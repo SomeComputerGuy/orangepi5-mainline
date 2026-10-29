@@ -1,0 +1,83 @@
+From f8fb03e50de95accfa191f47c6db3016da4a28ae Mon Sep 17 00:00:00 2001
+From: Arun Iyengar <aiyengar1990@gmail.com>
+Date: Thu, 29 Oct 2026 10:51:04 +0000
+Subject: [RFC PATCH] rockchip: rk3588: Raise the Cortex-A76 cluster clocks to
+ 1.2 GHz
+To: u-boot@lists.u-boot-project.org
+Cc: Kever Yang <kever.yang@rock-chips.com>,
+    Quentin Schulz <u-boot@0leil.net>,
+    Simon Glass <sjg@chromium.org>,
+    Tom Rini <trini@konsulko.com>,
+    Ilias Apalodimas <ilias.apalodimas@linaro.org>
+
+The two Cortex-A76 clusters of the RK3588(S) come out of reset at
+24 MHz, and mainline U-Boot leaves them there. Linux only raises them
+once its SCMI cpufreq driver probes; until then any early boot work the
+scheduler puts on a big core runs at 24 MHz. With a distro initramfs
+this is very visible: on an Orange Pi 5 with Ubuntu's arm64 kernel
+config, unpacking a 30 MB initramfs took ~80 s, and the kernel only
+reached userspace ~100 s after "Starting kernel":
+
+  cpufreq: CPU4: Running at unlisted initial frequency: 24000 kHz, ...
+  cpufreq: CPU6: Running at unlisted initial frequency: 24000 kHz, ...
+
+This happens with both mainline TF-A and Rockchip's
+rk3588_bl31_v1.56.elf. Rockchip's vendor U-Boot sets these clocks
+through SCMI before booting the OS.
+
+Set the CPUB01/CPUB23 SCMI clocks with assigned-clocks on the SCMI clock
+protocol node, so that U-Boot programs them when the clock provider
+probes. 1.2 GHz is the lowest OPP of both A76 cluster tables in
+rk3588-opp.dtsi, at the lowest voltage those tables use (675 mV). On the
+Orange Pi 5 the vdd_cpu_big0/1 regulators (RK8602) power up at 800 mV
+(VSEL0 = 0x30, read back in U-Boot). TF-A sets these rates through the
+PVTPLL, whose output follows the supply voltage, so at 800 mV the
+clusters settle at ~1.41 GHz:
+
+  cpufreq: CPU4: Running at unlisted initial frequency: 1409000 kHz, ...
+  cpufreq: CPU6: Running at unlisted initial frequency: 1414000 kHz, ...
+
+With this, the initramfs (84 MB) is unpacked 2.2 s into boot and the
+kernel reaches userspace ~5 s after "Starting kernel".
+
+Assisted-by: Claude:claude-opus-5-5
+---
+RFC because the safe rate depends on the voltage each board's big-core
+regulators power up at, which I could only measure on the Orange Pi 5
+(800 mV). 1.2 GHz is the lowest A76 OPP, at 675 mV, so this assumes the
+regulators come up at >= 675 mV. If some board's don't, this could
+instead go into the per-board -u-boot.dtsi files, or be limited to a
+lower rate. Reports from other RK3588 boards would help.
+
+Also tested: the scmi_clk node is bootph-pre-ram, but SPL is unaffected
+on the Orange Pi 5 (it boots from SPI and SD as before).
+
+Assisted-by follows Documentation/process/coding-assistants.rst in
+Linux; U-Boot's checkpatch.pl doesn't know the tag yet.
+
+ arch/arm/dts/rk3588s-u-boot.dtsi | 9 +++++++++
+ 1 file changed, 9 insertions(+)
+
+diff --git a/arch/arm/dts/rk3588s-u-boot.dtsi b/arch/arm/dts/rk3588s-u-boot.dtsi
+index 71fd352f..0444ec86 100644
+--- a/arch/arm/dts/rk3588s-u-boot.dtsi
++++ b/arch/arm/dts/rk3588s-u-boot.dtsi
+@@ -103,6 +103,15 @@
+ };
+ 
+ &scmi_clk {
++	/*
++	 * The Cortex-A76 clusters come out of reset at 24 MHz. Linux only
++	 * raises them once its SCMI cpufreq driver probes, so early boot work
++	 * scheduled on a big core (e.g. unpacking the initramfs) runs at 24 MHz
++	 * until then. 1.2 GHz is the lowest OPP of both A76 clusters, at the
++	 * lowest voltage of their OPP tables (675 mV).
++	 */
++	assigned-clocks = <&scmi_clk SCMI_CLK_CPUB01>, <&scmi_clk SCMI_CLK_CPUB23>;
++	assigned-clock-rates = <1200000000>, <1200000000>;
+ 	bootph-pre-ram;
+ 	bootph-some-ram;
+ };
+-- 
+2.55.0
+

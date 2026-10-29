@@ -1,0 +1,24 @@
+# Apply in this order on top of the parent topic (see topic.env):
+#   while read -r p sha; do git am "$p"; done < <(grep -v '^#' series)
+# Second column: the original commit in the workspace clone (for reference).
+carried/0001-media-rockchip-rga-zero-cmdbuf-in-shared-code.patch 8ec4c0b0785ddd17c610680f37c6bd8e7b838721
+carried/0002-media-rockchip-rga-add-comment-about-pixel-alignment.patch 3403881a55357c9c32d9a956049ba4f8420b8ea8
+carried/0003-media-rockchip-rga-move-early-return-into-if-conditi.patch 75f98691df86769519b2c8381b87d9f44654a062
+carried/0004-media-rockchip-rga-removed-unused-regmap-member.patch 446ae47f6f1cfa992cbca5e397bc2de327bec27d
+carried/0005-media-rockchip-rga-use-devres-version-of-pm_runtime_.patch 90f0f43438647abd0ca69794c30576cb8808c2ef
+carried/0006-media-v4l2-mem2mem-drop-curr_ctx-member-from-v4l2_m2.patch 5579a7ac413fbf36bbc3ebb02d0044749128ffe1
+carried/0007-media-v4l2-mem2mem-support-running-multiple-jobs-in-.patch 46ee0dc86a70199e4d8916e41a93fa7539b79f42
+carried/0008-media-rockchip-rga-move-power-handling-to-device_run.patch d1aaf65c3a83579a48691e01766965390463b475
+carried/0009-media-rockchip-rga-adjust-get_version-to-return-the-.patch da177c99bd356f62f5735ee7ca975062d1f47005
+carried/0010-media-rockchip-rga-add-rga_core-structure.patch 2590a20e3461177b2d133d08d0ff9c815526b3a8
+carried/0011-media-rockchip-rga-use-components-to-manage-multiple.patch 38a4e8bd697d40e5d7c43f00fc19aa49f3e085e4
+carried/0012-media-rockchip-rga-move-rockchip_rga-allocation-to-m.patch 46cfd6ce7429d3ce66226da344749ec66df3c97d
+carried/0013-media-rockchip-rga-move-core-initialization-from-bin.patch 17b72916184bdbce3eb50a3de3a9e22bdd9b56cb
+carried/0014-media-rockchip-rga-move-video-device-to-the-master.patch d774867e6676e472878ef195884a7af681886a3f
+carried/0015-media-rockchip-rga-bind-all-cores-to-the-master.patch 13be422580656dd4c92662f66b3274246650102c
+carried/0016-media-rockchip-rga-put-all-cores-into-first-core-iom.patch d4a20d6c2140e42fc5550dfbf0acb119b106f7f0
+carried/0017-media-rockchip-rga-schedule-jobs-to-multiple-cores.patch 161e51890d69ea1433a69e59c317a91baf87ec05
+carried/0018-media-rkvdec-Keep-RCB-to-the-correct-size.patch 0d2ec85f43db54fac382c2cff075c21b9e69c01d
+carried/0019-media-rkvdec-Remove-unused-need_reset.patch e5bbad52d795c32413fe2ac50332938e5716c134
+carried/0020-media-rkvdec-Split-into-core-and-master-platform-dri.patch 48802868c648827f1c88b64c45f60db85233818c
+carried/0021-media-rkvdec-Add-multicore-support.patch 6924e98ef6eeb4622286b671145e66e8744defaf

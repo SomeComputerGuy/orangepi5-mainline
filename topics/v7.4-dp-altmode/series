@@ -1,0 +1,31 @@
+# Apply in this order on top of the parent topic (see topic.env):
+#   while read -r p sha; do git am "$p"; done < <(grep -v '^#' series)
+# Second column: the original commit in the workspace clone (for reference).
+carried/0001-drm-bridge-synopsys-dw-dp-Register-DP-AUX-on-bridge-.patch fe0ae13a6de6c4083af0cc5468c06dcea400a785
+carried/0002-drm-bridge-synopsys-dw-dp-Fix-incorrect-resource-lif.patch 8236fe0377f81e6dc9b27e5b340fdb602e72b2be
+carried/0003-drm-bridge-synopsys-dw-dp-Fix-error-handling-for-DP-.patch dbcbd61f73f83ef086e00925ce80422518161c47
+carried/0004-drm-bridge-synopsys-dw-dp-Document-missing-reset-lin.patch af8c2ad94fddacb0e384bdc0cf0218466f947d08
+carried/0005-drm-bridge-synopsys-dw-dp-Add-missing-mutex-cleanups.patch 5346c9e9c05d6a504ce7d7e9d16e15ecd5855867
+carried/0006-drm-bridge-synopsys-dw-dp-Fix-AUX-transfer-timeout-r.patch 2c701a8e3a6e2d753b587457280d92ce6c036dba
+carried/0007-drm-bridge-synopsys-dw-dp-Fix-support-for-short-I2C-.patch 0a76896ba6a65fa44627855253fbec232b706ff9
+carried/0008-drm-bridge-synopsys-dw-dp-Free-output_fmts-when-none.patch 8ec8121b4bcf6319699b0593a83678034334f7ca
+carried/0009-drm-bridge-synopsys-dw-dp-Support-MEDIA_BUS_FMT_FIXE.patch 1703a395b793e149e1acb3cd84cb5e4dafbd3210
+carried/0010-drm-bridge-synopsys-dw-dp-Add-follow-up-bridge-suppo.patch 8bfe1b508bee30d8b9599ff61c9f714998ec952d
+carried/0011-drm-bridge-Add-out-of-band-HPD-notify-handler.patch dcf4099f2166756e640553588f1fe6f9fef96c85
+carried/0012-drm-bridge-synopsys-dw-dp-Support-software-triggered.patch d91d54a66545be1430c1d612cce980ec6c8a780c
+carried/0013-drm-rockchip-dw_dp-Implement-out-of-band-HPD-handlin.patch 6d201c61fd7134641ccc9cf18ead77783c2ae180
+carried/0014-drm-bridge-synopsys-dw-dp-Add-Runtime-PM-support.patch fec1b0033e4e6c2baa874be702b5a0441d88db8f
+carried/0015-drm-rockchip-dw_dp-Add-runtime-PM-support.patch ed2fec50aaa69e696ce56d9ab3b34cdfa7940588
+carried/0016-drm-bridge-synopsys-dw-dp-Protect-sdp_reg_bank-from-.patch 00efd9e1434a31830dbe01db2860da0f39a1c604
+carried/0017-drm-bridge-synopsys-dw-dp-Drop-useless-reservation-o.patch 40b950f642d7993c227d76a90403247df2d2080f
+carried/0018-drm-bridge-synopsys-dw-dp-Clear-only-enabled-SDPs-on.patch cd72ac68977ed84d88ded13c6c27562fc5171981
+carried/0019-drm-bridge-synopsys-dw-dp-Use-regmap_set_bits-in-dw_.patch 82ded06ba0c93ad78eac0dd2485d3ab006bcfd94
+carried/0020-dt-bindings-display-rockchip-dw-dp-Fix-sound-DAI-cel.patch c388146505401bf3b60fb643607ef055874af3e3
+carried/0021-drm-bridge-synopsys-dw-dp-Add-audio-support.patch 6d6d190159e337aff0dbaa723a6a337a70f9a289
+carried/0022-phy-rockchip-usbdp-Track-PHY-power-state.patch f311c2b089c051a4a9ed2251227e53e23a94f19e
+carried/0023-phy-rockchip-usbdp-Add-reset-hook-support-for-dwc3.patch 2232c312383eb242078a2f8b6d519efdbdb94a17
+carried/0024-usb-dwc3-rockchip-introduce-glue-driver.patch ef2161258f37bf85996a81076eed3d599f4fe528
+carried/0025-usb-dwc3-core-add-post-PHY-registration-hook-for-pla.patch 35eb14ef18f9f680390ac762c60f4a8d4bded9bd
+carried/0026-usb-dwc3-rockchip-add-USBDP-PHY-reset-quirk.patch 1351990322449de54e0ccd752bb5d398ac679644
+carried/0027-usb-gadget-define-stub-for-usb_udc_vbus_handler.patch bbcaa92f8d0ff540e2674107738ac73845be860d
+carried/0028-usb-dwc3-rockchip-fix-USB-C-reconnect-in-gadget-mode.patch 14a248111f1687595628cb916315c79c1bf94168

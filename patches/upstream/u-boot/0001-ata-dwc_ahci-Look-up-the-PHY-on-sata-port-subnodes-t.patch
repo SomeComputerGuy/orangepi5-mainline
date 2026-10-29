@@ -1,0 +1,83 @@
+From fbf3b6bf924aef60c4260cab04a2bac509f2c00e Mon Sep 17 00:00:00 2001
+From: Arun Iyengar <aiyengar1990@gmail.com>
+Date: Thu, 29 Oct 2026 10:51:04 +0000
+Subject: [PATCH] ata: dwc_ahci: Look up the PHY on sata-port subnodes too
+To: u-boot@lists.u-boot-project.org
+Cc: Tom Rini <trini@konsulko.com>
+
+The snps,dwc-ahci binding allows the PHY to be described either on the
+controller node or on its sata-port@N subnodes, and Linux's
+libahci_platform accepts both. The RK3588 SoC DT (rk3588-base.dtsi) uses
+the latter:
+
+	sata0: sata@fe210000 {
+		...
+		sata-port@0 {
+			reg = <0>;
+			...
+			phys = <&combphy0_ps PHY_TYPE_SATA>;
+			phy-names = "sata-phy";
+		};
+	};
+
+dwc_ahci only looks at the controller node, so on such boards probing
+fails with "can't get the phy from DT". When the controller node has no
+"phys" property, fall back to the first enabled sata-port subnode that
+has one. The driver only supports a single port, so that is the port it
+uses.
+
+Tested on an Orange Pi 5 (RK3588S) with an M.2 SATA SSD, with sata0
+enabled and pcie2x1l2 disabled: U-Boot finds the disk and boots from it.
+
+Assisted-by: Claude:claude-opus-5-5
+---
+Assisted-by follows Documentation/process/coding-assistants.rst in
+Linux; U-Boot's checkpatch.pl doesn't know the tag yet.
+
+ drivers/ata/dwc_ahci.c | 24 +++++++++++++++++++++++-
+ 1 file changed, 23 insertions(+), 1 deletion(-)
+
+diff --git a/drivers/ata/dwc_ahci.c b/drivers/ata/dwc_ahci.c
+index 0431d370..a9de7e7d 100644
+--- a/drivers/ata/dwc_ahci.c
++++ b/drivers/ata/dwc_ahci.c
+@@ -50,13 +50,35 @@ static int dwc_ahci_of_to_plat(struct udevice *dev)
+ 	return 0;
+ }
+ 
++/*
++ * The DT binding allows the PHY on the controller node or on its
++ * sata-port@N subnodes (e.g. Rockchip RK3588). Only one port is supported,
++ * so use the first enabled port that has one.
++ */
++static int dwc_ahci_get_phy(struct udevice *dev, struct phy *phy)
++{
++	ofnode port;
++
++	if (dev_read_prop(dev, "phys", NULL))
++		return generic_phy_get_by_name(dev, "sata-phy", phy);
++
++	dev_for_each_subnode(port, dev) {
++		if (!ofnode_is_enabled(port) || !ofnode_read_prop(port, "phys", NULL))
++			continue;
++
++		return generic_phy_get_by_index_nodev(port, 0, phy);
++	}
++
++	return -ENOENT;
++}
++
+ static int dwc_ahci_probe(struct udevice *dev)
+ {
+ 	struct dwc_ahci_priv *priv = dev_get_priv(dev);
+ 	int ret;
+ 	struct phy phy;
+ 
+-	ret = generic_phy_get_by_name(dev, "sata-phy", &phy);
++	ret = dwc_ahci_get_phy(dev, &phy);
+ 	if (ret) {
+ 		pr_err("can't get the phy from DT\n");
+ 		return ret;
+-- 
+2.55.0
+

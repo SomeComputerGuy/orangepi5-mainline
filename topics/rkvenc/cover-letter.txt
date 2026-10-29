@@ -1,0 +1,30 @@
+Subject: [RFC PATCH 0/3] media: rockchip: VEPU580 stateless H.264 encoder
+
+DRAFT, not for sending: talk to Collabora (Nicolas Dufresne, Detlev
+Casanova) first. They plan a Vulkan Video plus thin kernel driver path for
+this block.
+
+This series adds a V4L2 stateless encoder driver for the VEPU580 (RKVENC)
+of the RK3588, on top of Paul Kocialkowski's "media: Add V4L2 H.264
+stateless encode and VC8000E support" v1 (patches 1-7, generic uAPI and
+v4l2-h264-enc helpers). It would be a second, non-Hantro user of that uAPI.
+
+- The two encoder cores are independent DT nodes. They are bound as
+  components of one m2m device that schedules jobs from different contexts
+  on idle cores, and they share the first core's IOMMU domain.
+- H.264 Baseline/Main/High, CAVLC/CABAC, I/P pictures with a single
+  reference picture, and one slice.
+- The kernel writes SPS/PPS through the v4l2-h264-enc RBSP writer. The
+  hardware writes slice headers.
+- Direct QP, CQ and CBR rate control. CBR drives the hardware's per-row
+  rate control and feeds the measured average QP back to the statistics.
+
+Register meanings and default tuning values come from Rockchip's MPP
+library. They are written as named fields and formulas; there are no
+register dumps.
+
+Testing: <to be filled after board tests>
+
+  dt-bindings: media: Add the Rockchip VEPU580 video encoder
+  media: rockchip: Add a VEPU580 stateless video encoder driver
+  arm64: dts: rockchip: Add the VEPU580 encoder cores to the RK3588

@@ -1,0 +1,22 @@
+# Apply in this order on top of the parent topic (see topic.env):
+#   while read -r p sha; do git am "$p"; done < <(grep -v '^#' series)
+# Second column: the original commit in the workspace clone (for reference).
+carried/0001-media-h264-Add-a-more-generic-reflist-builder-init.patch 67e412586ec864d8265735b23736279116ae6f45
+carried/0002-media-uapi-Add-H.264-stateless-encode-support.patch 3bf62ab6f94d5ea3ad39b0b0ad4f719b032b294b
+carried/0003-media-h264-Add-SPS-video-definitions.patch e3d00e37b3fa13c78e1c891c557181847e6b17ac
+carried/0004-media-h264-Add-stateless-encode-core.patch e839a6d1c91c958a1a39e782f0b21289dbf45e66
+carried/0005-media-h264-Add-stateless-encode-rbsp.patch 4942c96ce8373979e7994c95093b35284e544966
+carried/0006-media-h264-Add-stateless-encode-reference-management.patch 5025a51b6d7809dc77a817addf97ba9744dd6a89
+carried/0007-media-h264-Add-stateless-encode-rate-control.patch 93a93f455e6a6ad48eb5d2edf22e30f4f068e552
+carried/0008-media-verisilicon-Report-default-pixel-coding-for-no.patch 2ee450bfb59451082cf58bbd567127977a6713e1
+carried/0009-media-hantro-use-hantro_decoded_buffer-only-for-dst_.patch abf5e0ce767cfa28c256683939f5b91033888f96
+carried/0010-media-verisilicon-Add-common-encoder-parm-and-framei.patch 57162d0f3f17c85f533a6431f36ed5dd272f3a54
+ours/0011-media-h264-Only-write-the-SPS-and-PPS-of-a-stateless.patch 0d64428f47d17ef38bf0416bc12cd683c9af8598
+ours/0012-media-h264-Support-picture-order-count-type-2-in-sta.patch 8b8a578554e1cdf17100b2330f9b20be5c6f248a
+ours/0013-media-hevc-Add-H.265-syntax-definitions.patch b4c184b4da65d1451575a7c8cc3dfbe5421b166b
+ours/0014-media-uapi-Add-HEVC-stateless-encode-support.patch 104dedacb427c53ef6bf57e1feef2accb53887cc
+ours/0015-media-hevc-Add-stateless-encode-RBSP-writer.patch 18be161485aa8ddfb8e662c27317e5973f0b0c31
+ours/0016-media-hevc-Add-KUnit-tests-for-the-stateless-encode-.patch 7b3ee3fabc65f1117fc912ca91e348016a610f50
+ours/0017-media-hevc-Add-stateless-encode-core.patch b96f43163acd5b92bb5725c2762d0592f0b6e5cf
+ours/0018-media-hevc-Add-KUnit-tests-for-the-stateless-encode-.patch 615e1a8633ee4714a45dfad5460cfff515fe9937
+ours/0019-media-docs-Document-the-HEVC-stateless-encode-uAPI.patch ae7404f7592097473e9656d08a1dc9d0a5a88b70

@@ -1,0 +1,72 @@
+From 96e97877c65caef6267db6b92cd37044ee8b693b Mon Sep 17 00:00:00 2001
+From: Cristian Ciocaltea <cristian.ciocaltea@collabora.com>
+Date: Thu, 12 Mar 2026 17:55:32 +0200
+Subject: [PATCH] drm/display: scdc: Add missing HDMI 2.1 FRL register
+ definitions
+
+HDMI 2.1 introduced Fixed Rate Link (FRL) as a new physical layer
+transport to replace TMDS for high-bandwidth modes requiring more than
+~18 Gbps.  Establishing a FRL link requires a training procedure known
+as Fixed Rate Link Training (FLT), which is coordinated between source
+and sink via the Status and Control Data Channel (SCDC).
+
+Add the missing register definitions and bit-field macros needed to
+implement this link training handshake.
+
+Signed-off-by: Cristian Ciocaltea <cristian.ciocaltea@collabora.com>
+Link: https://gitlab.collabora.com/hardware-enablement/rockchip-3588/linux/-/commit/01e574defbe52efb1ba1c3d666080655f9864bc0
+---
+ include/drm/display/drm_scdc.h | 19 +++++++++++++++++++
+ 1 file changed, 19 insertions(+)
+
+diff --git a/include/drm/display/drm_scdc.h b/include/drm/display/drm_scdc.h
+index 2d3ad012b..982f21f08 100644
+--- a/include/drm/display/drm_scdc.h
++++ b/include/drm/display/drm_scdc.h
+@@ -33,6 +33,8 @@
+ #define SCDC_UPDATE_0				0x10
+ #define  SCDC_RSED_UPDATE			BIT(6)
+ #define  SCDC_FLT_UPDATE			BIT(5)
++#define  SCDC_FRL_START				BIT(4)
++#define  SCDC_SOURCE_TEST_UPDATE		BIT(3)
+ #define  SCDC_READ_REQUEST_TEST			BIT(2)
+ #define  SCDC_CED_UPDATE			BIT(1)
+ #define  SCDC_STATUS_UPDATE			BIT(0)
+@@ -47,11 +49,24 @@
+ #define  SCDC_SCRAMBLING_STATUS			BIT(0)
+ 
+ #define SCDC_CONFIG_0				0x30
++#define  SCDC_FLT_NO_RETRAIN			BIT(1)
+ #define  SCDC_READ_REQUEST_ENABLE		BIT(0)
+ 
+ #define SCDC_CONFIG_1				0x31
+ #define  SCDC_FRL_RATE				0x0f
+ #define  SCDC_FFE_LEVELS			0xf0
++#define  SCDC_FFE_LEVELS_MASK			GENMASK(7, 4)
++#define  SCDC_FRL_RATE_MASK			GENMASK(3, 0)
++#define  SCDC_FRL_RATE_DISABLE			0
++#define  SCDC_FRL_RATE_3GBPS_3LANE		1
++#define  SCDC_FRL_RATE_6GBPS_3LANE		2
++#define  SCDC_FRL_RATE_6GBPS_4LANE		3
++#define  SCDC_FRL_RATE_8GBPS_4LANE		4
++#define  SCDC_FRL_RATE_10GBPS_4LANE		5
++#define  SCDC_FRL_RATE_12GBPS_4LANE		6
++
++#define SCDC_SOURCE_TEST_CONFIG			0x35
++#define  SCDC_FLT_NO_TIMEOUT			BIT(5)
+ 
+ #define SCDC_STATUS_FLAGS_0			0x40
+ #define  SCDC_DSC_FAIL				BIT(7)
+@@ -67,8 +82,12 @@
+ #define SCDC_STATUS_FLAGS_1			0x41
+ #define  SCDC_LN_EVEN_TRAIN_PTRN		0x0f
+ #define  SCDC_LN_ODD_TRAIN_PTRN			0xf0
++#define  SCDC_FRL_LN1_LTP_REQ_MASK		GENMASK(7, 4)
++#define  SCDC_FRL_LN0_LTP_REQ_MASK		GENMASK(3, 0)
+ 
+ #define SCDC_STATUS_FLAGS_2			0x42
++#define  SCDC_FRL_LN3_LTP_REQ_MASK		GENMASK(7, 4)
++#define  SCDC_FRL_LN2_LTP_REQ_MASK		GENMASK(3, 0)
+ 
+ #define SCDC_ERR_DET_0_L			0x50
+ #define SCDC_ERR_DET_0_H			0x51

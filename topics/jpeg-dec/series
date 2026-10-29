@@ -1,0 +1,6 @@
+# Apply in this order on top of the parent topic (see topic.env):
+#   while read -r p sha; do git am "$p"; done < <(grep -v '^#' series)
+# Second column: the original commit in the workspace clone (for reference).
+ours/0001-dt-bindings-media-Add-Rockchip-VDPU720-JPEG-decoder.patch c2f3f1751f7b4a7636f0c33ab47512c96c8809b7
+ours/0002-media-rockchip-Add-VDPU720-JPEG-decoder-driver.patch 58800fe9df28cefde06d06b88967dd5bc9319f05
+ours/0003-arm64-dts-rockchip-Add-the-JPEG-decoder-to-rk3588-ba.patch a2ebd13687e31d665282e144140067b3c08b01b9

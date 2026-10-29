@@ -1,0 +1,8 @@
+# Apply in this order on top of the parent topic (see topic.env):
+#   while read -r p sha; do git am "$p"; done < <(grep -v '^#' series)
+# Second column: the original commit in the workspace clone (for reference).
+ours/0001-dt-bindings-iommu-arm-smmu-v3-allow-a-power-domain.patch c295e066530e8f6daf846f9a4de25f0f58d40b81
+ours/0002-arm64-dts-rockchip-add-the-PCIe-power-domain-to-the-.patch 9c6eb9e46e2bf20ab348b694893e2ff27a1d56ae
+ours/0003-dt-bindings-iommu-arm-smmu-v3-allow-clocks.patch 3b2d0dad70ab440b639ec3dc214e0dabbbd584ec
+ours/0004-iommu-arm-smmu-v3-enable-optional-clocks.patch fc804caab7fd446ed40cc64faf3b5e4118d6ea2e
+ours/0005-arm64-dts-rockchip-add-the-clock-of-the-RK3588-PCIe-.patch 983769210f366e47787e47f55a6b9143f132f6e9

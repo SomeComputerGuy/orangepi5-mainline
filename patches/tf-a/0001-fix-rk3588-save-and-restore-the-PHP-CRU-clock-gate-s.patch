@@ -1,0 +1,49 @@
+From 840f033f16eed568392f3daad8bab33af11b04e2 Mon Sep 17 00:00:00 2001
+From: Arun Iyengar <aiyengar1990@gmail.com>
+Date: Thu, 29 Oct 2026 13:09:41 +0000
+Subject: [PATCH] fix(rk3588): save and restore the PHP CRU clock gate
+ separately
+
+clk_gate_con_save() stores PHP_CRU CLKGATE_CON0 in clk_save[j] without
+advancing j. The first secure CRU gate register then lands in the same
+slot and overwrites it. clk_gate_con_restore() has the same off-by-one,
+so on resume from system suspend PHPCRU_CLKGATE_CON0 is written with the
+value saved for SECURECRU_CLKGATE_CON0.
+
+PHPCRU_CLKGATE_CON0 holds the APB clock gates of the three PCIe/SATA/USB3
+combo PHYs (pclk_pcie_combo_pipe_phy0..2). If they come back gated while
+the kernel still considers them enabled, the first PHY register access
+after resume stalls the bus.
+
+Advance the index after the PHP gate register in both functions.
+
+Assisted-by: Claude:claude-opus-5-5
+---
+ plat/rockchip/rk3588/drivers/pmu/pmu.c | 4 ++--
+ 1 file changed, 2 insertions(+), 2 deletions(-)
+
+diff --git a/plat/rockchip/rk3588/drivers/pmu/pmu.c b/plat/rockchip/rk3588/drivers/pmu/pmu.c
+index 1a6394d..dcff02b 100644
+--- a/plat/rockchip/rk3588/drivers/pmu/pmu.c
++++ b/plat/rockchip/rk3588/drivers/pmu/pmu.c
+@@ -201,7 +201,7 @@ void clk_gate_con_save(void)
+ 	for (i = 0; i < CRU_CLKGATE_CON_CNT; i++, j++)
+ 		clk_save[j] = mmio_read_32(CRU_BASE + CRU_CLKGATE_CON(i));
+ 
+-	clk_save[j] = mmio_read_32(PHP_CRU_BASE + PHPCRU_CLKGATE_CON);
++	clk_save[j++] = mmio_read_32(PHP_CRU_BASE + PHPCRU_CLKGATE_CON);
+ 
+ 	for (i = 0; i < SECURECRU_CLKGATE_CON_CNT; i++, j++)
+ 		clk_save[j] = mmio_read_32(SCRU_BASE + SECURECRU_CLKGATE_CON(i));
+@@ -235,7 +235,7 @@ void clk_gate_con_restore(void)
+ 			      WITH_16BITS_WMSK(clk_save[j]));
+ 
+ 	mmio_write_32(PHP_CRU_BASE + PHPCRU_CLKGATE_CON,
+-		      WITH_16BITS_WMSK(clk_save[j]));
++		      WITH_16BITS_WMSK(clk_save[j++]));
+ 
+ 	for (i = 0; i < SECURECRU_CLKGATE_CON_CNT; i++, j++)
+ 		mmio_write_32(SCRU_BASE + SECURECRU_CLKGATE_CON(i),
+-- 
+2.55.0
+

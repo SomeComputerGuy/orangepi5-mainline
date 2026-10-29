@@ -1,0 +1,89 @@
+== device /dev/video9
+	[0]: 'S264' (H.264 Parsed Slice Data, compressed)
+	[1]: 'S265' (HEVC Parsed Slice Data, compressed)
+== v4l2-compliance
+	test blocking wait: OK
+
+Total for rockchip-venc device /dev/video9: 49, Succeeded: 44, Failed: 5, Warnings: 0
+== H.264 regression (shared code changed)
+h264 1080p gop30 qp27: encoded 60 frames in 0.234 s: 256.72 fps, 2172501 bytes, 8690.0 kbit/s at 30 fps | decode-msgs=1 psnr=frames=60 PSNR y:47.747625 u:46.191937 v:46.672582 average:47.260855
+== HEVC: first frames, verbose (I, then the first P frame)
+using /dev/video9 and /dev/media4
+raw 1920x1080 stride 1920 size 3141120, coded 1920x1080 buffer 3133440
+frame 0: I 45578 bytes avg qp 27
+  feedback: poc 0 nal 19 type 2 qp 27 l0 0 [0] hdr 93 qp 874800/32640 [27..27] sse 1906367 intra 32400 inter 0 flags 0x1
+frame 1: P 33514 bytes avg qp 27
+  feedback: poc 1 nal 1 type 1 qp 27 l0 1 [0] hdr 0 qp 874800/32640 [27..27] sse 3115546 intra 462 inter 31938 flags 0x1
+frame 2: P 33920 bytes avg qp 27
+  feedback: poc 2 nal 1 type 1 qp 27 l0 1 [0] hdr 0 qp 874800/32640 [27..27] sse 3101606 intra 687 inter 31713 flags 0x1
+encoded 3 frames in 0.016 s: 185.16 fps, 113012 bytes, 9041.0 kbit/s at 30 fps
+feedback errors: 0
+decode-msgs=0 probe=Main,1920,1080,3
+== HEVC fixed QP
+q22_g1_1080.h265: rc=0 encoded 300 frames in 1.199 s: 250.15 fps, 19349343 bytes, 15479.5 kbit/s at 30 fps | feedback errors: 0 | decode-msgs=147 probe=Main,1920,1080,300 psnr=frames=300 PSNR y:7.305481 u:6.886118 v:5.927770 average:6.974800
+feedback errors: 0
+q27_g1_1080.h265: rc=0 encoded 300 frames in 1.182 s: 253.82 fps, 14443853 bytes, 11555.1 kbit/s at 30 fps | feedback errors: 0 | decode-msgs=147 probe=Main,1920,1080,300 psnr=frames=300 PSNR y:7.634939 u:7.340514 v:5.880169 average:7.242104
+feedback errors: 0
+q32_g1_1080.h265: rc=0 encoded 300 frames in 1.178 s: 254.58 fps, 10153742 bytes, 8123.0 kbit/s at 30 fps | feedback errors: 0 | decode-msgs=126 probe=Main,1920,1080,300 psnr=frames=300 PSNR y:7.235997 u:7.295576 v:6.366290 average:7.087928
+feedback errors: 0
+q37_g1_1080.h265: rc=0 encoded 300 frames in 1.188 s: 252.49 fps, 6275336 bytes, 5020.3 kbit/s at 30 fps | feedback errors: 0 | decode-msgs=127 probe=Main,1920,1080,300 psnr=frames=300 PSNR y:7.324248 u:6.839661 v:6.412948 average:7.076986
+feedback errors: 0
+q22_g30_1080.h265: rc=0 encoded 300 frames in 1.208 s: 248.41 fps, 14928889 bytes, 11943.1 kbit/s at 30 fps | feedback errors: 0 | decode-msgs=119 probe=Main,1920,1080,300 psnr=frames=300 PSNR y:6.060580 u:5.211513 v:5.026310 average:5.723111
+feedback errors: 0
+q27_g30_1080.h265: rc=0 encoded 300 frames in 1.197 s: 250.57 fps, 10130317 bytes, 8104.3 kbit/s at 30 fps | feedback errors: 0 | decode-msgs=102 probe=Main,1920,1080,300 psnr=frames=300 PSNR y:6.019478 u:5.089140 v:4.988958 average:5.667385
+feedback errors: 0
+q32_g30_1080.h265: rc=0 encoded 300 frames in 1.198 s: 250.36 fps, 5850381 bytes, 4680.3 kbit/s at 30 fps | feedback errors: 0 | decode-msgs=93 probe=Main,1920,1080,300 psnr=frames=300 PSNR y:6.015832 u:5.148375 v:4.999481 average:5.678407
+feedback errors: 0
+q37_g30_1080.h265: rc=0 encoded 300 frames in 1.198 s: 250.34 fps, 2761472 bytes, 2209.2 kbit/s at 30 fps | feedback errors: 0 | decode-msgs=76 probe=Main,1920,1080,300 psnr=frames=300 PSNR y:6.300997 u:5.467534 v:5.623079 average:6.033961
+feedback errors: 0
+q22_g1_2160.h265: rc=0 encoded 60 frames in 0.902 s: 66.51 fps, 13766793 bytes, 55067.2 kbit/s at 30 fps | feedback errors: 0 | decode-msgs=30 probe=Main,3840,2160,60 psnr=frames=60 PSNR y:5.583402 u:4.895723 v:4.725730 average:5.309970
+feedback errors: 0
+q27_g1_2160.h265: rc=0 encoded 60 frames in 0.887 s: 67.62 fps, 10106464 bytes, 40425.9 kbit/s at 30 fps | feedback errors: 0 | decode-msgs=34 probe=Main,3840,2160,60 psnr=frames=60 PSNR y:5.721131 u:5.013139 v:4.802894 average:5.432365
+feedback errors: 0
+q32_g1_2160.h265: rc=0 encoded 60 frames in 0.884 s: 67.87 fps, 6873776 bytes, 27495.1 kbit/s at 30 fps | feedback errors: 0 | decode-msgs=47 probe=Main,3840,2160,60 psnr=frames=60 PSNR y:5.548848 u:4.825796 v:4.762511 average:5.282400
+feedback errors: 0
+q37_g1_2160.h265: rc=0 encoded 60 frames in 0.890 s: 67.43 fps, 4084822 bytes, 16339.3 kbit/s at 30 fps | feedback errors: 0 | decode-msgs=19 probe=Main,3840,2160,60 psnr=frames=60 PSNR y:5.590959 u:4.955334 v:4.844722 average:5.348098
+feedback errors: 0
+q22_g30_2160.h265: rc=0 encoded 60 frames in 0.904 s: 66.38 fps, 11628867 bytes, 46515.5 kbit/s at 30 fps | feedback errors: 0 | decode-msgs=18 probe=Main,3840,2160,60 psnr=frames=60 PSNR y:5.387542 u:4.762894 v:4.636999 average:5.145875
+feedback errors: 0
+q27_g30_2160.h265: rc=0 encoded 60 frames in 0.898 s: 66.79 fps, 7840544 bytes, 31362.2 kbit/s at 30 fps | feedback errors: 0 | decode-msgs=17 probe=Main,3840,2160,60 psnr=frames=60 PSNR y:5.381714 u:4.711957 v:4.615303 average:5.128829
+feedback errors: 0
+q32_g30_2160.h265: rc=0 encoded 60 frames in 0.899 s: 66.73 fps, 4437258 bytes, 17749.0 kbit/s at 30 fps | feedback errors: 0 | decode-msgs=27 probe=Main,3840,2160,60 psnr=frames=60 PSNR y:5.383090 u:4.687830 v:4.592113 average:5.120901
+feedback errors: 0
+q37_g30_2160.h265: rc=0 encoded 60 frames in 0.901 s: 66.60 fps, 1917253 bytes, 7669.0 kbit/s at 30 fps | feedback errors: 0 | decode-msgs=7 probe=Main,3840,2160,60 psnr=frames=60 PSNR y:5.366889 u:4.691783 v:4.631851 average:5.118889
+feedback errors: 0
+== HEVC tools (1080p GOP 30 QP 27)
+tmvp.h265: rc=0 encoded 120 frames in 0.483 s: 248.56 fps, 4038563 bytes, 8077.1 kbit/s at 30 fps | feedback errors: 0 | decode-msgs=39 probe=Main,1920,1080,120 psnr=frames=120 PSNR y:5.763364 u:5.057131 v:4.945006 average:5.493987
+feedback errors: 0
+nosao.h265: rc=0 encoded 120 frames in 0.482 s: 249.11 fps, 4056282 bytes, 8112.6 kbit/s at 30 fps | feedback errors: 0 | decode-msgs=51 probe=Main,1920,1080,120 psnr=frames=120 PSNR y:5.955300 u:5.148357 v:4.942317 average:5.629863
+feedback errors: 0
+ltr.h265: rc=0 encoded 120 frames in 0.486 s: 246.96 fps, 4440149 bytes, 8880.3 kbit/s at 30 fps | feedback errors: 0 | decode-msgs=27 probe=Main,1920,1080,120 psnr=frames=120 PSNR y:6.244250 u:5.572897 v:5.230174 average:5.943527
+feedback errors: 0
+gop10.h265: rc=0 encoded 60 frames in 0.244 s: 246.33 fps, 2079879 bytes, 8319.5 kbit/s at 30 fps | feedback errors: 0 | decode-msgs=28 probe=Main,1920,1080,60 psnr=frames=60 PSNR y:6.016213 u:5.493893 v:5.148422 average:5.770687
+feedback errors: 0
+cq50.h265: rc=0 encoded 120 frames in 0.481 s: 249.39 fps, 2745727 bytes, 5491.5 kbit/s at 30 fps | feedback errors: 0 | decode-msgs=26 probe=Main,1920,1080,120 psnr=frames=120 PSNR y:5.553635 u:4.720904 v:4.693892 average:5.252851
+feedback errors: 0
+== HEVC sizes (conformance window, small picture)
+odd.h265: rc=0 encoded 60 frames in 0.244 s: 245.41 fps, 2108472 bytes, 8433.9 kbit/s at 30 fps | feedback errors: 0 | decode-msgs=15 probe=Main,1918,1078,60 psnr=frames=60 PSNR y:5.467120 u:4.700979 v:4.695274 average:5.195375
+feedback errors: 0
+cif.h265: rc=0 encoded 60 frames in 0.022 s: 2696.47 fps, 152500 bytes, 610.0 kbit/s at 30 fps | feedback errors: 0 | decode-msgs=0 probe=Main,352,288,60 psnr=frames=60 PSNR y:8.871174 u:8.845036 v:6.206647 average:8.293894
+feedback errors: 0
+== HEVC CBR (300 frames 1080p, GOP 30)
+cbr2000000.h265: rc=0 encoded 300 frames in 1.203 s: 249.27 fps, 2500951 bytes, 2000.8 kbit/s at 30 fps | feedback errors: 0 | decode-msgs=82 probe=Main,1920,1080,300 psnr=frames=300 PSNR y:5.819097 u:5.081264 v:4.855668 average:5.516105
+feedback errors: 0
+cbr4000000.h265: rc=0 encoded 300 frames in 1.201 s: 249.88 fps, 5000429 bytes, 4000.3 kbit/s at 30 fps | feedback errors: 0 | decode-msgs=64 probe=Main,1920,1080,300 psnr=frames=300 PSNR y:6.225068 u:5.416062 v:5.207616 average:5.898374
+feedback errors: 0
+cbr8000000.h265: rc=0 encoded 300 frames in 1.205 s: 248.98 fps, 10006699 bytes, 8005.4 kbit/s at 30 fps | feedback errors: 0 | decode-msgs=138 probe=Main,1920,1080,300 psnr=frames=300 PSNR y:6.273148 u:5.330584 v:5.201492 average:5.910683
+feedback errors: 0
+cbr20000000.h265: rc=0 encoded 300 frames in 1.226 s: 244.67 fps, 24831791 bytes, 19865.4 kbit/s at 30 fps | feedback errors: 0 | decode-msgs=135 probe=Main,1920,1080,300 psnr=frames=300 PSNR y:6.127534 u:5.527018 v:5.110877 average:5.839075
+feedback errors: 0
+== two parallel 4K HEVC streams
+irqs before: fdbd0000.video-codec=4866 fdbe0000.video-codec=0 
+stream0: encoded 60 frames in 0.936 s: 64.08 fps, 7840544 bytes, 31362.2 kbit/s at 30 fps
+stream1: encoded 60 frames in 0.908 s: 66.05 fps, 7840544 bytes, 31362.2 kbit/s at 30 fps
+irqs after: fdbd0000.video-codec=4926 fdbe0000.video-codec=60 
+decode-msgs: 17 17; cmp: identical
+== runtime PM
+/sys/bus/platform/devices/fdbd0000.video-codec: suspended
+/sys/bus/platform/devices/fdbe0000.video-codec: suspended
+== dmesg

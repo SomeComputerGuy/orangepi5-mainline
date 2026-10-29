@@ -1,0 +1,37 @@
+From 2e07cdf6465407d3f5e75e7e1a44d94b98c30ca7 Mon Sep 17 00:00:00 2001
+From: Arun Iyengar <aiyengar1990@gmail.com>
+Date: Thu, 29 Oct 2026 18:42:29 +0000
+Subject: [PATCH] arm64: dts: rockchip: build the Orange Pi 5 and 5B DTBs with
+ symbols
+
+Overlays for the Orange Pi 5 connectors (MIPI DSI LCDs, MIPI CSI
+cameras, USB-C DisplayPort) are applied by the boot loader at boot
+time, which needs the __symbols__ node in the base DTB. Kbuild only
+adds it to base DTBs that are used by an in-tree overlay application
+test.
+
+Pass -@ to dtc for the Orange Pi 5, its M.2 SATA variant and the
+Orange Pi 5B, like the Allwinner and MediaTek Makefiles do for boards
+with add-on connectors.
+
+Assisted-by: Claude:claude-opus-5-5
+---
+ arch/arm64/boot/dts/rockchip/Makefile | 7 +++++++
+ 1 file changed, 7 insertions(+)
+
+diff --git a/arch/arm64/boot/dts/rockchip/Makefile b/arch/arm64/boot/dts/rockchip/Makefile
+index 96bcfde1c..178e5b3fb 100644
+--- a/arch/arm64/boot/dts/rockchip/Makefile
++++ b/arch/arm64/boot/dts/rockchip/Makefile
+@@ -1,4 +1,11 @@
+ # SPDX-License-Identifier: GPL-2.0
++
++# Orange Pi 5/5B: build with symbols so that overlays can be applied by the
++# boot loader
++DTC_FLAGS_rk3588s-orangepi-5 := -@
++DTC_FLAGS_rk3588s-orangepi-5-sata := -@
++DTC_FLAGS_rk3588s-orangepi-5b := -@
++
+ dtb-$(CONFIG_ARCH_ROCKCHIP) += px30-cobra-ltk050h3146w-a2.dtb
+ dtb-$(CONFIG_ARCH_ROCKCHIP) += px30-cobra-ltk050h3146w.dtb
+ dtb-$(CONFIG_ARCH_ROCKCHIP) += px30-cobra-ltk050h3148w.dtb

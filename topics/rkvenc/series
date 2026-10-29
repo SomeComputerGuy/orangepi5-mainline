@@ -1,0 +1,16 @@
+# Apply in this order on top of the parent topic (see topic.env):
+#   while read -r p sha; do git am "$p"; done < <(grep -v '^#' series)
+# Second column: the original commit in the workspace clone (for reference).
+carried/0001-media-h264-Add-a-more-generic-reflist-builder-init.patch 6801bbd68426b440113b93b9004152f83d499c98
+carried/0002-media-uapi-Add-H.264-stateless-encode-support.patch b89ff522442cb2044d5274b02d641e9f11fbcd94
+carried/0003-media-h264-Add-SPS-video-definitions.patch 5bfd149485f4d549a1738ae8af9179b73f7db80c
+carried/0004-media-h264-Add-stateless-encode-core.patch 67a63bf237cafca7fab6314cd3755862a39b4a4c
+carried/0005-media-h264-Add-stateless-encode-rbsp.patch 37b92c33993607e28a6151f2b5cb893154a84758
+carried/0006-media-h264-Add-stateless-encode-reference-management.patch de6101d073cefa3fab65e4ef96214dc9900ca2bc
+carried/0007-media-h264-Add-stateless-encode-rate-control.patch 0eec39bafd4bec58d3fe4d3ea98d11d4350eec7e
+ours/0008-media-h264-Only-write-the-SPS-and-PPS-of-a-stateless.patch cadb459da1d5e8c14ec4ad7d10f202fa6c640c12
+ours/0009-media-h264-Support-picture-order-count-type-2-in-sta.patch 2aa17becea1d3ee34e4976adc5955a298a3365b7
+local/0010-DO-NOT-UPSTREAM-media-v4l2-ctrls-Keep-the-v4l2-core-.patch ab9ea6f95835015082b2dc1c9a3c74cf573f294b
+ours/0011-dt-bindings-media-Add-the-Rockchip-VEPU580-video-enc.patch a17ffbfd48ef96900c7dd4fc5e02490a8fd944bb
+ours/0012-media-rockchip-Add-a-VEPU580-stateless-video-encoder.patch f33a0ab3826b98979a95fed57e77b0fcd0094be9
+ours/0013-arm64-dts-rockchip-Add-the-VEPU580-encoder-cores-to-.patch c12698a646ee709bc9b841635bd37202ba58f26e

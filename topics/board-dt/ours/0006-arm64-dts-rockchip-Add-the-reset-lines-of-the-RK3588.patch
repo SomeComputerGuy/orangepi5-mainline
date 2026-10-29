@@ -1,0 +1,61 @@
+From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
+From: Arun Iyengar <aiyengar1990@gmail.com>
+Date: Thu, 29 Oct 2026 12:20:35 +0000
+Subject: [PATCH] arm64: dts: rockchip: Add the reset lines of the RK3588
+ VEPU121 cores
+
+Describe the AXI and AHB reset lines of the four VEPU121 JPEG encoder
+cores, so that the driver can reset a core that is stuck after a fault
+of its IOMMU.
+
+The IOMMU of each core sits in the same register block and is clocked
+by the same clocks, so these resets likely cover its bus interface as
+well. This relies on the driver not leaving a VPU behind an IOMMU in
+reset after remove ("media: verisilicon: Don't hold a VPU behind an
+IOMMU in reset after remove").
+
+Assisted-by: Claude:claude-opus-5-5
+---
+ arch/arm64/boot/dts/rockchip/rk3588-base.dtsi | 8 ++++++++
+ 1 file changed, 8 insertions(+)
+
+diff --git a/arch/arm64/boot/dts/rockchip/rk3588-base.dtsi b/arch/arm64/boot/dts/rockchip/rk3588-base.dtsi
+index 9acd524bd..c757f70b6 100644
+--- a/arch/arm64/boot/dts/rockchip/rk3588-base.dtsi
++++ b/arch/arm64/boot/dts/rockchip/rk3588-base.dtsi
+@@ -1349,6 +1349,8 @@ vepu121_0: video-codec@fdba0000 {
+ 		clock-names = "aclk", "hclk";
+ 		iommus = <&vepu121_0_mmu>;
+ 		power-domains = <&power RK3588_PD_VDPU>;
++		resets = <&cru SRST_A_JPEG_ENCODER0>, <&cru SRST_H_JPEG_ENCODER0>;
++		reset-names = "axi", "ahb";
+ 	};
+ 
+ 	vepu121_0_mmu: iommu@fdba0800 {
+@@ -1369,6 +1371,8 @@ vepu121_1: video-codec@fdba4000 {
+ 		clock-names = "aclk", "hclk";
+ 		iommus = <&vepu121_1_mmu>;
+ 		power-domains = <&power RK3588_PD_VDPU>;
++		resets = <&cru SRST_A_JPEG_ENCODER1>, <&cru SRST_H_JPEG_ENCODER1>;
++		reset-names = "axi", "ahb";
+ 	};
+ 
+ 	vepu121_1_mmu: iommu@fdba4800 {
+@@ -1389,6 +1393,8 @@ vepu121_2: video-codec@fdba8000 {
+ 		clock-names = "aclk", "hclk";
+ 		iommus = <&vepu121_2_mmu>;
+ 		power-domains = <&power RK3588_PD_VDPU>;
++		resets = <&cru SRST_A_JPEG_ENCODER2>, <&cru SRST_H_JPEG_ENCODER2>;
++		reset-names = "axi", "ahb";
+ 	};
+ 
+ 	vepu121_2_mmu: iommu@fdba8800 {
+@@ -1409,6 +1415,8 @@ vepu121_3: video-codec@fdbac000 {
+ 		clock-names = "aclk", "hclk";
+ 		iommus = <&vepu121_3_mmu>;
+ 		power-domains = <&power RK3588_PD_VDPU>;
++		resets = <&cru SRST_A_JPEG_ENCODER3>, <&cru SRST_H_JPEG_ENCODER3>;
++		reset-names = "axi", "ahb";
+ 	};
+ 
+ 	vepu121_3_mmu: iommu@fdbac800 {

@@ -1,0 +1,7 @@
+# Apply in this order on top of the parent topic (see topic.env):
+#   while read -r p sha; do git am "$p"; done < <(grep -v '^#' series)
+# Second column: the original commit in the workspace clone (for reference).
+ours/0001-media-verisilicon-Enforce-a-minimum-CAPTURE-sizeimag.patch d3e599388f22ec5fdb8c1335f4cba59633be0375
+ours/0002-media-verisilicon-Keep-the-encoder-coded-size-in-syn.patch a994187e585dccc41e22c0460bf662e4f642c282
+ours/0003-media-verisilicon-Refuse-JPEG-encode-jobs-with-incon.patch 2ba0b2489dd00a92b99745bc41824cc35fa1a86b
+ours/0004-media-verisilicon-Report-fixed-JPEG-colorimetry-on-t.patch fa1856f9bd20e5ae0cc57edaa4f4f548724466a6

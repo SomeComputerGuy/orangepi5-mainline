@@ -1,0 +1,19 @@
+# Apply in this order on top of the parent topic (see topic.env):
+#   while read -r p sha; do git am "$p"; done < <(grep -v '^#' series)
+# Second column: the original commit in the workspace clone (for reference).
+carried/0001-media-h264-Add-a-more-generic-reflist-builder-init.patch dc7ce80a13eca028e0bd60f6af574a722900fedc
+carried/0002-media-uapi-Add-H.264-stateless-encode-support.patch b3e55ae9ba53019d5ccae5e16e092dee0fba8ddc
+carried/0003-media-h264-Add-SPS-video-definitions.patch f428d62660c5332f23ede07be9f442bfd3b64c1f
+carried/0004-media-h264-Add-stateless-encode-core.patch 8af74f64c06fb7e927577e37bc24ecd628503100
+carried/0005-media-h264-Add-stateless-encode-rbsp.patch c65096afa467b2124f887972bf29435a8e49ecb9
+carried/0006-media-h264-Add-stateless-encode-reference-management.patch 149b6be7d576b9dbcdac17c72268d9144a406144
+carried/0007-media-h264-Add-stateless-encode-rate-control.patch 633623e0d5b394e4d2013e6cdbb88868be7b2af7
+carried/0008-media-verisilicon-Report-default-pixel-coding-for-no.patch e57b66afdc6cc25f08af3063a5fca5a177547f67
+carried/0009-media-hantro-use-hantro_decoded_buffer-only-for-dst_.patch 0fde3e94eb2ae26792ad613b70a8b26c5eff2a4a
+carried/0010-media-verisilicon-Add-common-encoder-parm-and-framei.patch dfeeecfc9610d2d8055fefeea6b4e7c240110242
+ours/0011-media-h264-Only-write-the-SPS-and-PPS-of-a-stateless.patch 4bbc2fa31496a3f553bc7ac224703bd2fe75eb48
+ours/0012-media-h264-Support-picture-order-count-type-2-in-sta.patch 0501550b4c3cfb7a218e5fe7036e824401514c1c
+ours/0013-media-verisilicon-Share-the-H.264-CABAC-context-init.patch 6665187a3dc1adffa0c18e08f76f50920a018972
+ours/0014-media-verisilicon-Add-H.264-encoding-to-the-Rockchip.patch 75cea8edae86b5c377b5dd065c3a480ad6f8fe56
+ours/0015-arm64-dts-rockchip-Add-the-encoder-interrupt-of-the-.patch b5c58f976a9f2e14d19cac8d1e2ce92d0a5f1a58
+local/0016-DO-NOT-UPSTREAM-media-v4l2-ctrls-Keep-the-v4l2-core-.patch 557d52c493c9b1f3e5c84b7a50be3a5b508965d9

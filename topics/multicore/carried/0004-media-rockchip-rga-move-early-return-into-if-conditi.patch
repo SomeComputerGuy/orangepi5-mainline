@@ -1,0 +1,49 @@
+From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
+From: =?UTF-8?q?Sven=20P=C3=BCschel?= <s.pueschel@pengutronix.de>
+Date: Wed, 16 Sep 2026 17:09:44 +0200
+Subject: [PATCH] media: rockchip: rga: move early return into if condition in
+ vidioc_enum_fmt
+MIME-Version: 1.0
+Content-Type: text/plain; charset=UTF-8
+Content-Transfer-Encoding: 8bit
+
+Instead of a doing an early return when we don't have a capture device,
+merge the condition with the following if condition. This improves
+readability, as the condition now explicitly contains a check for a
+capture device instead of returning when we don't have a capture device.
+
+Also use the V4L2_TYPE_IS_CAPTURE helper and improve the comment.
+
+The early return if was copied from the vivid drivers
+vivid_enum_fmt_vid function.
+
+Signed-off-by: Sven Püschel <s.pueschel@pengutronix.de>
+---
+ drivers/media/platform/rockchip/rga/rga.c | 14 ++++++++------
+ 1 file changed, 8 insertions(+), 6 deletions(-)
+
+diff --git a/drivers/media/platform/rockchip/rga/rga.c b/drivers/media/platform/rockchip/rga/rga.c
+index 8d7700b70..e522ec377 100644
+--- a/drivers/media/platform/rockchip/rga/rga.c
++++ b/drivers/media/platform/rockchip/rga/rga.c
+@@ -372,12 +372,14 @@ static int vidioc_enum_fmt(struct file *file, void *priv, struct v4l2_fmtdesc *f
+ 	if (ret != 0)
+ 		return ret;
+ 
+-	if (f->type != V4L2_BUF_TYPE_VIDEO_CAPTURE &&
+-	    f->type != V4L2_BUF_TYPE_VIDEO_CAPTURE_MPLANE)
+-		return 0;
+-
+-	/* allow changing the quantization and xfer func for YUV formats */
+-	if (v4l2_is_format_yuv(v4l2_format_info(f->pixelformat)))
++	/*
++	 * Allow changing the quantization and ycbcr_enc func for YUV formats
++	 * on the capture side for RGB -> YUV conversions.
++	 *
++	 * These flags are only relevant for capture devices.
++	 */
++	if (V4L2_TYPE_IS_CAPTURE(f->type) &&
++	    v4l2_is_format_yuv(v4l2_format_info(f->pixelformat)))
+ 		f->flags |= V4L2_FMT_FLAG_CSC_QUANTIZATION |
+ 			    V4L2_FMT_FLAG_CSC_YCBCR_ENC;
+ 

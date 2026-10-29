@@ -1,0 +1,53 @@
+exit=0
+== v4l2-compliance
+	test blocking wait: OK
+
+Total for rockchip-venc device /dev/video11: 49, Succeeded: 44, Failed: 5, Warnings: 0
+fixqp res=1080 gop=1 qp=22: encoded 300 frames in 1.149 s: 261.06 fps, 19875256 bytes, 15900.2 kbit/s at 30 fps | decode-errors=0 psnr=frames=300 PSNR y:52.726831 u:51.810837 v:52.219379 average:52.474624
+fixqp res=1080 gop=1 qp=27: encoded 300 frames in 1.141 s: 262.84 fps, 14788049 bytes, 11830.4 kbit/s at 30 fps | decode-errors=0 psnr=frames=300 PSNR y:48.423659 u:46.345193 v:46.655321 average:47.682595
+fixqp res=1080 gop=1 qp=32: encoded 300 frames in 1.144 s: 262.17 fps, 10466864 bytes, 8373.5 kbit/s at 30 fps | decode-errors=0 psnr=frames=300 PSNR y:43.457083 u:42.955262 v:43.248342 average:43.334528
+fixqp res=1080 gop=1 qp=37: encoded 300 frames in 1.145 s: 262.03 fps, 6995005 bytes, 5596.0 kbit/s at 30 fps | decode-errors=0 psnr=frames=300 PSNR y:39.593899 u:39.587283 v:40.095078 average:39.672391
+fixqp res=1080 gop=30 qp=22: encoded 300 frames in 1.140 s: 263.07 fps, 15511381 bytes, 12409.1 kbit/s at 30 fps | decode-errors=0 psnr=frames=300 PSNR y:51.989971 u:51.413131 v:52.044167 average:51.897130
+fixqp res=1080 gop=30 qp=27: encoded 300 frames in 1.135 s: 264.21 fps, 10918645 bytes, 8734.9 kbit/s at 30 fps | decode-errors=0 psnr=frames=300 PSNR y:47.735622 u:46.177978 v:46.606441 average:47.238051
+fixqp res=1080 gop=30 qp=32: encoded 300 frames in 1.140 s: 263.21 fps, 7200745 bytes, 5760.6 kbit/s at 30 fps | decode-errors=0 psnr=frames=300 PSNR y:42.858946 u:42.788645 v:43.048141 average:42.878031
+fixqp res=1080 gop=30 qp=37: encoded 300 frames in 1.135 s: 264.34 fps, 4307831 bytes, 3446.3 kbit/s at 30 fps | decode-errors=0 psnr=frames=300 PSNR y:38.651538 u:39.605623 v:39.924632 average:38.991148
+cbr res=1080 target=2000000: encoded 300 frames in 1.135 s: 264.34 fps, 2424844 bytes, 1939.9 kbit/s at 30 fps | decode-errors=0 psnr=frames=300 PSNR y:34.971930 u:37.500117 v:37.142031 average:35.622382
+cbr res=1080 target=8000000: encoded 300 frames in 1.137 s: 263.88 fps, 9097562 bytes, 7278.0 kbit/s at 30 fps | decode-errors=0 psnr=frames=300 PSNR y:44.507232 u:44.852029 v:45.220795 average:44.675360
+cbr res=1080 target=20000000: encoded 300 frames in 1.162 s: 258.12 fps, 20675056 bytes, 16540.0 kbit/s at 30 fps | decode-errors=0 psnr=frames=300 PSNR y:55.601648 u:56.021358 v:56.137896 average:55.755082
+fixqp res=2160 gop=1 qp=22: encoded 60 frames in 0.856 s: 70.07 fps, 14214394 bytes, 56857.6 kbit/s at 30 fps | decode-errors=0 psnr=frames=60 PSNR y:53.557130 u:52.447807 v:52.811820 average:53.224074
+fixqp res=2160 gop=1 qp=27: encoded 60 frames in 0.848 s: 70.73 fps, 10441503 bytes, 41766.0 kbit/s at 30 fps | decode-errors=0 psnr=frames=60 PSNR y:48.934144 u:47.021927 v:47.211277 average:48.239870
+fixqp res=2160 gop=1 qp=32: encoded 60 frames in 0.847 s: 70.81 fps, 7140885 bytes, 28563.5 kbit/s at 30 fps | decode-errors=0 psnr=frames=60 PSNR y:43.485610 u:43.668063 v:43.877413 average:43.578824
+fixqp res=2160 gop=1 qp=37: encoded 60 frames in 0.848 s: 70.76 fps, 4443106 bytes, 17772.4 kbit/s at 30 fps | decode-errors=0 psnr=frames=60 PSNR y:39.965564 u:40.364429 v:40.778507 average:40.156794
+fixqp res=2160 gop=30 qp=22: encoded 60 frames in 0.854 s: 70.29 fps, 12524159 bytes, 50096.6 kbit/s at 30 fps | decode-errors=0 psnr=frames=60 PSNR y:52.542090 u:51.695021 v:52.308795 average:52.350544
+fixqp res=2160 gop=30 qp=27: encoded 60 frames in 0.848 s: 70.74 fps, 8769313 bytes, 35077.3 kbit/s at 30 fps | decode-errors=0 psnr=frames=60 PSNR y:47.948847 u:46.713798 v:47.000481 average:47.552733
+fixqp res=2160 gop=30 qp=32: encoded 60 frames in 0.847 s: 70.81 fps, 5709316 bytes, 22837.3 kbit/s at 30 fps | decode-errors=0 psnr=frames=60 PSNR y:42.891115 u:43.203293 v:43.494861 average:43.037708
+fixqp res=2160 gop=30 qp=37: encoded 60 frames in 0.848 s: 70.74 fps, 3253468 bytes, 13013.9 kbit/s at 30 fps | decode-errors=0 psnr=frames=60 PSNR y:39.368061 u:40.154757 v:40.396826 average:39.649584
+cbr res=2160 target=2000000: encoded 60 frames in 0.847 s: 70.83 fps, 1137476 bytes, 4549.9 kbit/s at 30 fps | decode-errors=0 psnr=frames=60 PSNR y:31.722317 u:36.833908 v:36.081950 average:32.806316
+cbr res=2160 target=8000000: encoded 60 frames in 0.847 s: 70.80 fps, 1696579 bytes, 6786.3 kbit/s at 30 fps | decode-errors=0 psnr=frames=60 PSNR y:36.034036 u:38.462770 v:38.057234 average:36.656149
+cbr res=2160 target=20000000: encoded 60 frames in 0.847 s: 70.81 fps, 4335074 bytes, 17340.3 kbit/s at 30 fps | decode-errors=0 psnr=frames=60 PSNR y:40.415238 u:42.193370 v:42.058095 average:40.913971
+== profiles (1080p, GOP 30, QP 27)
+profile 66: encoded 120 frames in 0.457 s: 262.76 fps, 5018393 bytes, 10036.8 kbit/s at 30 fps | decode-errors=0 Baseline
+profile 77: encoded 120 frames in 0.457 s: 262.49 fps, 4380371 bytes, 8760.7 kbit/s at 30 fps | decode-errors=0 Main
+profile 100: encoded 120 frames in 0.458 s: 262.26 fps, 4378901 bytes, 8757.8 kbit/s at 30 fps | decode-errors=0 High
+high cavlc: encoded 120 frames in 0.459 s: 261.55 fps, 5019675 bytes, 10039.4 kbit/s at 30 fps | decode-errors=0
+== two parallel 4K streams
+irqs before: fdbd0000.video-codec=4440 fdbe0000.video-codec=0 
+stream0: encoded 60 frames in 0.876 s: 68.52 fps, 8769313 bytes, 35077.3 kbit/s at 30 fps
+stream1: encoded 60 frames in 0.852 s: 70.46 fps, 8769313 bytes, 35077.3 kbit/s at 30 fps
+irqs after: fdbd0000.video-codec=4500 fdbe0000.video-codec=60 
+decode-errors: 0 0
+== runtime PM
+/sys/bus/platform/devices/fdbd0000.video-codec: suspended
+/sys/bus/platform/devices/fdbe0000.video-codec: suspended
+== dmesg
+===compliance
+Total for hantro-vpu device /dev/video6: 49, Succeeded: 49, Failed: 0, Warnings: 0
+===dmesg
+[    0.172831] iommu: Default domain type: Translated
+[    3.328266] platform fdbe0000.video-codec: Adding to iommu group 10
+[    3.378437] platform fdbd0000.video-codec: Adding to iommu group 16
+[    6.752277] hantro-vpu fdba0000.video-codec: registered rockchip,rk3588-vepu121-enc as /dev/video7
+[    6.781873] rockchip-venc-core fdbd0000.video-codec: registered encoder core 0
+[    6.781900] rockchip-venc rockchip-venc: bound fdbd0000.video-codec (ops rkvenc_core_ops [rockchip_venc])
+[    6.781936] rockchip-venc-core fdbe0000.video-codec: registered encoder core 1
+[    6.781945] rockchip-venc rockchip-venc: bound fdbe0000.video-codec (ops rkvenc_core_ops [rockchip_venc])

@@ -1,0 +1,342 @@
+From 8044297d025450cf5bb3c8eb7a0566d017ef2c9f Mon Sep 17 00:00:00 2001
+From: Arun Iyengar <aiyengar1990@gmail.com>
+Date: Thu, 29 Oct 2026 13:06:16 +0000
+Subject: [PATCH] arm64: dts: rockchip: Add Orange Pi 5 MIPI LCD overlays
+
+The Orange Pi 5 has two 4-lane MIPI DSI LCD connectors, named LCD1 and
+LCD2 in the Orange Pi 5 user manual (section 3.31). The Orange Pi BSP
+device trees wire LCD1 to DSI0/MIPI DCPHY0 and LCD2 to DSI1/MIPI
+DCPHY1, each with its own LCD power enable GPIO, panel reset GPIO,
+backlight PWM and touch I2C bus:
+
+         power en  reset     backlight     touch I2C   touch INT/RESET
+  LCD1   GPIO1_A0  GPIO1_B1  PWM2_M0       I2C7_M0     GPIO1_B5/GPIO1_B4
+  LCD2   GPIO1_A1  GPIO1_B3  PWM6_M0       I2C2_M0     GPIO1_A7/GPIO1_A4
+
+Source: rk3588s-orangepi.dtsi, rk3588s-orangepi-5.dtsi and
+rk3588s-orangepi-5-lcd.dtsi in
+https://github.com/orangepi-xunlong/linux-orangepi, branch
+orange-pi-6.1-rk35xx.
+
+Add one overlay per connector for the official Orange Pi 10.1" MIPI
+LCD (Innolux AFJ101-BA2131 with a Goodix GT9271 touch controller), so
+that boards without a panel are unaffected. LCD1 is fed from VP3, the
+same VOP2 to DSI0 routing other mainline RK3588 boards use; LCD2 is fed
+from VP2 so that both connectors can be used at the same time. VP0
+(HDMI0) and VP1 stay free.
+
+Also add overlay application tests. They make kbuild build
+rk3588s-orangepi-5.dtb and rk3588s-orangepi-5-sata.dtb with -@, so
+that the overlays can be applied to them by the boot loader.
+
+Assisted-by: Claude:claude-opus-5-5
+---
+ arch/arm64/boot/dts/rockchip/Makefile         |  14 ++
+ .../dts/rockchip/rk3588s-orangepi-5-lcd1.dtso | 131 ++++++++++++++++++
+ .../dts/rockchip/rk3588s-orangepi-5-lcd2.dtso | 130 +++++++++++++++++
+ 3 files changed, 275 insertions(+)
+ create mode 100644 arch/arm64/boot/dts/rockchip/rk3588s-orangepi-5-lcd1.dtso
+ create mode 100644 arch/arm64/boot/dts/rockchip/rk3588s-orangepi-5-lcd2.dtso
+
+diff --git a/arch/arm64/boot/dts/rockchip/Makefile b/arch/arm64/boot/dts/rockchip/Makefile
+index 178e5b3fb..6202e941d 100644
+--- a/arch/arm64/boot/dts/rockchip/Makefile
++++ b/arch/arm64/boot/dts/rockchip/Makefile
+@@ -240,6 +240,8 @@ dtb-$(CONFIG_ARCH_ROCKCHIP) += rk3588s-nanopi-r6s.dtb
+ dtb-$(CONFIG_ARCH_ROCKCHIP) += rk3588s-nanopi-r6c.dtb
+ dtb-$(CONFIG_ARCH_ROCKCHIP) += rk3588s-odroid-m2.dtb
+ dtb-$(CONFIG_ARCH_ROCKCHIP) += rk3588s-orangepi-5.dtb
++dtb-$(CONFIG_ARCH_ROCKCHIP) += rk3588s-orangepi-5-lcd1.dtbo
++dtb-$(CONFIG_ARCH_ROCKCHIP) += rk3588s-orangepi-5-lcd2.dtbo
+ dtb-$(CONFIG_ARCH_ROCKCHIP) += rk3588s-orangepi-5-sata.dtb
+ dtb-$(CONFIG_ARCH_ROCKCHIP) += rk3588s-orangepi-5b.dtb
+ dtb-$(CONFIG_ARCH_ROCKCHIP) += rk3588s-orangepi-5-pro.dtb
+@@ -351,3 +353,15 @@ rk3588-rock-5b-plus-radxa-4k-cam-dtbs := rk3588-rock-5b-plus.dtb \
+ dtb-$(CONFIG_ARCH_ROCKCHIP) += rk3588-tiger-haikou-haikou-video-demo.dtb
+ rk3588-tiger-haikou-haikou-video-demo-dtbs := rk3588-tiger-haikou.dtb \
+ 	rk3588-tiger-haikou-video-demo.dtbo
++
++dtb-$(CONFIG_ARCH_ROCKCHIP) += rk3588s-orangepi-5-lcd1.dtb
++rk3588s-orangepi-5-lcd1-dtbs := rk3588s-orangepi-5.dtb \
++	rk3588s-orangepi-5-lcd1.dtbo
++
++dtb-$(CONFIG_ARCH_ROCKCHIP) += rk3588s-orangepi-5-lcd2.dtb
++rk3588s-orangepi-5-lcd2-dtbs := rk3588s-orangepi-5.dtb \
++	rk3588s-orangepi-5-lcd2.dtbo
++
++dtb-$(CONFIG_ARCH_ROCKCHIP) += rk3588s-orangepi-5-sata-lcd1-lcd2.dtb
++rk3588s-orangepi-5-sata-lcd1-lcd2-dtbs := rk3588s-orangepi-5-sata.dtb \
++	rk3588s-orangepi-5-lcd1.dtbo rk3588s-orangepi-5-lcd2.dtbo
+diff --git a/arch/arm64/boot/dts/rockchip/rk3588s-orangepi-5-lcd1.dtso b/arch/arm64/boot/dts/rockchip/rk3588s-orangepi-5-lcd1.dtso
+new file mode 100644
+index 000000000..9a8e9056a
+--- /dev/null
++++ b/arch/arm64/boot/dts/rockchip/rk3588s-orangepi-5-lcd1.dtso
+@@ -0,0 +1,131 @@
++// SPDX-License-Identifier: (GPL-2.0+ OR MIT)
++/*
++ * Orange Pi 10.1" MIPI LCD (Innolux AFJ101-BA2131, ILI9881C, 800x1280,
++ * Goodix GT9271 touch) on the LCD1 connector of the Orange Pi 5.
++ *
++ * LCD1 is wired to DSI0 and MIPI DCPHY0. The connector signals are taken
++ * from the Orange Pi BSP device trees (rk3588s-orangepi-5-lcd.dtsi and
++ * rk3588s-orangepi-5.dtsi in orangepi-xunlong/linux-orangepi):
++ *   LCD power enable: GPIO1_A0, panel reset: GPIO1_B1 (active low),
++ *   backlight PWM: PWM2_M0 (GPIO0_C4),
++ *   touch: I2C7_M0, INT GPIO1_B5, RESET GPIO1_B4.
++ */
++
++/dts-v1/;
++/plugin/;
++
++#include <dt-bindings/gpio/gpio.h>
++#include <dt-bindings/interrupt-controller/irq.h>
++#include <dt-bindings/pinctrl/rockchip.h>
++#include <dt-bindings/soc/rockchip,vop2.h>
++
++&{/} {
++	backlight_lcd1: backlight-lcd1 {
++		compatible = "pwm-backlight";
++		pwms = <&pwm2 0 25000 0>;
++	};
++
++	vcc_lcd1: regulator-vcc-lcd1 {
++		compatible = "regulator-fixed";
++		enable-active-high;
++		gpios = <&gpio1 RK_PA0 GPIO_ACTIVE_HIGH>;
++		pinctrl-names = "default";
++		pinctrl-0 = <&lcd1_pwr_en>;
++		regulator-name = "vcc_lcd1";
++	};
++};
++
++&dsi0 {
++	#address-cells = <1>;
++	#size-cells = <0>;
++	status = "okay";
++
++	panel@0 {
++		compatible = "innolux,afj101-ba2131", "ilitek,ili9881c";
++		reg = <0>;
++		backlight = <&backlight_lcd1>;
++		pinctrl-names = "default";
++		pinctrl-0 = <&lcd1_rst>;
++		power-supply = <&vcc_lcd1>;
++		reset-gpios = <&gpio1 RK_PB1 GPIO_ACTIVE_LOW>;
++
++		port {
++			lcd1_panel_in: endpoint {
++				remote-endpoint = <&dsi0_out_lcd1>;
++			};
++		};
++	};
++};
++
++&dsi0_in {
++	dsi0_in_vp3: endpoint {
++		remote-endpoint = <&vp3_out_dsi0>;
++	};
++};
++
++&dsi0_out {
++	dsi0_out_lcd1: endpoint {
++		remote-endpoint = <&lcd1_panel_in>;
++	};
++};
++
++&i2c7 {
++	pinctrl-names = "default";
++	pinctrl-0 = <&i2c7m0_xfer>;
++	#address-cells = <1>;
++	#size-cells = <0>;
++	status = "okay";
++
++	touchscreen@14 {
++		compatible = "goodix,gt9271";
++		reg = <0x14>;
++		interrupt-parent = <&gpio1>;
++		interrupts = <RK_PB5 IRQ_TYPE_LEVEL_LOW>;
++		irq-gpios = <&gpio1 RK_PB5 GPIO_ACTIVE_HIGH>;
++		pinctrl-names = "default";
++		pinctrl-0 = <&lcd1_touch_int &lcd1_touch_rst>;
++		reset-gpios = <&gpio1 RK_PB4 GPIO_ACTIVE_HIGH>;
++		touchscreen-inverted-x;
++		touchscreen-size-x = <1280>;
++		touchscreen-size-y = <800>;
++		touchscreen-swapped-x-y;
++	};
++};
++
++&mipidcphy0 {
++	status = "okay";
++};
++
++&pinctrl {
++	lcd1 {
++		lcd1_pwr_en: lcd1-pwr-en {
++			rockchip,pins = <1 RK_PA0 RK_FUNC_GPIO &pcfg_pull_none>;
++		};
++
++		lcd1_rst: lcd1-rst {
++			rockchip,pins = <1 RK_PB1 RK_FUNC_GPIO &pcfg_pull_none>;
++		};
++
++		lcd1_touch_int: lcd1-touch-int {
++			rockchip,pins = <1 RK_PB5 RK_FUNC_GPIO &pcfg_pull_none>;
++		};
++
++		lcd1_touch_rst: lcd1-touch-rst {
++			rockchip,pins = <1 RK_PB4 RK_FUNC_GPIO &pcfg_pull_none>;
++		};
++	};
++};
++
++&pwm2 {
++	status = "okay";
++};
++
++&vp3 {
++	#address-cells = <1>;
++	#size-cells = <0>;
++
++	vp3_out_dsi0: endpoint@ROCKCHIP_VOP2_EP_MIPI0 {
++		reg = <ROCKCHIP_VOP2_EP_MIPI0>;
++		remote-endpoint = <&dsi0_in_vp3>;
++	};
++};
+diff --git a/arch/arm64/boot/dts/rockchip/rk3588s-orangepi-5-lcd2.dtso b/arch/arm64/boot/dts/rockchip/rk3588s-orangepi-5-lcd2.dtso
+new file mode 100644
+index 000000000..e92722729
+--- /dev/null
++++ b/arch/arm64/boot/dts/rockchip/rk3588s-orangepi-5-lcd2.dtso
+@@ -0,0 +1,130 @@
++// SPDX-License-Identifier: (GPL-2.0+ OR MIT)
++/*
++ * Orange Pi 10.1" MIPI LCD (Innolux AFJ101-BA2131, ILI9881C, 800x1280,
++ * Goodix GT9271 touch) on the LCD2 connector of the Orange Pi 5.
++ *
++ * LCD2 is wired to DSI1 and MIPI DCPHY1. The connector signals are taken
++ * from the Orange Pi BSP device trees (rk3588s-orangepi-5-lcd.dtsi and
++ * rk3588s-orangepi-5.dtsi in orangepi-xunlong/linux-orangepi):
++ *   LCD power enable: GPIO1_A1, panel reset: GPIO1_B3 (active low),
++ *   backlight PWM: PWM6_M0 (GPIO0_C7),
++ *   touch: I2C2_M0 (shared with the vdd_npu_s0 regulator), INT GPIO1_A7,
++ *   RESET GPIO1_A4.
++ */
++
++/dts-v1/;
++/plugin/;
++
++#include <dt-bindings/gpio/gpio.h>
++#include <dt-bindings/interrupt-controller/irq.h>
++#include <dt-bindings/pinctrl/rockchip.h>
++#include <dt-bindings/soc/rockchip,vop2.h>
++
++&{/} {
++	backlight_lcd2: backlight-lcd2 {
++		compatible = "pwm-backlight";
++		pwms = <&pwm6 0 25000 0>;
++	};
++
++	vcc_lcd2: regulator-vcc-lcd2 {
++		compatible = "regulator-fixed";
++		enable-active-high;
++		gpios = <&gpio1 RK_PA1 GPIO_ACTIVE_HIGH>;
++		pinctrl-names = "default";
++		pinctrl-0 = <&lcd2_pwr_en>;
++		regulator-name = "vcc_lcd2";
++	};
++};
++
++&dsi1 {
++	#address-cells = <1>;
++	#size-cells = <0>;
++	status = "okay";
++
++	panel@0 {
++		compatible = "innolux,afj101-ba2131", "ilitek,ili9881c";
++		reg = <0>;
++		backlight = <&backlight_lcd2>;
++		pinctrl-names = "default";
++		pinctrl-0 = <&lcd2_rst>;
++		power-supply = <&vcc_lcd2>;
++		reset-gpios = <&gpio1 RK_PB3 GPIO_ACTIVE_LOW>;
++
++		port {
++			lcd2_panel_in: endpoint {
++				remote-endpoint = <&dsi1_out_lcd2>;
++			};
++		};
++	};
++};
++
++&dsi1_in {
++	dsi1_in_vp2: endpoint {
++		remote-endpoint = <&vp2_out_dsi1>;
++	};
++};
++
++&dsi1_out {
++	dsi1_out_lcd2: endpoint {
++		remote-endpoint = <&lcd2_panel_in>;
++	};
++};
++
++&i2c2 {
++	#address-cells = <1>;
++	#size-cells = <0>;
++	status = "okay";
++
++	touchscreen@14 {
++		compatible = "goodix,gt9271";
++		reg = <0x14>;
++		interrupt-parent = <&gpio1>;
++		interrupts = <RK_PA7 IRQ_TYPE_LEVEL_LOW>;
++		irq-gpios = <&gpio1 RK_PA7 GPIO_ACTIVE_HIGH>;
++		pinctrl-names = "default";
++		pinctrl-0 = <&lcd2_touch_int &lcd2_touch_rst>;
++		reset-gpios = <&gpio1 RK_PA4 GPIO_ACTIVE_HIGH>;
++		touchscreen-inverted-x;
++		touchscreen-size-x = <1280>;
++		touchscreen-size-y = <800>;
++		touchscreen-swapped-x-y;
++	};
++};
++
++&mipidcphy1 {
++	status = "okay";
++};
++
++&pinctrl {
++	lcd2 {
++		lcd2_pwr_en: lcd2-pwr-en {
++			rockchip,pins = <1 RK_PA1 RK_FUNC_GPIO &pcfg_pull_none>;
++		};
++
++		lcd2_rst: lcd2-rst {
++			rockchip,pins = <1 RK_PB3 RK_FUNC_GPIO &pcfg_pull_none>;
++		};
++
++		lcd2_touch_int: lcd2-touch-int {
++			rockchip,pins = <1 RK_PA7 RK_FUNC_GPIO &pcfg_pull_none>;
++		};
++
++		lcd2_touch_rst: lcd2-touch-rst {
++			rockchip,pins = <1 RK_PA4 RK_FUNC_GPIO &pcfg_pull_none>;
++		};
++	};
++};
++
++&pwm6 {
++	status = "okay";
++};
++
++&vp2 {
++	#address-cells = <1>;
++	#size-cells = <0>;
++
++	vp2_out_dsi1: endpoint@ROCKCHIP_VOP2_EP_MIPI1 {
++		reg = <ROCKCHIP_VOP2_EP_MIPI1>;
++		remote-endpoint = <&dsi1_in_vp2>;
++	};
++};

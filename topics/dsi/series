@@ -1,0 +1,7 @@
+# Apply in this order on top of the parent topic (see topic.env):
+#   while read -r p sha; do git am "$p"; done < <(grep -v '^#' series)
+# Second column: the original commit in the workspace clone (for reference).
+ours/0001-dt-bindings-display-panel-ilitek-ili9881c-Add-Innolu.patch f2096b6f1fabc3417fbf3107b6c84fde5ad5ff19
+ours/0002-drm-panel-ilitek-ili9881c-Add-Innolux-AFJ101-BA2131-.patch fb2833fab3a34a3f60f9cd5f111f4e8bd7533f73
+ours/0003-drm-rockchip-dsi2-Add-missing-sentinel-to-the-RK3588.patch 5771b028366e8dbecb774526b0f3b49793544156
+ours/0004-arm64-dts-rockchip-Add-Orange-Pi-5-MIPI-LCD-overlays.patch d70f3be42a5a3c22129133ce8086498496de764c

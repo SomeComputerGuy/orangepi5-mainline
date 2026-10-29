@@ -1,0 +1,182 @@
+From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
+From: Arun Iyengar <aiyengar1990@gmail.com>
+Date: Thu, 29 Oct 2026 13:12:17 +0000
+Subject: [PATCH] arm64: dts: rockchip: Add USB-C DP AltMode for Orange Pi 5/5B
+
+The USB-C port of the Orange Pi 5 and 5B is connected to the RK3588S
+USBDP PHY0, which can mux two (pin assignment D) or all four (pin
+assignment C/E) of its SuperSpeed lanes to the DisplayPort controller
+DP0. The SBU lines are wired to the PHY's DP AUX channel through the
+sbu1/sbu2 DC control GPIOs that are already described.
+
+Enable DP0, route it from VOP2 video port 2 and describe the full
+USB-C graph using the USBDP PHY ports scheme:
+
+  port@0: SuperSpeed lanes to the USB-C connector
+  port@1: from the DWC3 controller (SuperSpeed)
+  port@2: from the DP controller
+  port@3: DP AUX to the connector's SBU port
+
+and advertise DisplayPort AltMode (DFP_D, HBR3, receptacle, pin
+assignments C/D/E) on the connector, so TCPM enters DP AltMode with
+DP capable sinks/adapters.
+
+VP2 is used as on the ROCK 5B family, leaving VP0 for HDMI0 and VP1
+free.
+
+Based on the ROCK 5B family support from Sebastian Reichel:
+Link: https://gitlab.collabora.com/hardware-enablement/rockchip-3588/linux/-/commit/7983809d4d2c5a6c39d936ed3140e378a3257ebd
+Link: https://gitlab.collabora.com/hardware-enablement/rockchip-3588/linux/-/commit/c2d2e2b10a55c4d740a2faf1526a70c4f19da047
+
+Assisted-by: Claude:claude-opus-5-5
+---
+ .../dts/rockchip/rk3588s-orangepi-5-5b.dtsi   | 89 ++++++++++++++++---
+ 1 file changed, 78 insertions(+), 11 deletions(-)
+
+diff --git a/arch/arm64/boot/dts/rockchip/rk3588s-orangepi-5-5b.dtsi b/arch/arm64/boot/dts/rockchip/rk3588s-orangepi-5-5b.dtsi
+index 6e081bc06..007e0818c 100644
+--- a/arch/arm64/boot/dts/rockchip/rk3588s-orangepi-5-5b.dtsi
++++ b/arch/arm64/boot/dts/rockchip/rk3588s-orangepi-5-5b.dtsi
+@@ -69,6 +69,22 @@ vbus_typec: regulator-vbus-typec {
+ 	};
+ };
+ 
++&dp0 {
++	status = "okay";
++};
++
++&dp0_in {
++	dp0_in_vp2: endpoint {
++		remote-endpoint = <&vp2_out_dp0>;
++	};
++};
++
++&dp0_out {
++	dp0_out_con: endpoint {
++		remote-endpoint = <&usbdp_phy0_dp_in>;
++	};
++};
++
+ &gmac1 {
+ 	clock_in_out = "output";
+ 	phy-handle = <&rgmii_phy1>;
+@@ -119,6 +135,13 @@ usb_con: connector {
+ 				<PDO_FIXED(5000, 3000, PDO_FIXED_USB_COMM)>;
+ 			try-power-role = "source";
+ 
++			altmodes {
++				displayport {
++					svid = /bits/ 16 <0xff01>;
++					vdo = <0x00001c46>;
++				};
++			};
++
+ 			ports {
+ 				#address-cells = <1>;
+ 				#size-cells = <0>;
+@@ -126,21 +149,21 @@ ports {
+ 				port@0 {
+ 					reg = <0>;
+ 					usbc0_hs: endpoint {
+-						remote-endpoint = <&usb_host0_xhci_drd_sw>;
++						remote-endpoint = <&usb_host0_xhci_hs>;
+ 					};
+ 				};
+ 
+ 				port@1 {
+ 					reg = <1>;
+ 					usbc0_ss: endpoint {
+-						remote-endpoint = <&usbdp_phy0_typec_ss>;
++						remote-endpoint = <&usbdp_phy0_ss_out>;
+ 					};
+ 				};
+ 
+ 				port@2 {
+ 					reg = <2>;
+ 					usbc0_sbu: endpoint {
+-						remote-endpoint = <&usbdp_phy0_typec_sbu>;
++						remote-endpoint = <&usbdp_phy0_dp_out>;
+ 					};
+ 				};
+ 			};
+@@ -222,9 +245,24 @@ &usb_host0_xhci {
+ 	dr_mode = "otg";
+ 	usb-role-switch;
+ 
+-	port {
+-		usb_host0_xhci_drd_sw: endpoint {
+-			remote-endpoint = <&usbc0_hs>;
++	ports {
++		#address-cells = <1>;
++		#size-cells = <0>;
++
++		port@0 {
++			reg = <0>;
++
++			usb_host0_xhci_hs: endpoint {
++				remote-endpoint = <&usbc0_hs>;
++			};
++		};
++
++		port@1 {
++			reg = <1>;
++
++			usb_host0_xhci_ss: endpoint {
++				remote-endpoint = <&usbdp_phy0_ss_in>;
++			};
+ 		};
+ 	};
+ };
+@@ -239,18 +277,47 @@ &usbdp_phy0 {
+ 	sbu1-dc-gpios = <&gpio4 RK_PA5 GPIO_ACTIVE_HIGH>;
+ 	sbu2-dc-gpios = <&gpio4 RK_PA7 GPIO_ACTIVE_HIGH>;
+ 
+-	port {
++	ports {
+ 		#address-cells = <1>;
+ 		#size-cells = <0>;
+ 
+-		usbdp_phy0_typec_ss: endpoint@0 {
++		port@0 {
+ 			reg = <0>;
+-			remote-endpoint = <&usbc0_ss>;
++
++			usbdp_phy0_ss_out: endpoint {
++				remote-endpoint = <&usbc0_ss>;
++			};
+ 		};
+ 
+-		usbdp_phy0_typec_sbu: endpoint@1 {
++		port@1 {
+ 			reg = <1>;
+-			remote-endpoint = <&usbc0_sbu>;
++
++			usbdp_phy0_ss_in: endpoint {
++				remote-endpoint = <&usb_host0_xhci_ss>;
++			};
+ 		};
++
++		port@2 {
++			reg = <2>;
++
++			usbdp_phy0_dp_in: endpoint {
++				remote-endpoint = <&dp0_out_con>;
++			};
++		};
++
++		port@3 {
++			reg = <3>;
++
++			usbdp_phy0_dp_out: endpoint {
++				remote-endpoint = <&usbc0_sbu>;
++			};
++		};
++	};
++};
++
++&vp2 {
++	vp2_out_dp0: endpoint@a {
++		reg = <ROCKCHIP_VOP2_EP_DP0>;
++		remote-endpoint = <&dp0_in_vp2>;
+ 	};
+ };

@@ -1,0 +1,3376 @@
+From 1ad1f1f2aa7c5001907727b3e07d4a4401281024 Mon Sep 17 00:00:00 2001
+From: Arun Iyengar <aiyengar1990@gmail.com>
+Date: Thu, 29 Oct 2026 13:14:58 +0000
+Subject: [PATCH] media: rockchip: Add a VEPU580 stateless video encoder driver
+
+Add a V4L2 m2m driver for the VEPU580 (RKVENC) encoder of the RK3588,
+using the H.264 stateless encode uAPI and helpers (v4l2-h264-enc) proposed
+by Paul Kocialkowski. H.264 is supported:
+
+- Baseline, Main and High profile, CAVLC and CABAC, 8x8 transform, a
+  single slice per picture, I and P pictures with one reference picture
+  (the hardware has a single reference read port);
+- input in NV12, NV12M, NV21, YUV420, YUV420M, YUYV or UYVY, up to
+  4096x4096 (wider pictures need the external line buffer, not handled);
+- the parameter sets come from the v4l2-h264-enc RBSP writer and are put
+  at the start of the CAPTURE buffer; the hardware then writes the start
+  code, NAL header and slice header from its syntax registers, followed by
+  the slice data;
+- reconstructed and reference pictures are driver-internal FBC buffers
+  with their quarter-resolution thumbnails, managed by the v4l2-h264-enc
+  reference code;
+- direct QP and constant quality use a fixed frame QP. In CBR mode the
+  frame size target of the common rate control is also given to the
+  hardware macroblock row rate control with adaptive quantisation, which
+  may move the QP of each row by up to row_rc_qp_range (module
+  parameter, default 2, 0 for frame-level rate control only). The average
+  QP measured by the hardware is exposed through
+  V4L2_CID_MPEG_VIDEO_AVERAGE_QP. It is not fed back into the frame-level
+  statistics: with adaptive quantisation it sits below the frame QP and
+  the estimate would spiral down.
+
+Each of the two cores is a component of a virtual master device that owns
+the video device. The cores share the first core's IOMMU domain, and
+v4l2_m2m_set_max_parallel_jobs() lets jobs of different contexts run on
+both cores at the same time. The dual-core handshake (one stream on two
+cores) is not used.
+
+The codec specific part sits behind a small ops structure so that HEVC can
+be added once a stateless HEVC encode uAPI exists.
+
+Provenance: there is no public documentation of this block. The register
+layout and meanings, and the default tuning values (RDO lambda and weight
+tables, intra/ATR thresholds, motion search parameters, flat quantisation
+tables, row rate control thresholds) were derived from the Rockchip MPP
+user space library (Apache-2.0: vepu580_common.h, hal_h264e_vepu580.c,
+hal_h264e_vepu580_reg.h, hal_h264e_vepu580_tune.c, vepu5xx_common.c).
+They are written as named fields and formulas, not register dumps. The
+power, watchdog, per-frame force clear and reset/IOMMU recovery sequences
+follow the Rockchip BSP mpp_rkvenc2 driver (GPL-2.0) as found in an
+out-of-tree port, with the interrupt status bits corrected to the layout
+used by MPP (safe clear done is bit 2, watchdog bit 8).
+
+Assisted-by: Claude:claude-opus-5-5
+---
+ drivers/media/platform/rockchip/Kconfig       |    1 +
+ drivers/media/platform/rockchip/Makefile      |    1 +
+ .../media/platform/rockchip/rkvenc/Kconfig    |   17 +
+ .../media/platform/rockchip/rkvenc/Makefile   |    7 +
+ .../platform/rockchip/rkvenc/rkvenc-h264.c    |  520 ++++++
+ .../platform/rockchip/rkvenc/rkvenc-regs.h    |  379 +++++
+ .../platform/rockchip/rkvenc/rkvenc-vepu580.c |  585 +++++++
+ .../media/platform/rockchip/rkvenc/rkvenc.c   | 1502 +++++++++++++++++
+ .../media/platform/rockchip/rkvenc/rkvenc.h   |  234 +++
+ 9 files changed, 3246 insertions(+)
+ create mode 100644 drivers/media/platform/rockchip/rkvenc/Kconfig
+ create mode 100644 drivers/media/platform/rockchip/rkvenc/Makefile
+ create mode 100644 drivers/media/platform/rockchip/rkvenc/rkvenc-h264.c
+ create mode 100644 drivers/media/platform/rockchip/rkvenc/rkvenc-regs.h
+ create mode 100644 drivers/media/platform/rockchip/rkvenc/rkvenc-vepu580.c
+ create mode 100644 drivers/media/platform/rockchip/rkvenc/rkvenc.c
+ create mode 100644 drivers/media/platform/rockchip/rkvenc/rkvenc.h
+
+diff --git a/drivers/media/platform/rockchip/Kconfig b/drivers/media/platform/rockchip/Kconfig
+index ba401d32f..e6afa6092 100644
+--- a/drivers/media/platform/rockchip/Kconfig
++++ b/drivers/media/platform/rockchip/Kconfig
+@@ -6,3 +6,4 @@ source "drivers/media/platform/rockchip/rga/Kconfig"
+ source "drivers/media/platform/rockchip/rkcif/Kconfig"
+ source "drivers/media/platform/rockchip/rkisp1/Kconfig"
+ source "drivers/media/platform/rockchip/rkvdec/Kconfig"
++source "drivers/media/platform/rockchip/rkvenc/Kconfig"
+diff --git a/drivers/media/platform/rockchip/Makefile b/drivers/media/platform/rockchip/Makefile
+index 0e0b2cbbd..6a1d847a1 100644
+--- a/drivers/media/platform/rockchip/Makefile
++++ b/drivers/media/platform/rockchip/Makefile
+@@ -3,3 +3,4 @@ obj-y += rga/
+ obj-y += rkcif/
+ obj-y += rkisp1/
+ obj-y += rkvdec/
++obj-y += rkvenc/
+diff --git a/drivers/media/platform/rockchip/rkvenc/Kconfig b/drivers/media/platform/rockchip/rkvenc/Kconfig
+new file mode 100644
+index 000000000..62bb1c7d5
+--- /dev/null
++++ b/drivers/media/platform/rockchip/rkvenc/Kconfig
+@@ -0,0 +1,17 @@
++# SPDX-License-Identifier: GPL-2.0
++config VIDEO_ROCKCHIP_VENC
++	tristate "Rockchip VEPU580 stateless video encoder driver"
++	depends on ARCH_ROCKCHIP || COMPILE_TEST
++	depends on VIDEO_DEV
++	select MEDIA_CONTROLLER
++	select VIDEOBUF2_DMA_CONTIG
++	select V4L2_MEM2MEM_DEV
++	select V4L2_H264
++	select V4L2_H264_ENC
++	help
++	  Support for the VEPU580 (RKVENC) video encoder of the Rockchip
++	  RK3588, using the V4L2 stateless encoder interface. H.264 is
++	  supported.
++
++	  To compile this driver as a module, choose M here: the module
++	  will be called rockchip-venc.
+diff --git a/drivers/media/platform/rockchip/rkvenc/Makefile b/drivers/media/platform/rockchip/rkvenc/Makefile
+new file mode 100644
+index 000000000..f41e2d2af
+--- /dev/null
++++ b/drivers/media/platform/rockchip/rkvenc/Makefile
+@@ -0,0 +1,7 @@
++# SPDX-License-Identifier: GPL-2.0
++obj-$(CONFIG_VIDEO_ROCKCHIP_VENC) += rockchip-venc.o
++
++rockchip-venc-y += \
++		rkvenc.o \
++		rkvenc-h264.o \
++		rkvenc-vepu580.o
+diff --git a/drivers/media/platform/rockchip/rkvenc/rkvenc-h264.c b/drivers/media/platform/rockchip/rkvenc/rkvenc-h264.c
+new file mode 100644
+index 000000000..c669a6322
+--- /dev/null
++++ b/drivers/media/platform/rockchip/rkvenc/rkvenc-h264.c
+@@ -0,0 +1,520 @@
++// SPDX-License-Identifier: GPL-2.0
++/*
++ * Rockchip VEPU580 (RKVENC) H.264 encoding backend
++ *
++ * Parameter sets are generated by the V4L2 H.264 stateless encode core and
++ * written by the CPU at the start of the CAPTURE buffer. The hardware
++ * writes the start code, NAL header and slice header of each slice from
++ * the syntax registers, followed by the slice data.
++ *
++ * The hardware reads exactly one reference picture per frame, so the
++ * stream is restricted to I and P frames with a single reference frame.
++ */
++
++#include <linux/bitfield.h>
++#include <linux/moduleparam.h>
++#include <linux/sizes.h>
++#include <linux/slab.h>
++#include <media/v4l2-h264-enc.h>
++
++#include "rkvenc.h"
++
++#define RKVENC_H264_ROW_QP_RANGE	2
++
++static unsigned int row_rc_qp_range = RKVENC_H264_ROW_QP_RANGE;
++module_param(row_rc_qp_range, uint, 0644);
++MODULE_PARM_DESC(row_rc_qp_range,
++		 "CBR: maximum per-row QP change by the hardware rate control (0 = frame-level rate control only)");
++
++#define RKVENC_H264_PROFILE_BASELINE	66
++#define RKVENC_H264_PROFILE_MAIN	77
++#define RKVENC_H264_PROFILE_HIGH	100
++
++struct rkvenc_h264_rec_buf {
++	struct rkvenc_rec_buf rec;
++};
++
++static int rkvenc_h264_state_constrain(struct v4l2_h264_enc *enc,
++				       struct v4l2_h264_enc_state *state)
++{
++	struct v4l2_ctrl_h264_sps *sps = &state->sps;
++	struct v4l2_ctrl_h264_pps *pps = &state->pps;
++	struct v4l2_ctrl_h264_encode_params *encode = &state->encode;
++
++	/* SPS: 8-bit 4:2:0 progressive, Baseline, Main or High. */
++	switch (sps->profile_idc) {
++	case RKVENC_H264_PROFILE_BASELINE:
++	case RKVENC_H264_PROFILE_MAIN:
++	case RKVENC_H264_PROFILE_HIGH:
++		break;
++	default:
++		sps->profile_idc = RKVENC_H264_PROFILE_HIGH;
++		break;
++	}
++
++	if (!sps->level_idc)
++		sps->level_idc = 51;
++
++	/*
++	 * The hardware writes pic_order_cnt_lsb in its slice headers, so only
++	 * picture order count type 0 can be described.
++	 */
++	if (sps->pic_order_cnt_type)
++		return -EINVAL;
++
++	if (V4L2_H264_SPS_HAS_CHROMA_FORMAT(sps)) {
++		sps->chroma_format_idc = 1;
++		sps->flags &= ~(V4L2_H264_SPS_FLAG_SEPARATE_COLOUR_PLANE |
++				V4L2_H264_SPS_FLAG_QPPRIME_Y_ZERO_TRANSFORM_BYPASS);
++		sps->bit_depth_luma_minus8 = 0;
++		sps->bit_depth_chroma_minus8 = 0;
++	}
++
++	sps->flags |= V4L2_H264_SPS_FLAG_FRAME_MBS_ONLY |
++		      V4L2_H264_SPS_FLAG_DIRECT_8X8_INFERENCE;
++	sps->flags &= ~(V4L2_H264_SPS_FLAG_MB_ADAPTIVE_FRAME_FIELD |
++			V4L2_H264_SPS_FLAG_GAPS_IN_FRAME_NUM_VALUE_ALLOWED);
++
++	/* One reference read port. */
++	if (sps->max_num_ref_frames > 1)
++		sps->max_num_ref_frames = 1;
++
++	if (sps->log2_max_frame_num_minus4 > 12)
++		sps->log2_max_frame_num_minus4 = 12;
++	if (sps->log2_max_pic_order_cnt_lsb_minus4 > 12)
++		sps->log2_max_pic_order_cnt_lsb_minus4 = 12;
++
++	/* PPS */
++	if (sps->profile_idc == RKVENC_H264_PROFILE_BASELINE)
++		pps->flags &= ~V4L2_H264_PPS_FLAG_ENTROPY_CODING_MODE;
++	if (sps->profile_idc != RKVENC_H264_PROFILE_HIGH) {
++		pps->flags &= ~V4L2_H264_PPS_FLAG_TRANSFORM_8X8_MODE;
++		/* second_chroma_qp_index_offset is a High profile syntax element. */
++		pps->second_chroma_qp_index_offset = pps->chroma_qp_index_offset;
++	}
++
++	pps->num_ref_idx_l0_default_active_minus1 = 0;
++	pps->num_ref_idx_l1_default_active_minus1 = 0;
++
++	/* Encode parameters */
++	encode->flags &= ~(V4L2_H264_ENCODE_FLAG_FIELD_PIC |
++			   V4L2_H264_ENCODE_FLAG_BOTTOM_FIELD |
++			   V4L2_H264_ENCODE_FLAG_NUM_REF_IDX_ACTIVE_OVERRIDE);
++	encode->num_ref_idx_l0_active_minus1 = 0;
++	encode->num_ref_idx_l1_active_minus1 = 0;
++	encode->colour_plane_id = 0;
++
++	if (!(pps->flags & V4L2_H264_PPS_FLAG_DEBLOCKING_FILTER_CONTROL_PRESENT)) {
++		encode->disable_deblocking_filter_idc = 0;
++		encode->slice_alpha_c0_offset_div2 = 0;
++		encode->slice_beta_offset_div2 = 0;
++	}
++
++	if (!(pps->flags & V4L2_H264_PPS_FLAG_ENTROPY_CODING_MODE))
++		encode->cabac_init_idc = 0;
++
++	return 0;
++}
++
++static void rkvenc_h264_rec_size(struct rkvenc_ctx *ctx, size_t *hdr,
++				 size_t *body, size_t *thumb)
++{
++	const struct v4l2_pix_format_mplane *pix = &ctx->coded_fmt.fmt.pix_mp;
++	/* FBC data needs 16 extra lines for the hardware I/O. */
++	unsigned int aw = ALIGN(pix->width, 64);
++	unsigned int ah = ALIGN(pix->height, 16) + 16;
++
++	*hdr = ALIGN(aw * ah / 64, SZ_8K);
++	*body = aw * ah * 3 / 2;
++	*thumb = ALIGN(DIV_ROUND_UP(aw, 64) * DIV_ROUND_UP(ah, 64) * 256, SZ_8K);
++}
++
++static int rkvenc_h264_rec_buffer_alloc(struct v4l2_h264_enc *enc,
++					struct v4l2_h264_enc_rec_buffer *buffer)
++{
++	struct rkvenc_ctx *ctx = enc->private_data;
++	struct rkvenc_h264_rec_buf *buf;
++	size_t hdr, body, thumb;
++	int ret;
++
++	buf = kzalloc_obj(*buf);
++	if (!buf)
++		return -ENOMEM;
++
++	rkvenc_h264_rec_size(ctx, &hdr, &body, &thumb);
++	buf->rec.fbc_hdr_size = hdr;
++
++	ret = rkvenc_alloc_aux(ctx->dev, &buf->rec.pixel, hdr + body, false);
++	if (ret)
++		goto err_free;
++
++	ret = rkvenc_alloc_aux(ctx->dev, &buf->rec.thumb, thumb, false);
++	if (ret)
++		goto err_free_pixel;
++
++	buffer->private_data = buf;
++	return 0;
++
++err_free_pixel:
++	rkvenc_free_aux(ctx->dev, &buf->rec.pixel);
++err_free:
++	kfree(buf);
++	return ret;
++}
++
++static int rkvenc_h264_rec_buffer_free(struct v4l2_h264_enc *enc,
++				       struct v4l2_h264_enc_rec_buffer *buffer)
++{
++	struct rkvenc_ctx *ctx = enc->private_data;
++	struct rkvenc_h264_rec_buf *buf = buffer->private_data;
++
++	if (!buf)
++		return -EINVAL;
++
++	rkvenc_free_aux(ctx->dev, &buf->rec.thumb);
++	rkvenc_free_aux(ctx->dev, &buf->rec.pixel);
++	kfree(buf);
++	buffer->private_data = NULL;
++	return 0;
++}
++
++static const struct v4l2_h264_enc_ops rkvenc_h264_enc_ops = {
++	.state_constrain = rkvenc_h264_state_constrain,
++	.rec_buffer_alloc = rkvenc_h264_rec_buffer_alloc,
++	.rec_buffer_free = rkvenc_h264_rec_buffer_free,
++};
++
++static int rkvenc_h264_start(struct rkvenc_ctx *ctx)
++{
++	struct rkvenc_h264_ctx *h264;
++	struct v4l2_h264_enc *enc;
++	int ret;
++
++	h264 = kzalloc_obj(*h264);
++	if (!h264)
++		return -ENOMEM;
++
++	enc = &h264->enc;
++	enc->ops = &rkvenc_h264_enc_ops;
++	enc->private_data = ctx;
++	enc->format_mplane = &ctx->coded_fmt.fmt.pix_mp;
++	enc->timeperframe = &ctx->timeperframe;
++	enc->ctrl_handler = &ctx->ctrl_hdl;
++	enc->ref_slots_count_init = 1;
++	enc->flags = V4L2_H264_ENC_FLAG_INTER_PRED |
++		     V4L2_H264_ENC_FLAG_HW_SLICE_HEADER |
++		     V4L2_H264_ENC_FLAG_CHROMA_QP_CR_OFFSET;
++
++	ret = v4l2_h264_enc_init(enc);
++	if (ret) {
++		kfree(h264);
++		return ret;
++	}
++
++	ctx->priv = h264;
++	return 0;
++}
++
++static void rkvenc_h264_stop(struct rkvenc_ctx *ctx)
++{
++	struct rkvenc_h264_ctx *h264 = ctx->priv;
++
++	if (!h264)
++		return;
++
++	v4l2_h264_enc_exit(&h264->enc);
++	kfree(h264);
++	ctx->priv = NULL;
++}
++
++static struct rkvenc_rec_buf *
++rkvenc_h264_rec(struct v4l2_h264_enc_rec_buffer *buffer)
++{
++	struct rkvenc_h264_rec_buf *buf = buffer->private_data;
++
++	return buf ? &buf->rec : NULL;
++}
++
++static void rkvenc_h264_setup_refs(struct rkvenc_h264_ctx *h264,
++				   struct rkvenc_core *core, bool intra)
++{
++	struct v4l2_h264_enc_ref *ref = &h264->enc.ref;
++	struct rkvenc_rec_buf *rec = rkvenc_h264_rec(&ref->buffer_current);
++	struct rkvenc_rec_buf *refr = NULL;
++
++	rkvenc_set(core, VEPU580_RFPW_H_ADDR, rec->pixel.dma);
++	rkvenc_set(core, VEPU580_RFPW_B_ADDR, rec->pixel.dma + rec->fbc_hdr_size);
++	rkvenc_set(core, VEPU580_DSPW_ADDR, rec->thumb.dma);
++
++	if (!intra && ref->l0_active_count)
++		refr = rkvenc_h264_rec(&ref->buffers[ref->l0[0].index]);
++
++	if (refr) {
++		rkvenc_set(core, VEPU580_RFPR_H_ADDR, refr->pixel.dma);
++		rkvenc_set(core, VEPU580_RFPR_B_ADDR,
++			   refr->pixel.dma + refr->fbc_hdr_size);
++		rkvenc_set(core, VEPU580_DSPR_ADDR, refr->thumb.dma);
++	}
++}
++
++static void rkvenc_h264_setup_syntax(struct rkvenc_core *core,
++				     const struct v4l2_h264_enc_state *state)
++{
++	const struct v4l2_ctrl_h264_sps *sps = &state->sps;
++	const struct v4l2_ctrl_h264_pps *pps = &state->pps;
++	const struct v4l2_ctrl_h264_encode_params *encode = &state->encode;
++	bool intra = encode->slice_type == V4L2_H264_SLICE_TYPE_I;
++	bool idr = encode->flags & V4L2_H264_ENCODE_FLAG_IDR_PIC;
++	bool cabac = pps->flags & V4L2_H264_PPS_FLAG_ENTROPY_CODING_MODE;
++	u32 val;
++
++	rkvenc_or(core, VEPU580_ENC_PIC,
++		  FIELD_PREP(VEPU580_ENC_PIC_ENC_STND, VEPU580_ENC_STND_H264) |
++		  (encode->nal_ref_idc ? VEPU580_ENC_PIC_CUR_FRM_REF : 0) |
++		  VEPU580_ENC_PIC_BS_SCP);
++
++	rkvenc_set(core, VEPU580_H264_SYNT_NAL,
++		   FIELD_PREP(VEPU580_H264_NAL_REF_IDC, encode->nal_ref_idc) |
++		   FIELD_PREP(VEPU580_H264_NAL_UNIT_TYPE,
++			      idr ? V4L2_H264_NALU_TYPE_SLICE_IDR :
++				    V4L2_H264_NALU_TYPE_SLICE_NON_IDR));
++
++	rkvenc_set(core, VEPU580_H264_SYNT_SPS,
++		   FIELD_PREP(VEPU580_H264_SPS_MAX_FNUM,
++			      sps->log2_max_frame_num_minus4) |
++		   ((sps->flags & V4L2_H264_SPS_FLAG_DIRECT_8X8_INFERENCE) ?
++		    VEPU580_H264_SPS_DRCT_8X8 : 0) |
++		   FIELD_PREP(VEPU580_H264_SPS_MPOC_LM4,
++			      sps->log2_max_pic_order_cnt_lsb_minus4));
++
++	val = (cabac ? VEPU580_H264_PPS_ETPY_MODE : 0) |
++	      FIELD_PREP(VEPU580_H264_PPS_NUM_REF0_IDX,
++			 pps->num_ref_idx_l0_default_active_minus1) |
++	      FIELD_PREP(VEPU580_H264_PPS_NUM_REF1_IDX,
++			 pps->num_ref_idx_l1_default_active_minus1) |
++	      FIELD_PREP(VEPU580_H264_PPS_PIC_INIT_QP,
++			 pps->pic_init_qp_minus26 + 26) |
++	      FIELD_PREP(VEPU580_H264_PPS_CB_OFST,
++			 pps->chroma_qp_index_offset & 0x1f) |
++	      FIELD_PREP(VEPU580_H264_PPS_CR_OFST,
++			 pps->second_chroma_qp_index_offset & 0x1f);
++	if (pps->flags & V4L2_H264_PPS_FLAG_TRANSFORM_8X8_MODE)
++		val |= VEPU580_H264_PPS_TRNS_8X8;
++	if (pps->flags & V4L2_H264_PPS_FLAG_CONSTRAINED_INTRA_PRED)
++		val |= VEPU580_H264_PPS_CSIP_FLAG;
++	if (pps->flags & V4L2_H264_PPS_FLAG_DEBLOCKING_FILTER_CONTROL_PRESENT)
++		val |= VEPU580_H264_PPS_DBF_CP_FLG;
++	rkvenc_set(core, VEPU580_H264_SYNT_PPS, val);
++
++	rkvenc_set(core, VEPU580_H264_SYNT_SLI0,
++		   FIELD_PREP(VEPU580_H264_SLI0_SLI_TYPE,
++			      intra ? VEPU580_H264_SLI_TYPE_I :
++				      VEPU580_H264_SLI_TYPE_P) |
++		   FIELD_PREP(VEPU580_H264_SLI0_PPS_ID,
++			      encode->pic_parameter_set_id) |
++		   FIELD_PREP(VEPU580_H264_SLI0_CBC_INIT_IDC,
++			      encode->cabac_init_idc) |
++		   FIELD_PREP(VEPU580_H264_SLI0_FRM_NUM, encode->frame_num));
++
++	rkvenc_set(core, VEPU580_H264_SYNT_SLI1,
++		   FIELD_PREP(VEPU580_H264_SLI1_IDR_PID,
++			      idr ? encode->idr_pic_id : 0xffff) |
++		   FIELD_PREP(VEPU580_H264_SLI1_POC_LSB,
++			      encode->pic_order_cnt_lsb));
++
++	rkvenc_set(core, VEPU580_H264_SYNT_SLI2,
++		   FIELD_PREP(VEPU580_H264_SLI2_SLI_BETA_OFST,
++			      encode->slice_beta_offset_div2 & 0xf) |
++		   FIELD_PREP(VEPU580_H264_SLI2_SLI_ALPH_OFST,
++			      encode->slice_alpha_c0_offset_div2 & 0xf) |
++		   FIELD_PREP(VEPU580_H264_SLI2_DIS_DBLK_IDC,
++			      encode->disable_deblocking_filter_idc));
++
++	/* Sliding window marking only; long-term marking on IDR. */
++	val = 0;
++	if (idr && (encode->flags & V4L2_H264_ENCODE_FLAG_NO_OUTPUT_OF_PRIOR_PICS))
++		val |= VEPU580_H264_REFM0_NOPP_FLG;
++	if (idr && (encode->flags & V4L2_H264_ENCODE_FLAG_LONG_TERM_REFERENCE))
++		val |= VEPU580_H264_REFM0_LTRF_FLG;
++	rkvenc_set(core, VEPU580_H264_SYNT_REFM0, val);
++	rkvenc_set(core, VEPU580_H264_SYNT_REFM1, 0);
++	rkvenc_set(core, VEPU580_H264_SYNT_REFM2, 0);
++
++	val = VEPU580_RDO_CFG_INTER_4X4 | VEPU580_RDO_CFG_CHRM_SPCL |
++	      VEPU580_RDO_CFG_CCWA_E | VEPU580_RDO_CFG_ATR_E |
++	      VEPU580_RDO_CFG_ATF_INTRA_E;
++	if (sps->profile_idc == RKVENC_H264_PROFILE_BASELINE &&
++	    sps->level_idc <= 30)
++		val |= VEPU580_RDO_CFG_RECT_SIZE;
++	if (sps->profile_idc < RKVENC_H264_PROFILE_MAIN && !cabac)
++		val |= VEPU580_RDO_CFG_VLC_LMT;
++	rkvenc_set(core, VEPU580_RDO_CFG, val);
++}
++
++static int rkvenc_h264_run(struct rkvenc_ctx *ctx, struct rkvenc_core *core,
++			   struct rkvenc_run *run)
++{
++	struct rkvenc_h264_ctx *h264 = ctx->priv;
++	struct v4l2_h264_enc *enc = &h264->enc;
++	const struct v4l2_h264_enc_state *state = &enc->state_active;
++	const struct v4l2_h264_enc_rc *rc = &enc->rc;
++	unsigned int mbs;
++	bool intra;
++	int ret;
++
++	/* The parameter sets are written through the kernel mapping. */
++	if (!vb2_plane_vaddr(&run->dst->vb2_buf, 0))
++		return -ENOMEM;
++
++	ret = v4l2_h264_enc_step(enc, run->dst);
++	if (ret)
++		return ret;
++
++	run->hdr_bytes = v4l2_h264_enc_rbsp_bytes_count(&enc->rbsp);
++	if (run->hdr_bytes + SZ_4K > rkvenc_dst_size(run))
++		return -ENOSPC;
++
++	intra = state->encode.slice_type == V4L2_H264_SLICE_TYPE_I;
++	mbs = state->width_mbs * state->height_mbs;
++
++	/* A P frame must have a reconstructed reference to read. */
++	if (!intra && (!enc->ref.l0_active_count ||
++		       !enc->ref.buffers[enc->ref.l0[0].index].private_data))
++		return -EINVAL;
++
++	vepu580_setup_common(ctx, core, run);
++	rkvenc_h264_setup_syntax(core, state);
++	rkvenc_h264_setup_refs(h264, core, intra);
++	vepu580_setup_me(core, state->width_mbs, state->height_mbs,
++			 state->sps.level_idc, intra);
++	vepu580_setup_h264_tuning(ctx->dev, core, intra);
++
++	/*
++	 * In CBR mode the frame size target from the common rate control is
++	 * handed to the hardware row rate control, which adapts the QP of
++	 * each macroblock row by up to RKVENC_H264_ROW_QP_RANGE.
++	 */
++	h264->hw_rc = rc->mode && rc->mode->type == V4L2_H264_ENC_RC_TYPE_CBR &&
++		      READ_ONCE(row_rc_qp_range);
++	if (h264->hw_rc)
++		vepu580_setup_row_rc(core, rc->qp, state->qp_min, state->qp_max,
++				     min(READ_ONCE(row_rc_qp_range), 15U),
++				     (u64)rc->size * 8,
++				     mbs, state->width_mbs);
++	else
++		vepu580_setup_fixed_qp(core, rc->qp);
++
++	return 0;
++}
++
++static void rkvenc_h264_done(struct rkvenc_ctx *ctx, struct rkvenc_run *run,
++			     const struct rkvenc_feedback *fb,
++			     enum vb2_buffer_state *state)
++{
++	struct rkvenc_h264_ctx *h264 = ctx->priv;
++	struct v4l2_h264_enc *enc;
++	unsigned int mbs, avg_qp;
++	u64 bytes;
++
++	if (!h264 || *state != VB2_BUF_STATE_DONE)
++		return;
++
++	enc = &h264->enc;
++	bytes = run->hdr_bytes + fb->bs_len;
++	if (!fb->bs_len || bytes > rkvenc_dst_size(run)) {
++		*state = VB2_BUF_STATE_ERROR;
++		return;
++	}
++
++	vb2_set_plane_payload(&run->dst->vb2_buf, 0, bytes);
++
++	mbs = enc->state_active.width_mbs * enc->state_active.height_mbs;
++	avg_qp = mbs ? DIV_ROUND_CLOSEST(fb->qp_sum, mbs) : 0;
++
++	/*
++	 * Don't feed the measured average back into the rate control
++	 * statistics: with adaptive quantisation it sits a few steps below the
++	 * frame QP, and the frame-level estimate then spirals down.
++	 */
++	if (ctx->avg_qp_ctrl)
++		v4l2_ctrl_s_ctrl(ctx->avg_qp_ctrl, min(avg_qp, 51U));
++
++	if (v4l2_h264_enc_complete(enc, run->dst))
++		*state = VB2_BUF_STATE_ERROR;
++}
++
++static int rkvenc_h264_adjust_fmt(struct rkvenc_ctx *ctx, struct v4l2_format *f)
++{
++	return 0;
++}
++
++static const struct rkvenc_codec_ops rkvenc_h264_ops = {
++	.adjust_fmt = rkvenc_h264_adjust_fmt,
++	.start = rkvenc_h264_start,
++	.stop = rkvenc_h264_stop,
++	.run = rkvenc_h264_run,
++	.done = rkvenc_h264_done,
++};
++
++static const struct v4l2_ctrl_config rkvenc_h264_ctrl_cfgs[] = {
++	{ .id = V4L2_CID_STATELESS_H264_SPS, },
++	{ .id = V4L2_CID_STATELESS_H264_PPS, },
++	{ .id = V4L2_CID_STATELESS_H264_ENCODE_PARAMS, },
++	{
++		.id = V4L2_CID_STATELESS_H264_START_CODE,
++		.min = V4L2_STATELESS_H264_START_CODE_ANNEX_B,
++		.max = V4L2_STATELESS_H264_START_CODE_ANNEX_B,
++		.def = V4L2_STATELESS_H264_START_CODE_ANNEX_B,
++	},
++	{ .id = V4L2_CID_MPEG_VIDEO_AU_DELIMITER, .max = 1, .step = 1, },
++	{ .id = V4L2_CID_MPEG_VIDEO_PREPEND_SPSPPS_TO_IDR, .max = 1, .step = 1, },
++	{ .id = V4L2_CID_MPEG_VIDEO_FRAME_RC_ENABLE, .max = 1, .step = 1, },
++	{
++		.id = V4L2_CID_MPEG_VIDEO_BITRATE_MODE,
++		.min = V4L2_MPEG_VIDEO_BITRATE_MODE_VBR,
++		.max = V4L2_MPEG_VIDEO_BITRATE_MODE_CQ,
++		.def = V4L2_MPEG_VIDEO_BITRATE_MODE_CBR,
++		.menu_skip_mask = BIT(V4L2_MPEG_VIDEO_BITRATE_MODE_VBR),
++	},
++	{
++		.id = V4L2_CID_MPEG_VIDEO_BITRATE,
++		.min = 10000, .max = 200000000, .step = 1, .def = 10000000,
++	},
++	{
++		.id = V4L2_CID_MPEG_VIDEO_CONSTANT_QUALITY,
++		.min = 1, .max = 100, .step = 1, .def = 50,
++	},
++	{ .id = V4L2_CID_MPEG_VIDEO_H264_MIN_QP, .max = 51, .step = 1, .def = 10, },
++	{ .id = V4L2_CID_MPEG_VIDEO_H264_MAX_QP, .max = 51, .step = 1, .def = 51, },
++	{ .id = V4L2_CID_MPEG_VIDEO_H264_I_FRAME_QP, .max = 51, .step = 1, .def = 26, },
++	{ .id = V4L2_CID_MPEG_VIDEO_H264_P_FRAME_QP, .max = 51, .step = 1, .def = 28, },
++	{ .id = V4L2_CID_MPEG_VIDEO_H264_VUI_SAR_ENABLE, .max = 1, .step = 1, },
++	{
++		.id = V4L2_CID_MPEG_VIDEO_H264_VUI_SAR_IDC,
++		.max = V4L2_MPEG_VIDEO_H264_VUI_SAR_IDC_EXTENDED,
++		.def = V4L2_MPEG_VIDEO_H264_VUI_SAR_IDC_UNSPECIFIED,
++	},
++	{ .id = V4L2_CID_MPEG_VIDEO_H264_VUI_EXT_SAR_WIDTH, .max = 0xffff, .step = 1, },
++	{ .id = V4L2_CID_MPEG_VIDEO_H264_VUI_EXT_SAR_HEIGHT, .max = 0xffff, .step = 1, },
++	{ .id = V4L2_CID_MPEG_VIDEO_AVERAGE_QP, .max = 51, .step = 1, },
++};
++
++static const struct rkvenc_ctrls rkvenc_h264_ctrls = {
++	.ctrls = rkvenc_h264_ctrl_cfgs,
++	.num_ctrls = ARRAY_SIZE(rkvenc_h264_ctrl_cfgs),
++};
++
++const struct rkvenc_coded_fmt_desc rkvenc_h264_fmt_desc = {
++	.fourcc = V4L2_PIX_FMT_H264_SLICE,
++	.frmsize = {
++		.min_width = 64,
++		/* The external line buffer for wider pictures is not handled. */
++		.max_width = 4096,
++		.step_width = 2,
++		.min_height = 64,
++		.max_height = 4096,
++		.step_height = 2,
++	},
++	.ctrls = &rkvenc_h264_ctrls,
++	.ops = &rkvenc_h264_ops,
++};
+diff --git a/drivers/media/platform/rockchip/rkvenc/rkvenc-regs.h b/drivers/media/platform/rockchip/rkvenc/rkvenc-regs.h
+new file mode 100644
+index 000000000..6957cdf53
+--- /dev/null
++++ b/drivers/media/platform/rockchip/rkvenc/rkvenc-regs.h
+@@ -0,0 +1,379 @@
++/* SPDX-License-Identifier: GPL-2.0 */
++/*
++ * Rockchip VEPU580 (RKVENC v2) register definitions
++ *
++ * The register meanings and field layouts were taken from the Rockchip MPP
++ * user space library register structures (vepu580_common.h,
++ * hal_h264e_vepu580_reg.h). No TRM chapter was available.
++ */
++
++#ifndef RKVENC_REGS_H_
++#define RKVENC_REGS_H_
++
++#include <linux/bits.h>
++
++/* Control class */
++#define VEPU580_VERSION				0x0000
++#define VEPU580_ENC_STRT			0x0010
++#define   VEPU580_ENC_STRT_LKT_NUM		GENMASK(7, 0)
++#define   VEPU580_ENC_STRT_VEPU_CMD		GENMASK(9, 8)
++#define VEPU580_ENC_CLR				0x0014
++#define   VEPU580_ENC_CLR_SAFE			BIT(0)
++#define   VEPU580_ENC_CLR_FORCE			BIT(1)
++#define VEPU580_INT_EN				0x0020
++#define VEPU580_INT_MSK				0x0024
++#define VEPU580_INT_CLR				0x0028
++#define VEPU580_INT_STA				0x002c
++#define   VEPU580_INT_ENC_DONE			BIT(0)
++#define   VEPU580_INT_LKT_NODE_DONE		BIT(1)
++#define   VEPU580_INT_SCLR_DONE			BIT(2)
++#define   VEPU580_INT_SLC_DONE			BIT(3)
++#define   VEPU580_INT_BSF_OFLW			BIT(4)
++#define   VEPU580_INT_BRSP_OTSD			BIT(5)
++#define   VEPU580_INT_WBUS_ERR			BIT(6)
++#define   VEPU580_INT_RBUS_ERR			BIT(7)
++#define   VEPU580_INT_WDG			BIT(8)
++#define   VEPU580_INT_LKT_ERR			BIT(9)
++#define   VEPU580_INT_ALL			GENMASK(9, 0)
++#define   VEPU580_INT_ERROR			GENMASK(9, 4)
++#define VEPU580_DTRNS_MAP			0x0030
++#define   VEPU580_DTRNS_MAP_LPFW_BUS_ORDR	BIT(0)
++#define   VEPU580_DTRNS_MAP_CMVW_BUS_ORDR	BIT(1)
++#define   VEPU580_DTRNS_MAP_DSPW_BUS_ORDR	BIT(2)
++#define   VEPU580_DTRNS_MAP_RFPW_BUS_ORDR	BIT(3)
++#define   VEPU580_DTRNS_MAP_SRC_BUS_EDIN	GENMASK(7, 4)
++#define   VEPU580_DTRNS_MAP_MEIW_BUS_EDIN	GENMASK(11, 8)
++#define   VEPU580_DTRNS_MAP_BSW_BUS_EDIN	GENMASK(14, 12)
++#define   VEPU580_DTRNS_MAP_AFBC_BSIZE		BIT(27)
++#define VEPU580_DTRNS_CFG			0x0034
++#define   VEPU580_DTRNS_CFG_DSPR_OTSD		BIT(7)
++#define   VEPU580_DTRNS_CFG_AXI_BRSP_CKE	GENMASK(23, 16)
++#define VEPU580_ENC_WDG				0x0038
++#define   VEPU580_ENC_WDG_VS_LOAD_THD		GENMASK(23, 0)
++#define   VEPU580_ENC_WDG_RFP_LOAD_THD		GENMASK(31, 24)
++#define VEPU580_FUNC_EN				0x0054
++#define   VEPU580_FUNC_EN_CKE			BIT(0)
++#define   VEPU580_FUNC_EN_RESETN_HW_EN		BIT(1)
++#define   VEPU580_FUNC_EN_ENC_DONE_TMVP_EN	BIT(2)
++#define   VEPU580_FUNC_EN_SRAM_CKG_EN		BIT(3)
++#define VEPU580_RDO_CKG				0x0058
++#define VEPU580_CTL_START			0x0030
++#define VEPU580_CTL_END				0x005c
++
++/* Frame class: addresses */
++#define VEPU580_ADR_SRC0			0x0280
++#define VEPU580_ADR_SRC1			0x0284
++#define VEPU580_ADR_SRC2			0x0288
++#define VEPU580_RFPW_H_ADDR			0x028c
++#define VEPU580_RFPW_B_ADDR			0x0290
++#define VEPU580_RFPR_H_ADDR			0x0294
++#define VEPU580_RFPR_B_ADDR			0x0298
++#define VEPU580_CMVW_ADDR			0x029c
++#define VEPU580_CMVR_ADDR			0x02a0
++#define VEPU580_DSPW_ADDR			0x02a4
++#define VEPU580_DSPR_ADDR			0x02a8
++#define VEPU580_MEIW_ADDR			0x02ac
++#define VEPU580_BSBT_ADDR			0x02b0
++#define VEPU580_BSBB_ADDR			0x02b4
++#define VEPU580_BSBR_ADDR			0x02b8
++#define VEPU580_ADR_BSBS			0x02bc
++#define VEPU580_LPFW_ADDR			0x02c0
++#define VEPU580_LPFR_ADDR			0x02c4
++#define VEPU580_EBUFT_ADDR			0x02d8
++#define VEPU580_EBUFB_ADDR			0x02dc
++
++/* Frame class: control */
++#define VEPU580_ENC_PIC				0x0300
++#define   VEPU580_ENC_PIC_ENC_STND		BIT(0)
++#define     VEPU580_ENC_STND_H264		0
++#define     VEPU580_ENC_STND_HEVC		1
++#define   VEPU580_ENC_PIC_ROI_EN		BIT(1)
++#define   VEPU580_ENC_PIC_CUR_FRM_REF		BIT(2)
++#define   VEPU580_ENC_PIC_MEI_STOR		BIT(3)
++#define   VEPU580_ENC_PIC_BS_SCP		BIT(4)
++#define   VEPU580_ENC_PIC_PIC_QP		GENMASK(13, 8)
++#define   VEPU580_ENC_PIC_NUM_PIC_TOT_CUR	GENMASK(18, 14)
++#define   VEPU580_ENC_PIC_LOG2_CTU_NUM		GENMASK(23, 19)
++#define   VEPU580_ENC_PIC_SLEN_FIFO		BIT(30)
++#define   VEPU580_ENC_PIC_REC_FBC_DIS		BIT(31)
++#define VEPU580_DUAL_CORE			0x0304
++#define VEPU580_ENC_RSL				0x0310
++#define   VEPU580_ENC_RSL_PIC_WD8_M1		GENMASK(10, 0)
++#define   VEPU580_ENC_RSL_PIC_HD8_M1		GENMASK(26, 16)
++#define VEPU580_SRC_FILL			0x0314
++#define   VEPU580_SRC_FILL_PIC_WFILL		GENMASK(5, 0)
++#define   VEPU580_SRC_FILL_PIC_HFILL		GENMASK(21, 16)
++#define VEPU580_SRC_FMT				0x0318
++#define   VEPU580_SRC_FMT_ALPHA_SWAP		BIT(0)
++#define   VEPU580_SRC_FMT_RBUV_SWAP		BIT(1)
++#define   VEPU580_SRC_FMT_SRC_CFMT		GENMASK(5, 2)
++#define     VEPU580_FMT_BGRA8888		0
++#define     VEPU580_FMT_BGR888			1
++#define     VEPU580_FMT_BGR565			2
++#define     VEPU580_FMT_ARGB1555		3
++#define     VEPU580_FMT_YUV422SP		4
++#define     VEPU580_FMT_YUV422P			5
++#define     VEPU580_FMT_YUV420SP		6
++#define     VEPU580_FMT_YUV420P			7
++#define     VEPU580_FMT_YUYV422			8
++#define     VEPU580_FMT_UYVY422			9
++#define     VEPU580_FMT_YUV400			10
++#define     VEPU580_FMT_AYUV2BPP		11
++#define     VEPU580_FMT_YUV444SP		12
++#define     VEPU580_FMT_YUV444P			13
++#define     VEPU580_FMT_ARGB4444		14
++#define     VEPU580_FMT_AYUV1BPP		15
++#define   VEPU580_SRC_FMT_SRC_RANGE		BIT(6)
++#define   VEPU580_SRC_FMT_OUT_FMT		BIT(7)
++#define VEPU580_SRC_UDFY			0x031c
++#define VEPU580_SRC_UDFU			0x0320
++#define VEPU580_SRC_UDFV			0x0324
++#define   VEPU580_SRC_UDF_WGT_B			GENMASK(8, 0)
++#define   VEPU580_SRC_UDF_WGT_G			GENMASK(17, 9)
++#define   VEPU580_SRC_UDF_WGT_R			GENMASK(26, 18)
++#define VEPU580_SRC_UDFO			0x0328
++#define   VEPU580_SRC_UDFO_OFST_V		GENMASK(7, 0)
++#define   VEPU580_SRC_UDFO_OFST_U		GENMASK(15, 8)
++#define   VEPU580_SRC_UDFO_OFST_Y		GENMASK(20, 16)
++#define VEPU580_SRC_PROC			0x032c
++#define   VEPU580_SRC_PROC_SRC_MIRR		BIT(26)
++#define   VEPU580_SRC_PROC_SRC_ROT		GENMASK(28, 27)
++#define   VEPU580_SRC_PROC_TXA_EN		BIT(29)
++#define   VEPU580_SRC_PROC_AFBCD_EN		BIT(30)
++#define VEPU580_PIC_OFST			0x0330
++#define   VEPU580_PIC_OFST_X			GENMASK(13, 0)
++#define   VEPU580_PIC_OFST_Y			GENMASK(29, 16)
++#define VEPU580_SRC_STRD0			0x0334
++#define   VEPU580_SRC_STRD0_STRD		GENMASK(16, 0)
++#define VEPU580_SRC_STRD1			0x0338
++#define   VEPU580_SRC_STRD1_STRD		GENMASK(15, 0)
++#define VEPU580_RC_CFG				0x0350
++#define   VEPU580_RC_CFG_RC_EN			BIT(0)
++#define   VEPU580_RC_CFG_AQ_EN			BIT(1)
++#define   VEPU580_RC_CFG_AQ_MODE		BIT(2)
++#define   VEPU580_RC_CFG_RC_CTU_NUM		GENMASK(31, 12)
++#define VEPU580_RC_QP				0x0354
++#define   VEPU580_RC_QP_RANGE			GENMASK(19, 16)
++#define   VEPU580_RC_QP_MAX			GENMASK(25, 20)
++#define   VEPU580_RC_QP_MIN			GENMASK(31, 26)
++#define VEPU580_RC_TGT				0x0358
++#define   VEPU580_RC_TGT_CTU_EBIT		GENMASK(19, 0)
++#define VEPU580_SLI_SPLT			0x0360
++#define   VEPU580_SLI_SPLT_EN			BIT(0)
++#define   VEPU580_SLI_SPLT_MODE			BIT(1)
++#define   VEPU580_SLI_SPLT_CPST			BIT(2)
++#define   VEPU580_SLI_SPLT_FLSH			BIT(15)
++#define   VEPU580_SLI_SPLT_MAX_NUM_M1		GENMASK(30, 16)
++#define VEPU580_SLI_BYTE			0x0364
++#define VEPU580_SLI_CNUM			0x0368
++#define VEPU580_ME_RNGE				0x0370
++#define   VEPU580_ME_RNGE_CME_SRCH_H		GENMASK(3, 0)
++#define   VEPU580_ME_RNGE_CME_SRCH_V		GENMASK(7, 4)
++#define   VEPU580_ME_RNGE_RME_SRCH_H		GENMASK(10, 8)
++#define   VEPU580_ME_RNGE_RME_SRCH_V		GENMASK(13, 11)
++#define   VEPU580_ME_RNGE_DLT_FRM_NUM		GENMASK(31, 16)
++#define VEPU580_ME_CFG				0x0374
++#define   VEPU580_ME_CFG_PMV_MDST_H		GENMASK(7, 0)
++#define   VEPU580_ME_CFG_PMV_MDST_V		GENMASK(15, 8)
++#define   VEPU580_ME_CFG_MV_LIMIT		GENMASK(17, 16)
++#define   VEPU580_ME_CFG_PMV_NUM		GENMASK(19, 18)
++#define   VEPU580_ME_CFG_COLMV_STOR		BIT(20)
++#define   VEPU580_ME_CFG_COLMV_LOAD		BIT(21)
++#define   VEPU580_ME_CFG_RME_DIS		GENMASK(24, 22)
++#define   VEPU580_ME_CFG_FME_DIS		GENMASK(29, 27)
++#define   VEPU580_ME_CFG_LVL4_OVRD_EN		BIT(31)
++#define VEPU580_ME_CACH				0x0378
++#define   VEPU580_ME_CACH_CME_RAMA_MAX		GENMASK(10, 0)
++#define   VEPU580_ME_CACH_CME_RAMA_H		GENMASK(15, 11)
++#define   VEPU580_ME_CACH_CACH_L2_TAG		GENMASK(17, 16)
++#define   VEPU580_ME_CACH_CME_LINEBUF_W		GENMASK(26, 18)
++#define VEPU580_GMV				0x0380
++#define VEPU580_ROI_EN				0x0390
++#define VEPU580_RDO_CFG				0x03a0
++#define   VEPU580_RDO_CFG_RECT_SIZE		BIT(0)
++#define   VEPU580_RDO_CFG_INTER_4X4		BIT(1)
++#define   VEPU580_RDO_CFG_ARB_SEL		BIT(2)
++#define   VEPU580_RDO_CFG_VLC_LMT		BIT(3)
++#define   VEPU580_RDO_CFG_CHRM_SPCL		BIT(4)
++#define   VEPU580_RDO_CFG_RDO_MASK		GENMASK(12, 5)
++#define   VEPU580_RDO_CFG_CCWA_E		BIT(13)
++#define   VEPU580_RDO_CFG_ATR_E			BIT(15)
++#define   VEPU580_RDO_CFG_ATF_INTRA_E		BIT(19)
++#define   VEPU580_RDO_CFG_SCL_LST_SEL		GENMASK(21, 20)
++#define VEPU580_IPRD_CSTS			0x03a4
++#define   VEPU580_IPRD_CSTS_VTHD_Y		GENMASK(11, 0)
++#define   VEPU580_IPRD_CSTS_VTHD_C		GENMASK(27, 16)
++
++/* Frame class: H.264 syntax */
++#define VEPU580_H264_SYNT_NAL			0x03b0
++#define   VEPU580_H264_NAL_REF_IDC		GENMASK(1, 0)
++#define   VEPU580_H264_NAL_UNIT_TYPE		GENMASK(6, 2)
++#define VEPU580_H264_SYNT_SPS			0x03b4
++#define   VEPU580_H264_SPS_MAX_FNUM		GENMASK(3, 0)
++#define   VEPU580_H264_SPS_DRCT_8X8		BIT(4)
++#define   VEPU580_H264_SPS_MPOC_LM4		GENMASK(8, 5)
++#define VEPU580_H264_SYNT_PPS			0x03b8
++#define   VEPU580_H264_PPS_ETPY_MODE		BIT(0)
++#define   VEPU580_H264_PPS_TRNS_8X8		BIT(1)
++#define   VEPU580_H264_PPS_CSIP_FLAG		BIT(2)
++#define   VEPU580_H264_PPS_NUM_REF0_IDX		GENMASK(4, 3)
++#define   VEPU580_H264_PPS_NUM_REF1_IDX		GENMASK(6, 5)
++#define   VEPU580_H264_PPS_PIC_INIT_QP		GENMASK(12, 7)
++#define   VEPU580_H264_PPS_CB_OFST		GENMASK(17, 13)
++#define   VEPU580_H264_PPS_CR_OFST		GENMASK(22, 18)
++#define   VEPU580_H264_PPS_WGHT_PRED		BIT(23)
++#define   VEPU580_H264_PPS_DBF_CP_FLG		BIT(24)
++#define VEPU580_H264_SYNT_SLI0			0x03bc
++#define   VEPU580_H264_SLI0_SLI_TYPE		GENMASK(1, 0)
++#define     VEPU580_H264_SLI_TYPE_P		0
++#define     VEPU580_H264_SLI_TYPE_I		2
++#define   VEPU580_H264_SLI0_PPS_ID		GENMASK(9, 2)
++#define   VEPU580_H264_SLI0_DRCT_SMVP		BIT(10)
++#define   VEPU580_H264_SLI0_NUM_REF_OVRD	BIT(11)
++#define   VEPU580_H264_SLI0_CBC_INIT_IDC	GENMASK(13, 12)
++#define   VEPU580_H264_SLI0_FRM_NUM		GENMASK(31, 16)
++#define VEPU580_H264_SYNT_SLI1			0x03c0
++#define   VEPU580_H264_SLI1_IDR_PID		GENMASK(15, 0)
++#define   VEPU580_H264_SLI1_POC_LSB		GENMASK(31, 16)
++#define VEPU580_H264_SYNT_SLI2			0x03c4
++#define   VEPU580_H264_SLI2_RODR_PIC_IDX	GENMASK(1, 0)
++#define   VEPU580_H264_SLI2_REF_LIST0_RODR	BIT(2)
++#define   VEPU580_H264_SLI2_SLI_BETA_OFST	GENMASK(6, 3)
++#define   VEPU580_H264_SLI2_SLI_ALPH_OFST	GENMASK(10, 7)
++#define   VEPU580_H264_SLI2_DIS_DBLK_IDC	GENMASK(12, 11)
++#define   VEPU580_H264_SLI2_RODR_PIC_NUM	GENMASK(31, 16)
++#define VEPU580_H264_SYNT_REFM0			0x03c8
++#define   VEPU580_H264_REFM0_NOPP_FLG		BIT(0)
++#define   VEPU580_H264_REFM0_LTRF_FLG		BIT(1)
++#define   VEPU580_H264_REFM0_ARPM_FLG		BIT(2)
++#define VEPU580_H264_SYNT_REFM1			0x03cc
++#define VEPU580_H264_SYNT_REFM2			0x03d0
++#define VEPU580_SLI_CFG				0x03f0
++#define   VEPU580_SLI_CFG_SLI_CRS_EN		BIT(31)
++#define VEPU580_TILE_POS			0x03f4
++#define VEPU580_FRAME_START			0x0280
++#define VEPU580_FRAME_END			0x03f8
++
++/* RC / KLUT class */
++#define VEPU580_RC_ADJ0				0x1000
++#define VEPU580_RC_ADJ1				0x1004
++#define   VEPU580_RC_ADJ_QP(n, v)		(((v) & 0x1f) << (5 * (n)))
++#define VEPU580_RC_DTHD(n)			(0x1008 + 4 * (n))
++#define VEPU580_ROI_QTHD(n)			(0x1030 + 4 * (n))
++#define VEPU580_MADI_CFG			0x1040
++#define   VEPU580_MADI_CFG_MADI_MODE		BIT(0)
++#define   VEPU580_MADI_CFG_MADI_THD		GENMASK(23, 16)
++#define VEPU580_AQ_TTHD(n)			(0x1044 + 4 * (n))
++#define VEPU580_AQ_STEP(n)			(0x1054 + 4 * (n))
++#define VEPU580_MD_SAD_THD			0x1070
++#define VEPU580_MADI_THD			0x1074
++#define VEPU580_KLUT_OFST			0x1080
++#define VEPU580_KLUT_WGT(n)			(0x1084 + 4 * (n))
++#define VEPU580_KLUT_WGT_NUM			24
++#define VEPU580_KLUT_START			0x1000
++#define VEPU580_KLUT_END			0x10e4
++
++/* Parameter class (section 3) */
++#define VEPU580_LVL32_INTRA_CST_THD0		0x1700
++#define VEPU580_LVL32_INTRA_CST_THD1		0x1704
++#define VEPU580_LVL16_INTRA_CST_THD0		0x1708
++#define VEPU580_LVL16_INTRA_CST_THD1		0x170c
++#define VEPU580_LVL8_INTRA_CST_THD0		0x1710
++#define VEPU580_LVL8_INTRA_CST_THD1		0x1714
++#define VEPU580_LVL16_INTRA_UL_CST_THD		0x1718
++#define VEPU580_LVL32_INTRA_CST_WGT0		0x171c
++#define VEPU580_LVL32_INTRA_CST_WGT1		0x1720
++#define VEPU580_LVL16_INTRA_CST_WGT0		0x1724
++#define VEPU580_LVL16_INTRA_CST_WGT1		0x1728
++#define VEPU580_RDO_QUANT			0x1730
++#define   VEPU580_RDO_QUANT_F_BIAS_I		GENMASK(9, 0)
++#define   VEPU580_RDO_QUANT_F_BIAS_P		GENMASK(19, 10)
++#define VEPU580_ATR_THD0			0x1740
++#define VEPU580_ATR_THD1			0x1744
++#define   VEPU580_ATR_THD1_THD2			GENMASK(11, 0)
++#define   VEPU580_ATR_THD1_THDQP		GENMASK(21, 16)
++#define VEPU580_ATR_THD10			0x1748
++#define VEPU580_ATR_THD11			0x174c
++#define VEPU580_LVL16_ATR_WGT			0x1750
++#define VEPU580_LVL8_ATR_WGT			0x1754
++#define VEPU580_LVL4_ATR_WGT			0x1758
++#define VEPU580_CIME_SQI_CFG			0x1760
++#define   VEPU580_CIME_SQI_CFG_SAD_MOD_SEL	BIT(0)
++#define   VEPU580_CIME_SQI_CFG_SAD_BIG_BLOCK	BIT(1)
++#define   VEPU580_CIME_SQI_CFG_PMV_SET_ZERO	BIT(2)
++#define   VEPU580_CIME_SQI_CFG_PMV_NUM		GENMASK(9, 8)
++#define VEPU580_CIME_SQI_THD			0x1764
++#define   VEPU580_CIME_SQI_THD_MVD_TH0		GENMASK(8, 0)
++#define   VEPU580_CIME_SQI_THD_MVD_TH1		GENMASK(18, 10)
++#define   VEPU580_CIME_SQI_THD_MVD_TH2		GENMASK(28, 20)
++#define VEPU580_CIME_SQI_MULTI0			0x1768
++#define VEPU580_CIME_SQI_MULTI1			0x176c
++#define   VEPU580_CIME_SQI_MULTI_LO		GENMASK(9, 0)
++#define   VEPU580_CIME_SQI_MULTI_HI		GENMASK(25, 16)
++#define VEPU580_RIME_SQI_THD			0x1770
++#define   VEPU580_RIME_SQI_THD_CIME_SAD_TH0	GENMASK(11, 0)
++#define   VEPU580_RIME_SQI_THD_MVD_TH0		GENMASK(19, 16)
++#define   VEPU580_RIME_SQI_THD_MVD_TH1		GENMASK(27, 24)
++#define VEPU580_RIME_SQI_MULTI			0x1774
++#define   VEPU580_RIME_SQI_MULTI0		GENMASK(9, 0)
++#define   VEPU580_RIME_SQI_MULTI1		GENMASK(19, 10)
++#define   VEPU580_RIME_SQI_MULTI2		GENMASK(29, 20)
++#define VEPU580_FME_SQI_THD0			0x1778
++#define   VEPU580_FME_SQI_THD0_PU16_TH		GENMASK(11, 0)
++#define   VEPU580_FME_SQI_THD0_PU32_TH		GENMASK(27, 16)
++#define VEPU580_FME_SQI_THD1			0x177c
++#define   VEPU580_FME_SQI_THD1_PU64_TH		GENMASK(11, 0)
++#define   VEPU580_FME_SQI_THD1_MOVE_LAMBDA	GENMASK(19, 16)
++#define VEPU580_IPRD_WGT_QP(n)			(0x1800 + 4 * (n))
++#define VEPU580_RDO_WGTA_QP(n)			(0x1900 + 4 * (n))
++#define VEPU580_PARAM_START			0x1700
++#define VEPU580_PARAM_END			0x19d0
++
++/* RDO (SQI) class, H.264 subset */
++#define VEPU580_RDO_SQI_CFG			0x2000
++#define   VEPU580_RDO_SQI_CFG_ATF_PSKIP_EN	BIT(0)
++#define VEPU580_RDO_INTRA_CIME_THD0		0x20cc
++#define VEPU580_RDO_INTRA_CIME_THD1		0x20d0
++#define VEPU580_RDO_INTRA_VAR_THD(n)		(0x20d4 + 4 * (n))
++#define VEPU580_RDO_INTRA_ATF_WGT(n)		(0x20e4 + 4 * (n))
++#define VEPU580_RDO_SKIP_CIME_THD0		0x211c
++#define VEPU580_RDO_SKIP_CIME_THD1		0x2120
++#define VEPU580_RDO_SKIP_VAR_THD(n)		(0x2124 + 4 * (n))
++#define VEPU580_RDO_SKIP_ATF_WGT(n)		(0x2134 + 4 * (n))
++#define VEPU580_RDO_START			0x2000
++#define VEPU580_RDO_END				0x21e8
++
++/* Scaling list class */
++#define VEPU580_SCL_START			0x2200
++#define VEPU580_SCL_H264_WORDS			576
++#define VEPU580_SCL_END				0x2c9c
++
++/* Status class */
++#define VEPU580_ST_BS_LGTH_L32			0x4000
++#define VEPU580_ST_SSE_BSL			0x4004
++#define   VEPU580_ST_BS_LGTH_H8			GENMASK(7, 0)
++#define   VEPU580_ST_SSE_L16			GENMASK(31, 16)
++#define VEPU580_ST_SSE_H32			0x4008
++#define VEPU580_ST_QP_SUM			0x400c
++#define VEPU580_ST_ENC				0x4020
++#define VEPU580_ST_BSB				0x402c
++#define VEPU580_ST_BUS				0x4030
++#define VEPU580_ST_SNUM				0x4034
++#define VEPU580_ST_SLEN				0x4038
++#define VEPU580_ST_PNUM_I16			0x4114
++#define VEPU580_ST_PNUM_I8			0x4118
++#define VEPU580_ST_PNUM_I4			0x411c
++#define VEPU580_ST_MADP				0x4120
++#define VEPU580_ST_BNUM_CME			0x4124
++#define VEPU580_ST_MADI				0x4128
++#define VEPU580_ST_BNUM_B16			0x412c
++
++/* Debug class */
++#define VEPU580_DBG_FRAME_CYC			0x5200
++#define VEPU580_DBG_AXIP0_CMD			0x5300
++#define   VEPU580_DBG_AXIP0_CLR			BIT(1)
++
++/* Software shadow covers everything up to the end of the scaling lists. */
++#define VEPU580_SHADOW_SIZE			VEPU580_SCL_END
++
++#endif /* RKVENC_REGS_H_ */
+diff --git a/drivers/media/platform/rockchip/rkvenc/rkvenc-vepu580.c b/drivers/media/platform/rockchip/rkvenc/rkvenc-vepu580.c
+new file mode 100644
+index 000000000..33d5154ef
+--- /dev/null
++++ b/drivers/media/platform/rockchip/rkvenc/rkvenc-vepu580.c
+@@ -0,0 +1,585 @@
++// SPDX-License-Identifier: GPL-2.0
++/*
++ * Rockchip VEPU580 (RKVENC) common frame programming
++ *
++ * The register meanings and the default tuning values below were derived
++ * from the Rockchip MPP user space library (hal_h264e_vepu580.c,
++ * vepu5xx_common.c, hal_h264e_vepu580_tune.c), which is the only
++ * documentation of this block. The values are expressed as named fields
++ * or as formulas instead of register dumps.
++ */
++
++#include <linux/bitfield.h>
++#include <linux/dma-mapping.h>
++#include <linux/minmax.h>
++#include <linux/slab.h>
++
++#include "rkvenc.h"
++
++int rkvenc_alloc_aux(struct rkvenc_dev *rkvenc, struct rkvenc_aux_buf *buf,
++		     size_t size, bool kernel_mapping)
++{
++	struct device *dev = rkvenc->main_core->dev;
++
++	buf->attrs = kernel_mapping ? 0 : DMA_ATTR_NO_KERNEL_MAPPING;
++	buf->size = size;
++	buf->cpu = dma_alloc_attrs(dev, size, &buf->dma, GFP_KERNEL, buf->attrs);
++	if (!buf->cpu)
++		return -ENOMEM;
++
++	return 0;
++}
++
++void rkvenc_free_aux(struct rkvenc_dev *rkvenc, struct rkvenc_aux_buf *buf)
++{
++	if (!buf->cpu)
++		return;
++
++	dma_free_attrs(rkvenc->main_core->dev, buf->size, buf->cpu, buf->dma,
++		       buf->attrs);
++	buf->cpu = NULL;
++}
++
++dma_addr_t rkvenc_dst_addr(struct rkvenc_run *run)
++{
++	return vb2_dma_contig_plane_dma_addr(&run->dst->vb2_buf, 0);
++}
++
++size_t rkvenc_dst_size(struct rkvenc_run *run)
++{
++	return vb2_plane_size(&run->dst->vb2_buf, 0);
++}
++
++static void vepu580_setup_ctl(struct rkvenc_core *core)
++{
++	/*
++	 * Bitstream writes are byte swapped within 64 bits (bsw_bus_edin = 7);
++	 * every other port uses the natural order.
++	 */
++	rkvenc_set(core, VEPU580_DTRNS_MAP,
++		   FIELD_PREP(VEPU580_DTRNS_MAP_BSW_BUS_EDIN, 7) |
++		   VEPU580_DTRNS_MAP_AFBC_BSIZE);
++	rkvenc_set(core, VEPU580_DTRNS_CFG, VEPU580_DTRNS_CFG_DSPR_OTSD);
++	rkvenc_set(core, VEPU580_FUNC_EN,
++		   VEPU580_FUNC_EN_CKE | VEPU580_FUNC_EN_RESETN_HW_EN |
++		   VEPU580_FUNC_EN_ENC_DONE_TMVP_EN);
++}
++
++static void vepu580_setup_src(struct rkvenc_ctx *ctx, struct rkvenc_core *core,
++			      struct rkvenc_run *run)
++{
++	const struct v4l2_pix_format_mplane *pix = &ctx->src_fmt.fmt.pix_mp;
++	const struct rkvenc_raw_fmt *fmt = ctx->raw_fmt;
++	const struct v4l2_format_info *info = v4l2_format_info(pix->pixelformat);
++	struct vb2_buffer *vb = &run->src->vb2_buf;
++	unsigned int width = ctx->coded_fmt.fmt.pix_mp.width;
++	unsigned int height = ctx->coded_fmt.fmt.pix_mp.height;
++	unsigned int ystride = pix->plane_fmt[0].bytesperline;
++	unsigned int cstride = 0;
++	dma_addr_t addr[3] = { 0 };
++	unsigned int i;
++
++	rkvenc_set(core, VEPU580_ENC_RSL,
++		   FIELD_PREP(VEPU580_ENC_RSL_PIC_WD8_M1, ALIGN(width, 16) / 8 - 1) |
++		   FIELD_PREP(VEPU580_ENC_RSL_PIC_HD8_M1, ALIGN(height, 16) / 8 - 1));
++	rkvenc_set(core, VEPU580_SRC_FILL,
++		   FIELD_PREP(VEPU580_SRC_FILL_PIC_WFILL, ALIGN(width, 16) - width) |
++		   FIELD_PREP(VEPU580_SRC_FILL_PIC_HFILL, ALIGN(height, 16) - height));
++
++	/* MPP sets src_range for every YUV input; out_fmt selects 4:2:0. */
++	rkvenc_set(core, VEPU580_SRC_FMT,
++		   FIELD_PREP(VEPU580_SRC_FMT_SRC_CFMT, fmt->hw_fmt) |
++		   (fmt->rbuv_swap ? VEPU580_SRC_FMT_RBUV_SWAP : 0) |
++		   VEPU580_SRC_FMT_SRC_RANGE | VEPU580_SRC_FMT_OUT_FMT);
++
++	/* BT.601 limited range RGB to YUV, unused for YUV input. */
++	rkvenc_set(core, VEPU580_SRC_UDFY,
++		   FIELD_PREP(VEPU580_SRC_UDF_WGT_R, 66) |
++		   FIELD_PREP(VEPU580_SRC_UDF_WGT_G, 129) |
++		   FIELD_PREP(VEPU580_SRC_UDF_WGT_B, 25));
++	rkvenc_set(core, VEPU580_SRC_UDFU,
++		   FIELD_PREP(VEPU580_SRC_UDF_WGT_R, -38 & 0x1ff) |
++		   FIELD_PREP(VEPU580_SRC_UDF_WGT_G, -74 & 0x1ff) |
++		   FIELD_PREP(VEPU580_SRC_UDF_WGT_B, 112));
++	rkvenc_set(core, VEPU580_SRC_UDFV,
++		   FIELD_PREP(VEPU580_SRC_UDF_WGT_R, 112) |
++		   FIELD_PREP(VEPU580_SRC_UDF_WGT_G, -94 & 0x1ff) |
++		   FIELD_PREP(VEPU580_SRC_UDF_WGT_B, -18 & 0x1ff));
++	rkvenc_set(core, VEPU580_SRC_UDFO,
++		   FIELD_PREP(VEPU580_SRC_UDFO_OFST_Y, 16) |
++		   FIELD_PREP(VEPU580_SRC_UDFO_OFST_U, 128) |
++		   FIELD_PREP(VEPU580_SRC_UDFO_OFST_V, 128));
++
++	/* Plane addresses */
++	for (i = 0; i < pix->num_planes; i++)
++		addr[i] = vb2_dma_contig_plane_dma_addr(vb, i);
++
++	if (info->comp_planes > 1) {
++		if (pix->num_planes > 1)
++			cstride = pix->plane_fmt[1].bytesperline;
++		else if (info->comp_planes == 2)
++			cstride = ystride * info->bpp[1] / info->hdiv;
++		else
++			cstride = ystride / info->hdiv;
++	}
++
++	if (pix->num_planes == 1 && info->comp_planes > 1) {
++		addr[1] = addr[0] + ystride * pix->height;
++		if (info->comp_planes > 2)
++			addr[2] = addr[1] + cstride * pix->height / info->vdiv;
++	}
++
++	rkvenc_set(core, VEPU580_ADR_SRC0, addr[0]);
++	rkvenc_set(core, VEPU580_ADR_SRC1, addr[1]);
++	rkvenc_set(core, VEPU580_ADR_SRC2, addr[2]);
++	rkvenc_set(core, VEPU580_SRC_STRD0, FIELD_PREP(VEPU580_SRC_STRD0_STRD, ystride));
++	rkvenc_set(core, VEPU580_SRC_STRD1, FIELD_PREP(VEPU580_SRC_STRD1_STRD, cstride));
++	rkvenc_set(core, VEPU580_PIC_OFST, 0);
++	rkvenc_set(core, VEPU580_SRC_PROC, 0);
++}
++
++static void vepu580_setup_bitstream(struct rkvenc_core *core,
++				    struct rkvenc_run *run)
++{
++	dma_addr_t base = rkvenc_dst_addr(run);
++	size_t size = rkvenc_dst_size(run);
++
++	/*
++	 * The bitstream buffer is a ring: bottom/top are its bounds (top is the
++	 * address of the last byte), bsbr the read pointer and bsbs the write
++	 * start. Software headers occupy the first hdr_bytes bytes.
++	 */
++	rkvenc_set(core, VEPU580_BSBB_ADDR, base);
++	rkvenc_set(core, VEPU580_BSBT_ADDR, base + size - 1);
++	rkvenc_set(core, VEPU580_BSBR_ADDR, base);
++	rkvenc_set(core, VEPU580_ADR_BSBS, base + run->hdr_bytes);
++}
++
++/*
++ * Clear the shadow registers and program everything that is not codec
++ * specific: control class, source picture, bitstream buffer and slices.
++ */
++void vepu580_setup_common(struct rkvenc_ctx *ctx, struct rkvenc_core *core,
++			  struct rkvenc_run *run)
++{
++	memset(core->shadow, 0, VEPU580_SHADOW_SIZE);
++
++	vepu580_setup_ctl(core);
++	vepu580_setup_src(ctx, core, run);
++	vepu580_setup_bitstream(core, run);
++
++	/* Single slice, deblocking across slice boundaries allowed. */
++	rkvenc_set(core, VEPU580_SLI_SPLT, 0);
++	rkvenc_set(core, VEPU580_SLI_CFG, VEPU580_SLI_CFG_SLI_CRS_EN);
++
++	/* No external line buffer: widths above 4096 are rejected for now. */
++	rkvenc_set(core, VEPU580_EBUFT_ADDR, 0);
++	rkvenc_set(core, VEPU580_EBUFB_ADDR, 0);
++}
++
++/*
++ * Size the coarse integer motion estimation (CIME) cache for a search
++ * window of +-4*srch_h by +-4*srch_v pixels and a zero global MV.
++ */
++static void vepu580_setup_cime_cache(struct rkvenc_core *core,
++				     unsigned int width_mbs,
++				     unsigned int srch_h, unsigned int srch_v)
++{
++	const unsigned int cache_max = 2464;
++	unsigned int s = 4 * srch_h, h = 4 * srch_v;
++	unsigned int cols = ALIGN(width_mbs * 16, 64) / 64;
++	unsigned int rx = (16 - s % 16) % 16;
++	unsigned int ry = (4 - h % 4) % 4;
++	unsigned int cur_w, rows0, rama_h, ramb_h;
++
++	cur_w = min(DIV_ROUND_UP(rx + 2 * s, 16) + 1, cols);
++	rows0 = DIV_ROUND_UP(ry + 2 * h, 4) + 1;
++
++	rama_h = 1;
++	ramb_h = rows0;
++	while (rama_h < rows0 &&
++	       cache_max > (rama_h - 1) * cols * 4 + ramb_h * 4 * cur_w) {
++		rama_h++;
++		ramb_h = ramb_h > 2 ? ramb_h - 1 : 1;
++	}
++
++	if (rows0 == 1) {
++		rama_h++;
++		ramb_h = 0;
++	}
++
++	if (cache_max < (rama_h - 1) * cols * 4 + ramb_h * 4 * cur_w)
++		rama_h--;
++
++	rkvenc_set(core, VEPU580_ME_CACH,
++		   FIELD_PREP(VEPU580_ME_CACH_CME_RAMA_MAX,
++			      (rama_h - 1) * cols + cur_w) |
++		   FIELD_PREP(VEPU580_ME_CACH_CME_RAMA_H, rama_h) |
++		   FIELD_PREP(VEPU580_ME_CACH_CME_LINEBUF_W, cols));
++}
++
++void vepu580_setup_me(struct rkvenc_core *core, unsigned int width_mbs,
++		      unsigned int height_mbs, unsigned int level_idc,
++		      bool intra)
++{
++	unsigned int blk_w = 44, blk_h = 28, hal;
++	unsigned int mv_limit;
++
++	/* Level 1.0 / 1b restrict the vertical range (H.264 table A-1). */
++	if (level_idc == 9 || level_idc == 10)
++		blk_h = 12;
++
++	if (blk_w / 4 * 2 > (width_mbs * 2 + 1) / 2)
++		blk_w = (width_mbs * 2 + 1) / 2 / 2 * 4;
++
++	hal = ALIGN(height_mbs * 16, 64);
++	if (blk_h / 4 > hal / 128 * 4)
++		blk_h = hal / 128 * 16;
++
++	rkvenc_set(core, VEPU580_ME_RNGE,
++		   FIELD_PREP(VEPU580_ME_RNGE_CME_SRCH_H, blk_w / 4) |
++		   FIELD_PREP(VEPU580_ME_RNGE_CME_SRCH_V, blk_h / 4) |
++		   FIELD_PREP(VEPU580_ME_RNGE_RME_SRCH_H, 7) |
++		   FIELD_PREP(VEPU580_ME_RNGE_RME_SRCH_V, 5));
++
++	if (level_idc > 20)
++		mv_limit = 2;
++	else if (level_idc >= 11)
++		mv_limit = 1;
++	else
++		mv_limit = 0;
++
++	rkvenc_set(core, VEPU580_ME_CFG,
++		   FIELD_PREP(VEPU580_ME_CFG_PMV_MDST_H, intra ? 0 : 5) |
++		   FIELD_PREP(VEPU580_ME_CFG_PMV_MDST_V, intra ? 0 : 5) |
++		   FIELD_PREP(VEPU580_ME_CFG_MV_LIMIT, mv_limit) |
++		   FIELD_PREP(VEPU580_ME_CFG_PMV_NUM, 2));
++
++	vepu580_setup_cime_cache(core, width_mbs, blk_w / 4, blk_h / 4);
++}
++
++/*
++ * H.264 RDO lambda per QP, growing by 2^(1/3) per QP step. The hardware
++ * table is indexed by QP 0..51 and starts at entry 6 of this list.
++ */
++static const u32 vepu580_h264_lambda[58] = {
++	3, 5, 6, 7, 9, 11, 14, 18, 22, 28, 36, 45, 57, 72, 91, 115, 145, 182,
++	230, 290, 365, 460, 580, 731, 921, 1161, 1462, 1843, 2322, 2925, 3686,
++	4644, 5851, 7372, 9289, 11703, 14745, 18578, 23407, 29491, 37156,
++	46814, 58982, 74313, 93628, 117964, 148626, 187257, 235929, 297252,
++	374514, 471859, 594505, 749029, 943718, 1189010, 1498059, 1887436,
++};
++
++/*
++ * Chroma distortion weights (about 16 * 2^(k/3), saturated to 18 bits),
++ * packed three per two registers. Intra frames start at entry 0, inter
++ * frames at entry 6.
++ */
++static const u32 vepu580_chroma_klut[45] = {
++	16, 20, 25, 32, 40, 50, 64, 80, 101, 128, 161, 203, 256, 322, 406,
++	512, 645, 812, 1024, 1290, 1625, 2048, 2580, 3250, 4096, 5160, 6501,
++	8192, 10321, 13003, 16384, 20642, 26007, 32768, 41285, 52015, 65535,
++	82570, 104030, 131070, 165141, 208896, 262143, 262143, 0,
++};
++
++/* Texture adaptive QP: MADI thresholds and QP steps. */
++static const u8 vepu580_aq_tthd[16] = {
++	0, 0, 0, 0, 3, 3, 5, 5, 8, 8, 8, 15, 15, 20, 25, 35,
++};
++
++static const s8 vepu580_aq_step_i[16] = {
++	-8, -7, -6, -5, -4, -3, -2, -1, 0, 1, 2, 3, 4, 5, 6, 8,
++};
++
++static const s8 vepu580_aq_step_p[16] = {
++	-8, -7, -6, -5, -4, -3, -2, -1, 0, 1, 2, 3, 4, 5, 7, 8,
++};
++
++static u32 pack4(u32 a, u32 b, u32 c, u32 d)
++{
++	return (a & 0xff) | (b & 0xff) << 8 | (c & 0xff) << 16 |
++	       (d & 0xff) << 24;
++}
++
++static u32 pack2x12(u32 lo, u32 hi)
++{
++	return (lo & 0xfff) | (hi & 0xfff) << 16;
++}
++
++static void vepu580_setup_klut(struct rkvenc_core *core, bool intra)
++{
++	const u32 *w = &vepu580_chroma_klut[intra ? 0 : 6];
++	unsigned int i;
++
++	rkvenc_set(core, VEPU580_KLUT_OFST, intra ? 0 : 3);
++
++	for (i = 0; i < VEPU580_KLUT_WGT_NUM; i += 2) {
++		const u32 *t = &w[i / 2 * 3];
++
++		rkvenc_set(core, VEPU580_KLUT_WGT(i),
++			   (t[0] & 0x3ffff) | (t[1] & 0x1ff) << 23);
++		rkvenc_set(core, VEPU580_KLUT_WGT(i + 1),
++			   (t[1] >> 9) | t[2] << 14);
++	}
++}
++
++void vepu580_setup_h264_tuning(struct rkvenc_dev *rkvenc,
++			       struct rkvenc_core *core, bool intra)
++{
++	const s8 *aq_step = intra ? vepu580_aq_step_i : vepu580_aq_step_p;
++	unsigned int i;
++
++	/* Intra prediction cost / mode decision */
++	rkvenc_set(core, VEPU580_IPRD_CSTS,
++		   FIELD_PREP(VEPU580_IPRD_CSTS_VTHD_Y, 9) |
++		   FIELD_PREP(VEPU580_IPRD_CSTS_VTHD_C, 63));
++
++	vepu580_setup_klut(core, intra);
++
++	rkvenc_set(core, VEPU580_MADI_CFG, FIELD_PREP(VEPU580_MADI_CFG_MADI_THD, 25));
++	rkvenc_set(core, VEPU580_MD_SAD_THD, pack4(4, 9, 15, 0));
++	rkvenc_set(core, VEPU580_MADI_THD, pack4(4, 9, 15, 0));
++
++	for (i = 0; i < 4; i++) {
++		rkvenc_set(core, VEPU580_AQ_TTHD(i),
++			   pack4(vepu580_aq_tthd[4 * i], vepu580_aq_tthd[4 * i + 1],
++				 vepu580_aq_tthd[4 * i + 2], vepu580_aq_tthd[4 * i + 3]));
++		rkvenc_set(core, VEPU580_AQ_STEP(i),
++			   pack4(aq_step[4 * i] & 0x3f, aq_step[4 * i + 1] & 0x3f,
++				 aq_step[4 * i + 2] & 0x3f, aq_step[4 * i + 3] & 0x3f));
++	}
++
++	/* Intra cost thresholds (1, 4, 9, 36) and weights */
++	rkvenc_set(core, VEPU580_LVL32_INTRA_CST_THD0, pack2x12(1, 4));
++	rkvenc_set(core, VEPU580_LVL32_INTRA_CST_THD1, pack2x12(9, 36));
++	rkvenc_set(core, VEPU580_LVL16_INTRA_CST_THD0, pack2x12(1, 4));
++	rkvenc_set(core, VEPU580_LVL16_INTRA_CST_THD1, pack2x12(9, 36));
++	rkvenc_set(core, VEPU580_LVL8_INTRA_CST_THD0, pack2x12(1, 4));
++	rkvenc_set(core, VEPU580_LVL8_INTRA_CST_THD1, pack2x12(9, 36));
++	rkvenc_set(core, VEPU580_LVL16_INTRA_UL_CST_THD, 0);
++	rkvenc_set(core, VEPU580_LVL32_INTRA_CST_WGT0, pack4(48, 60, 40, 48));
++	rkvenc_set(core, VEPU580_LVL32_INTRA_CST_WGT1, pack4(48, 60, 40, 48));
++	rkvenc_set(core, VEPU580_LVL16_INTRA_CST_WGT0, pack4(48, 60, 40, 48));
++	rkvenc_set(core, VEPU580_LVL16_INTRA_CST_WGT1, pack4(36, 42, 28, 32));
++
++	/* Quantisation dead zone: 683/1024 (I) or 583/1024, 171/1024 (P) */
++	rkvenc_set(core, VEPU580_RDO_QUANT,
++		   FIELD_PREP(VEPU580_RDO_QUANT_F_BIAS_I, intra ? 683 : 583) |
++		   FIELD_PREP(VEPU580_RDO_QUANT_F_BIAS_P, 171));
++
++	/* Adaptive transform (H.264 only) */
++	if (intra) {
++		rkvenc_set(core, VEPU580_ATR_THD0, pack2x12(1, 4));
++		rkvenc_set(core, VEPU580_ATR_THD1,
++			   FIELD_PREP(VEPU580_ATR_THD1_THD2, 36) |
++			   FIELD_PREP(VEPU580_ATR_THD1_THDQP, 45));
++		rkvenc_set(core, VEPU580_LVL16_ATR_WGT, pack4(16, 16, 16, 0));
++		rkvenc_set(core, VEPU580_LVL8_ATR_WGT, pack4(22, 21, 20, 0));
++		rkvenc_set(core, VEPU580_LVL4_ATR_WGT, pack4(20, 18, 16, 0));
++	} else {
++		rkvenc_set(core, VEPU580_ATR_THD0, pack2x12(4, 16));
++		rkvenc_set(core, VEPU580_ATR_THD1,
++			   FIELD_PREP(VEPU580_ATR_THD1_THD2, 81) |
++			   FIELD_PREP(VEPU580_ATR_THD1_THDQP, 45));
++		rkvenc_set(core, VEPU580_LVL16_ATR_WGT, pack4(22, 19, 16, 0));
++		rkvenc_set(core, VEPU580_LVL8_ATR_WGT, pack4(22, 19, 18, 0));
++		rkvenc_set(core, VEPU580_LVL4_ATR_WGT, pack4(22, 19, 16, 0));
++	}
++
++	/*
++	 * Motion search quality / cost multipliers. Where MPP's tuning differs
++	 * per scene mode, the values of its default (non-IPC) mode are used.
++	 */
++	rkvenc_set(core, VEPU580_CIME_SQI_CFG,
++		   VEPU580_CIME_SQI_CFG_SAD_BIG_BLOCK |
++		   VEPU580_CIME_SQI_CFG_PMV_SET_ZERO |
++		   FIELD_PREP(VEPU580_CIME_SQI_CFG_PMV_NUM, 3));
++	rkvenc_set(core, VEPU580_CIME_SQI_THD,
++		   FIELD_PREP(VEPU580_CIME_SQI_THD_MVD_TH0, 32) |
++		   FIELD_PREP(VEPU580_CIME_SQI_THD_MVD_TH1, 80) |
++		   FIELD_PREP(VEPU580_CIME_SQI_THD_MVD_TH2, 128));
++	rkvenc_set(core, VEPU580_CIME_SQI_MULTI0,
++		   FIELD_PREP(VEPU580_CIME_SQI_MULTI_LO, 4) |
++		   FIELD_PREP(VEPU580_CIME_SQI_MULTI_HI, 7));
++	rkvenc_set(core, VEPU580_CIME_SQI_MULTI1,
++		   FIELD_PREP(VEPU580_CIME_SQI_MULTI_LO, 20) |
++		   FIELD_PREP(VEPU580_CIME_SQI_MULTI_HI, 20));
++	rkvenc_set(core, VEPU580_RIME_SQI_THD,
++		   FIELD_PREP(VEPU580_RIME_SQI_THD_CIME_SAD_TH0, 50) |
++		   FIELD_PREP(VEPU580_RIME_SQI_THD_MVD_TH0, 3) |
++		   FIELD_PREP(VEPU580_RIME_SQI_THD_MVD_TH1, 8));
++	rkvenc_set(core, VEPU580_RIME_SQI_MULTI,
++		   FIELD_PREP(VEPU580_RIME_SQI_MULTI0, 4) |
++		   FIELD_PREP(VEPU580_RIME_SQI_MULTI1, 16) |
++		   FIELD_PREP(VEPU580_RIME_SQI_MULTI2, 64));
++	rkvenc_set(core, VEPU580_FME_SQI_THD0,
++		   FIELD_PREP(VEPU580_FME_SQI_THD0_PU16_TH, 2));
++	rkvenc_set(core, VEPU580_FME_SQI_THD1,
++		   FIELD_PREP(VEPU580_FME_SQI_THD1_MOVE_LAMBDA, 1));
++
++	/* RDO lambda, intra prediction weights stay zero for H.264 */
++	for (i = 0; i < 52; i++)
++		rkvenc_set(core, VEPU580_RDO_WGTA_QP(i), vepu580_h264_lambda[i + 6]);
++
++	/* RDO intra / skip thresholds and weights */
++	rkvenc_set(core, VEPU580_RDO_SQI_CFG, VEPU580_RDO_SQI_CFG_ATF_PSKIP_EN);
++	rkvenc_set(core, VEPU580_RDO_INTRA_CIME_THD0, pack2x12(28, 44));
++	rkvenc_set(core, VEPU580_RDO_INTRA_CIME_THD1, pack2x12(72, 0));
++	rkvenc_set(core, VEPU580_RDO_INTRA_VAR_THD(0), pack2x12(25, 64));
++	rkvenc_set(core, VEPU580_RDO_INTRA_VAR_THD(1), pack2x12(25, 64));
++	rkvenc_set(core, VEPU580_RDO_INTRA_VAR_THD(2), pack2x12(70, 100));
++	rkvenc_set(core, VEPU580_RDO_INTRA_VAR_THD(3), pack2x12(70, 100));
++	rkvenc_set(core, VEPU580_RDO_INTRA_ATF_WGT(0), pack4(22, 21, 20, 0));
++	rkvenc_set(core, VEPU580_RDO_INTRA_ATF_WGT(1), pack4(21, 20, 19, 0));
++	rkvenc_set(core, VEPU580_RDO_INTRA_ATF_WGT(2), pack4(20, 19, 18, 0));
++	rkvenc_set(core, VEPU580_RDO_INTRA_ATF_WGT(3), pack4(16, 16, 16, 0));
++	rkvenc_set(core, VEPU580_RDO_SKIP_CIME_THD0, pack2x12(10, 8));
++	rkvenc_set(core, VEPU580_RDO_SKIP_CIME_THD1, pack2x12(15, 25));
++	rkvenc_set(core, VEPU580_RDO_SKIP_VAR_THD(0), pack2x12(25, 40));
++	rkvenc_set(core, VEPU580_RDO_SKIP_VAR_THD(1), pack2x12(25, 40));
++	rkvenc_set(core, VEPU580_RDO_SKIP_VAR_THD(2), pack2x12(70, 100));
++	rkvenc_set(core, VEPU580_RDO_SKIP_VAR_THD(3), pack2x12(70, 100));
++	rkvenc_set(core, VEPU580_RDO_SKIP_ATF_WGT(0), pack4(20, 16, 16, 16));
++	rkvenc_set(core, VEPU580_RDO_SKIP_ATF_WGT(1), pack4(16, 16, 16, 0));
++	rkvenc_set(core, VEPU580_RDO_SKIP_ATF_WGT(2), pack4(16, 16, 16, 0));
++	rkvenc_set(core, VEPU580_RDO_SKIP_ATF_WGT(3), pack4(16, 16, 16, 0));
++
++	/* Flat quantisation tables */
++	memcpy(&core->shadow[VEPU580_SCL_START / 4], rkvenc->h264_scl,
++	       VEPU580_SCL_H264_WORDS * sizeof(u32));
++}
++
++/*
++ * Frame-level QP with the hardware row rate control: each macroblock row
++ * gets target_bits / num_blocks bits per block; the cumulative deviation
++ * from that target selects one of nine QP adjustments, bounded by
++ * qp_range around the frame QP and by [qp_min, qp_max].
++ */
++void vepu580_setup_row_rc(struct rkvenc_core *core, unsigned int qp,
++			  unsigned int qp_min, unsigned int qp_max,
++			  unsigned int qp_range, u64 target_bits,
++			  unsigned int num_blocks, unsigned int blocks_per_row)
++{
++	static const s8 qp_adj[9] = { -2, -1, 0, 1, 2, 0, 0, 0, 1 };
++	u64 ebit16 = div_u64(target_bits << 4, num_blocks);
++	s32 row_bits, thd;
++	unsigned int i;
++
++	if (ebit16 >= 0x100000)
++		ebit16 = 0x50000;
++
++	row_bits = (ebit16 * blocks_per_row) >> 4;
++	thd = 5 * row_bits / 16;
++
++	rkvenc_or(core, VEPU580_ENC_PIC, FIELD_PREP(VEPU580_ENC_PIC_PIC_QP, qp));
++	rkvenc_set(core, VEPU580_RC_CFG,
++		   VEPU580_RC_CFG_RC_EN | VEPU580_RC_CFG_AQ_EN |
++		   FIELD_PREP(VEPU580_RC_CFG_RC_CTU_NUM, blocks_per_row));
++	rkvenc_set(core, VEPU580_RC_QP,
++		   FIELD_PREP(VEPU580_RC_QP_RANGE, qp_range) |
++		   FIELD_PREP(VEPU580_RC_QP_MAX, qp_max) |
++		   FIELD_PREP(VEPU580_RC_QP_MIN, qp_min));
++	rkvenc_set(core, VEPU580_RC_TGT, FIELD_PREP(VEPU580_RC_TGT_CTU_EBIT, ebit16));
++
++	rkvenc_set(core, VEPU580_RC_ADJ0, 0);
++	rkvenc_set(core, VEPU580_RC_ADJ1, 0);
++	for (i = 0; i < 9; i++)
++		rkvenc_or(core, i < 5 ? VEPU580_RC_ADJ0 : VEPU580_RC_ADJ1,
++			  VEPU580_RC_ADJ_QP(i < 5 ? i : i - 5, qp_adj[i]));
++
++	rkvenc_set(core, VEPU580_RC_DTHD(0), -4 * thd);
++	rkvenc_set(core, VEPU580_RC_DTHD(1), -thd);
++	rkvenc_set(core, VEPU580_RC_DTHD(2), thd);
++	rkvenc_set(core, VEPU580_RC_DTHD(3), 4 * thd);
++	for (i = 4; i < 9; i++)
++		rkvenc_set(core, VEPU580_RC_DTHD(i), 0x7fffffff);
++
++	for (i = 0; i < 4; i++)
++		rkvenc_set(core, VEPU580_ROI_QTHD(i), 0);
++	/* All eight ROI areas use the frame QP bounds, qpmap_mode = 1. */
++	rkvenc_set(core, VEPU580_ROI_QTHD(0),
++		   qp_min | qp_max << 6 | qp_min << 12 | qp_max << 18 |
++		   qp_min << 24);
++	rkvenc_set(core, VEPU580_ROI_QTHD(1),
++		   qp_max | qp_min << 6 | qp_max << 12 | qp_min << 18 |
++		   qp_max << 24);
++	rkvenc_set(core, VEPU580_ROI_QTHD(2),
++		   qp_min | qp_max << 6 | qp_min << 12 | qp_max << 18 |
++		   qp_min << 24);
++	rkvenc_set(core, VEPU580_ROI_QTHD(3), qp_max | 1 << 30);
++}
++
++void vepu580_setup_fixed_qp(struct rkvenc_core *core, unsigned int qp)
++{
++	rkvenc_or(core, VEPU580_ENC_PIC, FIELD_PREP(VEPU580_ENC_PIC_PIC_QP, qp));
++	rkvenc_set(core, VEPU580_RC_CFG, 0);
++	rkvenc_set(core, VEPU580_RC_QP,
++		   FIELD_PREP(VEPU580_RC_QP_MAX, qp) |
++		   FIELD_PREP(VEPU580_RC_QP_MIN, qp));
++	rkvenc_set(core, VEPU580_ROI_QTHD(0),
++		   qp | qp << 6 | qp << 12 | qp << 18 | qp << 24);
++	rkvenc_set(core, VEPU580_ROI_QTHD(1),
++		   qp | qp << 6 | qp << 12 | qp << 18 | qp << 24);
++	rkvenc_set(core, VEPU580_ROI_QTHD(2),
++		   qp | qp << 6 | qp << 12 | qp << 18 | qp << 24);
++	rkvenc_set(core, VEPU580_ROI_QTHD(3), qp | 1 << 30);
++}
++
++/*
++ * H.264 8x8 forward quantisation multipliers (ITU-T H.264 8.5.12.1
++ * normAdjust8x8 counterparts) for QP % 6, per position class v0..v5.
++ */
++static const u16 h264_quant8[6][6] = {
++	{ 13107, 11428, 20972, 12222, 16777, 15481 },
++	{ 11916, 10826, 19174, 11058, 14980, 14290 },
++	{ 10082,  8943, 15978,  9675, 12710, 11985 },
++	{  9362,  8228, 14913,  8931, 11984, 11259 },
++	{  8192,  7346, 13159,  7740, 10486,  9777 },
++	{  7282,  6428, 11570,  6830,  9118,  8640 },
++};
++
++static unsigned int h264_quant8_class(unsigned int i, unsigned int j)
++{
++	if (i % 4 == 0 && j % 4 == 0)
++		return 0;
++	if (i % 2 == 1 && j % 2 == 1)
++		return 1;
++	if (i % 4 == 2 && j % 4 == 2)
++		return 2;
++	if ((i % 4 == 0 && j % 2 == 1) || (i % 2 == 1 && j % 4 == 0))
++		return 3;
++	if ((i % 4 == 0 && j % 4 == 2) || (i % 4 == 2 && j % 4 == 0))
++		return 4;
++	return 5;
++}
++
++/*
++ * Build the scaling list block for flat matrices: three groups of six 8x8
++ * tables (QP % 6 = 0..5, raster order, two 16-bit entries per word). The
++ * first group holds the multipliers, the second their low byte and the
++ * third their high byte, which is the layout the MPP library programs.
++ */
++u32 *vepu580_gen_h264_scl(struct device *dev)
++{
++	u16 *tab;
++	unsigned int g, q, i, j;
++
++	tab = devm_kcalloc(dev, VEPU580_SCL_H264_WORDS, sizeof(u32), GFP_KERNEL);
++	if (!tab)
++		return NULL;
++
++	for (g = 0; g < 3; g++)
++		for (q = 0; q < 6; q++)
++			for (i = 0; i < 8; i++)
++				for (j = 0; j < 8; j++) {
++					u16 v = h264_quant8[q][h264_quant8_class(i, j)];
++
++					if (g == 1)
++						v &= 0xff;
++					else if (g == 2)
++						v >>= 8;
++					tab[(g * 6 + q) * 64 + i * 8 + j] = v;
++				}
++
++	return (u32 *)tab;
++}
+diff --git a/drivers/media/platform/rockchip/rkvenc/rkvenc.c b/drivers/media/platform/rockchip/rkvenc/rkvenc.c
+new file mode 100644
+index 000000000..0e5afaefc
+--- /dev/null
++++ b/drivers/media/platform/rockchip/rkvenc/rkvenc.c
+@@ -0,0 +1,1502 @@
++// SPDX-License-Identifier: GPL-2.0
++/*
++ * Rockchip VEPU580 (RKVENC) stateless video encoder driver
++ *
++ * The VEPU580 found in the RK3588 has two identical cores, each behind its
++ * own IOMMU. Every core is a component bound to one virtual master device
++ * that owns the V4L2 m2m device; jobs from different contexts run on
++ * whichever core is idle (frame-level scheduling across streams, the
++ * dual-core handshake is not used).
++ *
++ * The power, clock, reset and error recovery sequences follow the Rockchip
++ * BSP mpp_rkvenc2 driver as found in its out-of-tree port.
++ */
++
++#include <linux/bitfield.h>
++#include <linux/component.h>
++#include <linux/delay.h>
++#include <linux/dma-mapping.h>
++#include <linux/iommu.h>
++#include <linux/iopoll.h>
++#include <linux/module.h>
++#include <linux/of.h>
++#include <linux/platform_device.h>
++#include <linux/pm_runtime.h>
++#include <linux/slab.h>
++#include <media/v4l2-event.h>
++#include <media/v4l2-mem2mem.h>
++
++#include "rkvenc.h"
++
++#define RKVENC_NAME			"rockchip-venc"
++#define RKVENC_SW_TIMEOUT_MS		1000
++
++static const struct rkvenc_raw_fmt rkvenc_raw_fmts[] = {
++	{ V4L2_PIX_FMT_NV12, VEPU580_FMT_YUV420SP, 0 },
++	{ V4L2_PIX_FMT_NV12M, VEPU580_FMT_YUV420SP, 0 },
++	{ V4L2_PIX_FMT_NV21, VEPU580_FMT_YUV420SP, 1 },
++	{ V4L2_PIX_FMT_YUV420, VEPU580_FMT_YUV420P, 0 },
++	{ V4L2_PIX_FMT_YUV420M, VEPU580_FMT_YUV420P, 0 },
++	{ V4L2_PIX_FMT_YUYV, VEPU580_FMT_YUYV422, 0 },
++	{ V4L2_PIX_FMT_UYVY, VEPU580_FMT_UYVY422, 0 },
++};
++
++static const struct rkvenc_coded_fmt_desc *rkvenc_coded_fmts[] = {
++	&rkvenc_h264_fmt_desc,
++};
++
++static const struct rkvenc_coded_fmt_desc *rkvenc_find_coded_fmt(u32 fourcc)
++{
++	unsigned int i;
++
++	for (i = 0; i < ARRAY_SIZE(rkvenc_coded_fmts); i++)
++		if (rkvenc_coded_fmts[i]->fourcc == fourcc)
++			return rkvenc_coded_fmts[i];
++
++	return NULL;
++}
++
++static const struct rkvenc_raw_fmt *rkvenc_find_raw_fmt(u32 fourcc)
++{
++	unsigned int i;
++
++	for (i = 0; i < ARRAY_SIZE(rkvenc_raw_fmts); i++)
++		if (rkvenc_raw_fmts[i].fourcc == fourcc)
++			return &rkvenc_raw_fmts[i];
++
++	return NULL;
++}
++
++static void rkvenc_fill_coded_fmt(struct rkvenc_ctx *ctx,
++				  struct v4l2_pix_format_mplane *pix)
++{
++	const struct rkvenc_coded_fmt_desc *desc;
++	u32 min_size;
++
++	desc = rkvenc_find_coded_fmt(pix->pixelformat);
++	if (!desc) {
++		desc = rkvenc_coded_fmts[0];
++		pix->pixelformat = desc->fourcc;
++	}
++
++	v4l2_apply_frmsize_constraints(&pix->width, &pix->height,
++				       &desc->frmsize);
++
++	pix->num_planes = 1;
++	pix->field = V4L2_FIELD_NONE;
++	pix->plane_fmt[0].bytesperline = 0;
++
++	/* Enough for an intra frame at a very low QP. */
++	min_size = ALIGN(pix->width, 16) * ALIGN(pix->height, 16) * 3 / 2;
++	min_size = max_t(u32, min_size, SZ_256K);
++	if (pix->plane_fmt[0].sizeimage < min_size / 4)
++		pix->plane_fmt[0].sizeimage = min_size;
++	pix->plane_fmt[0].sizeimage = PAGE_ALIGN(pix->plane_fmt[0].sizeimage);
++}
++
++static void rkvenc_fill_raw_fmt(struct v4l2_pix_format_mplane *pix,
++				u32 width, u32 height)
++{
++	if (!rkvenc_find_raw_fmt(pix->pixelformat))
++		pix->pixelformat = rkvenc_raw_fmts[0].fourcc;
++
++	/*
++	 * Lines are padded to 16 bytes and the allocation covers the
++	 * macroblock aligned height, in case the encoder reads the padding
++	 * rows. Planes follow the visible height.
++	 */
++	v4l2_fill_pixfmt_mp(pix, pix->pixelformat, ALIGN(width, 16),
++			    ALIGN(height, 16));
++	if (pix->num_planes == 1) {
++		const struct v4l2_format_info *info =
++			v4l2_format_info(pix->pixelformat);
++
++		/* Single plane formats need their planes at the visible height. */
++		if (info && info->comp_planes > 1) {
++			struct v4l2_pix_format_mplane tmp = *pix;
++
++			v4l2_fill_pixfmt_mp(&tmp, pix->pixelformat,
++					    ALIGN(width, 16), height);
++			pix->plane_fmt[0].sizeimage =
++				max(pix->plane_fmt[0].sizeimage,
++				    tmp.plane_fmt[0].sizeimage +
++				    pix->plane_fmt[0].bytesperline * 16);
++		}
++	}
++	pix->width = width;
++	pix->height = height;
++	pix->field = V4L2_FIELD_NONE;
++}
++
++static void rkvenc_reset_fmts(struct rkvenc_ctx *ctx)
++{
++	struct v4l2_pix_format_mplane *coded = &ctx->coded_fmt.fmt.pix_mp;
++	struct v4l2_pix_format_mplane *raw = &ctx->src_fmt.fmt.pix_mp;
++
++	memset(&ctx->coded_fmt, 0, sizeof(ctx->coded_fmt));
++	ctx->coded_fmt.type = V4L2_BUF_TYPE_VIDEO_CAPTURE_MPLANE;
++	coded->pixelformat = rkvenc_coded_fmts[0]->fourcc;
++	coded->width = 1920;
++	coded->height = 1080;
++	rkvenc_fill_coded_fmt(ctx, coded);
++	ctx->coded_fmt_desc = rkvenc_coded_fmts[0];
++
++	memset(&ctx->src_fmt, 0, sizeof(ctx->src_fmt));
++	ctx->src_fmt.type = V4L2_BUF_TYPE_VIDEO_OUTPUT_MPLANE;
++	raw->pixelformat = rkvenc_raw_fmts[0].fourcc;
++	rkvenc_fill_raw_fmt(raw, coded->width, coded->height);
++	ctx->raw_fmt = &rkvenc_raw_fmts[0];
++
++	ctx->timeperframe.numerator = 1;
++	ctx->timeperframe.denominator = 30;
++}
++
++/* ---- ioctls ---- */
++
++static int rkvenc_querycap(struct file *file, void *priv,
++			   struct v4l2_capability *cap)
++{
++	strscpy(cap->driver, RKVENC_NAME, sizeof(cap->driver));
++	strscpy(cap->card, "rockchip,vepu580", sizeof(cap->card));
++	return 0;
++}
++
++static int rkvenc_enum_framesizes(struct file *file, void *priv,
++				  struct v4l2_frmsizeenum *fsize)
++{
++	const struct rkvenc_coded_fmt_desc *desc;
++
++	if (fsize->index)
++		return -EINVAL;
++
++	desc = rkvenc_find_coded_fmt(fsize->pixel_format);
++	if (!desc) {
++		if (!rkvenc_find_raw_fmt(fsize->pixel_format))
++			return -EINVAL;
++		desc = rkvenc_coded_fmts[0];
++	}
++
++	fsize->type = V4L2_FRMSIZE_TYPE_STEPWISE;
++	fsize->stepwise = desc->frmsize;
++	return 0;
++}
++
++static int rkvenc_enum_frameintervals(struct file *file, void *priv,
++				      struct v4l2_frmivalenum *fival)
++{
++	if (fival->index)
++		return -EINVAL;
++
++	if (!rkvenc_find_coded_fmt(fival->pixel_format) &&
++	    !rkvenc_find_raw_fmt(fival->pixel_format))
++		return -EINVAL;
++
++	fival->type = V4L2_FRMIVAL_TYPE_CONTINUOUS;
++	fival->stepwise.min.numerator = 1;
++	fival->stepwise.min.denominator = 240;
++	fival->stepwise.max.numerator = 1;
++	fival->stepwise.max.denominator = 1;
++	fival->stepwise.step.numerator = 1;
++	fival->stepwise.step.denominator = 1;
++	return 0;
++}
++
++static int rkvenc_enum_capture_fmt(struct file *file, void *priv,
++				   struct v4l2_fmtdesc *f)
++{
++	if (f->index >= ARRAY_SIZE(rkvenc_coded_fmts))
++		return -EINVAL;
++
++	f->pixelformat = rkvenc_coded_fmts[f->index]->fourcc;
++	f->flags = V4L2_FMT_FLAG_COMPRESSED;
++	return 0;
++}
++
++static int rkvenc_enum_output_fmt(struct file *file, void *priv,
++				  struct v4l2_fmtdesc *f)
++{
++	if (f->index >= ARRAY_SIZE(rkvenc_raw_fmts))
++		return -EINVAL;
++
++	f->pixelformat = rkvenc_raw_fmts[f->index].fourcc;
++	return 0;
++}
++
++static int rkvenc_g_capture_fmt(struct file *file, void *priv,
++				struct v4l2_format *f)
++{
++	struct rkvenc_ctx *ctx = file_to_rkvenc_ctx(file);
++
++	*f = ctx->coded_fmt;
++	return 0;
++}
++
++static int rkvenc_g_output_fmt(struct file *file, void *priv,
++			       struct v4l2_format *f)
++{
++	struct rkvenc_ctx *ctx = file_to_rkvenc_ctx(file);
++
++	*f = ctx->src_fmt;
++	return 0;
++}
++
++static int rkvenc_try_capture_fmt(struct file *file, void *priv,
++				  struct v4l2_format *f)
++{
++	struct rkvenc_ctx *ctx = file_to_rkvenc_ctx(file);
++	const struct rkvenc_coded_fmt_desc *desc;
++
++	rkvenc_fill_coded_fmt(ctx, &f->fmt.pix_mp);
++
++	desc = rkvenc_find_coded_fmt(f->fmt.pix_mp.pixelformat);
++	if (desc->ops->adjust_fmt)
++		return desc->ops->adjust_fmt(ctx, f);
++
++	return 0;
++}
++
++static int rkvenc_try_output_fmt(struct file *file, void *priv,
++				 struct v4l2_format *f)
++{
++	struct rkvenc_ctx *ctx = file_to_rkvenc_ctx(file);
++	struct v4l2_pix_format_mplane *pix = &f->fmt.pix_mp;
++	const struct rkvenc_coded_fmt_desc *desc = ctx->coded_fmt_desc;
++	u32 width = pix->width, height = pix->height;
++
++	v4l2_apply_frmsize_constraints(&width, &height, &desc->frmsize);
++	rkvenc_fill_raw_fmt(pix, width, height);
++
++	return 0;
++}
++
++static int rkvenc_s_capture_fmt(struct file *file, void *priv,
++				struct v4l2_format *f)
++{
++	struct rkvenc_ctx *ctx = file_to_rkvenc_ctx(file);
++	struct v4l2_m2m_ctx *m2m_ctx = ctx->fh.m2m_ctx;
++	struct v4l2_pix_format_mplane *raw = &ctx->src_fmt.fmt.pix_mp;
++	int ret;
++
++	if (ctx->started || vb2_is_busy(v4l2_m2m_get_vq(m2m_ctx, f->type)))
++		return -EBUSY;
++
++	ret = rkvenc_try_capture_fmt(file, priv, f);
++	if (ret)
++		return ret;
++
++	/* Both queues must always describe the same picture size. */
++	if (vb2_is_busy(v4l2_m2m_get_src_vq(m2m_ctx)) &&
++	    (f->fmt.pix_mp.width != raw->width ||
++	     f->fmt.pix_mp.height != raw->height))
++		return -EBUSY;
++
++	ctx->coded_fmt = *f;
++	ctx->coded_fmt_desc = rkvenc_find_coded_fmt(f->fmt.pix_mp.pixelformat);
++
++	/* The raw format follows the coded size. */
++	if (!vb2_is_busy(v4l2_m2m_get_src_vq(m2m_ctx)))
++		rkvenc_fill_raw_fmt(raw, f->fmt.pix_mp.width,
++				    f->fmt.pix_mp.height);
++
++	return 0;
++}
++
++static int rkvenc_s_output_fmt(struct file *file, void *priv,
++			       struct v4l2_format *f)
++{
++	struct rkvenc_ctx *ctx = file_to_rkvenc_ctx(file);
++	struct v4l2_m2m_ctx *m2m_ctx = ctx->fh.m2m_ctx;
++	struct v4l2_pix_format_mplane *coded = &ctx->coded_fmt.fmt.pix_mp;
++	int ret;
++
++	if (ctx->started || vb2_is_busy(v4l2_m2m_get_vq(m2m_ctx, f->type)))
++		return -EBUSY;
++
++	ret = rkvenc_try_output_fmt(file, priv, f);
++	if (ret)
++		return ret;
++
++	if (vb2_is_busy(v4l2_m2m_get_dst_vq(m2m_ctx)) &&
++	    (f->fmt.pix_mp.width != coded->width ||
++	     f->fmt.pix_mp.height != coded->height))
++		return -EBUSY;
++
++	ctx->src_fmt = *f;
++	ctx->raw_fmt = rkvenc_find_raw_fmt(f->fmt.pix_mp.pixelformat);
++
++	/* The coded format takes the size and colorimetry of the input. */
++	if (!vb2_is_busy(v4l2_m2m_get_dst_vq(m2m_ctx))) {
++		coded->width = f->fmt.pix_mp.width;
++		coded->height = f->fmt.pix_mp.height;
++		rkvenc_fill_coded_fmt(ctx, coded);
++	}
++	coded->colorspace = f->fmt.pix_mp.colorspace;
++	coded->xfer_func = f->fmt.pix_mp.xfer_func;
++	coded->ycbcr_enc = f->fmt.pix_mp.ycbcr_enc;
++	coded->quantization = f->fmt.pix_mp.quantization;
++
++	return 0;
++}
++
++static int rkvenc_g_parm(struct file *file, void *priv,
++			 struct v4l2_streamparm *sp)
++{
++	struct rkvenc_ctx *ctx = file_to_rkvenc_ctx(file);
++
++	if (!V4L2_TYPE_IS_OUTPUT(sp->type))
++		return -EINVAL;
++
++	sp->parm.output.capability = V4L2_CAP_TIMEPERFRAME;
++	sp->parm.output.timeperframe = ctx->timeperframe;
++	return 0;
++}
++
++static int rkvenc_s_parm(struct file *file, void *priv,
++			 struct v4l2_streamparm *sp)
++{
++	struct rkvenc_ctx *ctx = file_to_rkvenc_ctx(file);
++	struct v4l2_fract *tpf = &sp->parm.output.timeperframe;
++
++	if (!V4L2_TYPE_IS_OUTPUT(sp->type))
++		return -EINVAL;
++
++	if (!tpf->numerator || !tpf->denominator) {
++		tpf->numerator = 1;
++		tpf->denominator = 30;
++	}
++
++	ctx->timeperframe = *tpf;
++	sp->parm.output.capability = V4L2_CAP_TIMEPERFRAME;
++	return 0;
++}
++
++static const struct v4l2_ioctl_ops rkvenc_ioctl_ops = {
++	.vidioc_querycap = rkvenc_querycap,
++	.vidioc_enum_framesizes = rkvenc_enum_framesizes,
++	.vidioc_enum_frameintervals = rkvenc_enum_frameintervals,
++
++	.vidioc_try_fmt_vid_cap_mplane = rkvenc_try_capture_fmt,
++	.vidioc_try_fmt_vid_out_mplane = rkvenc_try_output_fmt,
++	.vidioc_s_fmt_vid_out_mplane = rkvenc_s_output_fmt,
++	.vidioc_s_fmt_vid_cap_mplane = rkvenc_s_capture_fmt,
++	.vidioc_g_fmt_vid_out_mplane = rkvenc_g_output_fmt,
++	.vidioc_g_fmt_vid_cap_mplane = rkvenc_g_capture_fmt,
++	.vidioc_enum_fmt_vid_out = rkvenc_enum_output_fmt,
++	.vidioc_enum_fmt_vid_cap = rkvenc_enum_capture_fmt,
++
++	.vidioc_g_parm = rkvenc_g_parm,
++	.vidioc_s_parm = rkvenc_s_parm,
++
++	.vidioc_reqbufs = v4l2_m2m_ioctl_reqbufs,
++	.vidioc_querybuf = v4l2_m2m_ioctl_querybuf,
++	.vidioc_qbuf = v4l2_m2m_ioctl_qbuf,
++	.vidioc_dqbuf = v4l2_m2m_ioctl_dqbuf,
++	.vidioc_prepare_buf = v4l2_m2m_ioctl_prepare_buf,
++	.vidioc_create_bufs = v4l2_m2m_ioctl_create_bufs,
++	.vidioc_expbuf = v4l2_m2m_ioctl_expbuf,
++
++	.vidioc_subscribe_event = v4l2_ctrl_subscribe_event,
++	.vidioc_unsubscribe_event = v4l2_event_unsubscribe,
++
++	.vidioc_streamon = v4l2_m2m_ioctl_streamon,
++	.vidioc_streamoff = v4l2_m2m_ioctl_streamoff,
++};
++
++/* ---- vb2 ---- */
++
++static struct v4l2_format *rkvenc_queue_fmt(struct rkvenc_ctx *ctx,
++					    struct vb2_queue *vq)
++{
++	return V4L2_TYPE_IS_OUTPUT(vq->type) ? &ctx->src_fmt : &ctx->coded_fmt;
++}
++
++static int rkvenc_queue_setup(struct vb2_queue *vq, unsigned int *num_buffers,
++			      unsigned int *num_planes, unsigned int sizes[],
++			      struct device *alloc_devs[])
++{
++	struct rkvenc_ctx *ctx = vb2_get_drv_priv(vq);
++	struct v4l2_pix_format_mplane *pix = &rkvenc_queue_fmt(ctx, vq)->fmt.pix_mp;
++	unsigned int i;
++
++	if (*num_planes) {
++		if (*num_planes != pix->num_planes)
++			return -EINVAL;
++
++		for (i = 0; i < pix->num_planes; i++)
++			if (sizes[i] < pix->plane_fmt[i].sizeimage)
++				return -EINVAL;
++
++		return 0;
++	}
++
++	*num_planes = pix->num_planes;
++	for (i = 0; i < pix->num_planes; i++)
++		sizes[i] = pix->plane_fmt[i].sizeimage;
++
++	return 0;
++}
++
++static int rkvenc_buf_prepare(struct vb2_buffer *vb)
++{
++	struct rkvenc_ctx *ctx = vb2_get_drv_priv(vb->vb2_queue);
++	struct v4l2_pix_format_mplane *pix =
++		&rkvenc_queue_fmt(ctx, vb->vb2_queue)->fmt.pix_mp;
++	unsigned int i;
++
++	for (i = 0; i < pix->num_planes; i++) {
++		if (vb2_plane_size(vb, i) < pix->plane_fmt[i].sizeimage)
++			return -EINVAL;
++	}
++
++	return 0;
++}
++
++static void rkvenc_buf_queue(struct vb2_buffer *vb)
++{
++	struct rkvenc_ctx *ctx = vb2_get_drv_priv(vb->vb2_queue);
++
++	v4l2_m2m_buf_queue(ctx->fh.m2m_ctx, to_vb2_v4l2_buffer(vb));
++}
++
++static int rkvenc_buf_out_validate(struct vb2_buffer *vb)
++{
++	to_vb2_v4l2_buffer(vb)->field = V4L2_FIELD_NONE;
++	return 0;
++}
++
++static void rkvenc_buf_request_complete(struct vb2_buffer *vb)
++{
++	struct rkvenc_ctx *ctx = vb2_get_drv_priv(vb->vb2_queue);
++
++	v4l2_ctrl_request_complete(vb->req_obj.req, &ctx->ctrl_hdl);
++}
++
++static void rkvenc_queue_cleanup(struct vb2_queue *vq, u32 state)
++{
++	struct rkvenc_ctx *ctx = vb2_get_drv_priv(vq);
++	struct vb2_v4l2_buffer *vbuf;
++
++	for (;;) {
++		if (V4L2_TYPE_IS_OUTPUT(vq->type))
++			vbuf = v4l2_m2m_src_buf_remove(ctx->fh.m2m_ctx);
++		else
++			vbuf = v4l2_m2m_dst_buf_remove(ctx->fh.m2m_ctx);
++
++		if (!vbuf)
++			break;
++
++		v4l2_ctrl_request_complete(vbuf->vb2_buf.req_obj.req,
++					   &ctx->ctrl_hdl);
++		v4l2_m2m_buf_done(vbuf, state);
++	}
++}
++
++static int rkvenc_start_streaming(struct vb2_queue *q, unsigned int count)
++{
++	struct rkvenc_ctx *ctx = vb2_get_drv_priv(q);
++	const struct rkvenc_coded_fmt_desc *desc = ctx->coded_fmt_desc;
++	int ret;
++
++	if (ctx->started)
++		return 0;
++
++	if (ctx->src_fmt.fmt.pix_mp.width != ctx->coded_fmt.fmt.pix_mp.width ||
++	    ctx->src_fmt.fmt.pix_mp.height != ctx->coded_fmt.fmt.pix_mp.height)
++		ret = -EINVAL;
++	else
++		ret = desc->ops->start ? desc->ops->start(ctx) : 0;
++	if (ret) {
++		rkvenc_queue_cleanup(q, VB2_BUF_STATE_QUEUED);
++		return ret;
++	}
++
++	ctx->started = true;
++	return 0;
++}
++
++static void rkvenc_stop_streaming(struct vb2_queue *q)
++{
++	struct rkvenc_ctx *ctx = vb2_get_drv_priv(q);
++	const struct rkvenc_coded_fmt_desc *desc = ctx->coded_fmt_desc;
++
++	/* v4l2_m2m_streamoff() already waited for this context's job. */
++	if (ctx->started) {
++		if (desc->ops->stop)
++			desc->ops->stop(ctx);
++		ctx->started = false;
++	}
++
++	rkvenc_queue_cleanup(q, VB2_BUF_STATE_ERROR);
++}
++
++static const struct vb2_ops rkvenc_queue_ops = {
++	.queue_setup = rkvenc_queue_setup,
++	.buf_prepare = rkvenc_buf_prepare,
++	.buf_queue = rkvenc_buf_queue,
++	.buf_out_validate = rkvenc_buf_out_validate,
++	.buf_request_complete = rkvenc_buf_request_complete,
++	.start_streaming = rkvenc_start_streaming,
++	.stop_streaming = rkvenc_stop_streaming,
++};
++
++static int rkvenc_queue_init(void *priv, struct vb2_queue *src_vq,
++			     struct vb2_queue *dst_vq)
++{
++	struct rkvenc_ctx *ctx = priv;
++	struct rkvenc_dev *rkvenc = ctx->dev;
++	int ret;
++
++	src_vq->type = V4L2_BUF_TYPE_VIDEO_OUTPUT_MPLANE;
++	src_vq->io_modes = VB2_MMAP | VB2_DMABUF;
++	src_vq->drv_priv = ctx;
++	src_vq->ops = &rkvenc_queue_ops;
++	src_vq->mem_ops = &vb2_dma_contig_memops;
++	src_vq->dma_attrs = DMA_ATTR_ALLOC_SINGLE_PAGES |
++			    DMA_ATTR_NO_KERNEL_MAPPING;
++	src_vq->buf_struct_size = sizeof(struct v4l2_m2m_buffer);
++	src_vq->timestamp_flags = V4L2_BUF_FLAG_TIMESTAMP_COPY;
++	src_vq->lock = &rkvenc->vdev_lock;
++	src_vq->dev = rkvenc->v4l2_dev.dev;
++	src_vq->supports_requests = true;
++	src_vq->requires_requests = true;
++
++	ret = vb2_queue_init(src_vq);
++	if (ret)
++		return ret;
++
++	/* The CPU writes the parameter sets: CAPTURE needs a kernel mapping. */
++	/*
++	 * MMAP only: the headers are written through the coherent kernel
++	 * mapping; imported DMABUFs would need CPU cache maintenance.
++	 */
++	dst_vq->type = V4L2_BUF_TYPE_VIDEO_CAPTURE_MPLANE;
++	dst_vq->io_modes = VB2_MMAP;
++	dst_vq->drv_priv = ctx;
++	dst_vq->ops = &rkvenc_queue_ops;
++	dst_vq->mem_ops = &vb2_dma_contig_memops;
++	dst_vq->dma_attrs = DMA_ATTR_ALLOC_SINGLE_PAGES;
++	dst_vq->buf_struct_size = sizeof(struct v4l2_m2m_buffer);
++	dst_vq->timestamp_flags = V4L2_BUF_FLAG_TIMESTAMP_COPY;
++	dst_vq->lock = &rkvenc->vdev_lock;
++	dst_vq->dev = rkvenc->v4l2_dev.dev;
++
++	return vb2_queue_init(dst_vq);
++}
++
++/* ---- hardware ---- */
++
++static void rkvenc_write_range(struct rkvenc_core *core, u32 start, u32 end)
++{
++	u32 reg;
++
++	for (reg = start; reg < end; reg += 4)
++		writel_relaxed(core->shadow[reg / 4], core->regs + reg);
++}
++
++static u32 rkvenc_wdg_threshold(struct rkvenc_core *core)
++{
++	/* Hardware watchdog per picture size, as in the BSP driver. */
++	static const struct {
++		u32 pixels;
++		u32 ms;
++	} timeouts[] = {
++		{ 1920 * 1088, 50 },
++		{ 2560 * 1440, 100 },
++		{ 4096 * 2304, 200 },
++		{ 8192 * 8192, 400 },
++	};
++	unsigned long rate = core->core_clk ? clk_get_rate(core->core_clk) : 0;
++	u32 rsl = core->shadow[VEPU580_ENC_RSL / 4];
++	u32 pixels = (FIELD_GET(VEPU580_ENC_RSL_PIC_WD8_M1, rsl) + 1) *
++		     (FIELD_GET(VEPU580_ENC_RSL_PIC_HD8_M1, rsl) + 1) * 64;
++	u32 ms = 800;
++	unsigned int i;
++	u64 thd;
++
++	if (!rate)
++		return VEPU580_ENC_WDG_VS_LOAD_THD;
++
++	for (i = 0; i < ARRAY_SIZE(timeouts); i++) {
++		if (pixels <= timeouts[i].pixels) {
++			ms = timeouts[i].ms;
++			break;
++		}
++	}
++
++	/*
++	 * The BSP counts in units of 256 core clock cycles, its out-of-tree
++	 * port in units of 1024. Using the former errs on the long side.
++	 */
++	thd = (u64)ms * (rate / 256000);
++	return min_t(u64, thd, VEPU580_ENC_WDG_VS_LOAD_THD);
++}
++
++static void rkvenc_hw_start(struct rkvenc_core *core)
++{
++	/*
++	 * VEPU580 erratum: force-clear the core before every frame or stale
++	 * state may cause IOMMU page faults.
++	 */
++	writel(VEPU580_ENC_CLR_FORCE, core->regs + VEPU580_ENC_CLR);
++	udelay(5);
++	writel(0, core->regs + VEPU580_ENC_CLR);
++
++	writel_relaxed(VEPU580_DBG_AXIP0_CLR, core->regs + VEPU580_DBG_AXIP0_CMD);
++
++	writel_relaxed(VEPU580_INT_ENC_DONE | VEPU580_INT_ERROR,
++		       core->regs + VEPU580_INT_EN);
++	writel_relaxed(0, core->regs + VEPU580_INT_MSK);
++	writel_relaxed(VEPU580_INT_ALL, core->regs + VEPU580_INT_CLR);
++
++	rkvenc_write_range(core, VEPU580_CTL_START, VEPU580_CTL_END);
++	writel_relaxed(FIELD_PREP(VEPU580_ENC_WDG_VS_LOAD_THD,
++				  rkvenc_wdg_threshold(core)),
++		       core->regs + VEPU580_ENC_WDG);
++	rkvenc_write_range(core, VEPU580_FRAME_START, VEPU580_FRAME_END);
++	rkvenc_write_range(core, VEPU580_KLUT_START, VEPU580_KLUT_END);
++	rkvenc_write_range(core, VEPU580_PARAM_START, VEPU580_PARAM_END);
++	rkvenc_write_range(core, VEPU580_RDO_START, VEPU580_RDO_END);
++	rkvenc_write_range(core, VEPU580_SCL_START, VEPU580_SCL_END);
++
++	schedule_delayed_work(&core->watchdog_work,
++			      msecs_to_jiffies(RKVENC_SW_TIMEOUT_MS));
++
++	/* writel() orders all the relaxed writes above before the start. */
++	writel(FIELD_PREP(VEPU580_ENC_STRT_VEPU_CMD, 1),
++	       core->regs + VEPU580_ENC_STRT);
++}
++
++static void rkvenc_iommu_restore(struct rkvenc_core *core)
++{
++	struct iommu_domain *domain = core->rkvenc->iommu_domain;
++	int ret;
++
++	if (!core->empty_domain || !domain)
++		return;
++
++	/*
++	 * A CRU reset also clears the IOMMU. Attaching an empty domain and
++	 * then the shared domain again reprograms the page table base and
++	 * flushes the TLB of this core's IOMMU.
++	 */
++	iommu_detach_device(domain, core->dev);
++	ret = iommu_attach_device(core->empty_domain, core->dev);
++	if (ret)
++		dev_warn(core->dev, "cannot attach empty domain: %d\n", ret);
++	iommu_detach_device(core->empty_domain, core->dev);
++	ret = iommu_attach_device(domain, core->dev);
++	if (ret)
++		dev_warn(core->dev, "cannot attach shared domain: %d\n", ret);
++}
++
++static void rkvenc_hw_reset(struct rkvenc_core *core)
++{
++	u32 sta;
++	int ret;
++
++	/* Report safe-clear completion in the status, without an interrupt. */
++	writel(VEPU580_INT_ALL, core->regs + VEPU580_INT_MSK);
++	writel(VEPU580_INT_ALL, core->regs + VEPU580_INT_EN);
++	writel(VEPU580_ENC_CLR_SAFE, core->regs + VEPU580_ENC_CLR);
++	ret = readl_poll_timeout_atomic(core->regs + VEPU580_INT_STA, sta,
++					sta & VEPU580_INT_SCLR_DONE, 1, 100);
++	writel(VEPU580_ENC_CLR_FORCE, core->regs + VEPU580_ENC_CLR);
++	udelay(5);
++	writel(0, core->regs + VEPU580_ENC_CLR);
++	writel(VEPU580_INT_ALL, core->regs + VEPU580_INT_CLR);
++	writel(0, core->regs + VEPU580_INT_STA);
++
++	if (ret && core->rstc) {
++		dev_warn(core->dev, "safe clear timed out, resetting the core\n");
++		reset_control_assert(core->rstc);
++		udelay(5);
++		reset_control_deassert(core->rstc);
++		rkvenc_iommu_restore(core);
++	}
++}
++
++static void rkvenc_read_feedback(struct rkvenc_core *core,
++				 struct rkvenc_feedback *fb)
++{
++	void __iomem *r = core->regs;
++	u32 sse_bsl = readl_relaxed(r + VEPU580_ST_SSE_BSL);
++
++	fb->bs_len = readl_relaxed(r + VEPU580_ST_BS_LGTH_L32) |
++		     (u64)FIELD_GET(VEPU580_ST_BS_LGTH_H8, sse_bsl) << 32;
++	fb->sse = (u64)readl_relaxed(r + VEPU580_ST_SSE_H32) << 16 |
++		  FIELD_GET(VEPU580_ST_SSE_L16, sse_bsl);
++	fb->qp_sum = readl_relaxed(r + VEPU580_ST_QP_SUM);
++	fb->madi = readl_relaxed(r + VEPU580_ST_MADI);
++	fb->madp = readl_relaxed(r + VEPU580_ST_MADP);
++	fb->intra_blocks = readl_relaxed(r + VEPU580_ST_PNUM_I16) +
++			   readl_relaxed(r + VEPU580_ST_PNUM_I8) +
++			   readl_relaxed(r + VEPU580_ST_PNUM_I4);
++	fb->cycles = readl_relaxed(r + VEPU580_DBG_FRAME_CYC);
++}
++
++static void rkvenc_release_core(struct rkvenc_core *core)
++{
++	struct rkvenc_dev *rkvenc = core->rkvenc;
++
++	guard(spinlock_irqsave)(&rkvenc->cores_lock);
++	core->curr_ctx = NULL;
++	set_bit(core->id, &rkvenc->idle_cores);
++}
++
++static struct rkvenc_core *rkvenc_acquire_core(struct rkvenc_dev *rkvenc,
++					       struct rkvenc_ctx *ctx)
++{
++	struct rkvenc_core *core;
++	unsigned int id;
++
++	guard(spinlock_irqsave)(&rkvenc->cores_lock);
++	id = find_first_bit(&rkvenc->idle_cores, rkvenc->core_count);
++	if (id >= rkvenc->core_count)
++		return NULL;
++
++	clear_bit(id, &rkvenc->idle_cores);
++	core = rkvenc->cores[id];
++	core->curr_ctx = ctx;
++	return core;
++}
++
++static void rkvenc_job_finish(struct rkvenc_core *core,
++			      enum vb2_buffer_state state,
++			      const struct rkvenc_feedback *fb, bool powered)
++{
++	struct rkvenc_ctx *ctx = core->curr_ctx;
++	struct rkvenc_run *run = &core->run;
++	struct v4l2_m2m_ctx *m2m_ctx = ctx->fh.m2m_ctx;
++	struct vb2_v4l2_buffer *src = run->src, *dst = run->dst;
++	struct media_request *req = src->vb2_buf.req_obj.req;
++	struct rkvenc_feedback empty = { };
++
++	if (ctx->coded_fmt_desc->ops->done)
++		ctx->coded_fmt_desc->ops->done(ctx, run, fb ? fb : &empty, &state);
++
++	if (state != VB2_BUF_STATE_DONE)
++		vb2_set_plane_payload(&dst->vb2_buf, 0, 0);
++
++	if (powered) {
++		pm_runtime_mark_last_busy(core->dev);
++		pm_runtime_put_autosuspend(core->dev);
++	}
++
++	/*
++	 * Everything needed from core->run is in locals now: once the core is
++	 * idle another context's device_run() may take it.
++	 */
++	ctx->core = NULL;
++	rkvenc_release_core(core);
++
++	v4l2_m2m_src_buf_remove_by_buf(m2m_ctx, src);
++	v4l2_m2m_dst_buf_remove_by_buf(m2m_ctx, dst);
++	if (req)
++		v4l2_ctrl_request_complete(req, &ctx->ctrl_hdl);
++	/* CAPTURE first: the request completes with the OUTPUT buffer. */
++	v4l2_m2m_buf_done(dst, state);
++	v4l2_m2m_buf_done(src, state);
++	v4l2_m2m_job_finish(ctx->dev->m2m_dev, m2m_ctx);
++}
++
++static void rkvenc_device_run(void *priv)
++{
++	struct rkvenc_ctx *ctx = priv;
++	struct rkvenc_dev *rkvenc = ctx->dev;
++	const struct rkvenc_codec_ops *ops = ctx->coded_fmt_desc->ops;
++	struct vb2_v4l2_buffer *src, *dst;
++	struct media_request *req;
++	struct rkvenc_core *core;
++	int ret;
++
++	src = v4l2_m2m_next_src_buf(ctx->fh.m2m_ctx);
++	dst = v4l2_m2m_next_dst_buf(ctx->fh.m2m_ctx);
++
++	core = rkvenc_acquire_core(rkvenc, ctx);
++	if (WARN_ON(!core)) {
++		if (src->vb2_buf.req_obj.req)
++			v4l2_ctrl_request_complete(src->vb2_buf.req_obj.req,
++						   &ctx->ctrl_hdl);
++		v4l2_m2m_buf_done_and_job_finish(rkvenc->m2m_dev,
++						 ctx->fh.m2m_ctx,
++						 VB2_BUF_STATE_ERROR);
++		return;
++	}
++
++	ctx->core = core;
++	core->run.src = src;
++	core->run.dst = dst;
++	core->run.hdr_bytes = 0;
++
++	req = src->vb2_buf.req_obj.req;
++	if (req)
++		v4l2_ctrl_request_setup(req, &ctx->ctrl_hdl);
++
++	/* The reference handling keys reconstructed frames by timestamp. */
++	v4l2_m2m_buf_copy_metadata(src, dst);
++
++	ret = pm_runtime_resume_and_get(core->dev);
++	if (ret < 0) {
++		dev_err(core->dev, "cannot power up: %d\n", ret);
++		rkvenc_job_finish(core, VB2_BUF_STATE_ERROR, NULL, false);
++		return;
++	}
++
++	ret = ops->run(ctx, core, &core->run);
++	if (ret) {
++		dev_dbg(core->dev, "cannot prepare job: %d\n", ret);
++		rkvenc_job_finish(core, VB2_BUF_STATE_ERROR, NULL, true);
++		return;
++	}
++
++	rkvenc_hw_start(core);
++}
++
++static int rkvenc_job_ready(void *priv)
++{
++	struct rkvenc_ctx *ctx = priv;
++
++	return ctx->started;
++}
++
++static const struct v4l2_m2m_ops rkvenc_m2m_ops = {
++	.device_run = rkvenc_device_run,
++	.job_ready = rkvenc_job_ready,
++};
++
++static irqreturn_t rkvenc_irq_thread(int irq, void *priv)
++{
++	struct rkvenc_core *core = priv;
++	enum vb2_buffer_state state = VB2_BUF_STATE_DONE;
++	struct rkvenc_feedback fb = { };
++	u32 sta;
++
++	if (pm_runtime_get_if_active(core->dev) <= 0)
++		return IRQ_NONE;
++
++	sta = readl(core->regs + VEPU580_INT_STA);
++	writel(sta, core->regs + VEPU580_INT_CLR);
++	writel(0, core->regs + VEPU580_INT_STA);
++
++	if (!sta) {
++		pm_runtime_put_noidle(core->dev);
++		return IRQ_NONE;
++	}
++
++	core->irq_count++;
++
++	/* Prevent a watchdog interrupt storm. */
++	if (sta & VEPU580_INT_WDG)
++		writel(VEPU580_INT_WDG, core->regs + VEPU580_INT_MSK);
++
++	if (!(sta & (VEPU580_INT_ENC_DONE | VEPU580_INT_ERROR)) ||
++	    !core->curr_ctx || !cancel_delayed_work(&core->watchdog_work)) {
++		pm_runtime_put_noidle(core->dev);
++		return IRQ_HANDLED;
++	}
++
++	fb.int_sta = sta;
++	rkvenc_read_feedback(core, &fb);
++
++	if (sta & VEPU580_INT_ERROR) {
++		dev_err(core->dev, "encode error, irq status %#x\n", sta);
++		state = VB2_BUF_STATE_ERROR;
++		rkvenc_hw_reset(core);
++	}
++
++	pm_runtime_put_noidle(core->dev);
++	rkvenc_job_finish(core, state, &fb, true);
++
++	return IRQ_HANDLED;
++}
++
++static void rkvenc_watchdog_func(struct work_struct *work)
++{
++	struct rkvenc_core *core = container_of(to_delayed_work(work),
++						struct rkvenc_core,
++						watchdog_work);
++
++	if (!core->curr_ctx)
++		return;
++
++	dev_err(core->dev, "frame encoding timed out, irq status %#x\n",
++		readl(core->regs + VEPU580_INT_STA));
++	rkvenc_hw_reset(core);
++	rkvenc_job_finish(core, VB2_BUF_STATE_ERROR, NULL, true);
++}
++
++/* ---- file operations ---- */
++
++static int rkvenc_init_ctrls(struct rkvenc_ctx *ctx)
++{
++	struct v4l2_ctrl_handler *hdl = &ctx->ctrl_hdl;
++	unsigned int i, j, nctrls = 0;
++	int ret;
++
++	for (i = 0; i < ARRAY_SIZE(rkvenc_coded_fmts); i++)
++		nctrls += rkvenc_coded_fmts[i]->ctrls->num_ctrls;
++
++	v4l2_ctrl_handler_init(hdl, nctrls);
++
++	for (i = 0; i < ARRAY_SIZE(rkvenc_coded_fmts); i++) {
++		const struct rkvenc_ctrls *ctrls = rkvenc_coded_fmts[i]->ctrls;
++
++		for (j = 0; j < ctrls->num_ctrls; j++)
++			v4l2_ctrl_new_custom(hdl, &ctrls->ctrls[j], NULL);
++	}
++
++	ctx->avg_qp_ctrl = v4l2_ctrl_find(hdl, V4L2_CID_MPEG_VIDEO_AVERAGE_QP);
++
++	if (hdl->error) {
++		ret = hdl->error;
++		v4l2_ctrl_handler_free(hdl);
++		return ret;
++	}
++
++	ret = v4l2_ctrl_handler_setup(hdl);
++	if (ret) {
++		v4l2_ctrl_handler_free(hdl);
++		return ret;
++	}
++
++	ctx->fh.ctrl_handler = hdl;
++	return 0;
++}
++
++static int rkvenc_open(struct file *filp)
++{
++	struct rkvenc_dev *rkvenc = video_drvdata(filp);
++	struct rkvenc_ctx *ctx;
++	int ret;
++
++	ctx = kzalloc_obj(*ctx);
++	if (!ctx)
++		return -ENOMEM;
++
++	ctx->dev = rkvenc;
++	rkvenc_reset_fmts(ctx);
++	v4l2_fh_init(&ctx->fh, video_devdata(filp));
++
++	ret = rkvenc_init_ctrls(ctx);
++	if (ret)
++		goto err_free_ctx;
++
++	ctx->fh.m2m_ctx = v4l2_m2m_ctx_init(rkvenc->m2m_dev, ctx,
++					    rkvenc_queue_init);
++	if (IS_ERR(ctx->fh.m2m_ctx)) {
++		ret = PTR_ERR(ctx->fh.m2m_ctx);
++		goto err_free_ctrls;
++	}
++
++	v4l2_fh_add(&ctx->fh, filp);
++	return 0;
++
++err_free_ctrls:
++	v4l2_ctrl_handler_free(&ctx->ctrl_hdl);
++err_free_ctx:
++	v4l2_fh_exit(&ctx->fh);
++	kfree(ctx);
++	return ret;
++}
++
++static int rkvenc_release(struct file *filp)
++{
++	struct rkvenc_ctx *ctx = file_to_rkvenc_ctx(filp);
++
++	v4l2_fh_del(&ctx->fh, filp);
++	v4l2_m2m_ctx_release(ctx->fh.m2m_ctx);
++	v4l2_ctrl_handler_free(&ctx->ctrl_hdl);
++	v4l2_fh_exit(&ctx->fh);
++	kfree(ctx);
++	return 0;
++}
++
++static const struct v4l2_file_operations rkvenc_fops = {
++	.owner = THIS_MODULE,
++	.open = rkvenc_open,
++	.release = rkvenc_release,
++	.poll = v4l2_m2m_fop_poll,
++	.unlocked_ioctl = video_ioctl2,
++	.mmap = v4l2_m2m_fop_mmap,
++};
++
++static int rkvenc_request_validate(struct media_request *req)
++{
++	unsigned int count = vb2_request_buffer_cnt(req);
++
++	if (!count)
++		return -ENOENT;
++	if (count > 1)
++		return -EINVAL;
++
++	return vb2_request_validate(req);
++}
++
++static const struct media_device_ops rkvenc_media_ops = {
++	.req_validate = rkvenc_request_validate,
++	.req_queue = v4l2_m2m_request_queue,
++};
++
++static int rkvenc_v4l2_init(struct rkvenc_dev *rkvenc)
++{
++	struct device *dev = rkvenc->main_core->dev;
++	int ret;
++
++	ret = v4l2_device_register(dev, &rkvenc->v4l2_dev);
++	if (ret)
++		return ret;
++
++	rkvenc->m2m_dev = v4l2_m2m_init(&rkvenc_m2m_ops);
++	if (IS_ERR(rkvenc->m2m_dev)) {
++		ret = PTR_ERR(rkvenc->m2m_dev);
++		goto err_unregister_v4l2;
++	}
++
++	rkvenc->mdev.dev = dev;
++	strscpy(rkvenc->mdev.model, RKVENC_NAME, sizeof(rkvenc->mdev.model));
++	/* Must match the bus_info VIDIOC_QUERYCAP reports for the vdev. */
++	snprintf(rkvenc->mdev.bus_info, sizeof(rkvenc->mdev.bus_info),
++		 "platform:%s", dev_name(dev));
++	media_device_init(&rkvenc->mdev);
++	rkvenc->mdev.ops = &rkvenc_media_ops;
++	rkvenc->v4l2_dev.mdev = &rkvenc->mdev;
++
++	rkvenc->vdev.lock = &rkvenc->vdev_lock;
++	rkvenc->vdev.v4l2_dev = &rkvenc->v4l2_dev;
++	rkvenc->vdev.fops = &rkvenc_fops;
++	rkvenc->vdev.release = video_device_release_empty;
++	rkvenc->vdev.vfl_dir = VFL_DIR_M2M;
++	rkvenc->vdev.device_caps = V4L2_CAP_STREAMING |
++				   V4L2_CAP_VIDEO_M2M_MPLANE;
++	rkvenc->vdev.ioctl_ops = &rkvenc_ioctl_ops;
++	video_set_drvdata(&rkvenc->vdev, rkvenc);
++	strscpy(rkvenc->vdev.name, RKVENC_NAME, sizeof(rkvenc->vdev.name));
++
++	ret = video_register_device(&rkvenc->vdev, VFL_TYPE_VIDEO, -1);
++	if (ret)
++		goto err_cleanup_mc;
++
++	ret = v4l2_m2m_register_media_controller(rkvenc->m2m_dev, &rkvenc->vdev,
++						 MEDIA_ENT_F_PROC_VIDEO_ENCODER);
++	if (ret)
++		goto err_unregister_vdev;
++
++	ret = media_device_register(&rkvenc->mdev);
++	if (ret)
++		goto err_unregister_mc;
++
++	v4l2_m2m_set_max_parallel_jobs(rkvenc->m2m_dev, rkvenc->core_count);
++	return 0;
++
++err_unregister_mc:
++	v4l2_m2m_unregister_media_controller(rkvenc->m2m_dev);
++err_unregister_vdev:
++	video_unregister_device(&rkvenc->vdev);
++err_cleanup_mc:
++	media_device_cleanup(&rkvenc->mdev);
++	v4l2_m2m_release(rkvenc->m2m_dev);
++err_unregister_v4l2:
++	v4l2_device_unregister(&rkvenc->v4l2_dev);
++	return ret;
++}
++
++static void rkvenc_v4l2_cleanup(struct rkvenc_dev *rkvenc)
++{
++	media_device_unregister(&rkvenc->mdev);
++	v4l2_m2m_unregister_media_controller(rkvenc->m2m_dev);
++	video_unregister_device(&rkvenc->vdev);
++	media_device_cleanup(&rkvenc->mdev);
++	v4l2_m2m_release(rkvenc->m2m_dev);
++	v4l2_device_unregister(&rkvenc->v4l2_dev);
++}
++
++/* ---- cores ---- */
++
++static int rkvenc_core_bind(struct device *dev, struct device *master,
++			    void *data)
++{
++	struct rkvenc_core *core = dev_get_drvdata(dev);
++	struct rkvenc_dev *rkvenc = data;
++	int ret;
++
++	if (rkvenc->core_count >= rkvenc->num_cores)
++		return -EINVAL;
++
++	/*
++	 * All cores share the first core's DMA domain, so that buffers
++	 * allocated or imported through the first core are mapped in every
++	 * core's IOMMU and a job can run on any core.
++	 */
++	if (iommu_get_domain_for_dev(dev)) {
++		if (!rkvenc->iommu_domain) {
++			rkvenc->iommu_domain = iommu_get_domain_for_dev(dev);
++		} else {
++			ret = iommu_attach_device(rkvenc->iommu_domain, dev);
++			if (ret) {
++				dev_err(dev, "cannot attach shared IOMMU domain: %d\n",
++					ret);
++				return ret;
++			}
++		}
++	}
++
++	core->id = rkvenc->core_count;
++	core->rkvenc = rkvenc;
++	rkvenc->cores[core->id] = core;
++	if (!core->id)
++		rkvenc->main_core = core;
++	rkvenc->core_count++;
++	set_bit(core->id, &rkvenc->idle_cores);
++
++	dev_info(dev, "registered encoder core %d\n", core->id);
++	return 0;
++}
++
++static void rkvenc_core_unbind(struct device *dev, struct device *master,
++			       void *data)
++{
++	struct rkvenc_core *core = dev_get_drvdata(dev);
++	struct rkvenc_dev *rkvenc = data;
++
++	cancel_delayed_work_sync(&core->watchdog_work);
++
++	if (core->id && rkvenc->iommu_domain)
++		iommu_detach_device(rkvenc->iommu_domain, dev);
++
++	clear_bit(core->id, &rkvenc->idle_cores);
++	rkvenc->cores[core->id] = NULL;
++	rkvenc->core_count--;
++	core->rkvenc = NULL;
++}
++
++static const struct component_ops rkvenc_core_ops = {
++	.bind = rkvenc_core_bind,
++	.unbind = rkvenc_core_unbind,
++};
++
++static void rkvenc_free_empty_domain(void *data)
++{
++	iommu_domain_free(data);
++}
++
++static int rkvenc_core_probe(struct platform_device *pdev)
++{
++	struct device *dev = &pdev->dev;
++	struct rkvenc_core *core;
++	int ret, irq;
++
++	core = devm_kzalloc(dev, sizeof(*core), GFP_KERNEL);
++	if (!core)
++		return -ENOMEM;
++
++	core->dev = dev;
++	INIT_DELAYED_WORK(&core->watchdog_work, rkvenc_watchdog_func);
++
++	core->shadow = devm_kzalloc(dev, VEPU580_SHADOW_SIZE, GFP_KERNEL);
++	if (!core->shadow)
++		return -ENOMEM;
++
++	core->regs = devm_platform_ioremap_resource(pdev, 0);
++	if (IS_ERR(core->regs))
++		return PTR_ERR(core->regs);
++
++	ret = devm_clk_bulk_get_all(dev, &core->clocks);
++	if (ret < 0)
++		return dev_err_probe(dev, ret, "cannot get clocks\n");
++	core->num_clocks = ret;
++
++	core->core_clk = devm_clk_get(dev, "core");
++	if (IS_ERR(core->core_clk))
++		return dev_err_probe(dev, PTR_ERR(core->core_clk),
++				     "cannot get core clock\n");
++
++	core->rstc = devm_reset_control_array_get_optional_exclusive(dev);
++	if (IS_ERR(core->rstc))
++		return dev_err_probe(dev, PTR_ERR(core->rstc),
++				     "cannot get resets\n");
++
++	if (iommu_get_domain_for_dev(dev)) {
++		core->empty_domain = iommu_paging_domain_alloc(dev);
++		if (IS_ERR(core->empty_domain)) {
++			dev_warn(dev, "cannot allocate empty IOMMU domain\n");
++			core->empty_domain = NULL;
++		} else {
++			ret = devm_add_action_or_reset(dev,
++						       rkvenc_free_empty_domain,
++						       core->empty_domain);
++			if (ret)
++				return ret;
++		}
++	}
++
++	ret = dma_set_mask_and_coherent(dev, DMA_BIT_MASK(32));
++	if (ret)
++		return dev_err_probe(dev, ret, "cannot set DMA mask\n");
++
++	vb2_dma_contig_set_max_seg_size(dev, DMA_BIT_MASK(32));
++
++	irq = platform_get_irq(pdev, 0);
++	if (irq < 0)
++		return irq;
++
++	platform_set_drvdata(pdev, core);
++
++	pm_runtime_set_autosuspend_delay(dev, 100);
++	pm_runtime_use_autosuspend(dev);
++	ret = devm_pm_runtime_enable(dev);
++	if (ret)
++		return ret;
++
++	ret = devm_request_threaded_irq(dev, irq, NULL, rkvenc_irq_thread,
++					IRQF_ONESHOT, dev_name(dev), core);
++	if (ret)
++		return dev_err_probe(dev, ret, "cannot request IRQ\n");
++
++	ret = component_add(dev, &rkvenc_core_ops);
++	if (ret)
++		return dev_err_probe(dev, ret, "cannot add component\n");
++
++	return 0;
++}
++
++static void rkvenc_core_remove(struct platform_device *pdev)
++{
++	struct rkvenc_core *core = platform_get_drvdata(pdev);
++
++	component_del(&pdev->dev, &rkvenc_core_ops);
++	cancel_delayed_work_sync(&core->watchdog_work);
++}
++
++static int rkvenc_core_runtime_resume(struct device *dev)
++{
++	struct rkvenc_core *core = dev_get_drvdata(dev);
++
++	return clk_bulk_prepare_enable(core->num_clocks, core->clocks);
++}
++
++static int rkvenc_core_runtime_suspend(struct device *dev)
++{
++	struct rkvenc_core *core = dev_get_drvdata(dev);
++
++	clk_bulk_disable_unprepare(core->num_clocks, core->clocks);
++	return 0;
++}
++
++static const struct dev_pm_ops rkvenc_core_pm_ops = {
++	SYSTEM_SLEEP_PM_OPS(pm_runtime_force_suspend, pm_runtime_force_resume)
++	RUNTIME_PM_OPS(rkvenc_core_runtime_suspend, rkvenc_core_runtime_resume,
++		       NULL)
++};
++
++static const struct of_device_id rkvenc_core_of_match[] = {
++	{ .compatible = "rockchip,rk3588-vepu580" },
++	{ /* sentinel */ }
++};
++MODULE_DEVICE_TABLE(of, rkvenc_core_of_match);
++
++static struct platform_driver rkvenc_core_driver = {
++	.probe = rkvenc_core_probe,
++	.remove = rkvenc_core_remove,
++	.driver = {
++		.name = RKVENC_NAME "-core",
++		.of_match_table = rkvenc_core_of_match,
++		.pm = pm_ptr(&rkvenc_core_pm_ops),
++	},
++};
++
++/* ---- master ---- */
++
++static int rkvenc_master_bind(struct device *dev)
++{
++	struct rkvenc_dev *rkvenc = dev_get_drvdata(dev);
++	int ret;
++
++	ret = component_bind_all(dev, rkvenc);
++	if (ret)
++		return ret;
++
++	if (!rkvenc->main_core) {
++		ret = -ENODEV;
++		goto err_unbind;
++	}
++
++	ret = rkvenc_v4l2_init(rkvenc);
++	if (ret)
++		goto err_unbind;
++
++	rkvenc->bound = true;
++	return 0;
++
++err_unbind:
++	component_unbind_all(dev, rkvenc);
++	rkvenc->main_core = NULL;
++	rkvenc->iommu_domain = NULL;
++	return ret;
++}
++
++static void rkvenc_master_unbind(struct device *dev)
++{
++	struct rkvenc_dev *rkvenc = dev_get_drvdata(dev);
++
++	/* Let running jobs finish before the cores go away. */
++	v4l2_m2m_suspend(rkvenc->m2m_dev);
++	rkvenc->bound = false;
++	rkvenc_v4l2_cleanup(rkvenc);
++	component_unbind_all(dev, rkvenc);
++	rkvenc->main_core = NULL;
++	rkvenc->iommu_domain = NULL;
++}
++
++static const struct component_master_ops rkvenc_master_ops = {
++	.bind = rkvenc_master_bind,
++	.unbind = rkvenc_master_unbind,
++};
++
++static int rkvenc_master_probe(struct platform_device *pdev)
++{
++	struct device *dev = &pdev->dev;
++	struct component_match *match = NULL;
++	struct device_node *np;
++	struct rkvenc_dev *rkvenc;
++	unsigned int num_cores = 0;
++
++	for_each_matching_node(np, rkvenc_core_of_match) {
++		if (!of_device_is_available(np))
++			continue;
++
++		component_match_add_release(dev, &match, component_release_of,
++					    component_compare_of,
++					    of_node_get(np));
++		num_cores++;
++	}
++
++	if (!match)
++		return -ENODEV;
++
++	if (num_cores > BITS_PER_LONG)
++		num_cores = BITS_PER_LONG;
++
++	rkvenc = devm_kzalloc(dev, sizeof(*rkvenc), GFP_KERNEL);
++	if (!rkvenc)
++		return -ENOMEM;
++
++	rkvenc->cores = devm_kcalloc(dev, num_cores, sizeof(*rkvenc->cores),
++				     GFP_KERNEL);
++	if (!rkvenc->cores)
++		return -ENOMEM;
++
++	rkvenc->h264_scl = vepu580_gen_h264_scl(dev);
++	if (!rkvenc->h264_scl)
++		return -ENOMEM;
++
++	rkvenc->dev = dev;
++	rkvenc->num_cores = num_cores;
++	mutex_init(&rkvenc->vdev_lock);
++	spin_lock_init(&rkvenc->cores_lock);
++	dev_set_drvdata(dev, rkvenc);
++
++	return component_master_add_with_match(dev, &rkvenc_master_ops, match);
++}
++
++static void rkvenc_master_remove(struct platform_device *pdev)
++{
++	component_master_del(&pdev->dev, &rkvenc_master_ops);
++}
++
++/*
++ * The master device is registered after the cores, so it is suspended
++ * before and resumed after them: pause the job queue here so that no job
++ * is running when the cores are suspended.
++ */
++static int rkvenc_master_suspend(struct device *dev)
++{
++	struct rkvenc_dev *rkvenc = dev_get_drvdata(dev);
++
++	if (rkvenc && rkvenc->bound)
++		v4l2_m2m_suspend(rkvenc->m2m_dev);
++
++	return 0;
++}
++
++static int rkvenc_master_resume(struct device *dev)
++{
++	struct rkvenc_dev *rkvenc = dev_get_drvdata(dev);
++
++	if (rkvenc && rkvenc->bound)
++		v4l2_m2m_resume(rkvenc->m2m_dev);
++
++	return 0;
++}
++
++static DEFINE_SIMPLE_DEV_PM_OPS(rkvenc_master_pm_ops, rkvenc_master_suspend,
++				rkvenc_master_resume);
++
++static struct platform_driver rkvenc_master_driver = {
++	.probe = rkvenc_master_probe,
++	.remove = rkvenc_master_remove,
++	.driver = {
++		.name = RKVENC_NAME,
++		.pm = pm_sleep_ptr(&rkvenc_master_pm_ops),
++	},
++};
++
++static struct platform_device *rkvenc_master_pdev;
++
++static bool rkvenc_has_available_core(void)
++{
++	struct device_node *np;
++
++	for_each_matching_node(np, rkvenc_core_of_match) {
++		if (of_device_is_available(np)) {
++			of_node_put(np);
++			return true;
++		}
++	}
++
++	return false;
++}
++
++static int __init rkvenc_init(void)
++{
++	int ret;
++
++	ret = platform_driver_register(&rkvenc_core_driver);
++	if (ret)
++		return ret;
++
++	ret = platform_driver_register(&rkvenc_master_driver);
++	if (ret)
++		goto err_unregister_core;
++
++	if (!rkvenc_has_available_core())
++		return 0;
++
++	rkvenc_master_pdev = platform_device_register_simple(RKVENC_NAME,
++							     PLATFORM_DEVID_NONE,
++							     NULL, 0);
++	if (IS_ERR(rkvenc_master_pdev)) {
++		ret = PTR_ERR(rkvenc_master_pdev);
++		rkvenc_master_pdev = NULL;
++		goto err_unregister_master;
++	}
++
++	return 0;
++
++err_unregister_master:
++	platform_driver_unregister(&rkvenc_master_driver);
++err_unregister_core:
++	platform_driver_unregister(&rkvenc_core_driver);
++	return ret;
++}
++module_init(rkvenc_init);
++
++static void __exit rkvenc_exit(void)
++{
++	platform_device_unregister(rkvenc_master_pdev);
++	platform_driver_unregister(&rkvenc_master_driver);
++	platform_driver_unregister(&rkvenc_core_driver);
++}
++module_exit(rkvenc_exit);
++
++MODULE_DESCRIPTION("Rockchip VEPU580 stateless video encoder driver");
++MODULE_LICENSE("GPL");
+diff --git a/drivers/media/platform/rockchip/rkvenc/rkvenc.h b/drivers/media/platform/rockchip/rkvenc/rkvenc.h
+new file mode 100644
+index 000000000..4ecc601be
+--- /dev/null
++++ b/drivers/media/platform/rockchip/rkvenc/rkvenc.h
+@@ -0,0 +1,234 @@
++/* SPDX-License-Identifier: GPL-2.0 */
++/*
++ * Rockchip VEPU580 (RKVENC) stateless video encoder driver
++ */
++
++#ifndef RKVENC_H_
++#define RKVENC_H_
++
++#include <linux/clk.h>
++#include <linux/platform_device.h>
++#include <linux/reset.h>
++#include <linux/spinlock.h>
++#include <linux/videodev2.h>
++#include <linux/workqueue.h>
++#include <media/v4l2-ctrls.h>
++#include <media/v4l2-device.h>
++#include <media/v4l2-h264-enc.h>
++#include <media/v4l2-ioctl.h>
++#include <media/v4l2-mem2mem.h>
++#include <media/videobuf2-core.h>
++#include <media/videobuf2-dma-contig.h>
++
++#include "rkvenc-regs.h"
++
++struct rkvenc_ctx;
++struct rkvenc_core;
++
++/**
++ * struct rkvenc_aux_buf - driver-internal DMA buffer
++ * @cpu: kernel address, or NULL when allocated without a kernel mapping
++ * @dma: device address (IOVA in the shared IOMMU domain)
++ * @size: size in bytes
++ * @attrs: DMA attributes used for the allocation
++ */
++struct rkvenc_aux_buf {
++	void *cpu;
++	dma_addr_t dma;
++	size_t size;
++	unsigned long attrs;
++};
++
++/**
++ * struct rkvenc_rec_buf - reconstructed / reference picture
++ * @pixel: FBC header followed by the FBC body
++ * @thumb: 1/4 x 1/4 down-scaled luma used by the coarse motion search
++ * @colmv: collocated motion vectors (HEVC TMVP only)
++ * @fbc_hdr_size: offset of the FBC body inside @pixel
++ */
++struct rkvenc_rec_buf {
++	struct rkvenc_aux_buf pixel;
++	struct rkvenc_aux_buf thumb;
++	struct rkvenc_aux_buf colmv;
++	size_t fbc_hdr_size;
++};
++
++/**
++ * struct rkvenc_feedback - per-frame values read back from the status block
++ */
++struct rkvenc_feedback {
++	u32 int_sta;
++	u64 bs_len;
++	u64 sse;
++	u32 qp_sum;
++	u32 madi;
++	u32 madp;
++	u32 intra_blocks;
++	u32 cycles;
++};
++
++/**
++ * struct rkvenc_run - state of one hardware job
++ */
++struct rkvenc_run {
++	struct vb2_v4l2_buffer *src;
++	struct vb2_v4l2_buffer *dst;
++	/* Bytes written by software at the start of @dst (parameter sets). */
++	unsigned int hdr_bytes;
++};
++
++/**
++ * struct rkvenc_codec_ops - per-codec backend
++ * @adjust_fmt: adjust the coded (CAPTURE) format
++ * @start: called on STREAMON of both queues, allocates codec state
++ * @stop: called on STREAMOFF, frees codec state
++ * @run: prepare the job: produce software headers and fill @core's shadow
++ *	 registers (codec syntax, rate control and references)
++ * @done: called after the hardware finished; @fb holds the status read-back.
++ *	  The backend sets the CAPTURE payload and may change @state.
++ */
++struct rkvenc_codec_ops {
++	int (*adjust_fmt)(struct rkvenc_ctx *ctx, struct v4l2_format *f);
++	int (*start)(struct rkvenc_ctx *ctx);
++	void (*stop)(struct rkvenc_ctx *ctx);
++	int (*run)(struct rkvenc_ctx *ctx, struct rkvenc_core *core,
++		   struct rkvenc_run *run);
++	void (*done)(struct rkvenc_ctx *ctx, struct rkvenc_run *run,
++		     const struct rkvenc_feedback *fb,
++		     enum vb2_buffer_state *state);
++};
++
++struct rkvenc_ctrls {
++	const struct v4l2_ctrl_config *ctrls;
++	unsigned int num_ctrls;
++};
++
++/**
++ * struct rkvenc_coded_fmt_desc - coded (CAPTURE) format description
++ */
++struct rkvenc_coded_fmt_desc {
++	u32 fourcc;
++	struct v4l2_frmsize_stepwise frmsize;
++	const struct rkvenc_ctrls *ctrls;
++	const struct rkvenc_codec_ops *ops;
++};
++
++/**
++ * struct rkvenc_raw_fmt - raw (OUTPUT) format and its hardware mapping
++ */
++struct rkvenc_raw_fmt {
++	u32 fourcc;
++	u8 hw_fmt;
++	u8 rbuv_swap;
++};
++
++struct rkvenc_dev;
++
++/**
++ * struct rkvenc_core - one VEPU580 hardware core
++ */
++struct rkvenc_core {
++	struct device *dev;
++	struct rkvenc_dev *rkvenc;
++	void __iomem *regs;
++	struct clk_bulk_data *clocks;
++	int num_clocks;
++	struct clk *core_clk;
++	struct reset_control *rstc;
++	struct iommu_domain *empty_domain;
++	struct delayed_work watchdog_work;
++	/* Context whose job is running, protected by rkvenc->cores_lock. */
++	struct rkvenc_ctx *curr_ctx;
++	struct rkvenc_run run;
++	/* Shadow of the frame configuration registers. */
++	u32 *shadow;
++	unsigned long irq_count;
++	int id;
++};
++
++/**
++ * struct rkvenc_dev - V4L2 device, shared by all cores
++ */
++struct rkvenc_dev {
++	struct v4l2_device v4l2_dev;
++	struct media_device mdev;
++	struct video_device vdev;
++	struct v4l2_m2m_dev *m2m_dev;
++	struct device *dev;
++	/* Serializes ioctls. */
++	struct mutex vdev_lock;
++	struct rkvenc_core **cores;
++	unsigned int num_cores;
++	unsigned int core_count;
++	unsigned long idle_cores;
++	/* Protects idle_cores and core->curr_ctx. */
++	spinlock_t cores_lock;
++	struct rkvenc_core *main_core;
++	struct iommu_domain *iommu_domain;
++	/* The cores are bound and the V4L2 devices registered. */
++	bool bound;
++	/* H.264 flat quantisation tables, generated once. */
++	u32 *h264_scl;
++};
++
++/**
++ * struct rkvenc_h264_ctx - H.264 per-context state
++ */
++struct rkvenc_h264_ctx {
++	struct v4l2_h264_enc enc;
++	bool hw_rc;
++};
++
++struct rkvenc_ctx {
++	struct v4l2_fh fh;
++	struct rkvenc_dev *dev;
++	struct v4l2_format coded_fmt;
++	struct v4l2_format src_fmt;
++	const struct rkvenc_coded_fmt_desc *coded_fmt_desc;
++	const struct rkvenc_raw_fmt *raw_fmt;
++	struct v4l2_fract timeperframe;
++	struct v4l2_ctrl_handler ctrl_hdl;
++	struct rkvenc_core *core;
++	struct v4l2_ctrl *avg_qp_ctrl;
++	void *priv;
++	bool started;
++};
++
++static inline struct rkvenc_ctx *file_to_rkvenc_ctx(struct file *filp)
++{
++	return container_of(file_to_v4l2_fh(filp), struct rkvenc_ctx, fh);
++}
++
++static inline void rkvenc_set(struct rkvenc_core *core, u32 reg, u32 val)
++{
++	core->shadow[reg / 4] = val;
++}
++
++static inline void rkvenc_or(struct rkvenc_core *core, u32 reg, u32 val)
++{
++	core->shadow[reg / 4] |= val;
++}
++
++/* Shared VEPU580 programming helpers (rkvenc-vepu580.c). */
++int rkvenc_alloc_aux(struct rkvenc_dev *rkvenc, struct rkvenc_aux_buf *buf,
++		     size_t size, bool kernel_mapping);
++void rkvenc_free_aux(struct rkvenc_dev *rkvenc, struct rkvenc_aux_buf *buf);
++void vepu580_setup_common(struct rkvenc_ctx *ctx, struct rkvenc_core *core,
++			  struct rkvenc_run *run);
++void vepu580_setup_me(struct rkvenc_core *core, unsigned int width_mbs,
++		      unsigned int height_mbs, unsigned int level_idc,
++		      bool intra);
++void vepu580_setup_h264_tuning(struct rkvenc_dev *rkvenc,
++			       struct rkvenc_core *core, bool intra);
++void vepu580_setup_row_rc(struct rkvenc_core *core, unsigned int qp,
++			  unsigned int qp_min, unsigned int qp_max,
++			  unsigned int qp_range, u64 target_bits,
++			  unsigned int num_blocks, unsigned int blocks_per_row);
++void vepu580_setup_fixed_qp(struct rkvenc_core *core, unsigned int qp);
++u32 *vepu580_gen_h264_scl(struct device *dev);
++dma_addr_t rkvenc_dst_addr(struct rkvenc_run *run);
++size_t rkvenc_dst_size(struct rkvenc_run *run);
++
++extern const struct rkvenc_coded_fmt_desc rkvenc_h264_fmt_desc;
++
++#endif /* RKVENC_H_ */

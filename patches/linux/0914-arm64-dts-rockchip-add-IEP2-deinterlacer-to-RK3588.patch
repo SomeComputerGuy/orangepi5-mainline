@@ -1,0 +1,49 @@
+From 05eeeec0bfb259f94a2f33dc2dbcbcb99e9f8a16 Mon Sep 17 00:00:00 2001
+From: Arun Iyengar <aiyengar1990@gmail.com>
+Date: Thu, 29 Oct 2026 12:33:18 +0000
+Subject: [PATCH] arm64: dts: rockchip: add IEP2 deinterlacer to RK3588
+
+Add the IEP2 deinterlacer and its IOMMU to the RK3588 base dtsi. Both
+share GIC SPI 117 and sit in the VDPU power domain.
+
+Addresses, clocks, resets and the interrupt are taken from the Rockchip
+BSP rk3588s.dtsi (develop-6.1).
+
+Assisted-by: Claude:claude-opus-5-5
+---
+ arch/arm64/boot/dts/rockchip/rk3588-base.dtsi | 22 +++++++++++++++++++
+ 1 file changed, 22 insertions(+)
+
+diff --git a/arch/arm64/boot/dts/rockchip/rk3588-base.dtsi b/arch/arm64/boot/dts/rockchip/rk3588-base.dtsi
+index 28fcebeee..3d944f9b0 100644
+--- a/arch/arm64/boot/dts/rockchip/rk3588-base.dtsi
++++ b/arch/arm64/boot/dts/rockchip/rk3588-base.dtsi
+@@ -1433,6 +1433,28 @@ vepu121_3_mmu: iommu@fdbac800 {
+ 		#iommu-cells = <0>;
+ 	};
+ 
++	iep: deinterlace@fdbb0000 {
++		compatible = "rockchip,rk3588-iep", "rockchip,rk3568-iep";
++		reg = <0x0 0xfdbb0000 0x0 0x500>;
++		interrupts = <GIC_SPI 117 IRQ_TYPE_LEVEL_HIGH 0>;
++		clocks = <&cru ACLK_IEP2P0>, <&cru HCLK_IEP2P0>, <&cru CLK_IEP2P0_CORE>;
++		clock-names = "aclk", "hclk", "sclk";
++		resets = <&cru SRST_A_IEP2P0>, <&cru SRST_H_IEP2P0>, <&cru SRST_IEP2P0_CORE>;
++		reset-names = "axi", "ahb", "core";
++		power-domains = <&power RK3588_PD_VDPU>;
++		iommus = <&iep_mmu>;
++	};
++
++	iep_mmu: iommu@fdbb0800 {
++		compatible = "rockchip,rk3588-iommu", "rockchip,rk3568-iommu";
++		reg = <0x0 0xfdbb0800 0x0 0x100>;
++		interrupts = <GIC_SPI 117 IRQ_TYPE_LEVEL_HIGH 0>;
++		clocks = <&cru ACLK_IEP2P0>, <&cru HCLK_IEP2P0>;
++		clock-names = "aclk", "iface";
++		power-domains = <&power RK3588_PD_VDPU>;
++		#iommu-cells = <0>;
++	};
++
+ 	vepu580_0: video-codec@fdbd0000 {
+ 		compatible = "rockchip,rk3588-vepu580";
+ 		reg = <0x0 0xfdbd0000 0x0 0x6000>;

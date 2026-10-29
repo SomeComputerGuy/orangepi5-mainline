@@ -1,0 +1,61 @@
+From 81aee1c57152ae2aad1008fb02d6afde21c385fc Mon Sep 17 00:00:00 2001
+From: Arun Iyengar <aiyengar1990@gmail.com>
+Date: Thu, 29 Oct 2026 12:59:51 +0000
+Subject: [PATCH] media: verisilicon: Share the H.264 CABAC context
+ initialization table
+
+The CABAC context initialization values of ITU-T H.264 tables 9-12 to
+9-33 are also needed by the encoders, which have to compute the initial
+context states for each QP.
+
+Make the table used by the decoders global, and document its layout.
+
+Assisted-by: Claude:claude-opus-5-5
+---
+ drivers/media/platform/verisilicon/hantro_h264.c | 5 +++--
+ drivers/media/platform/verisilicon/hantro_hw.h   | 9 +++++++++
+ 2 files changed, 12 insertions(+), 2 deletions(-)
+
+diff --git a/drivers/media/platform/verisilicon/hantro_h264.c b/drivers/media/platform/verisilicon/hantro_h264.c
+index 2414782f1..c569c4b28 100644
+--- a/drivers/media/platform/verisilicon/hantro_h264.c
++++ b/drivers/media/platform/verisilicon/hantro_h264.c
+@@ -41,7 +41,7 @@ struct hantro_h264_dec_priv_tbl {
+  * in https://chromium.googlesource.com/chromiumos/third_party/kernel,
+  * chromeos-3.14 branch.
+  */
+-static const u32 h264_cabac_table[] = {
++const u32 hantro_h264_cabac_table[HANTRO_H264_CABAC_TABLE_SIZE] = {
+ 	0x14f10236, 0x034a14f1, 0x0236034a, 0xe47fe968, 0xfa35ff36, 0x07330000,
+ 	0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000,
+ 	0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000,
+@@ -515,7 +515,8 @@ int hantro_h264_dec_init(struct hantro_ctx *ctx)
+ 
+ 	priv->size = sizeof(*tbl);
+ 	tbl = priv->cpu;
+-	memcpy(tbl->cabac_table, h264_cabac_table, sizeof(tbl->cabac_table));
++	memcpy(tbl->cabac_table, hantro_h264_cabac_table,
++	       sizeof(tbl->cabac_table));
+ 
+ 	return 0;
+ }
+diff --git a/drivers/media/platform/verisilicon/hantro_hw.h b/drivers/media/platform/verisilicon/hantro_hw.h
+index 920721726..cbc161593 100644
+--- a/drivers/media/platform/verisilicon/hantro_hw.h
++++ b/drivers/media/platform/verisilicon/hantro_hw.h
+@@ -452,6 +452,15 @@ u16 hantro_h264_get_ref_nbr(struct hantro_ctx *ctx,
+ int hantro_h264_dec_prepare_run(struct hantro_ctx *ctx);
+ int rockchip_vpu2_h264_dec_run(struct hantro_ctx *ctx);
+ int hantro_g1_h264_dec_run(struct hantro_ctx *ctx);
++/*
++ * H.264 CABAC context initialization values (m, n) as signed bytes, packed
++ * two pairs per word with the first one in the most significant half: the
++ * 460 contexts of I slices, then those of P and B slices for each of the
++ * three cabac_init_idc values.
++ */
++#define HANTRO_H264_CABAC_TABLE_SIZE	(460 * 2)
++extern const u32 hantro_h264_cabac_table[HANTRO_H264_CABAC_TABLE_SIZE];
++
+ int hantro_h264_dec_init(struct hantro_ctx *ctx);
+ void hantro_h264_dec_exit(struct hantro_ctx *ctx);
+ 

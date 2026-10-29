@@ -1,0 +1,40 @@
+From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
+From: Cristian Ciocaltea <cristian.ciocaltea@collabora.com>
+Date: Fri, 14 Aug 2026 19:38:25 +0300
+Subject: [PATCH] drm/rockchip: dw_hdmi_qp: Switch to .atomic_enable() encoder
+ hook
+
+In preparation to introduce support for HDMI 2.1 FRL which requires
+access to the connector state, switch to the atomic variant of the
+encoder's enable hook.
+
+Signed-off-by: Cristian Ciocaltea <cristian.ciocaltea@collabora.com>
+Link: https://gitlab.collabora.com/hardware-enablement/rockchip-3588/linux/-/commit/c00775441c909fb4e5e01ca3162735df443b165d
+---
+ drivers/gpu/drm/rockchip/dw_hdmi_qp-rockchip.c | 6 ++++--
+ 1 file changed, 4 insertions(+), 2 deletions(-)
+
+diff --git a/drivers/gpu/drm/rockchip/dw_hdmi_qp-rockchip.c b/drivers/gpu/drm/rockchip/dw_hdmi_qp-rockchip.c
+index f2a1ea8df..73c0a13ee 100644
+--- a/drivers/gpu/drm/rockchip/dw_hdmi_qp-rockchip.c
++++ b/drivers/gpu/drm/rockchip/dw_hdmi_qp-rockchip.c
+@@ -145,7 +145,9 @@ static int __pure dw_hdmi_qp_rockchip_bus_fmt_to_reg(u32 bus_fmt)
+ 	return -EINVAL;
+ }
+ 
+-static void dw_hdmi_qp_rockchip_encoder_enable(struct drm_encoder *encoder)
++static void
++dw_hdmi_qp_rockchip_encoder_atomic_enable(struct drm_encoder *encoder,
++					  struct drm_atomic_commit *state)
+ {
+ 	struct rockchip_hdmi_qp *hdmi = to_rockchip_hdmi_qp(encoder);
+ 	struct drm_crtc *crtc = encoder->crtc;
+@@ -246,7 +248,7 @@ dw_hdmi_qp_rockchip_encoder_atomic_check(struct drm_encoder *encoder,
+ 
+ static const struct
+ drm_encoder_helper_funcs dw_hdmi_qp_rockchip_encoder_helper_funcs = {
+-	.enable		= dw_hdmi_qp_rockchip_encoder_enable,
++	.atomic_enable	= dw_hdmi_qp_rockchip_encoder_atomic_enable,
+ 	.atomic_check	= dw_hdmi_qp_rockchip_encoder_atomic_check,
+ };
+ 

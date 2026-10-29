@@ -1,0 +1,8 @@
+# Apply in this order on top of the parent topic (see topic.env):
+#   while read -r p sha; do git am "$p"; done < <(grep -v '^#' series)
+# Second column: the original commit in the workspace clone (for reference).
+ours/0001-net-stmmac-dwmac-rk-only-read-the-delays-the-MAC-app.patch 3a599e12df48bb033b80592065b991b58f8f4415
+ours/0002-ASoC-rockchip-i2s-tdm-add-the-reset-value-of-XFER-to.patch a7e4bd60c6d06956e08ed171e2cab510a650f50c
+ours/0003-arm64-dts-rockchip-use-rgmii-id-for-the-Orange-Pi-5-.patch 646d822767290a84fe893ca550be21c5e344be48
+ours/0004-arm64-dts-rockchip-add-the-SPI-NOR-flash-supply-on-O.patch facdfbd3ac69de778a99d5487dbbd195f75bf650
+ours/0005-arm64-dts-rockchip-set-the-RK806-reset-mode-on-Orang.patch 36f38f3be0e7192cdb992656611e2c4055ff5781

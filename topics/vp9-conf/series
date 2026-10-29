@@ -1,0 +1,5 @@
+# Apply in this order on top of the parent topic (see topic.env):
+#   while read -r p sha; do git am "$p"; done < <(grep -v '^#' series)
+# Second column: the original commit in the workspace clone (for reference).
+ours/0001-media-rkvdec-vdpu381-vp9-reset-the-register-set-for-.patch 313bd442e0dbe17c1e9e77dcf2d2a33883af7f0b
+ours/0002-media-rkvdec-vdpu381-vp9-fix-segmentation-map-handli.patch 9cb9c761ed16f0567ee710bdc623cdd4aa60cfd1

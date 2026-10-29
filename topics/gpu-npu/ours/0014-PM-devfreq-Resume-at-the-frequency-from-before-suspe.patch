@@ -1,0 +1,59 @@
+From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
+From: Arun Iyengar <aiyengar1990@gmail.com>
+Date: Thu, 29 Oct 2026 17:08:40 +0000
+Subject: [PATCH] PM / devfreq: Resume at the frequency from before suspend
+
+devfreq_suspend_device() moves a device that has a suspend OPP to that
+frequency with devfreq_set_target(). Since commit 62453f1ba5d5 ("PM /
+devfreq: Use more accurate returned new_freq as resume_freq"),
+devfreq_set_target() records the frequency it has just set as
+resume_freq, so the suspend transition itself overwrites the frequency
+to resume at with the suspend frequency. devfreq_resume_device() then
+"restores" the suspend frequency and the device stays there until the
+governor next re-evaluates it.
+
+For system suspend that only costs one polling interval. For a driver
+that calls devfreq_suspend_device() from runtime PM, such as panthor,
+every runtime resume starts at the lowest OPP: with a 50 ms autosuspend
+delay and a 50 ms polling interval, short bursts of GPU work after an
+idle period run at the suspend frequency.
+
+Save the frequency the device ran at before the suspend transition and
+use that as resume_freq, as the code did before that commit. Requests
+made while the device is suspended still update resume_freq through
+devfreq_set_target(), as before.
+
+Fixes: 62453f1ba5d5 ("PM / devfreq: Use more accurate returned new_freq as resume_freq")
+Assisted-by: Claude:claude-opus-5-5
+---
+ drivers/devfreq/devfreq.c | 9 +++++++++
+ 1 file changed, 9 insertions(+)
+
+diff --git a/drivers/devfreq/devfreq.c b/drivers/devfreq/devfreq.c
+index 82dd9a43d..510aa7920 100644
+--- a/drivers/devfreq/devfreq.c
++++ b/drivers/devfreq/devfreq.c
+@@ -1146,6 +1146,7 @@ EXPORT_SYMBOL(devm_devfreq_remove_device);
+  */
+ int devfreq_suspend_device(struct devfreq *devfreq)
+ {
++	unsigned long resume_freq;
+ 	int ret;
+ 
+ 	if (!devfreq)
+@@ -1163,7 +1164,15 @@ int devfreq_suspend_device(struct devfreq *devfreq)
+ 
+ 	if (devfreq->suspend_freq) {
+ 		mutex_lock(&devfreq->lock);
++		/*
++		 * devfreq_set_target() records the frequency it sets as the
++		 * one to resume at. Keep the frequency from before suspend
++		 * instead, so that the device does not resume at its suspend
++		 * frequency.
++		 */
++		resume_freq = devfreq->previous_freq;
+ 		ret = devfreq_set_target(devfreq, devfreq->suspend_freq, 0);
++		devfreq->resume_freq = resume_freq;
+ 		mutex_unlock(&devfreq->lock);
+ 		if (ret)
+ 			return ret;

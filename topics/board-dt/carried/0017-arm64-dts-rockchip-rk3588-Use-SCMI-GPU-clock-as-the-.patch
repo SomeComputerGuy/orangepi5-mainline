@@ -1,0 +1,106 @@
+From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
+From: Jonas Karlman <jonas@kwiboo.se>
+Date: Thu, 29 Oct 2026 17:07:53 +0000
+Subject: [PATCH] arm64: dts: rockchip: rk3588: Use SCMI GPU clock as the GPU
+ core clock
+
+CLK_GPU is the main clock of the RK3588 GPU. Its usual source is one of
+gpll, cpll, aupll, npll or spll through an integer divider, and with the
+PLL rates set at boot (1188, 1500, 786.432, 850 and 702 MHz) most OPPs
+in the GPU table cannot be reached. The rates on an Orange Pi 5 (devfreq
+cur_freq under load; 400 MHz from the clock tree) were:
+
+  OPP (MHz)    300  400  500  600  700  800    900  1000
+  CLK_GPU      300  396  500  594  594  786.4  850   850
+
+so the 900 and 1000 MHz OPPs ran at 850 MHz with the 1 GHz voltage, and
+800 MHz came from the audio PLL.
+
+For higher rates the GPU can also be fed by its PVTPLL. The logic to
+switch between a normal PLL and the PVTPLL is in the TF-A firmware and
+is exposed to Linux as SCMI_CLK_GPU: TF-A uses GPLL for 200 MHz and the
+PVTPLL for every rate from 300 MHz to 1 GHz, which are exactly the
+rates of the OPP table.
+
+Use SCMI_CLK_GPU as the GPU core clock, and keep the CRU gate CLK_GPU as
+the "bus" clock, as on RK356x.
+
+The PVTPLL and its registers in the GPU GRF are in the GPU power domain,
+so the GPU must not be powered down or up while it runs from the
+PVTPLL. Add a 200 MHz OPP marked opp-suspend to the RK3588 and RK3588J
+GPU tables, at the voltage of their 300 MHz OPP. devfreq then moves the
+GPU to the GPLL path before each runtime suspend, and back to the PVTPLL
+after resume.
+
+Before this change the GPU clock rate was max 850 MHz:
+
+  [terrain] <default>: FPS: 139 FrameTime: 7.231 ms
+
+After this change the GPU can use the 1 GHz rate with the PVTPLL:
+
+  [terrain] <default>: FPS: 152 FrameTime: 6.579 ms
+
+Signed-off-by: Jonas Karlman <jonas@kwiboo.se>
+Link: https://github.com/armbian/linux-rockchip/pull/380
+[Ported from the RFC to v7.3 (rk3588-base.dtsi, rk3588-opp.dtsi); also
+ add the 200 MHz suspend OPP to rk3588j.dtsi; describe the measured
+ CRU rates and the power domain constraint]
+---
+ arch/arm64/boot/dts/rockchip/rk3588-base.dtsi | 10 +++++-----
+ arch/arm64/boot/dts/rockchip/rk3588-opp.dtsi  |  5 +++++
+ arch/arm64/boot/dts/rockchip/rk3588j.dtsi     |  5 +++++
+ 3 files changed, 15 insertions(+), 5 deletions(-)
+
+diff --git a/arch/arm64/boot/dts/rockchip/rk3588-base.dtsi b/arch/arm64/boot/dts/rockchip/rk3588-base.dtsi
+index bdc5cc03a..e61cc868a 100644
+--- a/arch/arm64/boot/dts/rockchip/rk3588-base.dtsi
++++ b/arch/arm64/boot/dts/rockchip/rk3588-base.dtsi
+@@ -450,11 +450,11 @@ gpu: gpu@fb000000 {
+ 		compatible = "rockchip,rk3588-mali", "arm,mali-valhall-csf";
+ 		reg = <0x0 0xfb000000 0x0 0x200000>;
+ 		#cooling-cells = <2>;
+-		assigned-clocks = <&scmi_clk SCMI_CLK_GPU>;
+-		assigned-clock-rates = <200000000>;
+-		clocks = <&cru CLK_GPU>, <&cru CLK_GPU_COREGROUP>,
+-			 <&cru CLK_GPU_STACKS>;
+-		clock-names = "core", "coregroup", "stacks";
++		assigned-clocks = <&cru CLK_GPU>, <&scmi_clk SCMI_CLK_GPU>;
++		assigned-clock-rates = <198000000>, <200000000>;
++		clocks = <&scmi_clk SCMI_CLK_GPU>, <&cru CLK_GPU_COREGROUP>,
++			 <&cru CLK_GPU_STACKS>, <&cru CLK_GPU>;
++		clock-names = "core", "coregroup", "stacks", "bus";
+ 		dynamic-power-coefficient = <2982>;
+ 		interrupts = <GIC_SPI 92 IRQ_TYPE_LEVEL_HIGH 0>,
+ 			     <GIC_SPI 93 IRQ_TYPE_LEVEL_HIGH 0>,
+diff --git a/arch/arm64/boot/dts/rockchip/rk3588-opp.dtsi b/arch/arm64/boot/dts/rockchip/rk3588-opp.dtsi
+index 59ecaef51..af706f010 100644
+--- a/arch/arm64/boot/dts/rockchip/rk3588-opp.dtsi
++++ b/arch/arm64/boot/dts/rockchip/rk3588-opp.dtsi
+@@ -118,6 +118,11 @@ opp-2400000000 {
+ 	gpu_opp_table: opp-table-gpu {
+ 		compatible = "operating-points-v2";
+ 
++		opp-200000000 {
++			opp-hz = /bits/ 64 <200000000>;
++			opp-microvolt = <675000 675000 850000>;
++			opp-suspend;
++		};
+ 		opp-300000000 {
+ 			opp-hz = /bits/ 64 <300000000>;
+ 			opp-microvolt = <675000 675000 850000>;
+diff --git a/arch/arm64/boot/dts/rockchip/rk3588j.dtsi b/arch/arm64/boot/dts/rockchip/rk3588j.dtsi
+index e1e0e3fc0..1ca74d4fb 100644
+--- a/arch/arm64/boot/dts/rockchip/rk3588j.dtsi
++++ b/arch/arm64/boot/dts/rockchip/rk3588j.dtsi
+@@ -69,6 +69,11 @@ opp-1608000000 {
+ 	gpu_opp_table: opp-table-gpu {
+ 		compatible = "operating-points-v2";
+ 
++		opp-200000000 {
++			opp-hz = /bits/ 64 <200000000>;
++			opp-microvolt = <750000 750000 850000>;
++			opp-suspend;
++		};
+ 		opp-300000000 {
+ 			opp-hz = /bits/ 64 <300000000>;
+ 			opp-microvolt = <750000 750000 850000>;

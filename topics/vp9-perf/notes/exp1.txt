@@ -1,0 +1,79 @@
+== E0: dbg_cache=-2 dbg_cnt_nc=N irq_aff=0-7 load=0.00
+4k8.webm fakevideosink           x1:  127.0 fps total (600 frames each, 4.72s)
+4k8.webm fakevideosink           x2:  276.5 fps total (600 frames each, 4.34s)
+4k10.webm fakevideosink          x1:  131.8 fps total (600 frames each, 4.55s)
+4k10.webm fakevideosink          x2:  226.6 fps total (600 frames each, 5.30s)
+4k10hb.webm fakevideosink        x1:  108.8 fps total (300 frames each, 2.76s)
+4k10hb.webm fakevideosink        x2:  198.1 fps total (300 frames each, 3.03s)
+1080p.webm fakevideosink         x1:  455.1 fps total (1200 frames each, 2.64s)
+4k8.hevc.mkv fakevideosink       x1:  140.2 fps total (600 frames each, 4.28s)
+WARNING: erroneous pipeline: no element "v4l2slvideo11h264dec"
+4k8.h264.mkv fakevideosink       x1: 8221.6 fps total (600 frames each, 0.07s)
+./md5.sh: 5: cannot open /tmp/md5frames.1237: No such file
+d41d8cd98f00b204e9800998ecf8427e  4k10hb.webm ( frames)
+./md5.sh: 5: cannot open /tmp/md5frames.1248: No such file
+d41d8cd98f00b204e9800998ecf8427e  1080p.webm ( frames)
+== E1: dbg_cache=-2 dbg_cnt_nc=Y irq_aff=0-7 load=0.31
+4k8.webm fakevideosink           x1:  156.5 fps total (600 frames each, 3.83s)
+4k8.webm fakevideosink           x2:  286.5 fps total (600 frames each, 4.19s)
+4k10.webm fakevideosink          x1:  130.1 fps total (600 frames each, 4.61s)
+4k10.webm fakevideosink          x2:  238.1 fps total (600 frames each, 5.04s)
+4k10hb.webm fakevideosink        x1:  113.3 fps total (300 frames each, 2.65s)
+4k10hb.webm fakevideosink        x2:  206.0 fps total (300 frames each, 2.91s)
+1080p.webm fakevideosink         x1:  538.0 fps total (1200 frames each, 2.23s)
+4k8.hevc.mkv fakevideosink       x1:  140.4 fps total (600 frames each, 4.27s)
+WARNING: erroneous pipeline: no element "v4l2slvideo11h264dec"
+4k8.h264.mkv fakevideosink       x1: 7645.4 fps total (600 frames each, 0.08s)
+./md5.sh: 5: cannot open /tmp/md5frames.1422: No such file
+d41d8cd98f00b204e9800998ecf8427e  4k10hb.webm ( frames)
+./md5.sh: 5: cannot open /tmp/md5frames.1433: No such file
+d41d8cd98f00b204e9800998ecf8427e  1080p.webm ( frames)
+== E2: dbg_cache=-1 dbg_cnt_nc=Y irq_aff=0-7 load=0.57
+4k8.webm fakevideosink           x1:  155.5 fps total (600 frames each, 3.86s)
+4k8.webm fakevideosink           x2:  285.3 fps total (600 frames each, 4.21s)
+4k10.webm fakevideosink          x1:  129.2 fps total (600 frames each, 4.65s)
+4k10.webm fakevideosink          x2:  239.1 fps total (600 frames each, 5.02s)
+4k10hb.webm fakevideosink        x1:  113.5 fps total (300 frames each, 2.64s)
+4k10hb.webm fakevideosink        x2:  205.3 fps total (300 frames each, 2.92s)
+1080p.webm fakevideosink         x1:  532.8 fps total (1200 frames each, 2.25s)
+4k8.hevc.mkv fakevideosink       x1:  139.7 fps total (600 frames each, 4.30s)
+WARNING: erroneous pipeline: no element "v4l2slvideo11h264dec"
+4k8.h264.mkv fakevideosink       x1: 7962.3 fps total (600 frames each, 0.08s)
+./md5.sh: 5: cannot open /tmp/md5frames.1603: No such file
+d41d8cd98f00b204e9800998ecf8427e  4k10hb.webm ( frames)
+./md5.sh: 5: cannot open /tmp/md5frames.1614: No such file
+d41d8cd98f00b204e9800998ecf8427e  1080p.webm ( frames)
+== E3: dbg_cache=-1 dbg_cnt_nc=Y irq_aff=4-7 load=0.77
+4k8.webm fakevideosink           x1:  159.5 fps total (600 frames each, 3.76s)
+4k8.webm fakevideosink           x2:  290.9 fps total (600 frames each, 4.13s)
+4k10.webm fakevideosink          x1:  132.0 fps total (600 frames each, 4.54s)
+4k10.webm fakevideosink          x2:  241.2 fps total (600 frames each, 4.97s)
+4k10hb.webm fakevideosink        x1:  114.9 fps total (300 frames each, 2.61s)
+4k10hb.webm fakevideosink        x2:  207.3 fps total (300 frames each, 2.89s)
+1080p.webm fakevideosink         x1:  565.0 fps total (1200 frames each, 2.12s)
+4k8.hevc.mkv fakevideosink       x1:  140.9 fps total (600 frames each, 4.26s)
+WARNING: erroneous pipeline: no element "v4l2slvideo11h264dec"
+4k8.h264.mkv fakevideosink       x1: 7976.4 fps total (600 frames each, 0.08s)
+./md5.sh: 5: cannot open /tmp/md5frames.1784: No such file
+d41d8cd98f00b204e9800998ecf8427e  4k10hb.webm ( frames)
+./md5.sh: 5: cannot open /tmp/md5frames.1795: No such file
+d41d8cd98f00b204e9800998ecf8427e  1080p.webm ( frames)
+== E4: dbg_cache=-1 dbg_cnt_nc=N irq_aff=0-7 load=0.79
+4k8.webm fakevideosink           x1:  148.6 fps total (600 frames each, 4.04s)
+4k8.webm fakevideosink           x2:  276.1 fps total (600 frames each, 4.35s)
+4k10.webm fakevideosink          x1:  124.2 fps total (600 frames each, 4.83s)
+4k10.webm fakevideosink          x2:  224.4 fps total (600 frames each, 5.35s)
+4k10hb.webm fakevideosink        x1:  109.2 fps total (300 frames each, 2.75s)
+4k10hb.webm fakevideosink        x2:  190.9 fps total (300 frames each, 3.14s)
+1080p.webm fakevideosink         x1:  460.5 fps total (1200 frames each, 2.61s)
+4k8.hevc.mkv fakevideosink       x1:  139.9 fps total (600 frames each, 4.29s)
+WARNING: erroneous pipeline: no element "v4l2slvideo11h264dec"
+4k8.h264.mkv fakevideosink       x1: 8273.8 fps total (600 frames each, 0.07s)
+d41d8cd98f00b204e9800998ecf8427e  4k10hb.webm (0 frames)
+d41d8cd98f00b204e9800998ecf8427e  1080p.webm (0 frames)
+[   33.189756] rkvdec-core fdc40000.video-codec: DBG cache0 cfg=00000013 clr=00000000
+[   33.189766] rkvdec-core fdc40000.video-codec: DBG cache1 cfg=00000013 clr=00000000
+[   33.189769] rkvdec-core fdc40000.video-codec: DBG cache2 cfg=00000017 clr=00000000
+[   37.484037] rkvdec-core fdc38000.video-codec: DBG cache0 cfg=00000013 clr=00000000
+[   37.484048] rkvdec-core fdc38000.video-codec: DBG cache1 cfg=00000013 clr=00000000
+[   37.484051] rkvdec-core fdc38000.video-codec: DBG cache2 cfg=00000017 clr=00000000

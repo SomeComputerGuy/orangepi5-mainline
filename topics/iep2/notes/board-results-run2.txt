@@ -1,0 +1,72 @@
+IEP 720x576 nv12 tff bob rate=0: Y=35.206229 avg=33.955657 | in 25 out 25 errors 0 time 0.042 s: 601.8 in/s, 601.8 out/s [guard] rc=0 iommu_faults=+0 iep_err_total=0 
+IEP 720x576 nv12 tff bob rate=1: Y=35.212233 avg=33.922433 | in 25 out 50 errors 0 time 0.073 s: 342.0 in/s, 684.1 out/s [guard] rc=0 iommu_faults=+0 iep_err_total=0 
+IEP 720x576 nv12 tff ma rate=0: Y=36.681763 avg=35.999099 | in 25 out 25 errors 0 time 0.046 s: 538.6 in/s, 538.6 out/s [guard] rc=0 iommu_faults=+0 iep_err_total=0 
+IEP 720x576 nv12 tff ma rate=1: Y=33.238003 avg=32.146003 | in 25 out 50 errors 0 time 0.071 s: 354.4 in/s, 708.8 out/s [guard] rc=0 iommu_faults=+0 iep_err_total=0 
+SW  720x576 nv12 tff bwdif rate=0: Y=36.767996 avg=35.359944
+SW  720x576 nv12 tff bwdif rate=1: Y=36.749942 avg=35.343594
+SW  720x576 nv12 tff yadif rate=0: Y=36.215042 avg=35.902944
+SW  720x576 nv12 tff yadif rate=1: Y=36.219608 avg=35.912350
+RAW 720x576 nv12 tff weave: Y=31.204865 avg=30.022595
+IEP 720x576 nv12 bff bob rate=0: Y=35.241863 avg=33.895195 | in 25 out 25 errors 0 time 0.042 s: 599.7 in/s, 599.7 out/s [guard] rc=0 iommu_faults=+0 iep_err_total=0 
+IEP 720x576 nv12 bff bob rate=1: Y=35.221229 avg=33.920741 | in 25 out 50 errors 0 time 0.067 s: 374.7 in/s, 749.4 out/s [guard] rc=0 iommu_faults=+0 iep_err_total=0 
+IEP 720x576 nv12 bff ma rate=0: Y=36.743425 avg=36.011850 | in 25 out 25 errors 0 time 0.041 s: 611.7 in/s, 611.7 out/s [guard] rc=0 iommu_faults=+0 iep_err_total=0 
+IEP 720x576 nv12 bff ma rate=1: Y=33.236744 avg=32.153718 | in 25 out 50 errors 0 time 0.070 s: 356.8 in/s, 713.6 out/s [guard] rc=0 iommu_faults=+0 iep_err_total=0 
+SW  720x576 nv12 bff bwdif rate=0: Y=36.775984 avg=35.352437
+SW  720x576 nv12 bff bwdif rate=1: Y=36.764737 avg=35.344762
+SW  720x576 nv12 bff yadif rate=0: Y=36.192407 avg=35.895258
+SW  720x576 nv12 bff yadif rate=1: Y=36.185278 avg=35.884229
+RAW 720x576 nv12 bff weave: Y=31.225427 avg=30.027892
+IEP 720x576 nv16 tff bob rate=0: Y=35.206229 avg=36.000742 | in 25 out 25 errors 0 time 0.054 s: 464.6 in/s, 464.6 out/s [guard] rc=0 iommu_faults=+0 iep_err_total=0 
+IEP 720x576 nv16 tff bob rate=1: Y=35.212233 avg=36.001685 | in 25 out 50 errors 0 time 0.083 s: 301.4 in/s, 602.7 out/s [guard] rc=0 iommu_faults=+0 iep_err_total=0 
+IEP 720x576 nv16 tff ma rate=0: Y=36.681763 avg=37.008185 | in 25 out 25 errors 0 time 0.053 s: 468.4 in/s, 468.4 out/s [guard] rc=0 iommu_faults=+0 iep_err_total=0 
+IEP 720x576 nv16 tff ma rate=1: Y=33.238003 avg=32.079119 | in 25 out 50 errors 0 time 0.083 s: 299.8 in/s, 599.5 out/s [guard] rc=0 iommu_faults=+0 iep_err_total=0 
+SW  720x576 nv16 tff bwdif rate=0: Y=36.767996 avg=39.131913
+SW  720x576 nv16 tff bwdif rate=1: Y=36.749942 avg=39.112594
+SW  720x576 nv16 tff yadif rate=0: Y=36.215042 avg=36.945866
+SW  720x576 nv16 tff yadif rate=1: Y=36.219608 avg=36.943029
+RAW 720x576 nv16 tff weave: Y=31.204865 avg=29.682316
+IEP 720x576 nv16 bff bob rate=0: Y=35.241863 avg=36.015862 | in 25 out 25 errors 0 time 0.049 s: 509.2 in/s, 509.2 out/s [guard] rc=0 iommu_faults=+0 iep_err_total=0 
+IEP 720x576 nv16 bff bob rate=1: Y=35.221229 avg=36.004931 | in 25 out 50 errors 0 time 0.086 s: 290.7 in/s, 581.5 out/s [guard] rc=0 iommu_faults=+0 iep_err_total=0 
+IEP 720x576 nv16 bff ma rate=0: Y=36.743425 avg=37.044664 | in 25 out 25 errors 0 time 0.063 s: 395.6 in/s, 395.6 out/s [guard] rc=0 iommu_faults=+0 iep_err_total=0 
+IEP 720x576 nv16 bff ma rate=1: Y=33.236744 avg=32.078967 | in 25 out 50 errors 0 time 0.093 s: 268.1 in/s, 536.1 out/s [guard] rc=0 iommu_faults=+0 iep_err_total=0 
+SW  720x576 nv16 bff bwdif rate=0: Y=36.775984 avg=39.139868
+SW  720x576 nv16 bff bwdif rate=1: Y=36.764737 avg=39.128651
+SW  720x576 nv16 bff yadif rate=0: Y=36.192407 avg=36.913432
+SW  720x576 nv16 bff yadif rate=1: Y=36.185278 avg=36.912253
+RAW 720x576 nv16 bff weave: Y=31.225427 avg=29.689659
+IEP 1920x1080 nv12 tff bob rate=0: Y=37.156000 avg=36.383169 | in 25 out 25 errors 0 time 0.151 s: 165.1 in/s, 165.1 out/s [guard] rc=0 iommu_faults=+0 iep_err_total=0 
+IEP 1920x1080 nv12 tff bob rate=1: Y=37.154678 avg=36.149609 | in 25 out 50 errors 0 time 0.291 s: 85.9 in/s, 171.9 out/s [guard] rc=0 iommu_faults=+0 iep_err_total=0 
+IEP 1920x1080 nv12 tff ma rate=0: Y=35.458908 avg=34.406935 | in 25 out 25 errors 0 time 0.156 s: 160.3 in/s, 160.3 out/s [guard] rc=0 iommu_faults=+0 iep_err_total=0 
+IEP 1920x1080 nv12 tff ma rate=1: Y=33.099524 avg=31.909883 | in 25 out 50 errors 0 time 0.295 s: 84.6 in/s, 169.3 out/s [guard] rc=0 iommu_faults=+0 iep_err_total=0 
+SW  1920x1080 nv12 tff bwdif rate=0: Y=37.842171 avg=36.944109
+SW  1920x1080 nv12 tff bwdif rate=1: Y=37.831491 avg=36.922850
+SW  1920x1080 nv12 tff yadif rate=0: Y=37.647843 avg=37.212060
+SW  1920x1080 nv12 tff yadif rate=1: Y=37.645497 avg=37.157645
+RAW 1920x1080 nv12 tff weave: Y=31.445641 avg=30.203551
+IEP 1920x1080 nv12 bff bob rate=0: Y=37.160376 avg=35.936434 | in 25 out 25 errors 0 time 0.154 s: 162.7 in/s, 162.7 out/s [guard] rc=0 iommu_faults=+0 iep_err_total=0 
+IEP 1920x1080 nv12 bff bob rate=1: Y=37.160874 avg=36.155043 | in 25 out 50 errors 0 time 0.293 s: 85.4 in/s, 170.8 out/s [guard] rc=0 iommu_faults=+0 iep_err_total=0 
+IEP 1920x1080 nv12 bff ma rate=0: Y=35.445104 avg=34.368980 | in 25 out 25 errors 0 time 0.156 s: 160.5 in/s, 160.5 out/s [guard] rc=0 iommu_faults=+0 iep_err_total=0 
+IEP 1920x1080 nv12 bff ma rate=1: Y=33.100700 avg=31.906200 | in 25 out 50 errors 0 time 0.295 s: 84.6 in/s, 169.2 out/s [guard] rc=0 iommu_faults=+0 iep_err_total=0 
+SW  1920x1080 nv12 bff bwdif rate=0: Y=37.828164 avg=36.906060
+SW  1920x1080 nv12 bff bwdif rate=1: Y=37.832413 avg=36.923101
+SW  1920x1080 nv12 bff yadif rate=0: Y=37.608785 avg=37.083976
+SW  1920x1080 nv12 bff yadif rate=1: Y=37.611342 avg=37.139056
+RAW 1920x1080 nv12 bff weave: Y=31.438674 avg=30.198490
+IEP 1920x1080 nv16 tff bob rate=0: Y=37.156000 avg=38.222640 | in 25 out 25 errors 0 time 0.202 s: 124.0 in/s, 124.0 out/s [guard] rc=0 iommu_faults=+0 iep_err_total=0 
+IEP 1920x1080 nv16 tff bob rate=1: Y=37.154678 avg=38.217872 | in 25 out 50 errors 0 time 0.384 s: 65.1 in/s, 130.1 out/s [guard] rc=0 iommu_faults=+0 iep_err_total=0 
+IEP 1920x1080 nv16 tff ma rate=0: Y=35.458908 avg=34.792237 | in 25 out 25 errors 0 time 0.206 s: 121.5 in/s, 121.5 out/s [guard] rc=0 iommu_faults=+0 iep_err_total=0 
+IEP 1920x1080 nv16 tff ma rate=1: Y=33.099524 avg=31.733869 | in 25 out 50 errors 0 time 0.389 s: 64.3 in/s, 128.6 out/s [guard] rc=0 iommu_faults=+0 iep_err_total=0 
+SW  1920x1080 nv16 tff bwdif rate=0: Y=37.842171 avg=40.237118
+SW  1920x1080 nv16 tff bwdif rate=1: Y=37.831491 avg=40.227402
+SW  1920x1080 nv16 tff yadif rate=0: Y=37.647843 avg=38.505897
+SW  1920x1080 nv16 tff yadif rate=1: Y=37.645497 avg=38.501259
+RAW 1920x1080 nv16 tff weave: Y=31.445641 avg=29.805210
+IEP 1920x1080 nv16 bff bob rate=0: Y=37.160376 avg=38.222131 | in 25 out 25 errors 0 time 0.202 s: 123.8 in/s, 123.8 out/s [guard] rc=0 iommu_faults=+0 iep_err_total=0 
+IEP 1920x1080 nv16 bff bob rate=1: Y=37.160874 avg=38.222751 | in 25 out 50 errors 0 time 0.386 s: 64.7 in/s, 129.4 out/s [guard] rc=0 iommu_faults=+0 iep_err_total=0 
+IEP 1920x1080 nv16 bff ma rate=0: Y=35.445104 avg=34.786389 | in 25 out 25 errors 0 time 0.206 s: 121.6 in/s, 121.6 out/s [guard] rc=0 iommu_faults=+0 iep_err_total=0 
+IEP 1920x1080 nv16 bff ma rate=1: Y=33.100700 avg=31.734226 | in 25 out 50 errors 0 time 0.389 s: 64.3 in/s, 128.5 out/s [guard] rc=0 iommu_faults=+0 iep_err_total=0 
+SW  1920x1080 nv16 bff bwdif rate=0: Y=37.828164 avg=40.222949
+SW  1920x1080 nv16 bff bwdif rate=1: Y=37.832413 avg=40.227067
+SW  1920x1080 nv16 bff yadif rate=0: Y=37.608785 avg=38.465920
+SW  1920x1080 nv16 bff yadif rate=1: Y=37.611342 avg=38.469171
+RAW 1920x1080 nv16 bff weave: Y=31.438674 avg=29.802807

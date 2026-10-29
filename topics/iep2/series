@@ -1,0 +1,7 @@
+# Apply in this order on top of the parent topic (see topic.env):
+#   while read -r p sha; do git am "$p"; done < <(grep -v '^#' series)
+# Second column: the original commit in the workspace clone (for reference).
+ours/0001-media-uapi-add-Rockchip-IEP-deinterlacer-controls.patch a57bd92124bf6a216ab302f3dbde7f5a5e3c9c95
+ours/0002-dt-bindings-media-add-Rockchip-IEP2-deinterlacer.patch e2ccde1196aa4d58f9bd4b11edb22ffab0a0cedd
+ours/0003-media-rockchip-add-IEP2-deinterlacer-driver.patch 49328c63d27497c01d34a18a648c9231cd0f073e
+ours/0004-arm64-dts-rockchip-add-IEP2-deinterlacer-to-RK3588.patch 2c7b63d9bd0e7581d86fb14e0ca4df541fac54ff

@@ -1,0 +1,5 @@
+~/orangepi5/work/integration-7.3/drivers/iommu/arm/arm-smmu-v3/arm-smmu-v3.c:1512:1: warning: the frame size of 1088 bytes is larger than 1024 bytes [-Wframe-larger-than=]
+~/orangepi5/work/integration-7.3/drivers/iommu/arm/arm-smmu-v3/arm-smmu-v3.c:2439:1: warning: the frame size of 1088 bytes is larger than 1024 bytes [-Wframe-larger-than=]
+~/orangepi5/work/integration-7.3/drivers/iommu/arm/arm-smmu-v3/arm-smmu-v3.c:2681:1: warning: the frame size of 1104 bytes is larger than 1024 bytes [-Wframe-larger-than=]
+~/orangepi5/work/integration-7.3/drivers/net/ethernet/stmicro/stmmac/stmmac_ethtool.c:663:62: warning: ‘%s’ directive output may be truncated writing up to 63 bytes into a region of size between 27 and 29 [-Wformat-truncation=]
+~/orangepi5/work/integration-7.3/drivers/net/ethernet/stmicro/stmmac/stmmac_ethtool.c:670:62: warning: ‘%s’ directive output may be truncated writing up to 63 bytes into a region of size between 27 and 29 [-Wformat-truncation=]

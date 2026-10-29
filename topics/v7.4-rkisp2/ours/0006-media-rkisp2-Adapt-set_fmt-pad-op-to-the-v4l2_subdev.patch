@@ -1,0 +1,32 @@
+From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
+From: Arun Iyengar <aiyengar1990@gmail.com>
+Date: Thu, 29 Oct 2026 09:14:58 +0000
+Subject: [PATCH] media: rkisp2: Adapt set_fmt pad op to the
+ v4l2_subdev_client_info argument
+
+The 7.4 merge window added a const struct v4l2_subdev_client_info pointer
+to the set_fmt, get_selection and set_selection subdev pad operations.
+The rkisp2 v3 series was based on v7.2-rc1 and fails to build with
+-Wincompatible-pointer-types on the new prototype. Add the argument to
+rkisp2_isp_set_fmt(); it is unused, as in rkisp1.
+
+To be squashed into "media: rockchip: rkisp2: Add rkisp2 driver" when the
+series is rebased by its author.
+
+Assisted-by: Claude:claude-opus-5-5
+---
+ drivers/media/platform/rockchip/rkisp2/rkisp2-isp.c | 1 +
+ 1 file changed, 1 insertion(+)
+
+diff --git a/drivers/media/platform/rockchip/rkisp2/rkisp2-isp.c b/drivers/media/platform/rockchip/rkisp2/rkisp2-isp.c
+index 0833ffe57..a0c4bc963 100644
+--- a/drivers/media/platform/rockchip/rkisp2/rkisp2-isp.c
++++ b/drivers/media/platform/rockchip/rkisp2/rkisp2-isp.c
+@@ -579,6 +579,7 @@ static void rkisp2_isp_set_sink_fmt(struct rkisp2_isp *isp,
+ }
+ 
+ static int rkisp2_isp_set_fmt(struct v4l2_subdev *sd,
++			      const struct v4l2_subdev_client_info *ci,
+ 			      struct v4l2_subdev_state *sd_state,
+ 			      struct v4l2_subdev_format *fmt)
+ {

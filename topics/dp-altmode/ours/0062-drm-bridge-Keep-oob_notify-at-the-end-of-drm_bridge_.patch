@@ -1,0 +1,74 @@
+From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
+From: Arun Iyengar <aiyengar1990@gmail.com>
+Date: Thu, 29 Oct 2026 13:06:50 +0000
+Subject: [PATCH] drm/bridge: Keep oob_notify at the end of drm_bridge_funcs
+
+"drm/bridge: Add out-of-band HPD notify handler" inserts the new
+oob_notify callback in the middle of struct drm_bridge_funcs, which
+shifts the offsets of all HDMI, DP audio and debugfs callbacks after it.
+
+On the Orange Pi 5 kernel DRM core, the KMS helpers and the panel bridge
+are built in, while the display helpers (bridge connector), the DW DP
+bridge and rockchipdrm are modules. To be able to test the USB-C DP
+AltMode stack by replacing just those modules on top of an existing
+7.3 kernel image, the layout of the structure seen by the built-in code
+must not change. Move the new callback to the end of the structure; it
+is only called from drm_bridge_connector.c.
+
+This is a local change for the out-of-tree port and has no upstream
+equivalent; drop it when rebasing onto a kernel with the upstream patch.
+
+Assisted-by: Claude:claude-opus-5-5
+---
+ include/drm/drm_bridge.h | 31 +++++++++++++++++--------------
+ 1 file changed, 17 insertions(+), 14 deletions(-)
+
+diff --git a/include/drm/drm_bridge.h b/include/drm/drm_bridge.h
+index 713652fca..a2b99ed24 100644
+--- a/include/drm/drm_bridge.h
++++ b/include/drm/drm_bridge.h
+@@ -540,20 +540,6 @@ struct drm_bridge_funcs {
+ 	 */
+ 	void (*hpd_disable)(struct drm_bridge *bridge);
+ 
+-	/**
+-	 * @oob_notify:
+-	 *
+-	 * Notify the bridge of out of band hot plug detection.
+-	 *
+-	 * This callback is optional, it may be implemented by bridges that
+-	 * need to be notified of display connection or disconnection for
+-	 * internal reasons. One use case is to force the DP controllers HPD
+-	 * signal for USB-C DP AltMode.
+-	 */
+-	void (*oob_notify)(struct drm_bridge *bridge,
+-			   struct drm_connector *connector,
+-			   enum drm_connector_status status);
+-
+ 	/**
+ 	 * @hdmi_tmds_char_rate_valid:
+ 	 *
+@@ -866,6 +852,23 @@ struct drm_bridge_funcs {
+ 	 * Allows bridges to create bridge-specific debugfs files.
+ 	 */
+ 	void (*debugfs_init)(struct drm_bridge *bridge, struct dentry *root);
++
++	/**
++	 * @oob_notify:
++	 *
++	 * Notify the bridge of out of band hot plug detection.
++	 *
++	 * This callback is optional, it may be implemented by bridges that
++	 * need to be notified of display connection or disconnection for
++	 * internal reasons. One use case is to force the DP controllers HPD
++	 * signal for USB-C DP AltMode.
++	 *
++	 * Keep this at the end of the structure: it is only used by modular
++	 * code, so appending it keeps the layout seen by built-in code intact.
++	 */
++	void (*oob_notify)(struct drm_bridge *bridge,
++			   struct drm_connector *connector,
++			   enum drm_connector_status status);
+ };
+ 
+ /**

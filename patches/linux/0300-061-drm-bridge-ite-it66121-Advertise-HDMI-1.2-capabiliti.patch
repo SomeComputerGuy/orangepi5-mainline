@@ -1,0 +1,66 @@
+From 677a4780ee4557cacdd420fff1f54b9f64cb0782 Mon Sep 17 00:00:00 2001
+From: Cristian Ciocaltea <cristian.ciocaltea@collabora.com>
+Date: Thu, 16 Jul 2026 14:39:37 +0300
+Subject: [PATCH] drm/bridge: ite-it66121: Advertise HDMI 1.2 capabilities
+
+Bridges using DRM_BRIDGE_OP_HDMI are now expected to also provide a
+supported HDMI version.  This is not yet enforced, but will become
+mandatory once the migration to the new caps-based HDMI connector
+initialization API is completed.
+
+Since none of the chip variants handled by the driver can drive a TMDS
+character rate exceeding 148.5 MHz, advertise HDMI 1.2 as the supported
+version.  HDMI 1.2 allows up to 165 MHz, so set the bridge's
+max_tmds_char_rate to ensure the connector limit derived from
+supported_hdmi_ver remains within the hardware capabilities.
+
+drm_bridge_connector_atomic_check() runs
+drm_atomic_helper_connector_hdmi_check(), which rejects modes whose
+computed TMDS character rate exceeds the connector limit before invoking
+the driver's .tmds_char_rate_valid() hook, making the max_rate check in
+it66121_bridge_hdmi_tmds_char_rate_valid() redundant.  Drop it.
+
+Signed-off-by: Cristian Ciocaltea <cristian.ciocaltea@collabora.com>
+Link: https://gitlab.collabora.com/hardware-enablement/rockchip-3588/linux/-/commit/736478109af1cba7590789c3d3cbc0faa52180cd
+---
+ drivers/gpu/drm/bridge/ite-it66121.c | 13 ++++---------
+ 1 file changed, 4 insertions(+), 9 deletions(-)
+
+diff --git a/drivers/gpu/drm/bridge/ite-it66121.c b/drivers/gpu/drm/bridge/ite-it66121.c
+index 51fc68ffd..c8d0a26e8 100644
+--- a/drivers/gpu/drm/bridge/ite-it66121.c
++++ b/drivers/gpu/drm/bridge/ite-it66121.c
+@@ -10,6 +10,7 @@
+ #include <linux/media-bus-format.h>
+ #include <linux/module.h>
+ #include <linux/device.h>
++#include <linux/hdmi.h>
+ #include <linux/interrupt.h>
+ #include <linux/i2c.h>
+ #include <linux/bitfield.h>
+@@ -867,15 +868,6 @@ it66121_bridge_hdmi_tmds_char_rate_valid(const struct drm_bridge *bridge,
+ 					 const struct drm_display_mode *mode,
+ 					 unsigned long long tmds_rate)
+ {
+-	const struct it66121_ctx *ctx =
+-		container_of(bridge, const struct it66121_ctx, bridge);
+-	unsigned long long max_rate;
+-
+-	max_rate = (ctx->bus_width == 12) ? 74250000ULL : 148500000ULL;
+-
+-	if (tmds_rate > max_rate)
+-		return MODE_CLOCK_HIGH;
+-
+ 	if (tmds_rate < HDMI_TMDS_CHAR_RATE_MIN_HZ)
+ 		return MODE_CLOCK_LOW;
+ 
+@@ -1670,6 +1662,9 @@ static int it66121_probe(struct i2c_client *client)
+ 			  DRM_BRIDGE_OP_HDMI;
+ 	ctx->bridge.vendor = "ITE";
+ 	ctx->bridge.product = "IT66121";
++	ctx->bridge.supported_hdmi_ver = HDMI_VERSION_1_2;
++	ctx->bridge.max_tmds_char_rate = ctx->bus_width == 12 ? 74250000ULL : 148500000ULL;
++
+ 	if (client->irq > 0) {
+ 		ctx->bridge.ops |= DRM_BRIDGE_OP_HPD;
+ 

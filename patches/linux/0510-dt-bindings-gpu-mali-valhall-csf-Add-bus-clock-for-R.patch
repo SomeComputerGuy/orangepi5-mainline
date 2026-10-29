@@ -1,0 +1,63 @@
+From 02244a1b7d0e85c98eb04633866ad941046002f7 Mon Sep 17 00:00:00 2001
+From: Jonas Karlman <jonas@kwiboo.se>
+Date: Thu, 29 Oct 2026 17:06:24 +0000
+Subject: [PATCH] dt-bindings: gpu: mali-valhall-csf: Add bus clock for RK3588
+
+On RK3588 the GPU core clock is provided by the TF-A firmware through
+SCMI (SCMI_CLK_GPU), which switches between a CRU PLL and the GPU PVTPLL
+depending on the rate. The CRU gate CLK_GPU in front of the GPU still has
+to be enabled by the OS, so it needs a name of its own.
+
+Allow an optional fourth clock, "bus", and limit it to
+rockchip,rk3588-mali.
+
+Signed-off-by: Jonas Karlman <jonas@kwiboo.se>
+Link: https://github.com/armbian/linux-rockchip/pull/380
+[Ported from the RFC to v7.3; restrict "bus" to RK3588]
+---
+ .../devicetree/bindings/gpu/arm,mali-valhall-csf.yaml | 11 ++++++++++-
+ 1 file changed, 10 insertions(+), 1 deletion(-)
+
+diff --git a/Documentation/devicetree/bindings/gpu/arm,mali-valhall-csf.yaml b/Documentation/devicetree/bindings/gpu/arm,mali-valhall-csf.yaml
+index 8eccd4338..875d3b8e8 100644
+--- a/Documentation/devicetree/bindings/gpu/arm,mali-valhall-csf.yaml
++++ b/Documentation/devicetree/bindings/gpu/arm,mali-valhall-csf.yaml
+@@ -40,7 +40,7 @@ properties:
+ 
+   clocks:
+     minItems: 1
+-    maxItems: 3
++    maxItems: 4
+ 
+   clock-names:
+     minItems: 1
+@@ -50,6 +50,7 @@ properties:
+           - coregroup
+           - stacks
+       - const: stacks
++      - const: bus
+ 
+   nvmem-cells:
+     items:
+@@ -116,6 +117,8 @@ allOf:
+       properties:
+         clocks:
+           minItems: 3
++        clock-names:
++          minItems: 3
+         nvmem-cells: false
+         nvmem-cell-names: false
+         power-domains:
+@@ -123,6 +126,12 @@ allOf:
+         power-domain-names: false
+       required:
+         - mali-supply
++    else:
++      properties:
++        clocks:
++          maxItems: 3
++        clock-names:
++          maxItems: 3
+   - if:
+       properties:
+         compatible:

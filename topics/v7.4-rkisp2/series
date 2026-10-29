@@ -1,0 +1,10 @@
+# Apply in this order on top of the parent topic (see topic.env):
+#   while read -r p sha; do git am "$p"; done < <(grep -v '^#' series)
+# Second column: the original commit in the workspace clone (for reference).
+carried/0001-media-rockchip-rkisp2-Add-rkisp2-driver.patch d67d309163e243be80e3a4a8baa4fd686d940c01
+carried/0002-media-rkisp2-Add-parameters-output-video-node.patch f6287503ed66672b08c63139b55407a278e77e13
+carried/0003-media-rkisp2-Add-statistics-capture-video-node.patch b851799eabd7b6647ce70864b067a5b675c31528
+carried/0004-dt-bindings-media-Add-rockchip-rkisp2.patch 3a56b377ae8ff0b12aa93a77c8ca5dad2775034c
+carried/0005-arm64-dts-rockchip-add-ISP-nodes-to-rk3588.patch 288d2d890587013eb38b2d814f89ca2352704606
+ours/0006-media-rkisp2-Adapt-set_fmt-pad-op-to-the-v4l2_subdev.patch 8ab9d0d7b9f0fa436d91de481fbb0387326672bc
+ours/0007-media-rkisp2-Fix-missing-HIST_BIG2-entry-in-stats-bl.patch 3485041329eab8aa96ab967974deaa732c83b05c

@@ -1,0 +1,182 @@
+// SPDX-License-Identifier: (GPL-2.0+ OR MIT)
+/*
+ * NOT FOR UPSTREAM: one-boot camera presence probe for the Orange Pi 5.
+ *
+ * Camera sensors only answer on I2C once they're powered, out of reset and
+ * clocked, and the board DT neither enables I2C7 nor drives the camera
+ * control lines, so a plain i2cdetect can't see an attached module. This
+ * overlay powers the CAM1 and CAM3 connectors and binds the mainline imx219
+ * driver to the usual sensor addresses (0x10: IMX219 / OV13850, 0x36:
+ * OV13855) only to use its identify step, which only reads 16-bit register
+ * 0x0000 and powers the sensor off again on failure:
+ *
+ *   "failed to read chip id 219"     -> nothing acknowledges at that address
+ *   "chip id mismatch: 219!=<val>"   -> a non-IMX219 sensor is there
+ *   probe succeeds                   -> an IMX219 is there
+ *
+ * Wiring from the Xunlong vendor kernel (rk3588s-orangepi-5-camera[13].dtsi):
+ *   CAM1: I2C7 (M0), MCLK CLK_MIPI_CAMARAOUT_M3 (GPIO1_D6),
+ *         reset GPIO3_C4, power-down GPIO3_C6
+ *   CAM3: I2C2 (board default pins), MCLK CLK_MIPI_CAMARAOUT_M4 (GPIO1_D7),
+ *         reset GPIO1_A6, power-down GPIO3_C5
+ * CAM2 shares I2C7 and the sensor addresses with CAM1 (reset GPIO1_B2,
+ * power-down GPIO3_C1, MCLK M4) and isn't covered here.
+ *
+ * The reset and power-down lines (active low at the sensor) are modelled as
+ * fixed regulators, so both sensor nodes of a connector can share them; the
+ * imx219 supplies bring up power-down first, then reset.
+ */
+
+/dts-v1/;
+/plugin/;
+
+#include <dt-bindings/clock/rockchip,rk3588-cru.h>
+#include <dt-bindings/gpio/gpio.h>
+#include <dt-bindings/pinctrl/rockchip.h>
+
+&{/} {
+	cam1_pdn_n: regulator-cam1-pdn-n {
+		compatible = "regulator-fixed";
+		enable-active-high;
+		gpio = <&gpio3 RK_PC6 GPIO_ACTIVE_HIGH>;
+		pinctrl-names = "default";
+		pinctrl-0 = <&camdet_cam1_pdn &mipim0_camera3_clk>;
+		regulator-name = "cam1_pdn_n";
+		startup-delay-us = <5000>;
+		vin-supply = <&vcc_3v3_s3>;
+	};
+
+	cam1_rst_n: regulator-cam1-rst-n {
+		compatible = "regulator-fixed";
+		enable-active-high;
+		gpio = <&gpio3 RK_PC4 GPIO_ACTIVE_HIGH>;
+		pinctrl-names = "default";
+		pinctrl-0 = <&camdet_cam1_rst>;
+		regulator-name = "cam1_rst_n";
+		startup-delay-us = <10000>;
+		vin-supply = <&cam1_pdn_n>;
+	};
+
+	cam3_pdn_n: regulator-cam3-pdn-n {
+		compatible = "regulator-fixed";
+		enable-active-high;
+		gpio = <&gpio3 RK_PC5 GPIO_ACTIVE_HIGH>;
+		pinctrl-names = "default";
+		pinctrl-0 = <&camdet_cam3_pdn &mipim0_camera4_clk>;
+		regulator-name = "cam3_pdn_n";
+		startup-delay-us = <5000>;
+		vin-supply = <&vcc_3v3_s3>;
+	};
+
+	cam3_rst_n: regulator-cam3-rst-n {
+		compatible = "regulator-fixed";
+		enable-active-high;
+		gpio = <&gpio1 RK_PA6 GPIO_ACTIVE_HIGH>;
+		pinctrl-names = "default";
+		pinctrl-0 = <&camdet_cam3_rst>;
+		regulator-name = "cam3_rst_n";
+		startup-delay-us = <10000>;
+		vin-supply = <&cam3_pdn_n>;
+	};
+};
+
+&pinctrl {
+	camdet {
+		camdet_cam1_pdn: camdet-cam1-pdn-pinctrl {
+			rockchip,pins = <3 RK_PC6 RK_FUNC_GPIO &pcfg_pull_none>;
+		};
+
+		camdet_cam1_rst: camdet-cam1-rst-pinctrl {
+			rockchip,pins = <3 RK_PC4 RK_FUNC_GPIO &pcfg_pull_none>;
+		};
+
+		camdet_cam3_pdn: camdet-cam3-pdn-pinctrl {
+			rockchip,pins = <3 RK_PC5 RK_FUNC_GPIO &pcfg_pull_none>;
+		};
+
+		camdet_cam3_rst: camdet-cam3-rst-pinctrl {
+			rockchip,pins = <1 RK_PA6 RK_FUNC_GPIO &pcfg_pull_none>;
+		};
+	};
+};
+
+&i2c7 {
+	#address-cells = <1>;
+	#size-cells = <0>;
+	pinctrl-names = "default";
+	pinctrl-0 = <&i2c7m0_xfer>;
+	status = "okay";
+
+	camera-sensor@10 {
+		compatible = "sony,imx219";
+		reg = <0x10>;
+		assigned-clocks = <&cru CLK_MIPI_CAMARAOUT_M3>;
+		assigned-clock-rates = <24000000>;
+		clocks = <&cru CLK_MIPI_CAMARAOUT_M3>;
+		VANA-supply = <&cam1_pdn_n>;
+		VDIG-supply = <&cam1_rst_n>;
+		VDDL-supply = <&cam1_rst_n>;
+
+		port {
+			endpoint {
+				data-lanes = <1 2>;
+				link-frequencies = /bits/ 64 <456000000>;
+			};
+		};
+	};
+
+	camera-sensor@36 {
+		compatible = "sony,imx219";
+		reg = <0x36>;
+		clocks = <&cru CLK_MIPI_CAMARAOUT_M3>;
+		VANA-supply = <&cam1_pdn_n>;
+		VDIG-supply = <&cam1_rst_n>;
+		VDDL-supply = <&cam1_rst_n>;
+
+		port {
+			endpoint {
+				data-lanes = <1 2>;
+				link-frequencies = /bits/ 64 <456000000>;
+			};
+		};
+	};
+};
+
+&i2c2 {
+	#address-cells = <1>;
+	#size-cells = <0>;
+
+	camera-sensor@10 {
+		compatible = "sony,imx219";
+		reg = <0x10>;
+		assigned-clocks = <&cru CLK_MIPI_CAMARAOUT_M4>;
+		assigned-clock-rates = <24000000>;
+		clocks = <&cru CLK_MIPI_CAMARAOUT_M4>;
+		VANA-supply = <&cam3_pdn_n>;
+		VDIG-supply = <&cam3_rst_n>;
+		VDDL-supply = <&cam3_rst_n>;
+
+		port {
+			endpoint {
+				data-lanes = <1 2>;
+				link-frequencies = /bits/ 64 <456000000>;
+			};
+		};
+	};
+
+	camera-sensor@36 {
+		compatible = "sony,imx219";
+		reg = <0x36>;
+		clocks = <&cru CLK_MIPI_CAMARAOUT_M4>;
+		VANA-supply = <&cam3_pdn_n>;
+		VDIG-supply = <&cam3_rst_n>;
+		VDDL-supply = <&cam3_rst_n>;
+
+		port {
+			endpoint {
+				data-lanes = <1 2>;
+				link-frequencies = /bits/ 64 <456000000>;
+			};
+		};
+	};
+};

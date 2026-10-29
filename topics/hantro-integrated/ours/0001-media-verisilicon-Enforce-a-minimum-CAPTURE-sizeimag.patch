@@ -1,0 +1,60 @@
+From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
+From: Arun Iyengar <aiyengar1990@gmail.com>
+Date: Thu, 29 Oct 2026 12:01:33 +0000
+Subject: [PATCH] media: verisilicon: Enforce a minimum CAPTURE sizeimage for
+ the encoder
+
+For coded formats hantro_try_fmt() only computes sizeimage when the
+application passes 0, and otherwise accepts any value. On the encoder
+that lets the CAPTURE buffers be far too small for the selected
+resolution.
+
+This is easy to hit: "v4l2-ctl --set-fmt-video=width=1920,height=1080,
+pixelformat=JPEG" does G_FMT, modifies the size and calls S_FMT, so it
+passes back the 6768 byte sizeimage of the 96x32 default format. The
+driver accepts it for 1920x1088, the hardware runs out of stream buffer
+on every frame and the encoder only produces empty buffers.
+
+The stateful encoder specification lets the encoder adjust sizeimage to
+match hardware requirements. For the encoder, clamp the requested
+sizeimage up to the worst-case frame size already used as the default,
+while still allowing applications to ask for larger buffers. The
+decoder behaviour is unchanged.
+
+Assisted-by: Claude:claude-opus-5-5
+---
+ drivers/media/platform/verisilicon/hantro_v4l2.c | 16 +++++++++++++---
+ 1 file changed, 13 insertions(+), 3 deletions(-)
+
+diff --git a/drivers/media/platform/verisilicon/hantro_v4l2.c b/drivers/media/platform/verisilicon/hantro_v4l2.c
+index 83af9fa1c..c022b978f 100644
+--- a/drivers/media/platform/verisilicon/hantro_v4l2.c
++++ b/drivers/media/platform/verisilicon/hantro_v4l2.c
+@@ -386,14 +386,24 @@ static int hantro_try_fmt(const struct hantro_ctx *ctx,
+ 			pix_mp->plane_fmt[0].sizeimage +=
+ 				hantro_av1_mv_size(pix_mp->width,
+ 						   pix_mp->height);
+-	} else if (!pix_mp->plane_fmt[0].sizeimage) {
++	} else {
++		u32 max_size = fmt->header_size +
++			pix_mp->width * pix_mp->height * fmt->max_depth;
++		u32 *sizeimage = &pix_mp->plane_fmt[0].sizeimage;
++
+ 		/*
+ 		 * For coded formats the application can specify
+ 		 * sizeimage. If the application passes a zero sizeimage,
+ 		 * let's default to the maximum frame size.
++		 *
++		 * The encoder must also be able to fit the worst-case
++		 * frame for the current resolution, so never let the
++		 * application go below it. Larger values are kept.
+ 		 */
+-		pix_mp->plane_fmt[0].sizeimage = fmt->header_size +
+-			pix_mp->width * pix_mp->height * fmt->max_depth;
++		if (ctx->is_encoder)
++			*sizeimage = max(*sizeimage, max_size);
++		else if (!*sizeimage)
++			*sizeimage = max_size;
+ 	}
+ 
+ 	return 0;

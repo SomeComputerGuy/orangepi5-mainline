@@ -1,0 +1,13 @@
+# Apply in this order on top of the parent topic (see topic.env):
+#   while read -r p sha; do git am "$p"; done < <(grep -v '^#' series)
+# Second column: the original commit in the workspace clone (for reference).
+ours/0001-media-hevc-Add-H.265-syntax-definitions.patch af7c32c31d60d579d3e333008ba39d796b6f2682
+ours/0002-media-uapi-Add-HEVC-stateless-encode-support.patch c6c72d72ea2673c275c637a0f5bca7dec848cad5
+ours/0003-media-hevc-Add-stateless-encode-RBSP-writer.patch bc347e9352f01e3d62bc54e8e591e7f4251a5b04
+ours/0004-media-hevc-Add-KUnit-tests-for-the-stateless-encode-.patch e45bee8b9f9aa2d0f6bcc62541972b4084125358
+ours/0005-media-hevc-Add-stateless-encode-core.patch 687e3bd4305573dc003a95f407852f3e48986024
+ours/0006-media-hevc-Add-KUnit-tests-for-the-stateless-encode-.patch b7aa10ffe752e177a3400f80e41d24c48f7b8865
+ours/0007-media-docs-Document-the-HEVC-stateless-encode-uAPI.patch 1cb091ede6040bc5d3ee89f315aa7723323f002c
+local/0008-DO-NOT-UPSTREAM-media-v4l2-ctrls-Keep-the-v4l2-core-.patch ec82f38078623d6655a34b07e498b5715c184f35
+ours/0009-media-rockchip-rkvenc-Prepare-the-VEPU580-helpers-fo.patch 0012f5c2703975016a62e610b37ef09666ae6a26
+ours/0010-media-rockchip-rkvenc-Add-HEVC-encoding.patch 71d50a1e647dd867640243cc2389af05a3057707

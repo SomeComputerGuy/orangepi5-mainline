@@ -1,0 +1,25 @@
+# Apply in this order on top of the parent topic (see topic.env):
+#   while read -r p sha; do git am "$p"; done < <(grep -v '^#' series)
+# Second column: the original commit in the workspace clone (for reference).
+ours/0001-dt-bindings-media-add-Rockchip-IEP2-deinterlacer.patch 9172bc91c61b2c30ef363bc0f52b7dba95ad61bc
+ours/0002-arm64-dts-rockchip-add-IEP2-deinterlacer-to-RK3588.patch c40b7085d6937857195ee7b21fe70c1ed5148060
+ours/0003-dt-bindings-media-Add-Rockchip-VDPU720-JPEG-decoder.patch 62a9983e242a08c3268588ef4b516ebdccf67d1f
+ours/0004-arm64-dts-rockchip-Add-the-JPEG-decoder-to-rk3588-ba.patch a719fcd47ca305f6d4fdbd0acb96c387d6994ce1
+ours/0005-dt-bindings-media-rockchip-rk3568-vepu-Add-the-reset.patch b04f089431f3eeddd015e2337a424429fa5b3900
+ours/0006-arm64-dts-rockchip-Add-the-reset-lines-of-the-RK3588.patch 1f105bb2dd8dc065673609525fcc5680dde5a743
+ours/0007-dt-bindings-iommu-arm-smmu-v3-allow-a-power-domain.patch 79c358f861fb896de45e200f8c71d3efd6c12203
+ours/0008-arm64-dts-rockchip-add-the-PCIe-power-domain-to-the-.patch 02c5b429d780c12985fbb3d3f21bc99cf28c3d8a
+ours/0009-dt-bindings-iommu-arm-smmu-v3-allow-clocks.patch b3e15d5a843830befefedac296f4f3a0586adbcc
+ours/0010-arm64-dts-rockchip-add-the-clock-of-the-RK3588-PCIe-.patch 4bfc6a75910562ff399e7f835c1be045216467cb
+ours/0011-arm64-dts-rockchip-Add-the-encoder-interrupt-of-the-.patch 209b550e92e984baaa94d71247c6116f2932bc85
+ours/0012-arm64-dts-rockchip-Add-the-VEPU580-encoder-cores-to-.patch 323036fb0efe91c127de2a6196493879b83a14ed
+carried/0013-dt-bindings-npu-rockchip-allow-DVFS-and-thermal-prop.patch ebd54bdd115ee8b94f791984b9750c90d141ea91
+carried/0014-arm64-dts-rockchip-rk3588-add-an-OPP-table-for-the-N.patch 13a4d476816163280aafe681d562cc9f8a302ebf
+carried/0015-arm64-dts-rockchip-rk3588-add-passive-cooling-to-the.patch 5fa34c9fec44b3b1309d1b46cb8c5af0ee17cfb3
+carried/0016-dt-bindings-gpu-mali-valhall-csf-Add-bus-clock-for-R.patch e629d45ba31f3125fbd78de15d1d235a46e36862
+carried/0017-arm64-dts-rockchip-rk3588-Use-SCMI-GPU-clock-as-the-.patch 1b04c00ee7fc6c3c717fbc68a8f7236bbc8e009a
+ours/0018-arm64-dts-rockchip-use-rgmii-id-for-the-Orange-Pi-5-.patch 7c66e8d915b3f0a9cb8254755fb60bd9e6785b2c
+ours/0019-arm64-dts-rockchip-add-the-SPI-NOR-flash-supply-on-O.patch 59671f1c4b491c7694d51fa71d3828a353b5aedb
+ours/0020-arm64-dts-rockchip-set-the-RK806-reset-mode-on-Orang.patch 9cd04dc1e21f8857717c9ed340a0f16677da5c44
+carried/0021-arm64-dts-rockchip-Fix-DP-sound-dai-cells-on-RK3588.patch 429051f75c1c0a4b4cefd9471c0c8bcfc75e5217
+ours/0022-arm64-dts-rockchip-Add-USB-C-DP-AltMode-for-Orange-P.patch 974695ecb0f485580f4e3274518f18c71ff2489d

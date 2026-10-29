@@ -1,0 +1,46 @@
+From 09981a5f9bb41eec94aad6a8f10e0a0e8b986855 Mon Sep 17 00:00:00 2001
+From: Arun Iyengar <aiyengar1990@gmail.com>
+Date: Thu, 29 Oct 2026 17:51:50 +0000
+Subject: [PATCH] media: rkvdec: vdpu381-vp9: reset the register set for every
+ frame
+
+The VDPU381 VP9 backend keeps its register set in the codec context and
+fills it field by field in config_registers(), but never clears it, so
+values from earlier frames leak into later ones:
+
+- The loop filter ref and mode deltas of the previous frame are OR-ed
+  into reg94 and reg75, so after a frame that changes the deltas the
+  hardware gets the bitwise OR of the old and new values. On
+  vp90-2-09-lf_deltas.webm the deltas change from {1, 0, -1, -1} / {0, 0}
+  to {2, 0, -2, -2} / {-2, 2} on frame 3, and every frame from the next
+  one using the deltas is decoded with the wrong filter strength.
+
+- The per-segment feature enables in reg67-74 are only ever set, so a
+  feature stays enabled for a segment after the stream disables it.
+
+Clear the register set before programming each frame, as the H.264 and
+HEVC VDPU381 backends already do.
+
+Assisted-by: Claude:claude-opus-5-5
+---
+ .../media/platform/rockchip/rkvdec/rkvdec-vdpu381-vp9.c    | 7 +++++++
+ 1 file changed, 7 insertions(+)
+
+diff --git a/drivers/media/platform/rockchip/rkvdec/rkvdec-vdpu381-vp9.c b/drivers/media/platform/rockchip/rkvdec/rkvdec-vdpu381-vp9.c
+index 9b08e32fb..aee9de9a1 100644
+--- a/drivers/media/platform/rockchip/rkvdec/rkvdec-vdpu381-vp9.c
++++ b/drivers/media/platform/rockchip/rkvdec/rkvdec-vdpu381-vp9.c
+@@ -467,6 +467,13 @@ static void config_registers(struct rkvdec_ctx *ctx,
+ 			(V4L2_VP9_FRAME_FLAG_KEY_FRAME |
+ 			 V4L2_VP9_FRAME_FLAG_INTRA_ONLY));
+ 
++	/*
++	 * The register set is kept in the context and only partially written
++	 * below: start from a clean set so that nothing leaks from the
++	 * previous frame.
++	 */
++	memset(regs, 0, sizeof(*regs));
++
+ 	regs->common.reg009_dec_mode.dec_mode = VDPU381_MODE_VP9;
+ 
+ 	regs->vp9_param.reg103.vp9_intra_only_flag = intra_only;

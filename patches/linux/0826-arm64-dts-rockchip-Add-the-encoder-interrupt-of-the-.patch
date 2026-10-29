@@ -1,0 +1,39 @@
+From 0894e2bdd67b5ed8c3fbe71665f21bbf87788e17 Mon Sep 17 00:00:00 2001
+From: Arun Iyengar <aiyengar1990@gmail.com>
+Date: Thu, 29 Oct 2026 17:32:36 +0000
+Subject: [PATCH] arm64: dts: rockchip: Add the encoder interrupt of the RK3588
+ VPU121
+
+The VPU121 of the RK3588 at 0xfdb50000 is a VDPU2 decoder, with its
+registers at offset 0x400, and a VEPU2 encoder, at offset 0, which share
+clocks, power domain and IOMMU. Only the decoder interrupt is described,
+so the encoder can't be used.
+
+Add the encoder interrupt (GIC SPI 120), as described by the Rockchip
+vendor kernel, which has a "rockchip,vpu-encoder-v2" node at this
+address. The binding already allows the "vepu" interrupt.
+
+The VEPU121 cores at 0xfdba0000-0xfdbac000 are JPEG encoders only, the
+VEPU2 of the VPU121 is the H.264 encoder of the VPU1 generation.
+
+Assisted-by: Claude:claude-opus-5-5
+---
+ arch/arm64/boot/dts/rockchip/rk3588-base.dtsi | 5 +++--
+ 1 file changed, 3 insertions(+), 2 deletions(-)
+
+diff --git a/arch/arm64/boot/dts/rockchip/rk3588-base.dtsi b/arch/arm64/boot/dts/rockchip/rk3588-base.dtsi
+index 16bc12789..69e3216ce 100644
+--- a/arch/arm64/boot/dts/rockchip/rk3588-base.dtsi
++++ b/arch/arm64/boot/dts/rockchip/rk3588-base.dtsi
+@@ -1247,8 +1247,9 @@ rknn_mmu_2: iommu@fdada000 {
+ 	vpu121: video-codec@fdb50000 {
+ 		compatible = "rockchip,rk3588-vpu121", "rockchip,rk3568-vpu";
+ 		reg = <0x0 0xfdb50000 0x0 0x800>;
+-		interrupts = <GIC_SPI 119 IRQ_TYPE_LEVEL_HIGH 0>;
+-		interrupt-names = "vdpu";
++		interrupts = <GIC_SPI 120 IRQ_TYPE_LEVEL_HIGH 0>,
++			     <GIC_SPI 119 IRQ_TYPE_LEVEL_HIGH 0>;
++		interrupt-names = "vepu", "vdpu";
+ 		clocks = <&cru ACLK_VPU>, <&cru HCLK_VPU>;
+ 		clock-names = "aclk", "hclk";
+ 		iommus = <&vpu121_mmu>;

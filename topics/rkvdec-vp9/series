@@ -1,0 +1,9 @@
+# Apply in this order on top of the parent topic (see topic.env):
+#   while read -r p sha; do git am "$p"; done < <(grep -v '^#' series)
+# Second column: the original commit in the workspace clone (for reference).
+carried/0001-media-rkvdec-vp9-Changing-get_ref_buf-function-name-.patch 5806de6748df1b30cdaad0226f0bbb71c69d7ed5
+carried/0002-media-rkvdec-Move-vp9-functions-to-common-file.patch c691eea553a22b88a61796446f92d2ca887c4f91
+carried/0003-media-rkvdec-Add-VP9-support-for-VDPU381-variant.patch 67f6b1d086426bd77e15b19554850701d8b5bfb8
+carried/0004-media-rkvdec-align-bytesperline-to-64-bytes-in-rkvde.patch 4335413ec7a09cc3658a53f39b9a245ca8665747
+ours/0005-media-rkvdec-vdpu381-vp9-adapt-to-the-multi-core-cor.patch dcca220c9c04a2d10c54c601c96a5d08c964a0bd
+ours/0006-media-rkvdec-vdpu381-vp9-allow-frames-smaller-than-t.patch afe2d3426bafdb0195b0b3f60a5ad8df4c46f04e

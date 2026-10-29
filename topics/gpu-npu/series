@@ -1,0 +1,17 @@
+# Apply in this order on top of the parent topic (see topic.env):
+#   while read -r p sha; do git am "$p"; done < <(grep -v '^#' series)
+# Second column: the original commit in the workspace clone (for reference).
+carried/0001-accel-rocket-number-the-cores-by-devicetree-position.patch a156130a0a9eb954f374b44a20dd50d048135536
+carried/0002-accel-rocket-keep-core-slots-stable-across-unbind-an.patch fec03d1b1b4fd8a3056d66c5a46b3ada89a0cadb
+carried/0003-accel-rocket-request-the-core-clocks-by-name.patch e201b780ccab3b95f7ef05f9d98fbc15ff6759a7
+carried/0004-dt-bindings-npu-rockchip-allow-DVFS-and-thermal-prop.patch 009e9b20954b244017fdf00adc9fc0cb54b80487
+carried/0005-arm64-dts-rockchip-rk3588-add-an-OPP-table-for-the-N.patch 85a4d828f9cc7f415b9608205662215acfcfe5c8
+carried/0006-accel-rocket-restore-the-NPU-clock-boot-rate-before-.patch 31d43740c7f16dfb1945731a987ed9b445530fd9
+carried/0007-accel-rocket-add-devfreq-support.patch 845983141867604ff1788aeed180e495350dd4b1
+carried/0008-accel-rocket-register-a-devfreq-cooling-device.patch cfbe501071fc6f218b3856ff7af98f6ada79f464
+carried/0009-arm64-dts-rockchip-rk3588-add-passive-cooling-to-the.patch ffbda1e6e893cac873ca3d930bc768aa1df3a057
+carried/0010-dt-bindings-gpu-mali-valhall-csf-Add-bus-clock-for-R.patch ea1dab3bc5d1e8b049f7e7134c940b697f8eb4b7
+carried/0011-drm-panthor-Add-support-for-a-bus-clk.patch 8f0ccb11462946de69a9210891761c0d6543a14f
+ours/0012-drm-panthor-Do-not-change-the-GPU-clock-rate-while-s.patch 93036a6d4a282182cbee4c0f94de5efd059a757f
+carried/0013-arm64-dts-rockchip-rk3588-Use-SCMI-GPU-clock-as-the-.patch 40d5ed1e28491e8d20b0eaf96b1c470459b42cb6
+ours/0014-PM-devfreq-Resume-at-the-frequency-from-before-suspe.patch 7bbd66417626fd7ac12258d12af76ef34f3c58be

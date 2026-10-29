@@ -1,0 +1,40 @@
+From bb09f3403674bb9755b59a8bed0272b39a44a835 Mon Sep 17 00:00:00 2001
+From: Arun Iyengar <aiyengar1990@gmail.com>
+Date: Thu, 29 Oct 2026 13:10:29 +0000
+Subject: [PATCH] arm64: dts: rockchip: add the PCIe power domain to the RK3588
+ PCIe SMMU
+
+The MMU-600 for the PCIe controllers (mmu600_pcie) is enabled for every
+RK3588 board, but its node does not describe that it lives in
+RK3588_PD_PCIE. It only works today because TF-A leaves the domain on at
+boot and, on most boards, an enabled PCIe controller holds it on later.
+
+On a board that disables all PCIe controllers using that domain (the
+Orange Pi 5 with its M.2 slot in SATA mode is one), genpd powers
+PD_PCIE off as unused after boot while arm-smmu-v3 is still bound. Then
+at reboot arm_smmu_device_shutdown() writes CR0 and polls CR0ACK on the
+unpowered block, which stalls the bus: the kernel never reaches
+"reboot: Restarting system" and the board only comes back once the
+watchdog fires.
+
+Describe the power domain, so genpd keeps it on for as long as the SMMU
+is bound.
+
+Fixes: da92d3dfc871 ("arm64: dts: rockchip: enable the mmu600_pcie IOMMU on the rk3588 SoC")
+Assisted-by: Claude:claude-opus-5-5
+---
+ arch/arm64/boot/dts/rockchip/rk3588-base.dtsi | 1 +
+ 1 file changed, 1 insertion(+)
+
+diff --git a/arch/arm64/boot/dts/rockchip/rk3588-base.dtsi b/arch/arm64/boot/dts/rockchip/rk3588-base.dtsi
+index 376ad04e0..8812c86e5 100644
+--- a/arch/arm64/boot/dts/rockchip/rk3588-base.dtsi
++++ b/arch/arm64/boot/dts/rockchip/rk3588-base.dtsi
+@@ -560,6 +560,7 @@ mmu600_pcie: iommu@fc900000 {
+ 			     <GIC_SPI 367 IRQ_TYPE_EDGE_RISING 0>;
+ 		interrupt-names = "eventq", "gerror", "priq", "cmdq-sync";
+ 		#iommu-cells = <1>;
++		power-domains = <&power RK3588_PD_PCIE>;
+ 	};
+ 
+ 	mmu600_php: iommu@fcb00000 {

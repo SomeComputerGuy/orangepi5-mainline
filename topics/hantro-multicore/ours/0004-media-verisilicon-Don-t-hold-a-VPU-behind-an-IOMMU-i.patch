@@ -1,0 +1,83 @@
+From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
+From: Arun Iyengar <aiyengar1990@gmail.com>
+Date: Thu, 29 Oct 2026 12:20:32 +0000
+Subject: [PATCH] media: verisilicon: Don't hold a VPU behind an IOMMU in reset
+ after remove
+
+On the RK3588, the resets of the AV1 decoder include the AXI and APB
+bus interface resets (SRST_A_AV1_BIU, SRST_P_AV1_BIU), which also cover
+the Verisilicon IOMMU of the decoder. When the driver is unbound, the
+driver core runtime resumes the device and, through the runtime PM
+device link, its IOMMU. hantro_remove() then asserts the resets, and
+when the IOMMU autosuspends 100 ms later, vsi_iommu_suspend() writes to
+its registers while they are held in reset, which raises an SError and
+panics the system:
+
+  SError Interrupt on CPU4, code 0x00000000be000411 -- SError
+  Workqueue: pm pm_runtime_work
+  Call trace:
+   clk_disable+0x30/0x90 (P)
+   clk_bulk_disable+0x44/0x90
+   vsi_iommu_suspend+0x4c/0xc8 [vsi_iommu]
+   pm_generic_runtime_suspend+0x38/0x80
+   genpd_runtime_suspend+0xc4/0x348
+   ...
+  Kernel panic - not syncing: Asynchronous SError Interrupt
+
+This was hit when reloading the module, unless the decoder happened to
+be probed again within the autosuspend delay of its IOMMU.
+
+The IOMMU outlives the VPU driver, so leave the resets of a VPU that is
+behind an IOMMU deasserted on remove and on the probe error path. VPUs
+without an IOMMU are still put into reset.
+
+Assisted-by: Claude:claude-opus-5-5
+---
+ .../media/platform/verisilicon/hantro_drv.c   | 20 +++++++++++++++++--
+ 1 file changed, 18 insertions(+), 2 deletions(-)
+
+diff --git a/drivers/media/platform/verisilicon/hantro_drv.c b/drivers/media/platform/verisilicon/hantro_drv.c
+index 7bd6a7c15..8e5c3d02f 100644
+--- a/drivers/media/platform/verisilicon/hantro_drv.c
++++ b/drivers/media/platform/verisilicon/hantro_drv.c
+@@ -1152,6 +1152,22 @@ static struct v4l2_m2m_dev *hantro_get_v4l2_m2m_dev(struct hantro_dev *vpu)
+ 	return v4l2_m2m_init(&vpu_m2m_ops);
+ }
+ 
++/*
++ * The resets may also cover the bus interface that the IOMMU of the VPU is
++ * accessed through, e.g. on the RK3588 AV1 decoder. The IOMMU is a separate
++ * device which is runtime resumed with the VPU while it is unbound, and
++ * accesses its registers again when it runtime suspends afterwards. Holding
++ * the VPU in reset at that point causes an asynchronous external abort, so
++ * leave the resets deasserted for a VPU behind an IOMMU.
++ */
++static void hantro_reset_assert(struct hantro_dev *vpu)
++{
++	if (device_iommu_mapped(vpu->dev))
++		return;
++
++	reset_control_assert(vpu->resets);
++}
++
+ /*
+  * Acquire and initialize the hardware resources of one VPU instance:
+  * clocks, resets, registers, interrupts and runtime PM.
+@@ -1277,7 +1293,7 @@ static int hantro_hw_init(struct hantro_dev *vpu)
+ 	return 0;
+ 
+ err_rst_assert:
+-	reset_control_assert(vpu->resets);
++	hantro_reset_assert(vpu);
+ err_pm_disable:
+ 	pm_runtime_dont_use_autosuspend(vpu->dev);
+ 	pm_runtime_disable(vpu->dev);
+@@ -1287,7 +1303,7 @@ static int hantro_hw_init(struct hantro_dev *vpu)
+ static void hantro_hw_cleanup(struct hantro_dev *vpu)
+ {
+ 	clk_bulk_unprepare(vpu->variant->num_clocks, vpu->clocks);
+-	reset_control_assert(vpu->resets);
++	hantro_reset_assert(vpu);
+ 	pm_runtime_dont_use_autosuspend(vpu->dev);
+ 	pm_runtime_disable(vpu->dev);
+ }

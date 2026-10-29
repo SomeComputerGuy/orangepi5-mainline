@@ -1,0 +1,9 @@
+# Netplan v2 network config applied by cloud-init on first boot.
+# Default: DHCP on wired ethernet. Edit for a static IP if needed.
+version: 2
+ethernets:
+  wired:
+    match:
+      name: "en*"
+    dhcp4: true
+    dhcp6: true

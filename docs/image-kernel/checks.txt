@@ -1,0 +1,34 @@
+Verification of opi5/integration-7.3 (main, tree f099e1f92) and opi5/integration-extra-7.3 (tree b95e48395), 2026-10-29
+
+Apply: patches/linux (291) and patches/linux-extra (14) applied with `git apply --index` on a clean v7.3, using
+build-kernel.sh's loop and `want` hash logic (OPI5_EXTRA=0 and 1): trees identical to the branches.
+The 229 carried-over patches have the same patch-ids as patches/linux.bak-20261029 (only author e-mails normalised
+to aiyengar1990@gmail.com on 9 of ours).
+
+Config: Ubuntu config-7.3.0-10-generic + scripts/opi5.config (+ opi5-extra.config), olddefconfig: no fragment
+mismatches. Differs from build/linux/.config only by the new symbols (V4L2_H264_ENC, V4L2_HEVC_ENC(_RBSP),
+VIDEO_ROCKCHIP_IEP/JPEGD/VENC; + VIDEO_ROCKCHIP_ISP2 for extra).
+
+Full build (build/wt-integration-7.3, -j8, Image modules dtbs): exit 0. Only warnings: pre-existing
+-Wframe-larger-than in untouched code (binfmt_elf, wireguard, mlx5, infiniband, ublk, arm-smmu-v3 sync_cd/atc_inv/
+domain_inv_range, ...). New modules built: rockchip-venc, rockchip-jpegd, rockchip-iep, hantro-vpu (VEPU2 H.264),
+rockchip-vdec (VP9), v4l2-h264-enc(-rbsp,-rc), v4l2-hevc-enc(-rbsp).
+
+W=1: drivers/media/platform/rockchip/ drivers/media/platform/verisilicon/ drivers/media/v4l2-core/: 0 warnings
+(w1-media.txt). drivers/phy/ drm/bridge/synopsys drm/rockchip drm/display usb/dwc3 usb/typec accel/rocket
+drm/panthor devfreq stmmac sound/soc/rockchip arm-smmu-v3: only the pre-existing arm-smmu-v3 frame-size and
+stmmac_ethtool format-truncation warnings (w1-other.txt), none in code we changed.
+Extra W=1 (rkisp2, ili9881c panel, dsi2): 0 warnings.
+
+CHECK_DTBS: rk3588s-orangepi-5, -5-sata, -5b (main): clean. Extra: base DTBs and all overlay application tests
+clean except the expected undocumented ovti,ov13850/ov13855 compatibles (no mainline binding, noted in the commit).
+All three base DTBs carry __symbols__ (1004 in main; overlay tests in extra). `make dtbs` -j8 with extra: clean.
+dt_binding_check on the 12 new/changed bindings (main + extra): clean.
+
+checkpatch --strict on our 67 commits (checkpatch.txt): 0 errors, 0 checks. Warnings only: Co-Authored-By
+spelling (attribution rule), MAINTAINERS for new files, shallow-clone unknown commit ids, two quoted log lines,
+pr_cont in v4l2-ctrls-core (existing pattern), and an "undocumented" compatible that the preceding binding patch adds.
+
+DTB: see dtb-diff.txt. The live board DTB (= _out/board-dtb-K2.dtb = opi5/board-dt 9cd04dc1e built with
+DTC_FLAGS=-@, byte-identical) and the integration rk3588s-orangepi-5-sata.dtb decompile to the same tree with the
+same phandles, except dp@fde50000 #sound-dai-cells 0 -> 1 (patch 0266; dp0 is disabled on the board).

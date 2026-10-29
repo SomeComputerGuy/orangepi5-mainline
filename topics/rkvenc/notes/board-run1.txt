@@ -1,0 +1,42 @@
+exit=0
+== v4l2-compliance
+	test blocking wait: OK
+
+Total for rockchip-venc device /dev/video6: 49, Succeeded: 44, Failed: 5, Warnings: 2
+fixqp res=1080 gop=1 qp=22: encoded 300 frames in 1.165 s: 257.41 fps, 19875256 bytes, 15900.2 kbit/s at 30 fps | decode-errors=0 psnr=frames=300 PSNR y:52.726831 u:51.810837 v:52.219379 average:52.474624
+fixqp res=1080 gop=1 qp=27: encoded 300 frames in 1.171 s: 256.14 fps, 14788049 bytes, 11830.4 kbit/s at 30 fps | decode-errors=0 psnr=frames=300 PSNR y:48.423659 u:46.345193 v:46.655321 average:47.682595
+fixqp res=1080 gop=1 qp=32: encoded 300 frames in 1.179 s: 254.48 fps, 10466864 bytes, 8373.5 kbit/s at 30 fps | decode-errors=0 psnr=frames=300 PSNR y:43.457083 u:42.955262 v:43.248342 average:43.334528
+fixqp res=1080 gop=1 qp=37: encoded 300 frames in 1.155 s: 259.84 fps, 6995005 bytes, 5596.0 kbit/s at 30 fps | decode-errors=0 psnr=frames=300 PSNR y:39.593899 u:39.587283 v:40.095078 average:39.672391
+fixqp res=1080 gop=30 qp=22: encoded 300 frames in 1.151 s: 260.55 fps, 15511381 bytes, 12409.1 kbit/s at 30 fps | decode-errors=0 psnr=frames=300 PSNR y:51.989971 u:51.413131 v:52.044167 average:51.897130
+fixqp res=1080 gop=30 qp=27: encoded 300 frames in 1.122 s: 267.42 fps, 10918645 bytes, 8734.9 kbit/s at 30 fps | decode-errors=0 psnr=frames=300 PSNR y:47.735622 u:46.177978 v:46.606441 average:47.238051
+fixqp res=1080 gop=30 qp=32: rkvenc-enc.c:455: xioctl(vfd, VIDIOC_DQBUF, &vb): Resource temporarily unavailable | decode-errors=0 psnr=frames=273 PSNR y:42.878397 u:42.794447 v:43.054896 average:42.893121
+fixqp res=1080 gop=30 qp=37: encoded 300 frames in 1.131 s: 265.18 fps, 4307831 bytes, 3446.3 kbit/s at 30 fps | decode-errors=0 psnr=frames=300 PSNR y:38.651538 u:39.605623 v:39.924632 average:38.991148
+cbr res=1080 target=2000000: encoded 300 frames in 1.165 s: 257.57 fps, 17469725 bytes, 13975.8 kbit/s at 30 fps | decode-errors=0 psnr=frames=300 PSNR y:48.943440 u:49.969337 v:49.916827 average:49.251754
+cbr res=1080 target=8000000: encoded 300 frames in 1.148 s: 261.39 fps, 18117579 bytes, 14494.1 kbit/s at 30 fps | decode-errors=0 psnr=frames=300 PSNR y:53.305010 u:53.146711 v:53.290071 average:53.275745
+cbr res=1080 target=20000000: encoded 300 frames in 1.194 s: 251.29 fps, 23391603 bytes, 18713.3 kbit/s at 30 fps | decode-errors=0 psnr=frames=300 PSNR y:58.205180 u:58.505162 v:58.597378 average:58.317429
+fixqp res=2160 gop=1 qp=22: encoded 60 frames in 0.857 s: 70.01 fps, 14214394 bytes, 56857.6 kbit/s at 30 fps | decode-errors=0 psnr=frames=60 PSNR y:53.557130 u:52.447807 v:52.811820 average:53.224074
+fixqp res=2160 gop=1 qp=27: encoded 60 frames in 0.847 s: 70.83 fps, 10441503 bytes, 41766.0 kbit/s at 30 fps | decode-errors=0 psnr=frames=60 PSNR y:48.934144 u:47.021927 v:47.211277 average:48.239870
+fixqp res=2160 gop=1 qp=32: encoded 60 frames in 0.849 s: 70.66 fps, 7140885 bytes, 28563.5 kbit/s at 30 fps | decode-errors=0 psnr=frames=60 PSNR y:43.485610 u:43.668063 v:43.877413 average:43.578824
+fixqp res=2160 gop=1 qp=37: encoded 60 frames in 0.848 s: 70.76 fps, 4443106 bytes, 17772.4 kbit/s at 30 fps | decode-errors=0 psnr=frames=60 PSNR y:39.965564 u:40.364429 v:40.778507 average:40.156794
+fixqp res=2160 gop=30 qp=22: encoded 60 frames in 0.864 s: 69.46 fps, 12524159 bytes, 50096.6 kbit/s at 30 fps | decode-errors=0 psnr=frames=60 PSNR y:52.542090 u:51.695021 v:52.308795 average:52.350544
+fixqp res=2160 gop=30 qp=27: encoded 60 frames in 0.848 s: 70.77 fps, 8769313 bytes, 35077.3 kbit/s at 30 fps | decode-errors=0 psnr=frames=60 PSNR y:47.948847 u:46.713798 v:47.000481 average:47.552733
+fixqp res=2160 gop=30 qp=32: encoded 60 frames in 0.847 s: 70.85 fps, 5709316 bytes, 22837.3 kbit/s at 30 fps | decode-errors=0 psnr=frames=60 PSNR y:42.891115 u:43.203293 v:43.494861 average:43.037708
+fixqp res=2160 gop=30 qp=37: encoded 60 frames in 0.847 s: 70.84 fps, 3253468 bytes, 13013.9 kbit/s at 30 fps | decode-errors=0 psnr=frames=60 PSNR y:39.368061 u:40.154757 v:40.396826 average:39.649584
+cbr res=2160 target=2000000: encoded 60 frames in 0.843 s: 71.14 fps, 1597640 bytes, 6390.6 kbit/s at 30 fps | decode-errors=0 psnr=frames=60 PSNR y:32.181693 u:37.583837 v:36.871139 average:33.309338
+cbr res=2160 target=8000000: encoded 60 frames in 0.856 s: 70.08 fps, 10557518 bytes, 42230.1 kbit/s at 30 fps | decode-errors=0 psnr=frames=60 PSNR y:43.857262 u:45.418964 v:45.315723 average:44.304628
+cbr res=2160 target=20000000: encoded 60 frames in 0.855 s: 70.14 fps, 13282534 bytes, 53130.1 kbit/s at 30 fps | decode-errors=0 psnr=frames=60 PSNR y:49.368083 u:49.859308 v:49.967080 average:49.542191
+== profiles (1080p, GOP 30, QP 27)
+profile 66: encoded 120 frames in 0.476 s: 252.05 fps, 5018393 bytes, 10036.8 kbit/s at 30 fps | decode-errors=0 Baseline
+profile 77: encoded 120 frames in 0.473 s: 253.46 fps, 4380371 bytes, 8760.7 kbit/s at 30 fps | decode-errors=0 Main
+profile 100: encoded 120 frames in 0.473 s: 253.61 fps, 4378901 bytes, 8757.8 kbit/s at 30 fps | decode-errors=0 High
+high cavlc: encoded 120 frames in 0.458 s: 262.27 fps, 5019675 bytes, 10039.4 kbit/s at 30 fps | decode-errors=0
+== two parallel 4K streams
+irqs before: fdbd0000.video-codec=4430 fdbe0000.video-codec=0 
+stream0: encoded 60 frames in 0.874 s: 68.67 fps, 8769313 bytes, 35077.3 kbit/s at 30 fps
+stream1: encoded 60 frames in 0.848 s: 70.77 fps, 8769313 bytes, 35077.3 kbit/s at 30 fps
+irqs after: fdbd0000.video-codec=4490 fdbe0000.video-codec=60 
+decode-errors: 0 0
+== runtime PM
+/sys/bus/platform/devices/fdbd0000.video-codec: suspended
+/sys/bus/platform/devices/fdbe0000.video-codec: suspended
+== dmesg

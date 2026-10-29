@@ -1,0 +1,91 @@
+Subject: [RFC PATCH 0/7] media: Add V4L2 HEVC stateless encode uAPI
+
+DRAFT - NOT SENT. Depends on "[PATCH 00/14] media: Add V4L2 H.264
+stateless encode and VC8000E support" (Paul Kocialkowski, v1):
+https://lore.kernel.org/all/20260522101653.2565125-1-paulk@sys-base.io/
+
+Hi everyone,
+
+This RFC proposes a V4L2 uAPI for stateless HEVC (H.265) encoders, built on
+the kernel-driven design of Paul's H.264 stateless encode series. As far as I
+can tell, it is the first HEVC stateless encode proposal. It is meant to help
+the H.264 discussion as much as to add HEVC: reference handling is the open
+action item from the 2026 Media Summit, and HEVC makes one answer to it
+concrete.
+
+What it reuses from the H.264 design:
+- V4L2_PIX_FMT_HEVC_SLICE on the CAPTURE queue, with one access unit per
+  buffer;
+- the existing V4L2_CID_STATELESS_HEVC_SPS/PPS controls and structures for
+  the coding tools. The parts a decoder never needed (profile/tier/level,
+  conformance window, VUI, VPS) are derived in the kernel from the format,
+  S_PARM, S_SELECTION and the stateful HEVC profile/level/tier controls;
+- the kernel writes the VPS, SPS, PPS, AUD and, unless the hardware does it,
+  the slice segment header;
+- the QP comes from the stateful QP/rate control controls (direct QP and CQ
+  in the core, CBR/VBR through driver callbacks for now);
+- the driver API: init/step/complete/exit, state_constrain and
+  reconstruction buffer callbacks.
+
+What is new:
+- V4L2_CID_STATELESS_HEVC_ENCODE_PARAMS: the NAL unit type, TemporalId,
+  slice type and POC of the picture, the slice header syntax elements that
+  the SPS/PPS enable, and its reference picture set, given as a list of
+  OUTPUT buffer timestamps, each marked used-by-current-picture and/or
+  long-term. The kernel keeps the reconstructed pictures, computes the POC
+  deltas, codes the RPS, builds the default reference lists and drops
+  every picture that is not listed, exactly as a decoder does (8.3.2).
+  Userspace keeps full control of GOP structure, long-term references and
+  temporal layers without any MMCO-like syntax. Hardware with one reference
+  read port uses the single entry marked as used.
+- V4L2_CID_STATELESS_HEVC_ENCODE_FEEDBACK, read-only: the values the kernel
+  settled on (QP, resolved reference lists) and hardware statistics, in a
+  codec-agnostic struct v4l2_stateless_encode_stats (QP sum/min/max, luma
+  SSE, block counts) that H.264 could share. Applications never set it, so
+  v4l2_ctrl_request_complete() stores the value the driver set at the end of
+  the run in the request, and it can be read per request today, without
+  read-only requests.
+- A kernel HEVC NAL unit writer (v4l2-hevc-enc-rbsp) with byte-wise
+  emulation prevention, and an encode core (v4l2-hevc-enc) for the RPS/DPB,
+  accommodation, headers and feedback.
+- KUnit tests for both: byte-exact VPS/SPS/PPS/AUD/slice headers for three
+  configurations (vectors from an independent reference implementation;
+  see the commit message), and GOP sequences through the core.
+
+The uAPI was checked against two unrelated encoders: Rockchip VEPU580
+(RK3588; a driver is in progress) and VeriSilicon VC8000E (its HEVC
+registers are in Paul's series). Both write slice headers from registers and
+take CPU-written parameter sets, and both map one-to-one onto the resolved
+slice header structure. The mapping tables are in the design notes.
+
+Questions where I would particularly like feedback:
+1. Explicit references for HEVC versus the sliding window of the H.264 v1
+   series: is the asymmetry fine, or should H.264 go explicit too?
+2. Should the H.264 and HEVC bit writers become one shared helper, and
+   should Paul's rate control be made codec-agnostic so HEVC gets CBR?
+3. Is a read-only feedback control the right pattern, and should the stats
+   be their own codec-agnostic control?
+4. Capability discovery: reject-on-use plus written-back accommodation, or
+   a dedicated caps control?
+5. HEVC_SLICE reuse, or HEVC_SL alongside the H264_SL rename?
+
+Not covered yet: multi-slice, tiles/WPP with kernel-written headers, RPS
+candidates in the SPS, custom scaling lists, weighted prediction, SEI/HRD,
+4:2:2/4:4:4 and 10-bit beyond what the SPS can express (Main 10 is
+signalled but untested).
+
+Tested: W=1 builds, KUnit on UML (23 tests), and uAPI headers compiled
+standalone for x86-64, i386 and arm64. No hardware test yet.
+
+Thanks,
+
+---
+
+Arun Iyengar (7):
+  media: hevc: Add H.265 syntax definitions
+  media: uapi: Add HEVC stateless encode support
+  media: hevc: Add stateless encode RBSP writer
+  media: hevc: Add KUnit tests for the stateless encode RBSP writer
+  media: hevc: Add stateless encode core
+  media: hevc: Add KUnit tests for the stateless encode core
+  media: docs: Document the HEVC stateless encode uAPI

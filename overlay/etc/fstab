@@ -1,0 +1,2 @@
+# <file system>  <mount point>  <type>  <options>                    <dump>  <pass>
+LABEL=rootfs     /              ext4    defaults,noatime,commit=60   0       1

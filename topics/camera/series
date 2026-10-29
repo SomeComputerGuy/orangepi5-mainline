@@ -1,0 +1,12 @@
+# Apply in this order on top of the parent topic (see topic.env):
+#   while read -r p sha; do git am "$p"; done < <(grep -v '^#' series)
+# Second column: the original commit in the workspace clone (for reference).
+carried/0001-media-rockchip-rkisp2-Add-rkisp2-driver.patch 6e33ecb053b70b89f2c254352a79d3b9baac683d
+carried/0002-media-rkisp2-Add-parameters-output-video-node.patch e1231d87d61b0f1c8cbd503d4eaf134b4ee681e4
+carried/0003-media-rkisp2-Add-statistics-capture-video-node.patch fb57b7bcb0e2a6bcd0faf132610e548e8df15e71
+carried/0004-dt-bindings-media-Add-rockchip-rkisp2.patch 412bebf3d2a714da8e319913ee4a136ceb24cd8c
+carried/0005-arm64-dts-rockchip-add-ISP-nodes-to-rk3588.patch bd7ecd476ff4bffe0537d7cbc319033bffbe9d15
+ours/0006-media-rkisp2-Fix-missing-HIST_BIG2-entry-in-stats-bl.patch ca58b2af995ff4aebe9dff38c7456dbe6a5d0bfa
+ours/0007-arm64-dts-rockchip-rk3588-Drop-third-ISP0-interrupt.patch 625e976362410870ea106a3ccf649f414e9e0054
+ours/0008-arm64-dts-rockchip-Add-IMX219-camera-overlay-for-Ora.patch aa7e72e113d3e72e0509c9b0701f00b9433e0c76
+ours/0009-arm64-dts-rockchip-Add-OV13850-OV13855-overlays-for-.patch f384072b58afcfb490e240962ba01b8d22854707

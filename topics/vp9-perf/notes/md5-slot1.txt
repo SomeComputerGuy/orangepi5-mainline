@@ -1,0 +1,19 @@
+#!/bin/sh
+# usage: md5.sh clip  -> md5 over the per-frame md5s of the visible picture
+f=$1; t=$(mktemp)
+gst-launch-1.0 -q filesrc location=$f ! matroskademux ! vp9parse ! v4l2slvp9dec ! \
+	checksumsink hash=md5 sync=false 2>/dev/null | awk '{print $NF}' > $t
+echo "$(md5sum < $t | cut -c1-32)  $f ($(wc -l < $t) frames)"
+rm -f $t
+cnt_nc=0
+cea692ef31b067204847177188e6abd0  4k10hb.webm (300 frames)
+ff798cd6fabd0c350dfeb6e65848c5d3  1080p.webm (1200 frames)
+d23f937ec656531e80292c5cb36f410e  4k8.webm (600 frames)
+3ac3c5d18281dd7989f1cdc0eef72b32  4k10.webm (600 frames)
+cnt_nc=1
+cea692ef31b067204847177188e6abd0  4k10hb.webm (300 frames)
+ff798cd6fabd0c350dfeb6e65848c5d3  1080p.webm (1200 frames)
+d23f937ec656531e80292c5cb36f410e  4k8.webm (600 frames)
+3ac3c5d18281dd7989f1cdc0eef72b32  4k10.webm (600 frames)
+
+[exited with code 0]

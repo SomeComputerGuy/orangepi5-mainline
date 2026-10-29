@@ -1,0 +1,30 @@
+From 864675eee2c9c75e9aeb3a3d567765d19e5e095c Mon Sep 17 00:00:00 2001
+From: Arun Iyengar <aiyengar1990@gmail.com>
+Date: Thu, 29 Oct 2026 12:59:14 +0000
+Subject: [PATCH] dt-bindings: display: panel: ilitek,ili9881c: Add Innolux
+ AFJ101-BA2131
+
+The Innolux AFJ101-BA2131 is a 10.1" 800x1280 MIPI-DSI LCD panel driven
+by an Ilitek ILI9881C controller. It is sold by Xunlong as the official
+"Orange Pi 10.1 inch MIPI LCD" for the Orange Pi 5 family, where the
+vendor device trees describe it with this compatible string.
+
+Document the compatible.
+
+Assisted-by: Claude:claude-opus-5-5
+---
+ .../devicetree/bindings/display/panel/ilitek,ili9881c.yaml       | 1 +
+ 1 file changed, 1 insertion(+)
+
+diff --git a/Documentation/devicetree/bindings/display/panel/ilitek,ili9881c.yaml b/Documentation/devicetree/bindings/display/panel/ilitek,ili9881c.yaml
+index 42e35986f..30bcecbb3 100644
+--- a/Documentation/devicetree/bindings/display/panel/ilitek,ili9881c.yaml
++++ b/Documentation/devicetree/bindings/display/panel/ilitek,ili9881c.yaml
+@@ -20,6 +20,7 @@ properties:
+           - bananapi,lhr050h41
+           - bestar,bsd1218-a101kl68
+           - feixin,k101-im2byl02
++          - innolux,afj101-ba2131
+           - raspberrypi,dsi-5inch
+           - raspberrypi,dsi-7inch
+           - startek,kd050hdfia020

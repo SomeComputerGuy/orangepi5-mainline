@@ -1,0 +1,4 @@
+# Apply in this order on top of the parent topic (see topic.env):
+#   while read -r p sha; do git am "$p"; done < <(grep -v '^#' series)
+# Second column: the original commit in the workspace clone (for reference).
+carried/0001-drm-drm_scdc_helper-Add-SCDC-helper-funcs-for-FRL.patch 15c1b1ae82df8f300a6f8fa07c236cfea02bbb9e

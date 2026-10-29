@@ -1,0 +1,12 @@
+## /etc/default/u-boot - configuration file for u-boot-update(8)
+## Generates /boot/extlinux/extlinux.conf on every kernel install/removal.
+U_BOOT_MENU_LABEL="Ubuntu 26.10"
+U_BOOT_ALTERNATIVES="default recovery"
+U_BOOT_TIMEOUT="20"
+U_BOOT_ROOT="root=LABEL=rootfs"
+U_BOOT_PARAMETERS="rootwait ro console=ttyS2,115200 console=tty1"
+U_BOOT_FDT_DIR="/usr/lib/linux-image-"
+## No U_BOOT_FDT: extlinux.conf gets "fdtdir", and U-Boot loads $fdtfile from it.
+## U-Boot's M.2 auto-detect sets fdtfile to rk3588s-orangepi-5-sata.dtb when the
+## slot holds a SATA SSD (default rk3588s-orangepi-5.dtb: NVMe or empty).
+U_BOOT_FDT=""

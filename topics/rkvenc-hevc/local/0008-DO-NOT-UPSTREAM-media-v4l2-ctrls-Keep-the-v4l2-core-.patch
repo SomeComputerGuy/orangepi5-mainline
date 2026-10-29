@@ -1,0 +1,112 @@
+From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
+From: Arun Iyengar <aiyengar1990@gmail.com>
+Date: Thu, 29 Oct 2026 17:44:34 +0000
+Subject: [PATCH] DO NOT UPSTREAM: media: v4l2-ctrls: Keep the v4l2-core symbol
+ versions for HEVC encode
+
+Local deployment helper for the Orange Pi 5 test kernel (7.3.0-opi5,
+CONFIG_MODVERSIONS with gendwarfksyms), like the H.264 one before it.
+Drop it when the kernel is rebuilt as a whole.
+
+The HEVC stateless encode uAPI adds two members to union v4l2_ctrl_ptr
+and two enumerators to enum v4l2_ctrl_type, which would change the
+symbol versions of the videodev exports again. Use the generic pointer
+in the HEVC encode core and its tests, and define
+V4L2_CTRL_TYPE_HEVC_ENCODE_PARAMS and V4L2_CTRL_TYPE_HEVC_ENCODE_FEEDBACK
+outside of the enumeration. The switches on the control type already
+cast it to u32.
+
+With this, all 339 exports shared with the installed v4l2-core modules
+keep their versions, so only videodev.ko and the new v4l2-hevc-enc and
+v4l2-hevc-enc-rbsp modules need to be added to the board.
+
+Assisted-by: Claude:claude-opus-5-5
+---
+ drivers/media/v4l2-core/v4l2-hevc-enc-kunit.c | 4 ++--
+ drivers/media/v4l2-core/v4l2-hevc-enc.c       | 2 +-
+ include/media/v4l2-ctrls.h                    | 4 ----
+ include/uapi/linux/videodev2.h                | 6 +++---
+ 4 files changed, 6 insertions(+), 10 deletions(-)
+
+diff --git a/drivers/media/v4l2-core/v4l2-hevc-enc-kunit.c b/drivers/media/v4l2-core/v4l2-hevc-enc-kunit.c
+index 15c65663d..bb252c2ad 100644
+--- a/drivers/media/v4l2-core/v4l2-hevc-enc-kunit.c
++++ b/drivers/media/v4l2-core/v4l2-hevc-enc-kunit.c
+@@ -175,7 +175,7 @@ static const struct v4l2_ctrl_hevc_encode_feedback *
+ hevc_enc_test_feedback(struct hevc_enc_test *t)
+ {
+ 	return v4l2_ctrl_find(&t->hdl, V4L2_CID_STATELESS_HEVC_ENCODE_FEEDBACK)
+-		->p_cur.p_hevc_encode_feedback;
++		->p_cur.p;
+ }
+ 
+ static unsigned int hevc_enc_test_active(struct hevc_enc_test *t)
+@@ -469,7 +469,7 @@ static void hevc_enc_validate(struct kunit *test)
+ 		hevc_enc_test_init(test, V4L2_HEVC_ENC_FLAG_INTER_PRED);
+ 	const struct v4l2_ctrl_hevc_encode_params *cur =
+ 		v4l2_ctrl_find(&t->hdl, V4L2_CID_STATELESS_HEVC_ENCODE_PARAMS)
+-		->p_cur.p_hevc_encode_params;
++		->p_cur.p;
+ 	struct v4l2_ctrl_hevc_encode_params p = {
+ 		.nal_unit_type = V4L2_HEVC_NAL_TRAIL_R,
+ 		.nuh_temporal_id_plus1 = 1,
+diff --git a/drivers/media/v4l2-core/v4l2-hevc-enc.c b/drivers/media/v4l2-core/v4l2-hevc-enc.c
+index e2aa7d2da..b722eaa68 100644
+--- a/drivers/media/v4l2-core/v4l2-hevc-enc.c
++++ b/drivers/media/v4l2-core/v4l2-hevc-enc.c
+@@ -579,7 +579,7 @@ static int prepare_encode(struct v4l2_hevc_enc *enc,
+ 	if (!ctrl)
+ 		return -EINVAL;
+ 
+-	memcpy(encode, ctrl->p_cur.p_hevc_encode_params, sizeof(*encode));
++	memcpy(encode, ctrl->p_cur.p, sizeof(*encode));
+ 
+ 	/* The bitstream starts with an IRAP picture. */
+ 	if (!enc->state_serial && !v4l2_hevc_nal_is_irap(encode->nal_unit_type))
+diff --git a/include/media/v4l2-ctrls.h b/include/media/v4l2-ctrls.h
+index e817d1674..327976b14 100644
+--- a/include/media/v4l2-ctrls.h
++++ b/include/media/v4l2-ctrls.h
+@@ -49,8 +49,6 @@ struct video_device;
+  * @p_hevc_sps:			Pointer to an HEVC sequence parameter set structure.
+  * @p_hevc_pps:			Pointer to an HEVC picture parameter set structure.
+  * @p_hevc_slice_params:	Pointer to an HEVC slice parameters structure.
+- * @p_hevc_encode_params:	Pointer to an HEVC encode parameters structure.
+- * @p_hevc_encode_feedback:	Pointer to an HEVC encode feedback structure.
+  * @p_hdr10_cll:		Pointer to an HDR10 Content Light Level structure.
+  * @p_hdr10_mastering:		Pointer to an HDR10 Mastering Display structure.
+  * @p_area:			Pointer to an area.
+@@ -83,8 +81,6 @@ union v4l2_ctrl_ptr {
+ 	struct v4l2_ctrl_hevc_sps *p_hevc_sps;
+ 	struct v4l2_ctrl_hevc_pps *p_hevc_pps;
+ 	struct v4l2_ctrl_hevc_slice_params *p_hevc_slice_params;
+-	struct v4l2_ctrl_hevc_encode_params *p_hevc_encode_params;
+-	struct v4l2_ctrl_hevc_encode_feedback *p_hevc_encode_feedback;
+ 	struct v4l2_ctrl_vp9_compressed_hdr *p_vp9_compressed_hdr_probs;
+ 	struct v4l2_ctrl_vp9_frame *p_vp9_frame;
+ 	struct v4l2_ctrl_hdr10_cll_info *p_hdr10_cll;
+diff --git a/include/uapi/linux/videodev2.h b/include/uapi/linux/videodev2.h
+index 74a8959f0..06d8e37e4 100644
+--- a/include/uapi/linux/videodev2.h
++++ b/include/uapi/linux/videodev2.h
+@@ -1992,8 +1992,6 @@ enum v4l2_ctrl_type {
+ 	V4L2_CTRL_TYPE_HEVC_DECODE_PARAMS	= 0x0274,
+ 	V4L2_CTRL_TYPE_HEVC_EXT_SPS_ST_RPS	= 0x0275,
+ 	V4L2_CTRL_TYPE_HEVC_EXT_SPS_LT_RPS	= 0x0276,
+-	V4L2_CTRL_TYPE_HEVC_ENCODE_PARAMS	= 0x0277,
+-	V4L2_CTRL_TYPE_HEVC_ENCODE_FEEDBACK	= 0x0278,
+ 
+ 	V4L2_CTRL_TYPE_AV1_SEQUENCE	    = 0x280,
+ 	V4L2_CTRL_TYPE_AV1_TILE_GROUP_ENTRY = 0x281,
+@@ -2001,8 +1999,10 @@ enum v4l2_ctrl_type {
+ 	V4L2_CTRL_TYPE_AV1_FILM_GRAIN	    = 0x283,
+ };
+ 
+-/* Not an enumerator, to keep the module symbol versions of v4l2-core. */
++/* Not enumerators, to keep the module symbol versions of v4l2-core. */
+ #define V4L2_CTRL_TYPE_H264_ENCODE_PARAMS	0x0206
++#define V4L2_CTRL_TYPE_HEVC_ENCODE_PARAMS	0x0277
++#define V4L2_CTRL_TYPE_HEVC_ENCODE_FEEDBACK	0x0278
+ 
+ /*  Used in the VIDIOC_QUERYCTRL ioctl for querying controls */
+ struct v4l2_queryctrl {

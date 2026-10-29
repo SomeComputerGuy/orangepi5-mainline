@@ -1,0 +1,17 @@
+# Local, private or generated: never commit
+/local.env
+/cidata/user-data
+/.ssh/
+/src/
+/build/
+/out/
+/.work/
+*.ko
+*.dtb
+*.dtbo
+*.img
+*.img.xz
+*.deb
+*.pem
+x509.genkey
+__pycache__/

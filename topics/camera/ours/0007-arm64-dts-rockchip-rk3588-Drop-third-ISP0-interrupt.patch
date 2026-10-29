@@ -1,0 +1,38 @@
+From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
+From: Arun Iyengar <aiyengar1990@gmail.com>
+Date: Thu, 29 Oct 2026 13:00:34 +0000
+Subject: [PATCH] arm64: dts: rockchip: rk3588: Drop third ISP0 interrupt
+
+The isp0 node added by "arm64: dts: rockchip: add ISP nodes to rk3588"
+lists three interrupts (SPI 131, 133, 134) but only two interrupt-names
+("isp_irq", "mi_irq"), and the rockchip-isp2 binding allows exactly two.
+dtbs_check reports:
+
+  isp@fdcb0000 (rockchip,rk3588-isp): interrupts: [...] is too long
+
+SPI 134 is the ISP0 MIPI interrupt of the vendor tree, which the rkisp2
+driver doesn't use (it requests "isp_irq" and "mi_irq" by name). Drop it
+so that isp0 matches isp1 and the binding.
+
+To be squashed into "arm64: dts: rockchip: add ISP nodes to rk3588" when
+the series is rebased by its author.
+
+Assisted-by: Claude:claude-opus-5-5
+---
+ arch/arm64/boot/dts/rockchip/rk3588-base.dtsi | 3 +--
+ 1 file changed, 1 insertion(+), 2 deletions(-)
+
+diff --git a/arch/arm64/boot/dts/rockchip/rk3588-base.dtsi b/arch/arm64/boot/dts/rockchip/rk3588-base.dtsi
+index 5825bf879..a7d130dee 100644
+--- a/arch/arm64/boot/dts/rockchip/rk3588-base.dtsi
++++ b/arch/arm64/boot/dts/rockchip/rk3588-base.dtsi
+@@ -3595,8 +3595,7 @@ isp0: isp@fdcb0000 {
+ 		compatible = "rockchip,rk3588-isp";
+ 		reg = <0x0 0xfdcb0000 0x0 0x7f00>;
+ 		interrupts = <GIC_SPI 131 IRQ_TYPE_LEVEL_HIGH 0>,
+-			     <GIC_SPI 133 IRQ_TYPE_LEVEL_HIGH 0>,
+-			     <GIC_SPI 134 IRQ_TYPE_LEVEL_HIGH 0>;
++			     <GIC_SPI 133 IRQ_TYPE_LEVEL_HIGH 0>;
+ 		interrupt-names = "isp_irq", "mi_irq";
+ 		clocks = <&cru ACLK_ISP0>, <&cru HCLK_ISP0>,
+ 			 <&cru CLK_ISP0_CORE>, <&cru CLK_ISP0_CORE_MARVIN>,

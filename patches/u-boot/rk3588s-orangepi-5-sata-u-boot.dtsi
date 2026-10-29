@@ -1,0 +1,30 @@
+// SPDX-License-Identifier: (GPL-2.0+ OR MIT)
+/*
+ * Orange Pi 5 with an M.2 SATA SSD: run the M.2 slot's lane (combphy0) in
+ * SATA mode instead of PCIe. Included from rk3588s-orangepi-5-u-boot.dtsi.
+ */
+
+&pcie2x1l2 {
+	status = "disabled";
+};
+
+&sata0 {
+	status = "okay";
+	/* U-Boot's dwc_ahci looks up "sata-phy" on the controller node; upstream
+	 * DT has it only on the sata-port@0 child (where Linux looks) */
+	phys = <&combphy0_ps PHY_TYPE_SATA>;
+	phy-names = "sata-phy";
+};
+
+/*
+ * The M.2 slot's 3.3 V is normally switched on by the PCIe driver; U-Boot's
+ * AHCI driver doesn't handle supplies, so drive the enable pin (GPIO0_C5) here.
+ */
+&gpio0 {
+	m2-3v3-hog {
+		gpio-hog;
+		gpios = <RK_PC5 GPIO_ACTIVE_HIGH>;
+		output-high;
+		line-name = "m2_3v3_en";
+	};
+};

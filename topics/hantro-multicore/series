@@ -1,0 +1,7 @@
+# Apply in this order on top of the parent topic (see topic.env):
+#   while read -r p sha; do git am "$p"; done < <(grep -v '^#' series)
+# Second column: the original commit in the workspace clone (for reference).
+ours/0001-media-verisilicon-Split-probe-into-hardware-init-and.patch 8d20e121681f110a97ad925ebfe76be7dbcc005d
+ours/0002-media-verisilicon-Pick-the-hardware-core-for-each-jo.patch 25178c479251f7426c0a79d5dd6ded06ecc569de
+ours/0003-media-verisilicon-Add-multi-core-support.patch 7660cdbad2793a8e00a53002a824c6d920f4e0bb
+ours/0004-media-verisilicon-Don-t-hold-a-VPU-behind-an-IOMMU-i.patch 86102e78de870fc510a7c97163af5151b0584033

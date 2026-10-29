@@ -1,0 +1,40 @@
+Licensing of this repository
+============================
+
+This repository mixes material under different licences. Each directory is
+covered as follows. Full licence texts are in LICENSES/.
+
+1. Patches to upstream projects keep the licence of the project they apply to,
+   and of the files they modify:
+
+     patches/linux/, topics/*/{ours,carried,local}/*.patch
+         Linux kernel: GPL-2.0-only, with the kernel's own exceptions and
+         per-file SPDX identifiers (for example "GPL-2.0-only WITH
+         Linux-syscall-note" for uAPI headers, and "(GPL-2.0+ OR MIT)" for many
+         device trees). See COPYING and LICENSES/ in the Linux source tree.
+     patches/u-boot/, patches/upstream/u-boot/
+         U-Boot: GPL-2.0+ (per-file SPDX identifiers).
+     patches/tf-a/
+         Trusted Firmware-A: BSD-3-Clause.
+
+   Patches in topics/*/carried/ were written by the people named in their
+   From: lines. They are reproduced unchanged from public mailing lists or
+   public git trees, as their licences allow, so that the work here can be
+   reproduced. Copyright stays with their authors.
+
+2. Everything else written for this project: scripts/, tools/, install-deps.sh,
+   overlay/, cidata/, the test tools under topics/*/notes/, and the
+   documentation (README.md, STATUS.md, docs/, topics/*/README.md and notes/):
+
+     SPDX-License-Identifier: GPL-2.0-only
+     Copyright (c) 2026 Arun Iyengar
+
+   GPL-2.0-only, matching the kernel that most of this work targets.
+
+3. Not included: no third-party source trees, vendor (Rockchip BSP/MPP) code,
+   firmware or DDR blobs (rkbin), schematics, manuals, mailing-list archives or
+   test media are distributed here. The build scripts fetch what the build
+   needs from the public locations listed in docs/SOURCES.md, under those
+   projects' own licences. In particular, the rkbin DDR initialisation blob
+   used by scripts/build-uboot.sh is under Rockchip's licence in the rkbin
+   repository.

@@ -1,0 +1,40 @@
+From 79c9a784e74006498ac202a8ac2553c1fb1aea2a Mon Sep 17 00:00:00 2001
+From: Nicolas Frattaroli <nicolas.frattaroli@collabora.com>
+Date: Fri, 24 Jul 2026 16:22:40 +0200
+Subject: [PATCH] drm/display: hdmi-state-helper: Init SCDC debugfs for HDMI
+
+Initialise the SCDC debugfs file for connectors that call the HDMI state
+helper's debugfs_init helper. This makes all connectors that use the
+helper expose the scdc_status file in their connector debugfs.
+
+Acked-by: Maxime Ripard <mripard@kernel.org>
+Signed-off-by: Nicolas Frattaroli <nicolas.frattaroli@collabora.com>
+Tested-by: Hans Verkuil <hverkuil+cisco@kernel.org>
+Link: https://patch.msgid.link/20260724-scdc-link-health-v9-5-bdda406d016d@collabora.com
+Signed-off-by: Daniel Stone <daniels@collabora.com>
+Signed-off-by: Cristian Ciocaltea <cristian.ciocaltea@collabora.com>
+Link: https://gitlab.collabora.com/hardware-enablement/rockchip-3588/linux/-/commit/8b993feebf391df1da16b7d32e03dc0fa8094ee3
+---
+ drivers/gpu/drm/display/drm_hdmi_state_helper.c | 2 ++
+ 1 file changed, 2 insertions(+)
+
+diff --git a/drivers/gpu/drm/display/drm_hdmi_state_helper.c b/drivers/gpu/drm/display/drm_hdmi_state_helper.c
+index 3f0995f82..bccc5d7c8 100644
+--- a/drivers/gpu/drm/display/drm_hdmi_state_helper.c
++++ b/drivers/gpu/drm/display/drm_hdmi_state_helper.c
+@@ -13,6 +13,7 @@
+ #include <drm/display/drm_hdmi_cec_helper.h>
+ #include <drm/display/drm_hdmi_helper.h>
+ #include <drm/display/drm_hdmi_state_helper.h>
++#include <drm/display/drm_scdc_helper.h>
+ 
+ /**
+  * DOC: hdmi helpers
+@@ -1116,6 +1117,7 @@ void drm_hdmi_connector_debugfs_init(struct drm_connector *connector,
+ 		return;
+ 
+ 	create_hdmi_infoframe_files(connector, dir);
++	drm_scdc_debugfs_init(connector, root);
+ }
+ EXPORT_SYMBOL(drm_hdmi_connector_debugfs_init);
+ 

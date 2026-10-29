@@ -1,0 +1,10 @@
+# Apply in this order on top of the parent topic (see topic.env):
+#   while read -r p sha; do git am "$p"; done < <(grep -v '^#' series)
+# Second column: the original commit in the workspace clone (for reference).
+ours/0001-media-verisilicon-Drop-the-runtime-PM-reference-when.patch 49353c227602f9819705ca2a5f71cfe049c82587
+ours/0002-media-verisilicon-Make-the-codec-run-error-handling-.patch 36232e67386200210aff50d88844c15df9606a26
+ours/0003-media-verisilicon-Reset-the-Rockchip-encoder-cores-o.patch fa7d1bfa2add0817a7d9dc05b5c382983043440f
+ours/0004-media-verisilicon-Reinitialize-the-IOMMU-after-a-tim.patch 5d8a33488883a9d501c04da7c970de081728a373
+ours/0005-media-verisilicon-Don-t-hold-a-VPU-behind-an-IOMMU-i.patch 081e20ee4ba9acb3abd5b3db428805ac2fc1e776
+ours/0006-dt-bindings-media-rockchip-rk3568-vepu-Add-the-reset.patch e96f65e82a6b0e4d43dfd48e57b9bbb152188bee
+ours/0007-arm64-dts-rockchip-Add-the-reset-lines-of-the-RK3588.patch 005beb92141255539cf0f99ce748745990449494
