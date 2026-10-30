@@ -12,6 +12,8 @@ and identical recreated commit IDs.
   parent topic, the `_out` notes directory, a title, the hardware-test state and the next
   upstream step. Edit it when a topic is added or its state changes. It feeds the topic
   READMEs and `STATUS.md`.
+- `tests.conf`: the test scripts exported to `tests/<name>/` (sources, where they run, topic,
+  title, how they were run).
 - `exclude.conf`: `_out` paths that must never be exported (third-party-derived or
   superseded).
 - `export.py`: does the work. Run it with `python3 -I`.
@@ -30,6 +32,7 @@ and identical recreated commit IDs.
 | `overlay/`, `cidata/` | `overlay/`, `cidata/` | `cidata/user-data` becomes `cidata/user-data.example`; the real one stays local |
 | `docs/*.md`, `work/_out/GSTREAMER-FOLLOWUPS.md` | `docs/workspace/` | |
 | `work/_out/integration/` (MANIFEST.md, ...) | `docs/image-kernel/` | provenance of each `patches/linux` range, if present |
+| `work/_out/<item>/` test scripts listed in `tests.conf` | `tests/<name>/` + generated `README.md` | lab values (board login, host address, home directory) become overridable defaults through `.work/private/tests-public.conf` (`sub<TAB>regex<TAB>replacement`), then the redaction rules apply |
 | kernel branches | `topics/<topic>/{ours,carried,local}/`, `series`, `topic.env`, `README.md` | `git format-patch --zero-commit` per commit, from `merge-base(branch, parent)..branch` |
 | `work/_out/<item>/` | `topics/<topic>/notes/`, `cover-letter.txt` | text only (`.md .txt .c .h .py .sh .dtso .yaml .rst`, Makefile), at most 300 KiB per file; no build output, patches, logs dirs or binaries |
 

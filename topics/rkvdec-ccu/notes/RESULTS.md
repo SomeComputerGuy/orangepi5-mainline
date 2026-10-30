@@ -178,3 +178,17 @@ config, Module.symvers and key (m2m CRCs identical, one new export). Staged, NOT
 `~/ccu/k4/` on the board; `~/ccu/k4/install-k4.sh` installs the modules, removes codec-quality's rockchip-vdec,
 depmods and applies the CCU overlay to the kernel-4 DTB (backup `.pre-ccu-k4`). Patches re-exported from the k4
 branch (0009 should be squashed into 0005 after the board run).
+
+## Update 2026-10-30 (3): no serial fallbacks
+- H.264 field/MBAFF: the "interlaced off the CCU" fallback is removed; these streams run in CCU mode with the POC
+  high bits programmed as MPP does (commit 0009 `program the H.264 POC high bits for the CCU`). Field pairs still
+  don't overlap each other: both fields write one CAPTURE buffer that m2m holds on the queue
+  (V4L2_BUF_FLAG_M2M_HOLD_CAPTURE_BUF); frame pictures (incl. MBAFF and PAFF frames) pipeline. Module
+  8ffd956d staged in `~/ccu/k4b/` (board runs eac7d04, the fallback build). Needs a reboot/board slot to verify.
+- VP9 is still decoded with the cores disconnected from the CCU, one frame of a stream at a time. That is a
+  limitation of the current VP9 back-end, not a hardware one: rkvdec adapts the probabilities on the CPU in
+  `rkvdec_vp9_done()` from frame N's symbol counts and keeps the segment map / last-frame state per context, so
+  N+1 can only be set up after N is done. The proper fix is MPP's design (hal_vp9d_vdpu34x.c): hardware backward
+  adaptation (reg103 refresh_en/prob_save_en, reg162 last_prob_base, reg172 update_prob_wr_base, reg028
+  vp9_rd/wr_prob_idx, reg099 prob_ref_poc) plus the POC registers 65/95-98/100 (cur/last/golden/altref/col/segid
+  ref POC from a per-stream frame counter), which the CCU synchronizes. Not implemented yet (VP9 back-end rework).

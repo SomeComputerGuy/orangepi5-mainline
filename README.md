@@ -58,6 +58,7 @@ patches/{ffmpeg,mpv,gstreamer}/  media package patches (build-media-debs.sh)
 overlay/, cidata/         root-filesystem overlay and cloud-init seed for the image
 overlay-desktop/          extra overlay for the desktop image
 topics/<topic>/           one kernel topic (see "Kernel topics" below)
+tests/<test>/             board/host test scripts with a README each (see docs/TESTING.md)
 docs/                     SOURCES.md (third-party material and URLs), workspace notes
 tools/                    export, secret scan, kernel-branch recreation
 ```
@@ -216,13 +217,13 @@ kernel build, not against someone else's packages. To undo: remove
 `/lib/modules/*/updates/opi5-*`, run `depmod -a`, and restore the packaged DTB
 (`dpkg -i` the linux-image deb again).
 
-## Testing
+## Testing and results
 
-Each topic's `notes/TESTING.md` or `notes/RESULTS.md` has the exact commands, test vectors
-and pass/fail criteria used on the board. The tools used are GStreamer `v4l2codecs`, FFmpeg,
-fluster, v4l2-compliance, modetest, glmark2 and vkmark, plus the small test clients under
-`topics/*/notes/tools/`. Test media is not included. `docs/SOURCES.md` says where the
-conformance vectors come from.
+Testing is separate from the build. See [`docs/TESTING.md`](docs/TESTING.md) for how to re-run
+the board tests in [`tests/`](tests/), [`docs/RESULTS.md`](docs/RESULTS.md) for the numbers
+measured so far and the command behind each one, and [`docs/TEST-MEDIA.md`](docs/TEST-MEDIA.md)
+for the clips (not included: public URLs, licences and sha256). Each topic's
+`notes/TESTING.md` or `notes/RESULTS.md` has the per-topic details.
 
 ## Kernel topics
 

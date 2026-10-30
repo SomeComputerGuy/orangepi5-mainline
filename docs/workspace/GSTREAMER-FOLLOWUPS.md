@@ -37,3 +37,12 @@ because rkvdec does everything) or set the rkvdec element's rank higher.
 Kernel aside: rkvdec's VDPU381 frame-size ranges are "Continuous 1x1 - 65520x65520" (H.264) and 65472
 (HEVC/VP9), far above the real hardware limits. Once GStreamer uses the ranges, they won't steer anything
 away from rkvdec, but they should be tightened to the documented maximums (not done).
+
+## 9. v4l2convert (rockchip-rga) YUV→YUV scaling fails colorimetry negotiation (2026-10-30, maxout)
+`... ! v4l2slh264dec ! v4l2video3convert (RGA3) ! video/x-raw,format=NV12,width=960,height=540 ! ...` with a BT.709
+4K source fails: "Device '/dev/video3' does not support bt601 colorimetry … Device wants 2:4:16:1". The unconstrained
+output caps default to bt601 (2:4:16:4, chosen from the SD size), and the RGA driver keeps the OUTPUT queue's
+primaries (BT.709) on CAPTURE while honouring the requested ycbcr_enc/quantization (CSC flags). GStreamer then compares
+strictly and refuses. Fix (GStreamer, sys/v4l2 v4l2transform): when fixating src caps for YUV→YUV, prefer the sink's
+colorimetry (as videoconvert does), and/or accept the driver's adjusted colorimetry instead of erroring. Workaround:
+`colorimetry=bt709` in the intermediate caps (used in `work/_out/maxout/maxout.sh`). Not a kernel bug.

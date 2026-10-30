@@ -1,0 +1,229 @@
+From 8fd2f003048cb1722a57fc4bc01198b62297ad8f Mon Sep 17 00:00:00 2001
+From: Arun Iyengar <aiyengar1990@gmail.com>
+Date: Fri, 30 Oct 2026 03:50:00 +0000
+Subject: [PATCH 3/3] kiosk-shell: Honour the output passed to set_fullscreen
+ before mapping
+
+A client that calls xdg_toplevel.set_fullscreen() with a wl_output
+before its first buffer commit ends up on whatever output kiosk-shell
+would have picked on its own (the output holding keyboard focus, or the
+default output), instead of the output it asked for. With two outputs
+and two such clients each asking for a different output, both surfaces
+are shown on the same one. desktop-shell honours the request.
+
+desktop_surface_fullscreen_requested() does assign the requested
+output, but when the first buffer is committed and the surface has an
+app_id, desktop_surface_committed() unconditionally clears
+shsurf->output so that the output cached in desktop_surface_added() is
+not reused, and then picks a new one with
+kiosk_shell_surface_find_best_output(). This throws away the client's
+choice along with the cached one. Clients without an app_id are not
+affected, since that path is skipped for them.
+
+Remember whether the client requested a specific output, and only reset
+the output on the first commit when it did not. The [output] app-ids
+setting still applies to clients that leave the output choice to the
+compositor; an explicit request now wins, as it already does when
+set_fullscreen() is sent after the surface is mapped.
+
+Add kiosk-shell-multi-output-test, which creates two headless outputs
+and maps one fullscreen surface on each through set_fullscreen(output),
+checking the wl_surface.enter output. Without this change the surface
+that asks for "headless-1" enters "headless".
+
+Assisted-by: Claude:claude-opus-5-5
+---
+ kiosk-shell/kiosk-shell.c             |  10 ++-
+ kiosk-shell/kiosk-shell.h             |   2 +
+ tests/kiosk-shell-multi-output-test.c | 123 ++++++++++++++++++++++++++
+ tests/meson.build                     |   3 +
+ 4 files changed, 136 insertions(+), 2 deletions(-)
+ create mode 100644 tests/kiosk-shell-multi-output-test.c
+
+diff --git a/kiosk-shell/kiosk-shell.c b/kiosk-shell/kiosk-shell.c
+index 2b9cb23..e8cdf8f 100644
+--- a/kiosk-shell/kiosk-shell.c
++++ b/kiosk-shell/kiosk-shell.c
+@@ -1007,8 +1007,9 @@ desktop_surface_committed(struct weston_desktop_surface *desktop_surface,
+ 		struct kiosk_shell_output *shoutput = NULL;
+ 
+ 		/* reset previous output being set in _added() as the output is
+-		 * being cached */
+-		shsurf->output = NULL;
++		 * being cached, unless the client explicitly asked for one */
++		if (!shsurf->output_requested)
++			shsurf->output = NULL;
+ 		shoutput = kiosk_shell_surface_find_best_output(shsurf);
+ 
+ 		kiosk_shell_surface_set_output(shsurf, shoutput);
+@@ -1150,6 +1151,11 @@ desktop_surface_fullscreen_requested(struct weston_desktop_surface *desktop_surf
+ 	if (output)
+ 		shoutput = weston_output_get_shell_private(output);
+ 
++	/* Remember that the client picked the output, so that the initial
++	 * commit does not move the surface somewhere else. */
++	if (fullscreen)
++		shsurf->output_requested = shoutput != NULL;
++
+ 	/* We should normally be able to ignore fullscreen requests for
+ 	 * top-level surfaces, since we set them as fullscreen at creation
+ 	 * time. However, xwayland surfaces set their internal WM state
+diff --git a/kiosk-shell/kiosk-shell.h b/kiosk-shell/kiosk-shell.h
+index 2c112ca..0604a36 100644
+--- a/kiosk-shell/kiosk-shell.h
++++ b/kiosk-shell/kiosk-shell.h
+@@ -80,6 +80,8 @@ struct kiosk_shell_surface {
+ 	} xwayland;
+ 
+ 	bool appid_output_assigned;
++	/* the client asked for a specific output with set_fullscreen() */
++	bool output_requested;
+ 
+ 	struct wl_listener surface_label_update;
+ };
+diff --git a/tests/kiosk-shell-multi-output-test.c b/tests/kiosk-shell-multi-output-test.c
+new file mode 100644
+index 0000000..7f0bb82
+--- /dev/null
++++ b/tests/kiosk-shell-multi-output-test.c
+@@ -0,0 +1,123 @@
++/*
++ * Copyright 2026 Arun Iyengar
++ *
++ * Permission is hereby granted, free of charge, to any person obtaining
++ * a copy of this software and associated documentation files (the
++ * "Software"), to deal in the Software without restriction, including
++ * without limitation the rights to use, copy, modify, merge, publish,
++ * distribute, sublicense, and/or sell copies of the Software, and to
++ * permit persons to whom the Software is furnished to do so, subject to
++ * the following conditions:
++ *
++ * The above copyright notice and this permission notice (including the
++ * next paragraph) shall be included in all copies or substantial
++ * portions of the Software.
++ *
++ * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND,
++ * EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF
++ * MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND
++ * NONINFRINGEMENT.  IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS
++ * BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN
++ * ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN
++ * CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
++ * SOFTWARE.
++ */
++
++#include "config.h"
++
++#include <string.h>
++
++#include "weston-test-client-helper.h"
++#include "weston-test-fixture-compositor.h"
++#include "weston-test-assert.h"
++#include "xdg-client-helper.h"
++
++static enum test_result_code
++fixture_setup(struct weston_test_harness *harness)
++{
++	struct compositor_setup setup;
++
++	compositor_setup_defaults(&setup);
++	setup.renderer = WESTON_RENDERER_PIXMAN;
++	setup.width = 320;
++	setup.height = 240;
++	setup.shell = SHELL_KIOSK;
++	setup.output_count = 2;
++	setup.logging_scopes = "log,test-harness-plugin";
++	setup.refresh = HIGHEST_OUTPUT_REFRESH;
++
++	return weston_test_harness_execute_as_client(harness, &setup);
++}
++DECLARE_FIXTURE_SETUP(fixture_setup);
++
++static struct output *
++find_output(struct client *client, const char *name)
++{
++	struct output *output;
++
++	wl_list_for_each(output, &client->output_list, link) {
++		if (output->name && strcmp(output->name, name) == 0)
++			return output;
++	}
++
++	return NULL;
++}
++
++/*
++ * A client that passes a wl_output to xdg_toplevel.set_fullscreen() before
++ * the initial commit must be shown on that output, and not on whichever
++ * output kiosk-shell would otherwise pick (the focused or default one).
++ */
++static enum test_result_code
++fullscreen_on_requested_output(struct wet_testsuite_data *suite_data)
++{
++	static const char * const names[] = { "headless-1", "headless" };
++	struct xdg_client *xdg_client = create_xdg_client();
++	struct xdg_surface_data *xdg_surface[ARRAY_LENGTH(names)];
++	unsigned int i;
++
++	test_assert_ptr_not_null(xdg_client);
++
++	for (i = 0; i < ARRAY_LENGTH(names); i++) {
++		struct client *client = xdg_client->client;
++		struct output *target = find_output(client, names[i]);
++		int frame;
++
++		test_assert_ptr_not_null(target);
++
++		xdg_surface[i] = create_xdg_surface(xdg_client);
++		test_assert_ptr_not_null(xdg_surface[i]);
++		xdg_surface_make_toplevel(xdg_surface[i], "weston.test.kiosk",
++					  names[i]);
++		xdg_toplevel_set_fullscreen(xdg_surface[i]->xdg_toplevel,
++					    target->wl_output);
++
++		xdg_surface_wait_configure(xdg_surface[i]);
++		test_assert_true(xdg_surface[i]->configure.fullscreen);
++		test_assert_int_eq(xdg_surface[i]->configure.width,
++				   target->width);
++		test_assert_int_eq(xdg_surface[i]->configure.height,
++				   target->height);
++
++		frame_callback_set(xdg_surface[i]->surface->wl_surface, &frame);
++		xdg_surface_commit_solid(xdg_surface[i], 0, 0, 255);
++		frame_callback_wait(client, &frame);
++		client_roundtrip(client);
++
++		testlog("surface \"%s\" requested output %s, entered %s\n",
++			names[i], target->name,
++			xdg_surface[i]->surface->output ?
++			xdg_surface[i]->surface->output->name : "(none)");
++		test_assert_ptr_eq(xdg_surface[i]->surface->output, target);
++	}
++
++	for (i = 0; i < ARRAY_LENGTH(names); i++)
++		destroy_xdg_surface(xdg_surface[i]);
++	xdg_client_destroy(xdg_client);
++
++	return RESULT_OK;
++}
++
++DECLARE_TEST_LIST(
++	TESTFN(fullscreen_on_requested_output),
++);
+diff --git a/tests/meson.build b/tests/meson.build
+index 701f2f5..30af64a 100644
+--- a/tests/meson.build
++++ b/tests/meson.build
+@@ -274,6 +274,9 @@ if get_option('shell-kiosk')
+ 		{
+ 			'name': 'kiosk-shell',
+ 		},
++		{
++			'name': 'kiosk-shell-multi-output',
++		},
+ 	]
+ endif
+ 
+-- 
+2.55.0
+

@@ -1,0 +1,64 @@
+From 1198fe63915fa4c9ef8cafd3d370522b6f7c28fb Mon Sep 17 00:00:00 2001
+From: Arun Iyengar <aiyengar1990@gmail.com>
+Date: Fri, 30 Oct 2026 03:48:27 +0000
+Subject: [PATCH 2/3] tests: Allow fixtures to request several headless outputs
+
+Add an output_count member to struct compositor_setup, defaulting to 1,
+and pass it to the compositor as --output-count when a fixture asks for
+more than one output on the headless backend.
+
+Assisted-by: Claude:claude-opus-5-5
+---
+ tests/harness/weston-test-fixture-compositor.c | 7 +++++++
+ tests/harness/weston-test-fixture-compositor.h | 3 +++
+ 2 files changed, 10 insertions(+)
+
+diff --git a/tests/harness/weston-test-fixture-compositor.c b/tests/harness/weston-test-fixture-compositor.c
+index 4a75438..4366d66 100644
+--- a/tests/harness/weston-test-fixture-compositor.c
++++ b/tests/harness/weston-test-fixture-compositor.c
+@@ -203,6 +203,7 @@ compositor_setup_defaults_(struct compositor_setup *setup,
+ 		.scale = 1,
+ 		.refresh = 0,
+ 		.transform = WL_OUTPUT_TRANSFORM_NORMAL,
++		.output_count = 1,
+ 		.config_file = NULL,
+ 		.extra_module = NULL,
+ 		.logging_scopes = NULL,
+@@ -337,6 +338,12 @@ execute_compositor(const struct compositor_setup *setup,
+ 		prog_args_take(&args, tmp);
+ 	}
+ 
++	if (setup->output_count > 1 &&
++	    setup->backend == WESTON_BACKEND_HEADLESS) {
++		str_printf(&tmp, "--output-count=%d", setup->output_count);
++		prog_args_take(&args, tmp);
++	}
++
+ 	if (setup->config_file) {
+ 		str_printf(&tmp, "--config=%s", setup->config_file);
+ 		prog_args_take(&args, tmp);
+diff --git a/tests/harness/weston-test-fixture-compositor.h b/tests/harness/weston-test-fixture-compositor.h
+index de91758..bf89a32 100644
+--- a/tests/harness/weston-test-fixture-compositor.h
++++ b/tests/harness/weston-test-fixture-compositor.h
+@@ -87,6 +87,8 @@ struct compositor_setup {
+ 	int refresh;
+ 	/** Default output transform, one of WL_OUTPUT_TRANSFORM_*. */
+ 	enum wl_output_transform transform;
++	/** Number of outputs to create (headless backend only). */
++	int output_count;
+ 	/** The absolute path to \c weston.ini to use,
+ 	 * or NULL for \c --no-config .
+ 	 * To properly fill this entry use weston_ini_setup() */
+@@ -118,6 +120,7 @@ compositor_setup_defaults_(struct compositor_setup *setup,
+  * - refresh: 0 (repaint only on demand)
+  * - scale: 1
+  * - transform: WL_OUTPUT_TRANSFORM_NORMAL
++ * - output_count: 1
+  * - config_file: none
+  * - extra_module: none
+  * - logging_scopes: compositor defaults
+-- 
+2.55.0
+

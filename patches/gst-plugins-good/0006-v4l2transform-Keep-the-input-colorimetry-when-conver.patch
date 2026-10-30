@@ -1,0 +1,113 @@
+From e31bf5a40bbd5bb0a508cbbed8ca59e827ae13a5 Mon Sep 17 00:00:00 2001
+From: Arun Iyengar <aiyengar1990@gmail.com>
+Date: Fri, 30 Oct 2026 03:47:24 +0000
+Subject: [PATCH] v4l2transform: Keep the input colorimetry when converting YUV
+ to YUV
+
+Scaling NV12 with the Rockchip RGA (v4l2convert) fails negotiation as
+soon as the output caps don't pin the colorimetry:
+
+  ... ! v4l2slh264dec ! v4l2video3convert !
+      video/x-raw,format=NV12,width=960,height=540 ! v4l2video2convert ! ...
+  ERROR: Device '/dev/video3' does not support bt601 colorimetry
+  Device wants 2:4:16:1 colorimetry
+
+transform_caps() drops the colorimetry, and fixate_caps() never sets
+it, so gst_caps_fixate() takes the first entry of the downstream
+element's probed colorimetry list (or, without one, the size-based
+default, bt601 for SD). The source is bt709. On the CAPTURE queue of a
+V4L2 converter, only the fields the driver flags with V4L2_FMT_FLAG_CSC_*
+can be chosen with V4L2_PIX_FMT_FLAG_SET_CSC. The others follow the
+OUTPUT queue. The RGA advertises CSC_YCBCR_ENC and CSC_QUANTIZATION
+only, so S_FMT keeps the bt709 primaries (REC709 colorspace) and applies
+the requested bt601 matrix. The strict colorimetry check in
+gst_v4l2_object_set_format_full() then rejects the result.
+
+A converter that only scales or changes the YUV layout should keep its
+input colorimetry anyway; videoconvert behaves the same way. When both
+sides are YUV, fixate the output colorimetry to the input one (adding it
+if downstream doesn't constrain it). The output format is fixated first,
+because it decides whether the rule applies. YUV<->RGB conversions are
+unchanged.
+
+Reproducer (any 4K BT.709 H.264 clip, RK3588 with the rockchip-rga
+driver):
+  gst-launch-1.0 filesrc location=bt709-2160p.mkv ! matroskademux !
+    h264parse ! v4l2slh264dec ! <rga3 v4l2convert> !
+    video/x-raw,format=NV12,width=960,height=540 ! <rga2 v4l2convert> !
+    video/x-raw,format=RGB,width=224,height=224 ! fakesink
+
+Assisted-by: Claude:claude-opus-5-5
+---
+ sys/v4l2/gstv4l2transform.c | 48 +++++++++++++++++++++++++++++++++++++
+ 1 file changed, 48 insertions(+)
+
+diff --git a/sys/v4l2/gstv4l2transform.c b/sys/v4l2/gstv4l2transform.c
+index f8dc713..0fc5a6c 100644
+--- a/sys/v4l2/gstv4l2transform.c
++++ b/sys/v4l2/gstv4l2transform.c
+@@ -450,6 +450,53 @@ gst_v4l2_transform_transform_caps (GstBaseTransform * btrans,
+   return result;
+ }
+ 
++static gboolean
++gst_v4l2_transform_format_is_yuv (const GstStructure * s)
++{
++  const gchar *format = gst_structure_get_string (s, "format");
++  const GstVideoFormatInfo *finfo;
++
++  if (!format)
++    return FALSE;
++
++  finfo = gst_video_format_get_info (gst_video_format_from_string (format));
++  return finfo && GST_VIDEO_FORMAT_INFO_IS_YUV (finfo);
++}
++
++/* A converter that only scales or changes the YUV layout keeps the
++ * colorimetry of its input, and most V4L2 converters cannot change all of it
++ * anyway: on the CAPTURE queue, only the parts flagged with
++ * V4L2_FMT_FLAG_CSC_* can be chosen, and the others (typically the
++ * primaries, i.e. the V4L2 colorspace) follow the OUTPUT queue. Leaving the
++ * colorimetry to the generic fixation picks the first entry of the probed
++ * list (or the size-based default, bt601 for SD), which then does not match
++ * what S_FMT returns and fails negotiation. Prefer the input colorimetry when
++ * both sides are YUV. */
++static void
++gst_v4l2_transform_fixate_colorimetry (const GstStructure * ins,
++    GstStructure * outs)
++{
++  const gchar *in_colorimetry = gst_structure_get_string (ins, "colorimetry");
++
++  if (!in_colorimetry)
++    return;
++
++  /* The output format decides whether the input colorimetry applies, so
++   * fixate it first (gst_caps_fixate() would pick the same one later). */
++  if (gst_structure_has_field (outs, "format"))
++    gst_structure_fixate_field (outs, "format");
++
++  if (!gst_v4l2_transform_format_is_yuv (ins) ||
++      !gst_v4l2_transform_format_is_yuv (outs))
++    return;
++
++  if (gst_structure_has_field (outs, "colorimetry"))
++    gst_structure_fixate_field_string (outs, "colorimetry", in_colorimetry);
++  else
++    gst_structure_set (outs, "colorimetry", G_TYPE_STRING, in_colorimetry,
++        NULL);
++}
++
+ static GstCaps *
+ gst_v4l2_transform_fixate_caps (GstBaseTransform * trans,
+     GstPadDirection direction, GstCaps * caps, GstCaps * othercaps)
+@@ -478,6 +525,7 @@ gst_v4l2_transform_fixate_caps (GstBaseTransform * trans,
+       gst_structure_fixate_field_string (outs, "format", in_format);
+     }
+ 
++    gst_v4l2_transform_fixate_colorimetry (ins, outs);
+   }
+ 
+   from_par = gst_structure_get_value (ins, "pixel-aspect-ratio");
+-- 
+2.55.0
+

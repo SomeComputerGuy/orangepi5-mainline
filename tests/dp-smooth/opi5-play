@@ -1,0 +1,30 @@
+#!/bin/sh
+# opi5-play <video file> [dp|hdmi] - full-screen hardware-decoded playback on a KMS display
+# from the text console, without frame-rate loss:
+#  - kmssink skip-vsync=true: on atomic drivers (rockchip) drmModeSetPlane already blocks until
+#    the frame is on screen; kmssink's own extra vblank wait halves the frame rate otherwise
+#    (60 fps -> 30 fps on HDMI, ~10-15 fps on the 30 Hz DP monitor).
+#  - hides the fbcon cursor on the foreground VT while playing: its blink redraws the console
+#    framebuffer and commits on every CRTC that shows it every 200 ms, which delays the video's
+#    plane update by a refresh and drops a frame each time.
+# PLANE=<id> overrides the plane (defaults keep DP and HDMI on separate Esmart planes, so both
+# can play at the same time). Extra args after the output name go to gst-launch-1.0.
+set -e
+[ -n "$1" ] || { echo "usage: $0 <file> [dp|hdmi] [gst-launch args]" >&2; exit 2; }
+FILE=$(readlink -f "$1"); OUT=${2:-hdmi}; [ $# -ge 2 ] && shift 2 || shift 1
+case "$OUT" in
+	dp)   NAME=DP-1;     DEF_PLANE=65 ;;
+	hdmi) NAME=HDMI-A-1; DEF_PLANE=59 ;;
+	*) echo "output must be dp or hdmi" >&2; exit 2 ;;
+esac
+CONN=$(cat /sys/class/drm/card*-"$NAME"/connector_id)
+[ "$(cat /sys/class/drm/card*-"$NAME"/status)" = connected ] || { echo "$NAME not connected" >&2; exit 1; }
+TTY=/dev/tty$(cat /sys/class/tty/tty0/active | sed 's/^tty//')
+cursor() {	# the VT is root:tty 0620; fall back to sudo when not writable
+	if [ -w "$TTY" ]; then printf "\033[?25%s" "$1" > "$TTY"
+	else printf "\033[?25%s" "$1" | sudo -n tee "$TTY" > /dev/null 2>&1 || true; fi
+}
+trap 'cursor h' EXIT INT TERM
+cursor l
+gst-launch-1.0 playbin3 uri="file://$FILE" \
+	video-sink="kmssink connector-id=$CONN plane-id=${PLANE:-$DEF_PLANE} skip-vsync=true" "$@"

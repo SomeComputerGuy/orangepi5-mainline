@@ -9,7 +9,7 @@
 #                    verify every topic's tree (about 2 minutes)
 #
 # What it regenerates (and overwrites): scripts/, install-deps.sh, patches/,
-# overlay/, cidata/, docs/workspace/, docs/image-kernel/, topics/, STATUS.md.
+# overlay/, overlay-desktop/, cidata/, tests/, docs/workspace/, docs/image-kernel/, topics/, STATUS.md.
 # Hand-written files are not touched. Needs .work/private/ (not published):
 # see tools/export/README.md.
 set -euo pipefail

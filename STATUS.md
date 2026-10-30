@@ -52,7 +52,7 @@ Nothing here has been sent upstream yet.
 
 `patches/linux/` is what `scripts/build-kernel.sh` applies on v7.3 for the image (recreated as fork branch `opi5/image-7.3`). It is a snapshot of the topics that were ready for the image; the topic directories are the reference for upstreaming. Range-by-range provenance and test state: [docs/image-kernel/MANIFEST.md](docs/image-kernel/MANIFEST.md).
 
-Patches in patches/linux: 309; other patch directories: ffmpeg, gstreamer, linux-extra, mpv, tf-a, u-boot, upstream.
+Patches in patches/linux: 309; other patch directories: ffmpeg, gst-plugins-good, gstreamer, linux-extra, mpv, tf-a, u-boot, upstream, weston.
 
 ## U-Boot and TF-A
 

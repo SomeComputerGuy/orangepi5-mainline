@@ -31,6 +31,13 @@ if (PRIVATE / "private.conf").exists():
             OWN_EMAILS.add(f[1])
 else:
     print("WARNING: no .work/private/private.conf: nothing site-specific is redacted", file=sys.stderr)
+TEST_SUBS = []
+if (PRIVATE / "tests-public.conf").exists():
+    for line in (PRIVATE / "tests-public.conf").read_text().splitlines():
+        f = line.split("\t")
+        if f[0] == "sub" and len(f) == 3:
+            TEST_SUBS.append((re.compile(f[1], re.M), f[2]))
+TESTS_CONF = REPO / "tools/export/tests.conf"
 TEXT_EXT = {".md", ".txt", ".patch", ".diff", ".c", ".h", ".py", ".sh", ".dtso",
             ".yaml", ".rst", ".conf", ".cfg", ".config", ".dtsi", ".mk", ""}
 OUT_TEXT_EXT = {".md", ".txt", ".c", ".h", ".py", ".sh", ".dtso", ".yaml", ".rst"}
@@ -341,6 +348,99 @@ def export_static(ws, repo):
                 copy_text(p, md / rel)
 
 
+def script_header(text):
+    """The leading comment block of a script (after the shebang / SPDX line)."""
+    out = []
+    lines = text.splitlines()
+    if lines and lines[0].startswith("#!"):
+        lines = lines[1:]
+    if lines and lines[0].lstrip().startswith('"""'):        # Python docstring
+        doc = []
+        for i, l in enumerate(lines):
+            doc.append(l.replace('"""', ""))
+            if i and '"""' in l or (i == 0 and l.count('"""') == 2):
+                break
+        return [l.rstrip() for l in doc if l.strip()][:25]
+    for l in lines:
+        st = l.strip()
+        if st.startswith("//") or st.startswith("/*") or st.startswith("*"):
+            st = st.lstrip("/*").strip()
+        elif st.startswith("#"):
+            st = st[1:].strip()
+        elif not st:
+            if out:
+                break
+            continue
+        else:
+            break
+        if st.startswith("SPDX-License-Identifier"):
+            continue
+        out.append(st)
+    return out[:25]
+
+
+def export_tests(ws, repo):
+    """tests/<name>/: board/host test scripts from work/_out, made portable
+    (TEST_SUBS), redacted, with a generated README."""
+    td = repo / "tests"
+    shutil.rmtree(td, ignore_errors=True)
+    if not TESTS_CONF.exists():
+        return []
+    excl = load_excludes()
+    done = []
+    for line in TESTS_CONF.read_text().splitlines():
+        if not line.strip() or line.lstrip().startswith("#"):
+            continue
+        f = [x.strip() for x in line.split(" | ")]
+        if len(f) != 6:
+            sys.exit(f"tests.conf: bad line: {line}")
+        name, sources, where, topic, title, runline = f
+        files = []
+        for pat in sources.split():
+            hits = sorted((ws / "work/_out").glob(pat))
+            if not hits:
+                sys.exit(f"tests.conf: {name}: nothing matches {pat}")
+            for p in hits:
+                rel = p.relative_to(ws / "work/_out").as_posix()
+                if (not p.is_file() or BACKUP_RE.search(p.name) or excluded(rel, excl)
+                        or p.stat().st_size > OUT_MAX or b"\0" in p.read_bytes()[:8192]):
+                    continue
+                files.append(p)
+        d = td / name
+        rows = []
+        for p in files:
+            text = p.read_text(errors="replace")
+            for rx, rep in TEST_SUBS:
+                text = rx.sub(rep, text)
+            write(d / p.name, text)
+            if os.access(p, os.X_OK) or p.suffix in (".sh", ".py") or text.startswith("#!"):
+                (d / p.name).chmod(0o755)
+            rows.append((p.name, script_header(redact(text))))
+        L = [f"# {name}: {title}", "",
+             f"- Runs on: **{where}**" + (" (copy this directory to the board, e.g. with `scp -r`)" if where != "host" else ""),
+             f"- How it was run: `{runline}`"]
+        if topic != "-":
+            L.append(f"- Notes and detailed results: [`topics/{topic}/`](../../topics/{topic}/README.md)")
+        L += ["- Reference numbers: [`docs/RESULTS.md`](../../docs/RESULTS.md); how to re-run everything: "
+              "[`docs/TESTING.md`](../../docs/TESTING.md); clips: [`docs/TEST-MEDIA.md`](../../docs/TEST-MEDIA.md)", "",
+              "These are the scripts exactly as they were run on the test board, except that the lab's own "
+              "values are now defaults you can override: `OPI5_PI` (board login, default `ubuntu@orangepi5`), "
+              "`OPI5_PI_IP` / `OPI5_HOST_IP` (board and host addresses, default the `scripts/nat-on.sh` "
+              "subnet 172.31.55.0/24) and `$HOME` for the board user's home directory. Paths such as `~/demo` "
+              "or `~/codecsweep` are on the board. Test media is not included (see TEST-MEDIA.md). "
+              "C files are built on the board with `gcc -O2 -o <name> <name>.c` (plus `-ldrm` for DRM tools: "
+              "see the file's header).", "", "## Files", ""]
+        for fn, hdr in rows:
+            L.append(f"### [`{fn}`]({fn})")
+            L.append("")
+            if hdr:
+                L += ["```"] + hdr + ["```"]
+            L.append("")
+        write(d / "README.md", "\n".join(L))
+        done.append((name, len(files)))
+    return done
+
+
 def status_md(topics, repo):
     today = datetime.date.today()
     L = [f"# Status (generated {today} by tools/export-from-workspace.sh)", "",
@@ -385,6 +485,8 @@ def main():
     ws = Path(a.workspace)
     linux = Path(a.linux) if a.linux else ws / "src/linux"
     export_static(ws, REPO)
+    for name, n in export_tests(ws, REPO):
+        print(f"  tests/{name:16} {n} files")
     topics = Topics(linux)
     dest = REPO / "topics"
     shutil.rmtree(dest, ignore_errors=True)
