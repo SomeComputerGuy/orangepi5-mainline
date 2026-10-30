@@ -1,0 +1,31 @@
+# apt preferences used only while build-image.sh builds the desktop rootfs (it is
+# removed from the image afterwards): Recommends of Ubuntu's desktop seed that
+# this image leaves out.
+
+# Snaps can't be seeded by an mmdebstrap build (Ubuntu's firefox and thunderbird
+# debs only install the snap; snapd itself is a Depends of ubuntu-server-minimal,
+# as on the server image). Firefox comes from Mozilla's repository instead
+# (overlay-desktop/etc/apt/sources.list.d/mozilla.sources).
+Package: thunderbird
+Pin: version *
+Pin-Priority: -1
+
+Package: firefox
+Pin: release o=Ubuntu
+Pin-Priority: -1
+
+# The image uses initramfs-tools, like the server image (scripts/customize-rootfs.sh
+# relies on its kernel postinst hook building /boot/initrd.img-*)
+Package: dracut dracut-core
+Pin: version *
+Pin-Priority: -1
+
+# EFI-only firmware updater signing and kdump (crashkernel via GRUB): not on U-Boot
+Package: fwupd-signed kdump-tools
+Pin: version *
+Pin-Priority: -1
+
+# Crash/usage reporting to Canonical (a development board)
+Package: whoopsie ubuntu-insights
+Pin: version *
+Pin-Priority: -1

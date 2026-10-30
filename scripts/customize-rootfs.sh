@@ -4,7 +4,8 @@ set -euo pipefail
 R=$1 TOP=$2
 
 rsync -rlt --chown=root:root --chmod=D755,F644 "$TOP/overlay/" "$R/"
-chmod 755 "$R"/usr/local/sbin/*
+# Overlay programs (rsync above made every file 0644)
+find "$R/usr/local/sbin" "$R/usr/local/bin" -maxdepth 1 -type f -exec chmod 755 {} +
 rm -f "$R/etc/apt/sources.list"
 echo orangepi5 > "$R/etc/hostname"
 printf '127.0.0.1\tlocalhost\n127.0.1.1\torangepi5\n::1\tlocalhost ip6-localhost ip6-loopback\nff02::1\tip6-allnodes\nff02::2\tip6-allrouters\n' > "$R/etc/hosts"
@@ -32,5 +33,9 @@ echo "man-db man-db/auto-update boolean true" | chroot "$R" debconf-set-selectio
 touch "$R/var/lib/man-db/auto-update"
 
 # mmdebstrap bind-mounts the host's /sys, including efivarfs on UEFI hosts; that
-# submount makes mmdebstrap's own "umount /sys" fail with "target is busy"
-if mountpoint -q "$R/sys/firmware/efi/efivars"; then umount "$R/sys/firmware/efi/efivars"; fi
+# submount makes mmdebstrap's own "umount /sys" fail with "target is busy".
+# (Root mode only: in unshare mode the inherited submount is locked and
+# mmdebstrap detaches /sys itself.)
+if [ "${MMDEBSTRAP_MODE:-root}" = root ] && mountpoint -q "$R/sys/firmware/efi/efivars"; then
+  umount "$R/sys/firmware/efi/efivars"
+fi

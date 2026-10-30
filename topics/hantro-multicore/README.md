@@ -1,6 +1,6 @@
 # hantro-multicore: Hantro multi-core: the four RK3588 VEPU121 JPEG encoder cores behind one device
 
-- Workspace branch: `opi5/hantro-multicore` (exported 2026-10-29)
+- Workspace branch: `opi5/hantro-multicore` (exported 2026-10-30)
 - Kernel fork branch: `opi5/hantro-multicore` (see PUBLISH.md)
 - Sits on: `multicore` (base commit `d1b5768a932b`)
 - Hardware test: yes: drop-in modules on the board, throughput scales across cores

@@ -1,0 +1,243 @@
+From 2ef556731aa3963be336e1a967549ba3d2014a46 Mon Sep 17 00:00:00 2001
+From: Arun Iyengar <aiyengar1990@gmail.com>
+Date: Thu, 29 Oct 2026 22:25:50 +0000
+Subject: [PATCH 1/2] drm/rockchip: vop2: Balance window fetches across both
+ AXI ports on RK3588
+
+The RK3588 VOP2 fetches through two AXI read ports. Every window has a
+fixed default port in rk3588_vop_win_data: Cluster0/1 and Esmart0/1 use
+AXI0, Cluster2/3 and Esmart2/3 use AXI1. The port is chosen by a per
+window register (CLUSTER_CTRL[13] / ESMART_AXI_CTRL[1]), though, and it
+is programmed on every plane update.
+
+One port can't sustain two full screen 4K@120Hz layers. With the
+console on Cluster0 (the primary plane of video port 0) and a video on
+Esmart0 (its overlay plane), both on AXI0, HDMI 3840x2160@120 reports
+POST_BUF_EMPTY on about half of all lines (~120000 per second) and the
+picture is scrambled. The VOP read rate measured with the DDR PMU drops
+from the expected 6.3 GB/s to 3.2 GB/s: the fetch collapses instead of
+merely saturating. Measured at 4K@120Hz, XR24 primary plane:
+
+  Cluster0 + Esmart0 (AXI0 + AXI0)	~120k POST_BUF_EMPTY/s
+  Cluster2 + Esmart2 (AXI1 + AXI1)	~100k/s
+  Esmart0 + Esmart1  (AXI0 + AXI0)	~90k/s (XR24 both)
+  Cluster0 + Esmart2 (AXI0 + AXI1)	0, 9.2 GB/s read
+  Cluster0 + Cluster2 (AXI0 + AXI1)	0, 8.6 GB/s read
+
+Moving Esmart0 to AXI1 at runtime (with no other change) makes the
+first case clean. Raising ACLK_VOP from 750 to 850 MHz, or changing
+the NoC QoS priority or mode of the VOP ports, makes no difference,
+and neither does the buffer placement (both planes scanning out the
+same buffer fail the same way). So the limit is per port, and the
+fixed assignment puts both layers of the most common configuration on
+the same port while the other one sits idle. Lower modes are affected
+too: the same port also carries Cluster1 for a second display, and
+under DDR contention from other masters a 4K@60Hz port with the
+console, an overlay and a second display underflows for short bursts.
+
+Choose the port of a window when it starts fetching instead: estimate
+the fetch rate of each active window (source size x bpp x refresh),
+and put the new window on the port that leaves the busier port least
+loaded, preferring the default one on a tie. A window must not share
+an AXI read ID with another active window on the same port; the IDs in
+the table are unique per default port, and mirrored between the two
+ports (Cluster0/Cluster2, Esmart0/Esmart2, ...), so a window can always
+use the port its mirror isn't on. A window keeps its port while it
+stays enabled, so an active layer is never moved.
+
+This is only enabled for RK3588, where it was measured.
+
+Assisted-by: Claude:claude-opus-5-5
+---
+ drivers/gpu/drm/rockchip/rockchip_drm_vop2.c | 99 +++++++++++++++++++-
+ drivers/gpu/drm/rockchip/rockchip_drm_vop2.h | 14 +++
+ drivers/gpu/drm/rockchip/rockchip_vop2_reg.c |  3 +-
+ 3 files changed, 114 insertions(+), 2 deletions(-)
+
+diff --git a/drivers/gpu/drm/rockchip/rockchip_drm_vop2.c b/drivers/gpu/drm/rockchip/rockchip_drm_vop2.c
+index 17d33e396..e5f3bbb34 100644
+--- a/drivers/gpu/drm/rockchip/rockchip_drm_vop2.c
++++ b/drivers/gpu/drm/rockchip/rockchip_drm_vop2.c
+@@ -1233,6 +1233,98 @@ static int vop2_plane_atomic_check(struct drm_plane *plane,
+ 	return 0;
+ }
+ 
++static bool vop2_win_axi_ids_clash(const struct vop2_win *a, const struct vop2_win *b)
++{
++	u8 ida[] = { a->data->axi_yrgb_r_id, a->data->axi_uv_r_id };
++	u8 idb[] = { b->data->axi_yrgb_r_id, b->data->axi_uv_r_id };
++	int i, j;
++
++	for (i = 0; i < ARRAY_SIZE(ida); i++)
++		for (j = 0; j < ARRAY_SIZE(idb); j++)
++			if (ida[i] == idb[j])
++				return true;
++
++	return false;
++}
++
++/*
++ * The VOP2 on RK3588 has two AXI read ports. Each window has a default port
++ * (&vop2_win_data.axi_bus_id), but the port is selected by a per window
++ * register, so any window can fetch through either one as long as its read
++ * IDs are unique on that port.
++ *
++ * A single port can't sustain much more than one full screen 4K@120Hz
++ * layer: two such layers on the same port (e.g. Cluster0 and Esmart0, the
++ * default primary and overlay planes of video port 0) make the window
++ * line buffers run dry, the fetch rate collapses and the video port
++ * reports POST_BUF_EMPTY on most lines, which scrambles the picture. The
++ * same layers fetched through different ports are fine. Raising ACLK or
++ * the NoC priority of the VOP doesn't help, the limit is per port.
++ *
++ * So pick the port of a window when it starts fetching: use the port that
++ * leaves the busier of the two ports least loaded, preferring the default
++ * one, and never a port on which another active window already uses one of
++ * its read IDs. A window keeps its port while it stays enabled.
++ */
++static u8 vop2_win_get_axi_bus(struct vop2_win *win, u64 load)
++{
++	struct vop2 *vop2 = win->vop2;
++	u64 bus_load[VOP2_SYS_AXI_BUS_NUM] = { };
++	bool clash[VOP2_SYS_AXI_BUS_NUM] = { };
++	u8 def = win->data->axi_bus_id;
++	unsigned long flags;
++	u8 bus = def;
++	int i;
++
++	if (!(vop2->data->feature & VOP2_FEATURE_AXI_BALANCE))
++		return def;
++
++	spin_lock_irqsave(&vop2->axi_lock, flags);
++
++	if (win->axi_active) {
++		win->axi_load = load;
++		bus = win->axi_bus;
++		goto out;
++	}
++
++	for (i = 0; i < vop2->registered_num_wins; i++) {
++		struct vop2_win *w = &vop2->win[i];
++
++		if (w == win || !w->axi_active)
++			continue;
++
++		bus_load[w->axi_bus] += w->axi_load;
++		if (vop2_win_axi_ids_clash(win, w))
++			clash[w->axi_bus] = true;
++	}
++
++	if (!clash[def ^ 1] &&
++	    (clash[def] || max(bus_load[def ^ 1] + load, bus_load[def]) <
++			   max(bus_load[def] + load, bus_load[def ^ 1])))
++		bus = def ^ 1;
++
++	WARN_ON_ONCE(clash[bus]);
++
++	win->axi_bus = bus;
++	win->axi_load = load;
++	win->axi_active = true;
++out:
++	spin_unlock_irqrestore(&vop2->axi_lock, flags);
++
++	return bus;
++}
++
++static void vop2_win_put_axi_bus(struct vop2_win *win)
++{
++	struct vop2 *vop2 = win->vop2;
++	unsigned long flags;
++
++	spin_lock_irqsave(&vop2->axi_lock, flags);
++	win->axi_active = false;
++	win->axi_load = 0;
++	spin_unlock_irqrestore(&vop2->axi_lock, flags);
++}
++
+ static void vop2_plane_atomic_disable(struct drm_plane *plane,
+ 				      struct drm_atomic_commit *state)
+ {
+@@ -1243,6 +1335,8 @@ static void vop2_plane_atomic_disable(struct drm_plane *plane,
+ 
+ 	drm_dbg(vop2->drm, "%s disable\n", win->data->name);
+ 
++	vop2_win_put_axi_bus(win);
++
+ 	if (state)
+ 		old_pstate = drm_atomic_get_old_plane_state(state, plane);
+ 
+@@ -1418,7 +1512,9 @@ static void vop2_plane_atomic_update(struct drm_plane *plane,
+ 		afbc_en ? "AFBC" : "", &yrgb_mst);
+ 
+ 	if (vop2->version > VOP_VERSION_RK3568) {
+-		vop2_win_write(win, VOP2_WIN_AXI_BUS_ID, win->data->axi_bus_id);
++		u64 load = (u64)src_w * src_h * bpp / 8 * drm_mode_vrefresh(adjusted_mode);
++
++		vop2_win_write(win, VOP2_WIN_AXI_BUS_ID, vop2_win_get_axi_bus(win, load));
+ 		vop2_win_write(win, VOP2_WIN_AXI_YRGB_R_ID, win->data->axi_yrgb_r_id);
+ 		vop2_win_write(win, VOP2_WIN_AXI_UV_R_ID, win->data->axi_uv_r_id);
+ 	}
+@@ -3017,6 +3113,7 @@ static int vop2_bind(struct device *dev, struct device *master, void *data)
+ 
+ 	mutex_init(&vop2->vop2_lock);
+ 	mutex_init(&vop2->ovl_lock);
++	spin_lock_init(&vop2->axi_lock);
+ 
+ 	ret = devm_request_irq(dev, vop2->irq, vop2_isr, IRQF_SHARED, dev_name(dev), vop2);
+ 	if (ret)
+diff --git a/drivers/gpu/drm/rockchip/rockchip_drm_vop2.h b/drivers/gpu/drm/rockchip/rockchip_drm_vop2.h
+index cc06904b4..f8ba1cb58 100644
+--- a/drivers/gpu/drm/rockchip/rockchip_drm_vop2.h
++++ b/drivers/gpu/drm/rockchip/rockchip_drm_vop2.h
+@@ -29,6 +29,7 @@
+ #define VOP2_FEATURE_HAS_VO1_GRF	BIT(2)
+ #define VOP2_FEATURE_HAS_VOP_GRF	BIT(3)
+ #define VOP2_FEATURE_HAS_SYS_PMU	BIT(4)
++#define VOP2_FEATURE_AXI_BALANCE	BIT(5)
+ 
+ #define WIN_FEATURE_AFBDC		BIT(0)
+ #define WIN_FEATURE_CLUSTER		BIT(1)
+@@ -219,6 +220,16 @@ struct vop2_win {
+ 	u32 offset;
+ 
+ 	enum drm_plane_type type;
++
++	/**
++	 * @axi_bus: AXI read port the window currently fetches through,
++	 * protected by &vop2.axi_lock.
++	 */
++	u8 axi_bus;
++	/** @axi_active: the window is fetching, protected by &vop2.axi_lock */
++	bool axi_active;
++	/** @axi_load: estimated fetch rate in bytes/s, protected by &vop2.axi_lock */
++	u64 axi_load;
+ };
+ 
+ struct vop2_video_port_data {
+@@ -357,6 +368,9 @@ struct vop2 {
+ 	 */
+ 	struct mutex ovl_lock;
+ 
++	/* protects the AXI port assignment of all windows (&vop2_win.axi_bus) */
++	spinlock_t axi_lock;
++
+ 	/* must be put at the end of the struct */
+ 	struct vop2_win win[];
+ };
+diff --git a/drivers/gpu/drm/rockchip/rockchip_vop2_reg.c b/drivers/gpu/drm/rockchip/rockchip_vop2_reg.c
+index c44648e1b..c329250df 100644
+--- a/drivers/gpu/drm/rockchip/rockchip_vop2_reg.c
++++ b/drivers/gpu/drm/rockchip/rockchip_vop2_reg.c
+@@ -2561,7 +2561,8 @@ static const struct vop2_data rk3576_vop = {
+ static const struct vop2_data rk3588_vop = {
+ 	.version = VOP_VERSION_RK3588,
+ 	.feature = VOP2_FEATURE_HAS_SYS_GRF | VOP2_FEATURE_HAS_VO1_GRF |
+-		   VOP2_FEATURE_HAS_VOP_GRF | VOP2_FEATURE_HAS_SYS_PMU,
++		   VOP2_FEATURE_HAS_VOP_GRF | VOP2_FEATURE_HAS_SYS_PMU |
++		   VOP2_FEATURE_AXI_BALANCE,
+ 	.nr_vps = 4,
+ 	.max_input = { 4096, 4320 },
+ 	.max_output = { 4096, 4320 },
+-- 
+2.55.0
+

@@ -1,6 +1,6 @@
 # v7.4-rkvdec-vp9: 7.4 base: VDPU381 VP9 series as posted
 
-- Workspace branch: `opi5/rkvdec-vp9` (exported 2026-10-29)
+- Workspace branch: `opi5/rkvdec-vp9` (exported 2026-10-30)
 - Kernel fork branch: `opi5/v7.4-rkvdec-vp9` (see PUBLISH.md)
 - Sits on: `c339f4010` (base commit `c339f4010dea`)
 - Hardware test: via rkvdec-vp9 (v7.3)

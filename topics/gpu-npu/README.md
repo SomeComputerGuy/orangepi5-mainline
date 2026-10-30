@@ -1,6 +1,6 @@
 # gpu-npu: panthor bus clock / suspend clock fix, rocket NPU DVFS + cooling, devfreq resume
 
-- Workspace branch: `opi5/gpu-npu-7.3` (exported 2026-10-29)
+- Workspace branch: `opi5/gpu-npu-7.3` (exported 2026-10-30)
 - Kernel fork branch: `opi5/gpu-npu` (see PUBLISH.md)
 - Sits on: `board-sata` (base commit `5e33b74b04cf`)
 - Hardware test: partly: GPU/NPU baseline measured; fixes waiting for a full kernel install

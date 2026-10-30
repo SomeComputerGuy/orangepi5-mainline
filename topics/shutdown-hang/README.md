@@ -1,6 +1,6 @@
 # shutdown-hang: arm-smmu-v3: PCIe SMMU power domain and clock (SATA-root reboot hang)
 
-- Workspace branch: `opi5/shutdown-hang-7.3` (exported 2026-10-29)
+- Workspace branch: `opi5/shutdown-hang-7.3` (exported 2026-10-30)
 - Kernel fork branch: `opi5/shutdown-hang` (see PUBLISH.md)
 - Sits on: `board-sata` (base commit `5e33b74b04cf`)
 - Hardware test: yes: reboot hang fixed, reboots take <1 s; in the image kernel (patches/linux/0130-0134)

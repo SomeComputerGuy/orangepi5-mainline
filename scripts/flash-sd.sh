@@ -1,10 +1,12 @@
 #!/bin/bash
-# Write the Orange Pi 5 image to an SD card: scripts/flash-sd.sh /dev/sdX
+# Write the Orange Pi 5 image to an SD card: scripts/flash-sd.sh /dev/sdX [server|desktop]
 set -euo pipefail
 [ "$(id -u)" -eq 0 ] || exec sudo "$0" "$@"
 TOP=$(cd "$(dirname "$0")/.." && pwd)
-IMG=$TOP/out/ubuntu-26.10-server-orangepi5.img
-DEV=${1:?usage: $0 /dev/sdX}
+DEV=${1:?usage: $0 /dev/sdX [server|desktop]}
+VARIANT=${2:-server}
+case $VARIANT in server|desktop) ;; *) echo "unknown variant: $VARIANT"; exit 1 ;; esac
+IMG=$TOP/out/ubuntu-26.10-$VARIANT-orangepi5.img
 
 [ -b "$DEV" ] || { echo "$DEV is not a block device"; exit 1; }
 [ "$(lsblk -dno TYPE "$DEV")" = disk ] || { echo "$DEV is not a whole disk"; exit 1; }
@@ -12,7 +14,7 @@ DEV=${1:?usage: $0 /dev/sdX}
 if lsblk -no MOUNTPOINTS "$DEV" | grep -q .; then
   echo "$DEV has mounted partitions; unmount them first"; exit 1
 fi
-[ -f "$IMG" ] || { echo "missing $IMG (run scripts/build-image.sh)"; exit 1; }
+[ -f "$IMG" ] || { echo "missing $IMG (run scripts/build-image.sh --variant $VARIANT)"; exit 1; }
 
 lsblk -o NAME,SIZE,TRAN,MODEL "$DEV"
 read -rp "ERASE $DEV and write $(basename "$IMG")? Type the device name ($DEV) to confirm: " ok

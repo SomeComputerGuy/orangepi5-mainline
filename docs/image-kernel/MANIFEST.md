@@ -132,3 +132,41 @@ at 3840x2160@30 over 2-lane pin assignment D; the user saw the picture), so it m
 `opi5/integration-7.3`). `linux-extra/` no longer has 0001 (old copy in `patches/linux-extra.bak-20261029/`).
 Kernel build 3 (pkg 7.3.0-3) predates this move; its DTB lacks DP, so build 3 is installed with the
 1005 DTB built from `opi5/integration-7.3` in build/wt-integration-7.3 until the next build-kernel.sh run.
+
+## 1101-1102: suspend fixes (added 2026-10-29 by the suspend agent)
+Range `1101-1102`. Source: branch `opi5/suspend-test-7.3-k3` in `~/orangepi5/work/suspend-test-7.3`, based on
+`opi5/integration-7.3` @ 1afa8d268 (= patches/linux 0001-1005), commits d9fc41cb1 and 741e2e2df. Exported with
+`git format-patch --zero-commit`.
+- `1101-drm-rockchip-dw_dp-Add-system-sleep-PM-ops.patch` (sha256 23dc434e97bf…). Late system-sleep ops
+  (pm_runtime_force_suspend/resume) so dw-dp is re-initialised after genpd powers PD_VO0 off in suspend_noirq. It fixes
+  "dw-dp: timeout waiting for AUX reply / failed to enable link: -110" after every resume. Follow-up to the
+  Collabora dw-dp v11 runtime-PM patch (0255). **Status: untested on hardware with the fix** (bug reproduced in
+  S3/S4/S5; DPMS-cycle recovery confirms the cause). Built as a signed rockchipdrm.ko against build 3.
+- `1102-cpufreq-Defer-the-unlisted-frequency-check-on-CPU-on.patch` (sha256 43b81035711d…). Skips the "unlisted initial
+  frequency" fix-up in cpufreq_online() while cpufreq_suspended and runs it from cpufreq_resume(). It fixes
+  "kernel BUG at drivers/cpufreq/cpufreq.c:1527" when a big core is re-onlined during resume (rk8602 on I2C still
+  suspended). **Status: build-tested only** (cpufreq.o; vmlinux change, needs a full package).
+- Checks: the whole patches/linux stack (294 patches) applies on clean v7.3 with build-kernel.sh's
+  `git apply --index` loop. The resulting tree is identical to opi5/suspend-test-7.3-k3 (tree 6e12a1778).
+  patches/linux-extra (13) still applies on top. build-kernel.sh not run. checkpatch --strict: only "missing SoB"
+  (by design), plus the kept pre-existing BUG_ON warning and long log quotes in 1102's message.
+- Details: `~/orangepi5/work/_out/suspend/RESULTS.md`.
+
+Update 2026-10-29 22:30: 0267-0269 added (branch `opi5/dp-smooth-7.3`, `work/_out/dp-smooth/`): USBDP PHY re-enables
+the DP lanes after a re-init, dw-dp treats OOB HPD events with the link up as IRQ_HPD and retrains (with retry),
+typec displayport notifies HPD after reconfiguration. Hardware-tested: D→C→D pin-assignment switch retrains in
+~0.36 s with no black screen (TESTING.md). Overlay: `usr/local/bin/opi5-play` (kmssink skip-vsync=true, hides the
+console cursor; see GSTREAMER-FOLLOWUPS for the kmssink double-vblank-wait bug).
+
+Update 2026-10-29 23:30: 1301-1302 added (branch `opi5/vop2-underflow-int-7.3`, `work/_out/vop2-underflow/`):
+VOP2 balances window fetches across both AXI read ports on RK3588 (mainline wired all windows to AXI0, ~5 GB/s,
+which underflowed at 4K120 + overlay and at 4K60 under DDR load), and reports POST_BUF_EMPTY at most once per
+frame (IRQ storm). Hardware-tested: 4K120 + NV12 overlay 0 underflows idle and under 4K decode load; weston
+dual-display 10+ min 0; BBB 4K60 0. The board's interim module also contained 1101 (dw_dp sleep).
+
+Update 2026-10-29 23:32: 1201-1202 added (branch `opi5/audio-7.3`, `work/_out/audio/`): DP0 audio card (SPDIF_TX2
+→ dw-dp) for RK3588 + Orange Pi 5/5B, and dw-hdmi-qp reprograms audio N/CTS after a link/mode change.
+Hardware-tested: HDMI audio audible through 4K60(FRL)→4K120(FRL)→4K60→1080p(TMDS)→4K60 mode changes (user
+listened); DP audio verified at signal level only (the Dell has no speakers). Overlay: ALSA UCM profiles
+(es8388 headphone defaults, HDMI/DP names), cloud-init default user groups audio/video/render; desktop
+WirePlumber priorities in overlay-desktop/. Packages: alsa-utils alsa-ucm-conf gstreamer1.0-alsa.

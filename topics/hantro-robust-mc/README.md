@@ -1,6 +1,6 @@
 # hantro-robust-mc: hantro-robust rebased on hantro-multicore
 
-- Workspace branch: `opi5/hantro-robust-mc` (exported 2026-10-29)
+- Workspace branch: `opi5/hantro-robust-mc` (exported 2026-10-30)
 - Kernel fork branch: `opi5/hantro-robust-mc` (see PUBLISH.md)
 - Sits on: `hantro-multicore` (base commit `86102e78de87`)
 - Hardware test: see hantro-robust/TESTING.md

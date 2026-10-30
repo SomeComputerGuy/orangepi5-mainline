@@ -1,6 +1,6 @@
 # jpeg-dec: New driver: RK3588 VDPU720 JPEG decoder (rkjpegd)
 
-- Workspace branch: `opi5/rkjpegd-7.3` (exported 2026-10-29)
+- Workspace branch: `opi5/rkjpegd-7.3` (exported 2026-10-30)
 - Kernel fork branch: `opi5/jpeg-dec` (see PUBLISH.md)
 - Sits on: `board-sata` (base commit `5e33b74b04cf`)
 - Hardware test: yes: decodes on the board, PSNR 66-80 dB vs FFmpeg

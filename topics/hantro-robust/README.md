@@ -1,6 +1,6 @@
 # hantro-robust: Hantro error recovery (runtime PM, IOMMU re-init after timeout, encoder core reset, resets in DT)
 
-- Workspace branch: `opi5/hantro-robust` (exported 2026-10-29)
+- Workspace branch: `opi5/hantro-robust` (exported 2026-10-30)
 - Kernel fork branch: `opi5/hantro-robust` (see PUBLISH.md)
 - Sits on: `hantro-validate` (base commit `fa1856f9bd20`)
 - Hardware test: see TESTING.md

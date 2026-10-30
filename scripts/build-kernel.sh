@@ -82,6 +82,8 @@ want=$(for d in "${PATCH_DIRS[@]}"; do (cd "$d" && sha256sum ./*.patch | sed "s|
 if [ "$(cat "$BUILD/.patches-applied" 2>/dev/null)" != "$want" ]; then
   git -C "$SRC" diff --binary HEAD > "$BUILD/src-linux-before-patches.diff"
   git -C "$SRC" reset -q --hard "$BASE"
+  # a previous run that stopped half-way may have left files its patches created
+  git -C "$SRC" clean -fdq
   for d in "${PATCH_DIRS[@]}"; do
     for p in "$d"/*.patch; do
       git -C "$SRC" apply --index "$p" || { echo "patch failed: $p"; exit 1; }
@@ -107,6 +109,6 @@ done
 # so skip dpkg's build-dep check (-d).
 # Debug info is kept for BTF (eBPF tooling); skip the huge -dbg package
 export DEB_BUILD_PROFILES=pkg.linux-upstream.nokerneldbg
-make -C "$SRC" O="$BUILD" CC="$KCC" -j"$(nproc)" DPKG_FLAGS=-d KDEB_PKGVERSION="$(make -s -C "$SRC" kernelversion)-3" bindeb-pkg
+make -C "$SRC" O="$BUILD" CC="$KCC" -j"$(nproc)" DPKG_FLAGS=-d KDEB_PKGVERSION="$(make -s -C "$SRC" kernelversion)-4" bindeb-pkg
 mv "$BUILD"/../linux-*.deb "$OUT/debs/"
 ls -l "$OUT/debs"

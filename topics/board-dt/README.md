@@ -1,6 +1,6 @@
 # board-dt: Combined board DT used on the test board (DT commits from the topics above)
 
-- Workspace branch: `opi5/board-dt` (exported 2026-10-29)
+- Workspace branch: `opi5/board-dt` (exported 2026-10-30)
 - Kernel fork branch: `opi5/board-dt` (see PUBLISH.md)
 - Sits on: `board-sata` (base commit `5e33b74b04cf`)
 - Hardware test: yes: the test board boots this DTB

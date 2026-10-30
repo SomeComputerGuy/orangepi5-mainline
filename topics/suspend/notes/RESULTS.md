@@ -134,7 +134,7 @@ is ignored and nothing is saved in s2idle beyond clock/PD gating.
 `~/orangepi5/work/suspend-test-7.3`, branch `opi5/suspend-test-7.3-k2`: de0c4208f (= kernel #2 source,
 patches/linux 0001-0514 as applied in src/linux), then 2c753bace (dw_dp sleep ops) and a41c2f3fe (cpufreq). Also
 created: an empty branch `opi5/suspend-test-7.3` (from opi5/suspend-7.3). Build dir `~/orangepi5/build/wt-suspend-test/`
-(the full deb build was stopped: superseded by build 3).
+(the full deb build for #2 was stopped: superseded by build 3; see Update below).
 
 ## Board state left behind
 - Cmdline restored to the coordinator's version (`... console=tty1 video=HDMI-A-1:3840x2160@120`; my
@@ -145,3 +145,51 @@ created: an empty branch `opi5/suspend-test-7.3` (from opi5/suspend-7.3). Build 
 - **RTC: the hym8563 has no backup battery.** After the power cycle at ~20:16 it read "no valid clock". I set it from
   NTP time with RTC_SET_TIME at 20:17. It will be lost again on the next power loss; rtcwake fails until it is set.
 - Webcam and DP dongle are unplugged (user).
+
+## Update 2026-10-29 (after build 3)
+- Both fixes are rebased onto build 3 (`opi5/integration-7.3` @ 1afa8d268) in `~/orangepi5/work/suspend-test-7.3`,
+  branch `opi5/suspend-test-7.3-k3`: d9fc41cb1 (dw_dp sleep ops) and 741e2e2df (cpufreq). They cherry-picked cleanly;
+  the touched files are identical to build 3's source. The trailer is now `Assisted-by: Claude:claude-opus-5-5`.
+  `patches/0001-*dw_dp*` and `patches/0002-*cpufreq*` are regenerated from that branch.
+- `modules/rockchipdrm-dwdp-sleep-k3.ko`: signed, no BTF, vermagic 7.3.0-opi5, built against build/linux (build 3).
+  Not installed. To test it: put it in /lib/modules/7.3.0-opi5/updates/opi5-suspend/, run depmod -a, back up the
+  initrd and run update-initramfs -u (rockchipdrm is in the initramfs), then reboot. Then S3 (pm_test=platform,
+  s2idle) with DP on: expect no AUX timeouts and a DPCD read OK. S3 doesn't hit bug 3.
+- The cpufreq fix needs a full kernel package (built-in code); not built for build 3.
+
+## Bug 3 bisect plan (prepared host-side, for one batched suspend window)
+**Tool:** `modules/resume_delay-k3.ko` (source `tools/resume-delay/resume_delay.c`; signed for build 3, W=1 and
+checkpatch clean). It hooks the `device_pm_callback_start` tracepoint and busy-waits `delay_ms` (default 20, about
+the pm_print_times console cost per device) before each matching callback. Params, writable at runtime:
+`events` (1 suspend, 2 resume, 3 both), `phases` (0 normal phase only, 1 incl. late/early/noirq), `match`
+(comma-separated substrings of the device name **or any ancestor**, so `fcd00000` = the whole USB3-host2 subtree;
+it also matches the driver name; empty = all), `invert`. It logs `resume_delay: armed ...` and `done, delayed N
+suspend and M resume callbacks`.
+**Runner:** `tools/bisect-attempt.sh <tag> <events> <phases> <invert> "<match>"` → loads the module once per boot and
+runs `susp-run.sh <tag> s2idle none 120` with PRINT_TIMES=0 (the fast console that reproduces 10/10).
+**Setup once per boot:** copy `resume_delay-k3.ko`, `bisect-attempt.sh`, `susp-run.sh` to /var/tmp; check
+`/proc/driver/rtc` has a valid date (otherwise `python3 -I rtc-set.py`); `sysrq=1`. Webcam/dongle state doesn't matter (Y1).
+
+**Signatures**
+- PASS: `rc=0` in `/var/tmp/susp-logs/<tag>.log`, `resume_delay: done ...`, susp-check OK.
+- FAIL: serial stops after `xhci-hcd.N.auto: xHC error in resume ... Reinit` / `usb5/6 root hub lost power`
+  (sometimes `ata1 ... configured`), optionally `soft lockup ... rcu_exp_gp_kthr` ~26 s later, then the DDR blob ~44 s
+  after wake. The board is back about 1.5 min later.
+
+**Sequence** (stop at the first conclusive point):
+| # | events phases invert match | Expect | Meaning |
+|---|---|---|---|
+| A1 | 3 0 0 "" | PASS | the delay reproduces the slow-console effect (if FAIL: A1b `3 1 0 ""`; if that also fails, timing isn't the trigger → go to pstore/ramoops, next steps 3) |
+| A2 | 2 0 0 "" | PASS → resume side; FAIL → suspend side (then A2b `1 0 0 ""` to confirm, and bisect the suspend side with the same sets) |
+| A3 | 2 0 0 "fcd00000,fe210000,fee00000,fee20000" (USB3 host2 subtree, AHCI, both combphys) | PASS → culprit in this set | FAIL → A3i `2 0 1` same set (everything else) |
+| A4 | 2 0 0 "fcd00000" | PASS → the USB3-host2 resume (dwc3 + combphy2 + xHCI reinit) needs a settle gap | FAIL → A4b "fe210000,fee00000" (SATA path) |
+| A5 | 2 0 0 "xhci-hcd" (driver match: only xHCI + root hubs of both hosts) vs "dwc3" | split dwc3/PHY bring-up from xHCI reinit |
+| A3i branch | 2 0 0 "regulator,spi2.0,0-004,2-0042" then "fc8,fc000000,fed80000" (PD_USB ehci/ohci/dwc3 + USBDP) | bisect the rest |
+Then confirm: 2 attempts with only the final set delayed (PASS) and 1 with the final set excluded (`invert=1`, FAIL).
+After that, find where the missing wait belongs in that driver (PLL/PIPE lock, power-domain or regulator settle)
+and write the fix.
+
+**Estimate:** PASS ≈ 3 min (60-120 s sleep, since the hym8563 alarm rounds down, plus ~12 s of injected delays),
+FAIL ≈ 4 min (wake + 44 s watchdog + ~60 s boot + reload). A typical path is A1, A2, A3, A4, A5 plus 3 confirmations,
+8 attempts at about half FAIL: **≈ 30 min; plan a 40 min window.** Each FAIL is a watchdog reset that interrupts every other
+agent on the board.

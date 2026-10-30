@@ -1,6 +1,6 @@
 # vp9-perf: VDPU381 VP9 performance (count table caching)
 
-- Workspace branch: `opi5/vp9-perf-7.3` (exported 2026-10-29)
+- Workspace branch: `opi5/vp9-perf-7.3` (exported 2026-10-30)
 - Kernel fork branch: `opi5/vp9-perf` (see PUBLISH.md)
 - Sits on: `vp9-conf` (base commit `9cb9c761ed16`)
 - Hardware test: yes: measured on the board (see RESULTS.md)

@@ -1,6 +1,6 @@
 # v7.4-multicore: 7.4 base: RGA3 + rkvdec multi-core series as posted (no backport commit)
 
-- Workspace branch: `opi5/multicore` (exported 2026-10-29)
+- Workspace branch: `opi5/multicore` (exported 2026-10-30)
 - Kernel fork branch: `opi5/v7.4-multicore` (see PUBLISH.md)
 - Sits on: `c339f4010` (base commit `c339f4010dea`)
 - Hardware test: via multicore (v7.3)

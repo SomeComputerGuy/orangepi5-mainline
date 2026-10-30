@@ -1,6 +1,6 @@
 # suspend: System suspend analysis (TF-A PHP CRU gate fix)
 
-- Workspace branch: `opi5/suspend-7.3` (exported 2026-10-29)
+- Workspace branch: `opi5/suspend-7.3` (exported 2026-10-30)
 - Kernel fork branch: `opi5/suspend` (see PUBLISH.md)
 - Sits on: `board-sata` (base commit `5e33b74b04cf`)
 - Hardware test: not run (analysis only; TF-A patch in patches/tf-a)
@@ -14,6 +14,9 @@ Apply with `git am` in the order listed in [`series`](series), on top of the par
 - [notes/ANALYSIS.md](notes/ANALYSIS.md)
 - [notes/RESULTS.md](notes/RESULTS.md)
 - [notes/TEST-PLAN.md](notes/TEST-PLAN.md)
+- [notes/tools/bisect-attempt.sh](notes/tools/bisect-attempt.sh)
+- [notes/tools/resume-delay/resume_delay.c](notes/tools/resume-delay/resume_delay.c)
 - [notes/tools/resume-wd/resume_wd.c](notes/tools/resume-wd/resume_wd.c)
+- [notes/tools/rtc-set.py](notes/tools/rtc-set.py)
 - [notes/tools/susp-check.sh](notes/tools/susp-check.sh)
 - [notes/tools/susp-run.sh](notes/tools/susp-run.sh)

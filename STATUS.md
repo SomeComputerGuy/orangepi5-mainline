@@ -1,4 +1,4 @@
-# Status (generated 2026-10-29 by tools/export-from-workspace.sh)
+# Status (generated 2026-10-30 by tools/export-from-workspace.sh)
 
 Every kernel topic, the branch it lives on, how far it got, and the next upstream step.
 `Ours/Carried/Local` count the patches in each category (see the topic README).
@@ -43,7 +43,7 @@ Nothing here has been sent upstream yet.
 
 `patches/linux/` is what `scripts/build-kernel.sh` applies on v7.3 for the image (recreated as fork branch `opi5/image-7.3`). It is a snapshot of the topics that were ready for the image; the topic directories are the reference for upstreaming. Range-by-range provenance and test state: [docs/image-kernel/MANIFEST.md](docs/image-kernel/MANIFEST.md).
 
-Patches in patches/linux: 292; other patch directories: linux-extra, tf-a, u-boot, upstream.
+Patches in patches/linux: 309; other patch directories: ffmpeg, gstreamer, linux-extra, mpv, tf-a, u-boot, upstream.
 
 ## U-Boot and TF-A
 

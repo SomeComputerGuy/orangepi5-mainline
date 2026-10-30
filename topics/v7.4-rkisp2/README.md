@@ -1,6 +1,6 @@
 # v7.4-rkisp2: 7.4 base: rkisp2 series
 
-- Workspace branch: `opi5/rkisp2` (exported 2026-10-29)
+- Workspace branch: `opi5/rkisp2` (exported 2026-10-30)
 - Kernel fork branch: `opi5/v7.4-rkisp2` (see PUBLISH.md)
 - Sits on: `c339f4010` (base commit `c339f4010dea`)
 - Hardware test: via camera (v7.3)

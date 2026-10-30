@@ -1,6 +1,6 @@
 # hantro-validate: Hantro JPEG encoder input validation
 
-- Workspace branch: `opi5/hantro-validate` (exported 2026-10-29)
+- Workspace branch: `opi5/hantro-validate` (exported 2026-10-30)
 - Kernel fork branch: `opi5/hantro-validate` (see PUBLISH.md)
 - Sits on: `multicore` (base commit `d1b5768a932b`)
 - Hardware test: see TESTING.md

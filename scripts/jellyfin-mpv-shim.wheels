@@ -1,0 +1,7 @@
+# Jellyfin MPV Shim and its two dependencies that Ubuntu doesn't package (pure-Python
+# wheels from PyPI), installed into /opt/jellyfin-mpv-shim by customize-desktop.sh.
+# Everything else it needs comes from Ubuntu packages (build-image.sh DESKTOP_PKGS).
+# Format: sha256 filename url
+4d9236b464d5369922552d06a1313e8e7bfa0dfde53610ccb59291e6e3d5edcc jellyfin_mpv_shim-3.3.0-py3-none-any.whl https://files.pythonhosted.org/packages/71/03/b8d4b73728e25e0e54ca952184bfef07aafce75dd7e055886beed1d10be6/jellyfin_mpv_shim-3.3.0-py3-none-any.whl
+0ea9c4a3023420a3010920260970cd61bc51a8b9dba44158ed2357e59cb4d730 jellyfin_apiclient_python-1.21.0-py3-none-any.whl https://files.pythonhosted.org/packages/cd/55/b1d2f9fe0e45b7867e8e15621c3ad333b4f50ec8daab11e5670bf710f36d/jellyfin_apiclient_python-1.21.0-py3-none-any.whl
+f9ce720a07a005c6e37b3eacccffe220ad73cf5d5b0aa9dd77dbe8578be4f249 python_mpv_jsonipc-1.5.0-py3-none-any.whl https://files.pythonhosted.org/packages/16/d2/a84078ecdde229251284c290109e93c00ddc5f0a0831284ada6bd6cb04d9/python_mpv_jsonipc-1.5.0-py3-none-any.whl

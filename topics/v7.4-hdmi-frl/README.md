@@ -1,6 +1,6 @@
 # v7.4-hdmi-frl: 7.4 base: first HDMI FRL commit
 
-- Workspace branch: `opi5/hdmi-frl` (exported 2026-10-29)
+- Workspace branch: `opi5/hdmi-frl` (exported 2026-10-30)
 - Kernel fork branch: `opi5/v7.4-hdmi-frl` (see PUBLISH.md)
 - Sits on: `c339f4010` (base commit `c339f4010dea`)
 - Hardware test: via hdmi-frl (v7.3)

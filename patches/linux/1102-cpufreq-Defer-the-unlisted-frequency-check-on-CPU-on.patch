@@ -1,0 +1,167 @@
+From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
+From: Arun Iyengar <aiyengar1990@gmail.com>
+Date: Thu, 29 Oct 2026 21:51:14 +0000
+Subject: [PATCH 2/2] cpufreq: Defer the unlisted frequency check on CPU online
+ during resume
+
+When a system with CPUFREQ_NEED_INITIAL_FREQ_CHECK (e.g. cpufreq-dt)
+resumes from a suspend that took the non-boot CPUs offline, the first
+CPU of every inactive policy is brought back online from
+suspend_enter(), after syscore_resume() but before dpm_resume_noirq().
+cpufreq_online() reads the current frequency and, if it isn't in the
+frequency table, immediately calls __cpufreq_driver_target() to move to
+a listed one, and BUG()s if that fails.
+
+At that point no device has been resumed and device interrupts are still
+disabled, so a frequency change that needs a regulator on an I2C or SPI
+bus cannot work. On RK3588 the SCMI CPU clock reads back the PVTPLL ring
+oscillator rate (it is CLK_GET_RATE_NOCACHE), which is never exactly an
+OPP, and the big cluster supplies are RK8602/RK8603 on I2C, so
+pm_test=core (and a real deep suspend) ends in:
+
+  cpu cpu6: _set_opp_voltage: failed to set voltage (987500 987500 1000000 mV): -110
+  cpufreq: __target_index: Failed to change cpu frequency: -110
+  kernel BUG at drivers/cpufreq/cpufreq.c:1527!
+  Call trace:
+   cpufreq_online+0xda8/0xf58
+   cpuhp_cpufreq_online+0x1c/0x40
+   cpuhp_invoke_callback+0x208/0xb08
+
+The core already avoids governor work and frequency verification while
+cpufreq_suspended is set (cpufreq_init_governor(),
+cpufreq_policy_refresh()). Do the same for the initial frequency check:
+move it into a helper, skip it in cpufreq_online() while suspended, and
+run it from cpufreq_resume(), which is called at the end of dpm_resume()
+once every device is back, before the governor is restarted. A failure
+there is reported instead of BUG()ing, as the system was running fine
+before suspend.
+
+Tested on Orange Pi 5 (RK3588S): build-tested only so far (needs a new
+kernel image; not installed on the board).
+
+Assisted-by: Claude:claude-opus-5-5
+---
+ drivers/cpufreq/cpufreq.c | 92 ++++++++++++++++++++++++---------------
+ 1 file changed, 57 insertions(+), 35 deletions(-)
+
+diff --git a/drivers/cpufreq/cpufreq.c b/drivers/cpufreq/cpufreq.c
+index 54dde8419..87dc59046 100644
+--- a/drivers/cpufreq/cpufreq.c
++++ b/drivers/cpufreq/cpufreq.c
+@@ -1404,6 +1404,47 @@ static int cpufreq_policy_init_qos(struct cpufreq_policy *policy)
+ 	return 0;
+ }
+ 
++/*
++ * Sometimes boot loaders set CPU frequency to a value outside of
++ * frequency table present with cpufreq core. In such cases CPU might be
++ * unstable if it has to run on that frequency for long duration of time
++ * and so its better to set it to a frequency which is specified in
++ * freq-table. This also makes cpufreq stats inconsistent as
++ * cpufreq-stats would fail to register because current frequency of CPU
++ * isn't found in freq-table.
++ *
++ * Because we don't want this change to effect boot process badly, we go
++ * for the next freq which is >= policy->cur ('cur' must be set by now,
++ * otherwise we will end up setting freq to lowest of the table as 'cur'
++ * is initialized to zero).
++ *
++ * We are passing target-freq as "policy->cur - 1" otherwise
++ * __cpufreq_driver_target() would simply fail, as policy->cur will be
++ * equal to target-freq.
++ */
++static int cpufreq_check_initial_freq(struct cpufreq_policy *policy)
++{
++	unsigned int old_freq = policy->cur;
++	int ret;
++
++	if (!(cpufreq_driver->flags & CPUFREQ_NEED_INITIAL_FREQ_CHECK) ||
++	    !has_target())
++		return 0;
++
++	/* Are we running at unknown frequency ? */
++	if (cpufreq_frequency_table_get_index(policy, old_freq) != -EINVAL)
++		return 0;
++
++	ret = __cpufreq_driver_target(policy, old_freq - 1, CPUFREQ_RELATION_L);
++	if (ret)
++		return ret;
++
++	pr_info("%s: CPU%d: Running at unlisted initial frequency: %u kHz, changing to: %u kHz\n",
++		__func__, policy->cpu, old_freq, policy->cur);
++
++	return 0;
++}
++
+ static int cpufreq_policy_online(struct cpufreq_policy *policy,
+ 				 unsigned int cpu, bool new_policy)
+ {
+@@ -1492,42 +1533,19 @@ static int cpufreq_policy_online(struct cpufreq_policy *policy,
+ 	}
+ 
+ 	/*
+-	 * Sometimes boot loaders set CPU frequency to a value outside of
+-	 * frequency table present with cpufreq core. In such cases CPU might be
+-	 * unstable if it has to run on that frequency for long duration of time
+-	 * and so its better to set it to a frequency which is specified in
+-	 * freq-table. This also makes cpufreq stats inconsistent as
+-	 * cpufreq-stats would fail to register because current frequency of CPU
+-	 * isn't found in freq-table.
+-	 *
+-	 * Because we don't want this change to effect boot process badly, we go
+-	 * for the next freq which is >= policy->cur ('cur' must be set by now,
+-	 * otherwise we will end up setting freq to lowest of the table as 'cur'
+-	 * is initialized to zero).
+-	 *
+-	 * We are passing target-freq as "policy->cur - 1" otherwise
+-	 * __cpufreq_driver_target() would simply fail, as policy->cur will be
+-	 * equal to target-freq.
++	 * While the system is resuming from suspend, the non-boot CPUs are
++	 * brought back online before any device is resumed, so the regulators
++	 * and clock providers a frequency change needs may not be usable yet.
++	 * cpufreq_resume() checks the frequency once devices are back.
+ 	 */
+-	if ((cpufreq_driver->flags & CPUFREQ_NEED_INITIAL_FREQ_CHECK)
+-	    && has_target()) {
+-		unsigned int old_freq = policy->cur;
+-
+-		/* Are we running at unknown frequency ? */
+-		ret = cpufreq_frequency_table_get_index(policy, old_freq);
+-		if (ret == -EINVAL) {
+-			ret = __cpufreq_driver_target(policy, old_freq - 1,
+-						      CPUFREQ_RELATION_L);
+-
+-			/*
+-			 * Reaching here after boot in a few seconds may not
+-			 * mean that system will remain stable at "unknown"
+-			 * frequency for longer duration. Hence, a BUG_ON().
+-			 */
+-			BUG_ON(ret);
+-			pr_info("%s: CPU%d: Running at unlisted initial frequency: %u kHz, changing to: %u kHz\n",
+-				__func__, policy->cpu, old_freq, policy->cur);
+-		}
++	if (!cpufreq_suspended) {
++		ret = cpufreq_check_initial_freq(policy);
++		/*
++		 * Reaching here after boot in a few seconds may not
++		 * mean that system will remain stable at "unknown"
++		 * frequency for longer duration. Hence, a BUG_ON().
++		 */
++		BUG_ON(ret);
+ 	}
+ 
+ 	if (new_policy) {
+@@ -2024,6 +2042,10 @@ void cpufreq_resume(void)
+ 				cpufreq_driver->name);
+ 		} else if (has_target()) {
+ 			scoped_guard(cpufreq_policy_write, policy) {
++				if (cpufreq_check_initial_freq(policy))
++					pr_err("%s: CPU%u: failed to leave unlisted frequency %u kHz\n",
++					       __func__, policy->cpu, policy->cur);
++
+ 				ret = cpufreq_start_governor(policy);
+ 			}
+ 
+-- 
+2.55.0
+

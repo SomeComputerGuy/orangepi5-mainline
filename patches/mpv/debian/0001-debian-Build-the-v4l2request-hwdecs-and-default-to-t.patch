@@ -1,0 +1,46 @@
+From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
+From: Arun Iyengar <aiyengar1990@gmail.com>
+Date: Thu, 29 Oct 2026 22:16:51 +0000
+Subject: [PATCH] debian: Build the v4l2request hwdecs and default to them
+
+Enable the v4l2request hwdec/interop added by the preceding patches
+(https://github.com/mpv-player/mpv/pull/14690). It needs an FFmpeg with the
+V4L2 Request API hwdevice (AV_HWDEVICE_TYPE_V4L2REQUEST); use "enabled" so
+the build fails rather than silently dropping it.
+
+This build is for boards whose video decoders are V4L2 stateless devices
+(RK3588 here), which have no VA-API driver, so the shipped
+/etc/mpv/mpv.conf uses hwdec=v4l2request instead of Ubuntu's hwdec=vaapi.
+
+Assisted-by: Claude:claude-opus-5-5
+---
+ debian/mpv.conf.ubuntu | 9 ++++++++-
+ debian/rules           | 1 +
+ 2 files changed, 9 insertions(+), 1 deletion(-)
+
+diff --git a/debian/mpv.conf.ubuntu b/debian/mpv.conf.ubuntu
+index 621600c..88c8962 100644
+--- a/debian/mpv.conf.ubuntu
++++ b/debian/mpv.conf.ubuntu
+@@ -1 +1,8 @@
+-hwdec=vaapi
++# System-wide mpv defaults (Orange Pi 5 / RK3588 build).
++# Decode with the V4L2 stateless decoders through FFmpeg's v4l2request hwaccel
++# and import the DRM PRIME (dmabuf) frames into the GPU without CPU copies.
++# Codecs or sizes the hardware can't decode fall back to software decoding.
++hwdec=v4l2request
++# EGL dmabuf import (Mesa panfrost/panthor) is the long-proven path for DRM
++# PRIME frames on Mali; to try Vulkan (panvk) instead: --gpu-api=vulkan.
++gpu-api=opengl
+diff --git a/debian/rules b/debian/rules
+index b52e7ea..6923f04 100755
+--- a/debian/rules
++++ b/debian/rules
+@@ -17,6 +17,7 @@ override_dh_auto_configure:
+ 		-Dbuild-date=false \
+ 		-Dcdda=enabled \
+ 		-Ddvdnav=enabled \
++		-Dv4l2request=enabled \
+ 		$(ARCH_CONFIGURE)
+ 
+ execute_after_dh_auto_install:

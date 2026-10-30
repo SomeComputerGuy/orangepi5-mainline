@@ -1,6 +1,6 @@
 # iep2: New driver: RK3588 IEP2 deinterlacer
 
-- Workspace branch: `opi5/iep2-7.3` (exported 2026-10-29)
+- Workspace branch: `opi5/iep2-7.3` (exported 2026-10-30)
 - Kernel fork branch: `opi5/iep2` (see PUBLISH.md)
 - Sits on: `board-sata` (base commit `5e33b74b04cf`)
 - Hardware test: yes: board run 3 passes (runs 1-2 found and fixed an IOMMU fault storm)
