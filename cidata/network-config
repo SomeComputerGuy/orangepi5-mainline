@@ -1,9 +1,18 @@
 # Netplan v2 network config applied by cloud-init on first boot.
 # Default: DHCP on wired ethernet. Edit for a static IP if needed.
+# The onboard port (end0) is what boot waits for. USB ethernet adapters (enx..., e.g. on a
+# USB-C dock) are optional, so one without a cable doesn't hold boot for 2 minutes in
+# systemd-networkd-wait-online.
 version: 2
 ethernets:
-  wired:
+  onboard:
     match:
-      name: "en*"
+      name: "end*"
     dhcp4: true
     dhcp6: true
+  usb:
+    match:
+      name: "enx*"
+    dhcp4: true
+    dhcp6: true
+    optional: true

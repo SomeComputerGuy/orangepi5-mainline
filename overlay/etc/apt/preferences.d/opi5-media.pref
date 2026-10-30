@@ -1,9 +1,10 @@
-# Keep the Orange Pi 5 rebuilds of FFmpeg, mpv, GStreamer and the VA-API driver
-# (version suffix +opi5.N, from scripts/build-media-debs.sh): Ubuntu's builds lack
-# the V4L2 stateless decoding this image relies on. When Ubuntu updates one of
-# them, rebuild ours from the new version and install it.
+# Keep the Orange Pi 5 rebuilds of FFmpeg, mpv, GStreamer, alsa-ucm-conf and the
+# VA-API driver (version suffix +opi5.N, from scripts/build-media-debs.sh, in
+# /etc/apt/sources.list.d/opi5-media.sources): Ubuntu's builds lack the V4L2
+# stateless decoding and the board's audio profiles. When Ubuntu updates one of
+# these sources, rebuild ours from the new version.
 # (Version pins need named packages, hence src:...; a leading * in a version glob
 # doesn't match, hence the regex.)
-Package: src:ffmpeg src:mpv src:gst-plugins-bad1.0 src:libva-v4l2-request
+Package: src:ffmpeg src:mpv src:gst-plugins-bad1.0 src:gst-plugins-good1.0 src:libva-v4l2-request src:alsa-ucm-conf
 Pin: version /\+opi5/
 Pin-Priority: 1001

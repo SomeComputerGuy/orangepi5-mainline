@@ -1,0 +1,2 @@
+arch/arm64/boot/dts/rockchip/rk3588s-orangepi-5-cam1-ov13850.dtb: /i2c@fec90000/camera-sensor@10: failed to match any schema with compatible: ['ovti,ov13850']
+arch/arm64/boot/dts/rockchip/rk3588s-orangepi-5-cam1-ov13855.dtb: /i2c@fec90000/camera-sensor@36: failed to match any schema with compatible: ['ovti,ov13855']

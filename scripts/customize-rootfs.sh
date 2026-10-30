@@ -4,13 +4,19 @@ set -euo pipefail
 R=$1 TOP=$2
 
 rsync -rlt --chown=root:root --chmod=D755,F644 "$TOP/overlay/" "$R/"
-# Overlay programs (rsync above made every file 0644)
-find "$R/usr/local/sbin" "$R/usr/local/bin" -maxdepth 1 -type f -exec chmod 755 {} +
 rm -f "$R/etc/apt/sources.list"
 echo orangepi5 > "$R/etc/hostname"
 printf '127.0.0.1\tlocalhost\n127.0.1.1\torangepi5\n::1\tlocalhost ip6-localhost ip6-loopback\nff02::1\tip6-allnodes\nff02::2\tip6-allrouters\n' > "$R/etc/hosts"
 echo 'LANG=C.UTF-8' > "$R/etc/default/locale"
-install -Dm644 -t "$R/usr/lib/u-boot/orangepi5/" "$TOP/out/u-boot-rockchip.bin" "$TOP/out/u-boot-rockchip-spi.bin"
+
+# Our rebuilds (out/debs-media) as an apt source in the image, the way a PPA would
+# be: packages from those sources that aren't preinstalled then install as our
+# builds (with the pin in overlay/etc/apt/preferences.d/opi5-media.pref) instead
+# of Ubuntu's, which would conflict with the installed ones of the same source.
+# A local flat repository until the rebuilds are published (e.g. a Launchpad PPA);
+# overlay/etc/apt/sources.list.d/opi5-media.sources points apt at it.
+install -d -m755 "$R/var/lib/opi5-media"
+install -m644 -t "$R/var/lib/opi5-media/" "$TOP"/out/debs-media/*.deb "$TOP/out/debs-media/Packages"
 
 # Kernel + headers (for DKMS): postinst hooks build the initramfs and extlinux.conf (u-boot-menu)
 cp "$TOP"/out/debs/linux-image-*.deb "$TOP"/out/debs/linux-headers-*.deb "$R/tmp/"

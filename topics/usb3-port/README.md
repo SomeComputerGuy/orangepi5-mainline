@@ -1,10 +1,10 @@
-# usb3-port: DROPPED, NOT IN THE IMAGE: pair the Type-A USB3 port's EHCI and xHCI ports through a usb-a-connector node and retry SuperSpeed for a device stuck at 480M (was patches/linux 1501-1504)
+# usb3-port: IN THE IMAGE (patches/linux 1501-1504): pair the Type-A USB3 port's EHCI and xHCI ports through a usb-a-connector node and retry SuperSpeed for a device stuck at 480M
 
-- Workspace branch: `opi5/usb3-port-k5-7.3` (exported 2026-10-30)
+- Workspace branch: `opi5/usb3-port-k6-7.3` (exported 2026-10-30)
 - Kernel fork branch: `opi5/usb3-port` (see PUBLISH.md)
-- Sits on: `image-k6` (base commit `996168d5c3b1`)
-- Hardware test: does not help: the SanDisk Ultra Fit only tries SuperSpeed when VBUS rises, and this port's VBUS is always on; a SanDisk Extreme comes up at 5000M at boot on the same port, so it is device-specific
-- Next upstream step: none (dropped; kept for reference in patches/linux-dropped)
+- Sits on: `image-k6` (base commit `c257cc692edd`)
+- Hardware test: yes: a SanDisk Extreme present at boot is moved from 480M to 5000M by the retry; a SanDisk Ultra Fit ignores USB2 resets and needs a VBUS cycle (port VBUS is always on)
+- Next upstream step: send to linux-usb
 - Patches: 4 = 4 ours, 0 carried from others, 0 local-only
 
 Apply with `git am` in the order listed in [`series`](series), on top of the parent topic (or check out the fork branch). Patch numbers are the position in that order.

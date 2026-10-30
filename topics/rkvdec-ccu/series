@@ -1,17 +1,19 @@
 # Apply in this order on top of the parent topic (see topic.env):
 #   while read -r p sha; do git am "$p"; done < <(grep -v '^#' series)
 # Second column: the original commit in the workspace clone (for reference).
-ours/0001-media-v4l2-mem2mem-add-v4l2_m2m_buf_detach_and_job_f.patch acb41e8f2e8298672598565cd223dad8aeae6ce9
-ours/0002-media-rkvdec-complete-decode-jobs-independently-of-t.patch 5f119cf013467d45ecd4b51a5b869e77f1f4aeed
-ours/0003-media-rkvdec-vdpu381-give-every-job-its-own-H.264-HE.patch fa0aa92443cd0ba674d8257b82a264ca3f7fb137
-ours/0004-dt-bindings-media-rockchip-add-the-RK3588-video-deco.patch d7ccda32ee8e050120a07c14f3b04fee6ac77b7d
-ours/0005-media-rkvdec-decode-one-stream-on-both-RK3588-cores-.patch a0c9cfef9033feb43df4ecf19256ae8e8b09cc80
-ours/0006-arm64-dts-rockchip-add-the-RK3588-video-decoder-CCU.patch d8819b391cc4ce783c836903554364c54f682175
-ours/0007-media-rkvdec-vdpu381-enable-and-flush-the-read-cache.patch af9af6ca7b93733982382e9e8086dafbdd5dc1ff
-ours/0008-media-rkvdec-vdpu381-program-the-H.264-POC-high-bits.patch 17cab3faf795516d173e39b6f9be47383c869ea7
-ours/0009-media-rkvdec-vdpu381-reset-failed-cores-don-t-let-PO.patch cfdd1f69f10d35ed55ebc69f5d9a928ef6f78c86
-ours/0010-media-v4l2-mem2mem-let-detached-jobs-hold-the-captur.patch 8ef2696d393367c22e88ec939795b55003a15f73
-ours/0011-media-rkvdec-decode-the-two-fields-of-a-frame-on-bot.patch 90579cbc0c189dd5978a6698547bae260d234e4f
-ours/0012-media-rkvdec-vdpu381-adapt-the-VP9-probabilities-in-.patch 140d0b5ed9a1e2e80a583d556b708a0c618ce331
-ours/0013-media-rkvdec-vdpu381-decode-VP9-on-both-RK3588-cores.patch 6b84229b5be8735360343b0db1f184b5b0df4bef
-ours/0014-media-rkvdec-vdpu381-reset-the-cores-together-once-t.patch 7c944e6b1ba7efdedc027a08bc808a9ef9e145f1
+ours/0001-media-v4l2-mem2mem-add-v4l2_m2m_buf_detach_and_job_f.patch 0d068e8fa53785fc00668acaf4cb8fcb506b5c1e
+ours/0002-media-rkvdec-complete-decode-jobs-independently-of-t.patch 4ea880924e364fe8f13e5b97c66bca2b10562ac6
+ours/0003-media-rkvdec-vdpu381-give-every-job-its-own-H.264-HE.patch 54a3c8c3ed83c97feea742d769e51abf2beb67c7
+ours/0004-dt-bindings-media-rockchip-add-the-RK3588-video-deco.patch bb7c78aa9a91a9884695f022a98a5884da7e7c9a
+ours/0005-media-rkvdec-decode-one-stream-on-both-RK3588-cores-.patch e61be37e928dd634b22b31747f2fac642e748183
+ours/0006-arm64-dts-rockchip-add-the-RK3588-video-decoder-CCU.patch edce2023e4c18a1e5500cbf8add8449306b64802
+ours/0007-media-rkvdec-vdpu381-enable-and-flush-the-read-cache.patch 76d1274983c0eee11469773593f9d1febfd3864e
+ours/0008-media-rkvdec-vdpu381-program-the-H.264-POC-high-bits.patch 9f4d86c90da7aea1b8a1f0cf99d8949e4e5ad66e
+ours/0009-media-rkvdec-vdpu381-reset-failed-cores-in-the-CCU-a.patch aa9b4445bdf7df951776ababa8057b098adacff4
+ours/0010-media-v4l2-mem2mem-let-detached-jobs-hold-the-captur.patch 3fc938748c75686c54593967cd48f8958313a741
+ours/0011-media-rkvdec-decode-the-two-fields-of-a-frame-on-bot.patch 53dabc983a2ab7ed2221f4e426a9e7d3218e8139
+ours/0012-media-rkvdec-vdpu381-adapt-the-VP9-probabilities-in-.patch 3d4e9e584ecb213dc17124bf489f337d371b5095
+ours/0013-media-rkvdec-vdpu381-decode-VP9-on-both-RK3588-cores.patch d5f7de48dfd55f1831318312c1f1963c192424b7
+ours/0014-media-rkvdec-vdpu381-reset-the-cores-together-once-t.patch 8e7ba705812297dd30663b4cdc4f9065cd4b921b
+ours/0015-media-rkvdec-fix-two-races-around-job-completion-and.patch 1c6732920d524dd270343af8eaf5f32b7cb9bc30
+ours/0016-media-rkvdec-vdpu381-sync-H.264-field-and-frame-pict.patch 494e259b00f810286dc49c2ca10a6e235caddcc8

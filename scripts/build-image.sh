@@ -31,47 +31,34 @@ SUITE=stonking
 MIRROR=http://ports.ubuntu.com/ubuntu-ports
 COMPONENTS="main restricted universe multiverse"
 IMG=$OUT/ubuntu-26.10-$VARIANT-orangepi5.img
+# Every package below is either part of Ubuntu's own seed for the variant or board
+# enablement; the reason for each is in work/_out/desktop-image/RESULTS.md ("What the
+# image contains"). Test tools are not installed: the board tests install what they need.
 PKGS=(
   ubuntu-minimal ubuntu-server-minimal ubuntu-standard
   openssh-server initramfs-tools u-boot-menu cloud-init cloud-guest-utils
   unattended-upgrades ca-certificates bash-completion nano htop
-  mtd-utils nvme-cli gdisk rsync needrestart zstd
-  # Toolchain so DKMS can build out-of-tree modules against linux-headers
-  build-essential dkms
+  nvme-cli gdisk rsync needrestart zstd
   # ubuntu-standard's Recommends (installed without recommends above), minus desktop/grub bits
   apparmor command-not-found ethtool iptables iputils-tracepath manpages mtr-tiny
   openssh-client sysstat tcpdump telnet trace-cmd ufw update-manager-core uuid-runtime
   # Firmware: GPU (Mali CSF), common USB Wi-Fi/BT/ethernet dongles
   linux-firmware-misc linux-firmware-realtek linux-firmware-mediatek wireless-regdb
-  # Media/board test tools: V4L2 codecs (v4l2-ctl, v4l2-compliance, GStreamer
-  # v4l2codecs, FFmpeg v4l2-request, fluster conformance), NPU (Teflon), I2C, EDID
-  v4l-utils gstreamer1.0-tools gstreamer1.0-plugins-base gstreamer1.0-plugins-good
-  gstreamer1.0-plugins-bad ffmpeg fluster mesa-teflon-delegate i2c-tools edid-decode
-  # Sound: ALSA tools (aplay, speaker-test, alsactl and the udev rule that applies
-  # the UCM boot defaults), UCM profiles, and GStreamer's alsasink
-  alsa-utils alsa-ucm-conf gstreamer1.0-alsa
 )
-# Desktop: Ubuntu's GNOME desktop seed, installed with its Recommends as Ubuntu
-# Desktop is (except scripts/desktop-exclude.pref), plus video playback
+# Desktop: Ubuntu Desktop as Ubuntu preinstalls it on boards (the Raspberry Pi desktop
+# image is ubuntu-desktop with its Recommends; scripts/desktop-exclude.pref leaves out
+# only what can't work here), plus the hardware-decode enablement:
 DESKTOP_PKGS=(
-  ubuntu-desktop-minimal
-  # GPU: Mesa panthor (GL/GLES/EGL) and panvk (Vulkan), and test tools
-  libgl1-mesa-dri libegl-mesa0 mesa-vulkan-drivers mesa-utils vulkan-tools
-  kmscube libdrm-tests glmark2-es2-wayland
-  # Players: GNOME's Showtime (GStreamer) and mpv; GStreamer decoders, GL and
-  # GTK 4 dmabuf sinks; v4l2codecs (in plugins-bad) outranks the software decoders
-  showtime mpv gstreamer1.0-libav gstreamer1.0-plugins-ugly gstreamer1.0-gl
-  gstreamer1.0-gtk4 gstreamer1.0-dav1d gstreamer1.0-pipewire gstreamer1.0-alsa
-  gstreamer1.0-plugins-base-apps
-  # Jellyfin MPV Shim's dependencies that Ubuntu packages (the shim itself and two
-  # small libraries are pinned wheels: scripts/jellyfin-mpv-shim.wheels)
-  python3-venv python3-mpv python3-requests python3-urllib3 python3-websocket
-  python3-certifi python3-pil python3-pystray python3-gi gir1.2-ayatanaappindicator3-0.1
-  wl-clipboard
-  # VA-API over the V4L2 stateless decoders (our libva-v4l2-request build, in
-  # out/debs-media) for browsers and other VA clients; Firefox from Mozilla's
-  # repository and Google Chrome from Google's (flags: work/_out/desktop-image/RESULTS.md)
-  v4l2-request-va-driver vainfo firefox google-chrome-stable
+  ubuntu-desktop
+  # VA-API driver over the V4L2 stateless decoders (our libva-v4l2-request build), the
+  # VA-API counterpart of mesa-va-drivers on PCs: browsers and other VA clients
+  v4l2-request-va-driver
+  # GStreamer's v4l2codecs decoders (our gst-plugins-bad rebuild): hardware decoding
+  # in Showtime and other GStreamer players
+  gstreamer1.0-plugins-bad
+  # Firefox from Mozilla's repository: Ubuntu's is a snap, which can't load a system
+  # VA-API driver (overlay-desktop/etc/apt/sources.list.d/mozilla.sources)
+  firefox
 )
 RECOMMENDS=false
 if [ "$VARIANT" = desktop ]; then
@@ -99,21 +86,22 @@ if [ -n "$ROOTFS_TAR" ]; then
   rm -rf "$WORK"; mkdir -p "$WORK"
   S=$WORK/opi5-top
   mkdir -p "$S/scripts" "$S/out/debs"
-  cp -a "$TOP/scripts/customize-rootfs.sh" "$TOP/scripts/customize-desktop.sh" \
-    "$TOP/scripts/jellyfin-mpv-shim.wheels" "$S/scripts/"
+  cp -a "$TOP/scripts/customize-rootfs.sh" "$TOP/scripts/customize-desktop.sh" "$S/scripts/"
   cp -a "$TOP/overlay" "$TOP/overlay-desktop" "$S/"
   cp -a "${debs[0]}" "${hdrs[0]}" "$S/out/debs/"
-  cp -a "$OUT/u-boot-rockchip.bin" "$OUT/u-boot-rockchip-spi.bin" "$S/out/"
+  cp -a "$OUT/u-boot-rockchip.bin" "$OUT/u-boot-rockchip-spi.bin" "$OUT/debs-media" "$S/out/"
   EXTRA+=(--setup-hook='mkdir -p "$1/tmp"' --setup-hook="copy-in '$S' /tmp")
   HT='"$1/tmp/opi5-top"'
   POST+=(--customize-hook='rm -rf "$1/tmp/opi5-top"')
 fi
-# Local repository with our rebuilds of FFmpeg, mpv and GStreamer (V4L2 stateless
-# decoding fixes; they sort above the archive versions, and overlay/ pins them).
-# apt reads it at the same path outside (mmdebstrap) and inside the chroot, from
-# a world-readable copy (see build-media-debs.sh).
-need=(ffmpeg gstreamer1.0-plugins-bad)
-[ "$VARIANT" = desktop ] && need+=(mpv v4l2-request-va-driver)
+# Local repository with our rebuilds (out/debs-media: FFmpeg, mpv, GStreamer,
+# alsa-ucm-conf, the VA-API driver; they sort above the archive versions, and
+# overlay/ pins them). apt reads it at the same path outside (mmdebstrap) and
+# inside the chroot, from a world-readable copy (see build-media-debs.sh).
+# Both variants get the same repository, which customize-rootfs.sh also keeps in
+# the image as an apt source, so packages from these sources that aren't
+# preinstalled (mpv, ffmpeg, libmpv2 for a Jellyfin client, ...) install as our builds.
+need=(ffmpeg libmpv2 gstreamer1.0-plugins-bad gstreamer1.0-plugins-good v4l2-request-va-driver alsa-ucm-conf)
 for p in "${need[@]}"; do
   ls "$OUT"/debs-media/"${p}"_*+opi5*.deb >/dev/null 2>&1 ||
     { echo "missing the $p rebuild in $OUT/debs-media (run scripts/build-media-debs.sh)"; exit 1; }
@@ -131,9 +119,9 @@ if [ "$VARIANT" = desktop ]; then
     --setup-hook="upload '$TOP/overlay-desktop/etc/apt/preferences.d/mozilla.pref' /etc/apt/preferences.d/mozilla.pref"
     --customize-hook="$HT/scripts/customize-desktop.sh \"\$1\" $HT")
   POST+=(--customize-hook='rm -f "$1/etc/apt/preferences.d/opi5-desktop-exclude.pref"')
-  # Third-party repositories (mmdebstrap copies these into sources.list.d as NNNN<name>;
-  # customize-desktop.sh replaces them with the image's own definitions)
-  SOURCES+=("$TOP/overlay-desktop/etc/apt/sources.list.d/mozilla.sources" "$TOP/scripts/google-chrome.sources")
+  # Mozilla's repository (mmdebstrap copies it into sources.list.d as NNNNmozilla.sources;
+  # customize-desktop.sh replaces it with the overlay's copy)
+  SOURCES+=("$TOP/overlay-desktop/etc/apt/sources.list.d/mozilla.sources")
 fi
 
 # An interrupted run can leave /dev, /proc, /sys bind-mounted in the old rootfs

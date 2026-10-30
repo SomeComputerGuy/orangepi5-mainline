@@ -1,0 +1,204 @@
+From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
+From: Arun Iyengar <aiyengar1990@gmail.com>
+Date: Fri, 30 Oct 2026 09:40:39 +0000
+Subject: [PATCH] media: rkvdec: Handle interrupts of a core that has no job
+
+rkvdec_irq_handler() takes the context from core->curr_ctx and
+dereferences it to find the variant before reading the interrupt status.
+core->curr_ctx is NULL whenever the core has no job: after the watchdog
+finished a timed-out job and released the core, the late completion
+interrupt of that job, or any interrupt while the core is idle,
+dereferences a NULL pointer in the threaded handler. On RK3588 that
+panics the board after a burst of timeouts on broken VP9 streams
+("Unable to handle kernel NULL pointer dereference at virtual address
+00000000000002f8", pc rkvdec_irq_handler+0x1c). A late interrupt can
+also land after the core was given to the next job, and the handlers'
+IOMMU restore then reaches the domain through that unrelated context.
+
+Let the variant handlers work on the core: they acknowledge the status
+as before, which is needed for the level-triggered line in every case,
+and complete the job only if they cancel its still pending watchdog (as
+before, the watchdog completes the job otherwise); the context is taken
+only then, since until then the watchdog may complete the job and the
+next one may start on the core. The core keeps its variant and its
+rkvdec device, so the IOMMU restore doesn't need a context either.
+
+Assisted-by: Claude:claude-opus-5-5
+---
+ .../media/platform/rockchip/rkvdec/rkvdec.c   | 63 ++++++++++++-------
+ .../media/platform/rockchip/rkvdec/rkvdec.h   |  6 +-
+ 2 files changed, 47 insertions(+), 22 deletions(-)
+
+diff --git a/drivers/media/platform/rockchip/rkvdec/rkvdec.c b/drivers/media/platform/rockchip/rkvdec/rkvdec.c
+index 256bfe5b5c95..ff4b555bd269 100644
+--- a/drivers/media/platform/rockchip/rkvdec/rkvdec.c
++++ b/drivers/media/platform/rockchip/rkvdec/rkvdec.c
+@@ -1558,8 +1558,15 @@ static void rkvdec_v4l2_cleanup(struct rkvdec_dev *rkvdec)
+ 
+ static void rkvdec_iommu_restore(struct rkvdec_core *core)
+ {
++	struct iommu_domain *domain;
+ 	int ret;
+-	if (core->empty_domain) {
++
++	/* Not bound yet: no job ran on this core. */
++	if (!core->rkvdec)
++		return;
++
++	domain = core->rkvdec->iommu_global_domain;
++	if (core->empty_domain && domain) {
+ 		/*
+ 		 * To rewrite mapping into the attached IOMMU core, attach a new empty domain that
+ 		 * will program an empty table, then detach it to restore the default domain and
+@@ -1567,20 +1574,42 @@ static void rkvdec_iommu_restore(struct rkvdec_core *core)
+ 		 * This is safely done in this interrupt handler to make sure no memory get mapped
+ 		 * through the IOMMU while the empty domain is attached.
+ 		 */
+-		iommu_detach_device(core->curr_ctx->dev->iommu_global_domain, core->dev);
++		iommu_detach_device(domain, core->dev);
+ 		ret = iommu_attach_device(core->empty_domain, core->dev);
+ 		if (ret)
+ 			dev_warn(core->dev, "Cannot attach empty domain: %d\n", ret);
+ 		iommu_detach_device(core->empty_domain, core->dev);
+-		ret = iommu_attach_device(core->curr_ctx->dev->iommu_global_domain, core->dev);
++		ret = iommu_attach_device(domain, core->dev);
+ 		if (ret)
+ 			dev_warn(core->dev, "Cannot attach global domain: %d\n", ret);
+ 	}
+ }
+ 
+-static irqreturn_t rk3399_irq_handler(struct rkvdec_ctx *ctx)
++/*
++ * Completes the job of @core with @state, unless the watchdog already did or
++ * the core has no job: the interrupt status is acknowledged in any case, a
++ * late interrupt (after a timeout) or a spurious one doesn't belong to a job.
++ */
++static void rkvdec_irq_job_done(struct rkvdec_core *core,
++				enum vb2_buffer_state state)
++{
++	struct rkvdec_ctx *ctx;
++
++	/*
++	 * The watchdog is pending only while the core has a job, and whoever
++	 * cancels it owns the job. Only then take the context: until then, the
++	 * watchdog may complete the job and the next job may start.
++	 */
++	if (!cancel_delayed_work(&core->watchdog_work))
++		return;
++
++	ctx = READ_ONCE(core->curr_ctx);
++	if (!WARN_ON(!ctx))
++		rkvdec_job_finish(ctx, state);
++}
++
++static irqreturn_t rk3399_irq_handler(struct rkvdec_core *core)
+ {
+-	struct rkvdec_core *core = ctx->core;
+ 	enum vb2_buffer_state state;
+ 	u32 status;
+ 
+@@ -1595,15 +1624,13 @@ static irqreturn_t rk3399_irq_handler(struct rkvdec_ctx *ctx)
+ 			rkvdec_iommu_restore(core);
+ 	}
+ 
+-	if (cancel_delayed_work(&core->watchdog_work))
+-		rkvdec_job_finish(ctx, state);
++	rkvdec_irq_job_done(core, state);
+ 
+ 	return IRQ_HANDLED;
+ }
+ 
+-static irqreturn_t vdpu381_irq_handler(struct rkvdec_ctx *ctx)
++static irqreturn_t vdpu381_irq_handler(struct rkvdec_core *core)
+ {
+-	struct rkvdec_core *core = ctx->core;
+ 	enum vb2_buffer_state state;
+ 	u32 status;
+ 
+@@ -1620,15 +1647,13 @@ static irqreturn_t vdpu381_irq_handler(struct rkvdec_ctx *ctx)
+ 			rkvdec_iommu_restore(core);
+ 	}
+ 
+-	if (cancel_delayed_work(&core->watchdog_work))
+-		rkvdec_job_finish(ctx, state);
++	rkvdec_irq_job_done(core, state);
+ 
+ 	return IRQ_HANDLED;
+ }
+ 
+-static irqreturn_t vdpu383_irq_handler(struct rkvdec_ctx *ctx)
++static irqreturn_t vdpu383_irq_handler(struct rkvdec_core *core)
+ {
+-	struct rkvdec_core *core = ctx->core;
+ 	enum vb2_buffer_state state;
+ 	u32 status;
+ 
+@@ -1645,22 +1670,16 @@ static irqreturn_t vdpu383_irq_handler(struct rkvdec_ctx *ctx)
+ 		rkvdec_iommu_restore(core);
+ 	}
+ 
+-	if (cancel_delayed_work(&core->watchdog_work))
+-		rkvdec_job_finish(ctx, state);
++	rkvdec_irq_job_done(core, state);
+ 
+ 	return IRQ_HANDLED;
+ }
+ 
+ static irqreturn_t rkvdec_irq_handler(int irq, void *priv)
+ {
+-	irqreturn_t ret;
+ 	struct rkvdec_core *core = priv;
+-	struct rkvdec_ctx *ctx = core->curr_ctx;
+-	const struct rkvdec_variant *variant = ctx->dev->variant;
+-
+-	ret = variant->ops->irq_handler(ctx);
+ 
+-	return ret;
++	return core->variant->ops->irq_handler(core);
+ }
+ 
+ /*
+@@ -1869,6 +1888,7 @@ static int rkvdec_core_bind(struct device *dev, struct device *master, void *dat
+ 
+ 	id = rkvdec->core_count;
+ 	core->id = id;
++	core->rkvdec = rkvdec;
+ 	rkvdec->cores[id] = core;
+ 
+ 	if (id == 0)
+@@ -1920,6 +1940,7 @@ static int rkvdec_core_probe(struct platform_device *pdev)
+ 		return -ENOMEM;
+ 
+ 	core->dev = &pdev->dev;
++	core->variant = variant;
+ 	INIT_DELAYED_WORK(&core->watchdog_work, rkvdec_watchdog_func);
+ 
+ 	ret = devm_clk_bulk_get_all_enabled(&pdev->dev, &core->clocks);
+diff --git a/drivers/media/platform/rockchip/rkvdec/rkvdec.h b/drivers/media/platform/rockchip/rkvdec/rkvdec.h
+index 338ce1efb3cd..1cfa922b8e9a 100644
+--- a/drivers/media/platform/rockchip/rkvdec/rkvdec.h
++++ b/drivers/media/platform/rockchip/rkvdec/rkvdec.h
+@@ -72,8 +72,10 @@ vb2_to_rkvdec_decoded_buf(struct vb2_buffer *buf)
+ 			    base.vb.vb2_buf);
+ }
+ 
++struct rkvdec_core;
++
+ struct rkvdec_variant_ops {
+-	irqreturn_t (*irq_handler)(struct rkvdec_ctx *ctx);
++	irqreturn_t (*irq_handler)(struct rkvdec_core *core);
+ 	u32 (*colmv_size)(u16 width, u16 height);
+ 	void (*flatten_matrices)(u8 *output, const u8 *input, int matrices, int row_length);
+ };
+@@ -128,6 +130,8 @@ struct rkvdec_coded_fmt_desc {
+ 
+ struct rkvdec_core {
+ 	struct device *dev;
++	struct rkvdec_dev *rkvdec;
++	const struct rkvdec_variant *variant;
+ 	struct clk_bulk_data *clocks;
+ 	unsigned int num_clocks;
+ 	struct clk *axi_clk;
+-- 
+2.55.0
+

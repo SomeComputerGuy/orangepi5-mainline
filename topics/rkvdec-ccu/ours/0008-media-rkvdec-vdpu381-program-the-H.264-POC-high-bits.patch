@@ -93,10 +93,10 @@ index dca2a6ba4d05..b5a412489a11 100644
  		 * If a DPB entry is unused or invalid, address of current destination
  		 * buffer is returned.
 diff --git a/drivers/media/platform/rockchip/rkvdec/rkvdec.c b/drivers/media/platform/rockchip/rkvdec/rkvdec.c
-index a94a2e90ed65..095e361649f6 100644
+index c72925a5fdfc..e4c17a6f1f4c 100644
 --- a/drivers/media/platform/rockchip/rkvdec/rkvdec.c
 +++ b/drivers/media/platform/rockchip/rkvdec/rkvdec.c
-@@ -1463,7 +1463,7 @@ static int rkvdec_job_ready(void *priv)
+@@ -1465,7 +1465,7 @@ static int rkvdec_job_ready(void *priv)
  		return 1;
  
  	/* Only formats with more than one job slot can be pipelined. */
@@ -105,7 +105,7 @@ index a94a2e90ed65..095e361649f6 100644
  		return 0;
  
  	/* A CAPTURE buffer shared by two jobs (two fields): one at a time. */
-@@ -1750,10 +1750,19 @@ static int rkvdec_open(struct file *filp)
+@@ -1758,10 +1758,19 @@ static int rkvdec_open(struct file *filp)
  	mutex_init(&ctx->done_lock);
  	ctx->num_job_slots = 1;
  
@@ -126,7 +126,7 @@ index a94a2e90ed65..095e361649f6 100644
  
  	rkvdec_reset_coded_fmt(ctx);
  	rkvdec_reset_decoded_fmt(ctx);
-@@ -2567,6 +2576,7 @@ static int rkvdec_probe(struct platform_device *pdev)
+@@ -2688,6 +2697,7 @@ static int rkvdec_probe(struct platform_device *pdev)
  	mutex_init(&rkvdec->vdev_lock);
  	spin_lock_init(&rkvdec->cores_lock);
  	ida_init(&rkvdec->film_ida);
@@ -135,10 +135,10 @@ index a94a2e90ed65..095e361649f6 100644
  	dev_set_drvdata(dev, rkvdec);
  
 diff --git a/drivers/media/platform/rockchip/rkvdec/rkvdec.h b/drivers/media/platform/rockchip/rkvdec/rkvdec.h
-index 1c27fcffefca..fb17bf644e5c 100644
+index 923a46551237..153cd2d50900 100644
 --- a/drivers/media/platform/rockchip/rkvdec/rkvdec.h
 +++ b/drivers/media/platform/rockchip/rkvdec/rkvdec.h
-@@ -214,6 +214,7 @@ struct rkvdec_dev {
+@@ -222,6 +222,7 @@ struct rkvdec_dev {
  	struct rkvdec_job *held_job;
  	struct rkvdec_ccu *ccu;
  	struct ida film_ida;

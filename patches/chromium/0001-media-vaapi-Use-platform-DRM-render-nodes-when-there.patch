@@ -1,0 +1,93 @@
+From ab4e39bedab62511f39768540d9df33e1f6f5048 Mon Sep 17 00:00:00 2001
+From: Arun Iyengar <aiyengar1990@gmail.com>
+Date: Fri, 30 Oct 2026 21:30:00 +0000
+Subject: [PATCH] media/vaapi: Use platform DRM render nodes when there is no
+ PCI GPU
+
+VADisplayStateSingleton::PreSandboxInitialization() only considers PCI
+DRM devices ("Skip non-PCI devices") and matches them against the active
+GPU's PCI vendor/device IDs. GPUs on Arm SoCs (Mali with panfrost or
+panthor, Adreno with msm, Vivante with etnaviv, Tegra on host1x) are
+platform devices, so on those systems no VA display is ever opened and
+VaapiVideoDecoder is unavailable even when a VA-API driver is installed
+(e.g. a V4L2 stateless VA driver for the SoC's video decoder). The only
+way to get hardware decoding today is --render-node-override.
+
+When the system has no PCI GPU with a render node, fall back to the first
+platform (or host1x) device that has one. Systems with a PCI GPU keep the
+current behaviour, so a discrete GPU is never passed over for an
+integrated one. LoadDrmFD() still rejects vgem, and display-only KMS
+drivers have no render node, so they are not picked.
+
+Test: On an Orange Pi 5 (RK3588S: panthor renderD128 on the platform bus,
+rockchip-drm card1 without a render node, libva-v4l2-request VA driver),
+chrome://gpu lists the VA decode profiles and chrome://media-internals
+shows VaapiVideoDecoder with no command-line switch.
+
+Bug: TBD
+Assisted-by: Claude:claude-opus-5-5
+---
+ media/gpu/vaapi/vaapi_wrapper.cc | 33 ++++++++++++++++++++++++++++++++
+ 1 file changed, 33 insertions(+)
+
+diff --git a/media/gpu/vaapi/vaapi_wrapper.cc b/media/gpu/vaapi/vaapi_wrapper.cc
+index e5eb1c1..967a8bc 100644
+--- a/media/gpu/vaapi/vaapi_wrapper.cc
++++ b/media/gpu/vaapi/vaapi_wrapper.cc
+@@ -1659,6 +1659,7 @@ void VADisplayStateSingleton::PreSandboxInitialization(
+     return;
+   }
+ 
++  bool has_pci_render_node = false;
+   for (const drmDevicePtr& device : devices) {
+     if (!device) {
+       continue;
+@@ -1671,6 +1672,7 @@ void VADisplayStateSingleton::PreSandboxInitialization(
+     if (!(device->available_nodes & (1u << DRM_NODE_RENDER))) {
+       continue;
+     }
++    has_pci_render_node = true;
+     // If active gpu is specified, only check that device.
+     if (gpu_info) {
+       if (device->deviceinfo.pci->vendor_id !=
+@@ -1691,6 +1693,37 @@ void VADisplayStateSingleton::PreSandboxInitialization(
+     }
+   }
+ 
++  // GPUs on most Arm SoCs (e.g. Mali with panfrost/panthor, Adreno with msm,
++  // Vivante with etnaviv) are platform devices: they have a render node, but
++  // no PCI IDs to match against |gpu_info|, so the loop above never selects
++  // them. When the system has no PCI GPU with a render node, use the first
++  // platform render node, so that a discrete GPU is never passed over for an
++  // integrated one. LoadDrmFD() still skips vgem; display-only drivers (e.g.
++  // the SoC's KMS device) have no render node.
++  if (!va_display_state.drm_fd_.is_valid() && !has_pci_render_node) {
++    for (const drmDevicePtr& device : devices) {
++      if (!device) {
++        continue;
++      }
++      if (device->bustype != DRM_BUS_PLATFORM &&
++          device->bustype != DRM_BUS_HOST1X) {
++        continue;
++      }
++      if (!(device->available_nodes & (1u << DRM_NODE_RENDER))) {
++        continue;
++      }
++
++      // SAFETY: libdrm ensures that device->nodes is of size=DRM_NODE_MAX and
++      // DRM_NODE_RENDER<DRM_NODE_MAX.
++      base::FilePath dev_path(UNSAFE_BUFFERS(device->nodes[DRM_NODE_RENDER]));
++      auto [drm_fd, should_skip] = LoadDrmFD(dev_path);
++      if (drm_fd.is_valid() && !should_skip) {
++        va_display_state.drm_fd_ = std::move(drm_fd);
++        break;
++      }
++    }
++  }
++
+   // Fallback to primary nodes if no render node is found.
+   // Useful for VMs that may only expose a primary node without PCI.
+   // Note: This is separate from the fallback in platform_video_frame_utils.cc.
+-- 
+2.55.0
+

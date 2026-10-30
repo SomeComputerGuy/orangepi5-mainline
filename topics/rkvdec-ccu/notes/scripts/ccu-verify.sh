@@ -6,13 +6,14 @@
 # Usage: ccu-verify.sh [quick]   (quick: HEVC only)
 # Results in ~/ccu/run-<time>/summary.txt
 set -u
+HERE=$(dirname $(readlink -f $0))
 P=/sys/module/rockchip_vdec/parameters
 D=~/ccu/run-$(date +%m%d-%H%M); mkdir -p $D; cd $D
 log() { echo "$*" | tee -a summary.txt; }
 setp() { for kv in "$@"; do echo ${kv#*=} | sudo -n tee $P/${kv%%=*} >/dev/null; done; }
 stats() { echo "jobs=$(cat $P/stat_jobs) overlap=$(cat $P/stat_overlap)"; }
 irqs() { grep -E 'fdc38000|fdc40000' /proc/interrupts | awk '{s=0; for(i=2;i<=9;i++) s+=$i; printf "%s ", s}'; }
-. $(dirname $(readlink -f $0))/ccu-lib.sh
+. $HERE/ccu-lib.sh
 
 log "== $(date) $(uname -v)"
 log "rockchip-vdec: $(modinfo -n rockchip-vdec)  v4l2-mem2mem: $(modinfo -n v4l2-mem2mem)"

@@ -24,9 +24,11 @@ u-boot-update
 grep -E '^\s*(linux|fdt|fdtdir|append)' /boot/extlinux/extlinux.conf | head -4
 
 echo "==> Helper scripts and U-Boot images"
-install -m755 "$D/opi5-install-ssd" /usr/local/sbin/
+# (this test board only; the images carry neither: scripts/opi5-install-ssd)
+install -Dm755 -t /usr/local/lib/opi5-install-ssd/ "$D/opi5-install-ssd"
+install -Dm644 -t /usr/local/lib/opi5-install-ssd/ "$D/u-boot-rockchip-spi.bin"
+ln -sf /usr/local/lib/opi5-install-ssd/opi5-install-ssd /usr/local/sbin/opi5-install-ssd
 rm -f /usr/local/sbin/opi5-install-nvme
-install -Dm644 -t /usr/lib/u-boot/orangepi5/ "$D/u-boot-rockchip.bin" "$D/u-boot-rockchip-spi.bin"
 
 echo "==> U-Boot to SD card"
 root=$(findmnt -no SOURCE /)

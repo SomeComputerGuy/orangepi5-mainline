@@ -18,7 +18,7 @@ if [ $# -gt 0 ] && [ "$1" != -- ]; then PI=$1; shift; fi
 [ "${1:-}" = -- ] && shift
 SSH=(-o BatchMode=yes -o UserKnownHostsFile="$OPI5_KNOWN_HOSTS" -i "$OPI5_SSH_KEY")
 ENV=$TOP/local.env
-TOOL=$TOP/overlay-desktop/usr/local/bin/opi5-jellyfin-hwtest
+TOOL=$TOP/work/_out/fresh-install/opi5-jellyfin-hwtest
 
 [ -f "$ENV" ] || { echo "missing $ENV with OPI5_JELLYFIN_URL/_USER/_PASS (see the header of $0)"; exit 1; }
 [ -z "$(find "$ENV" -perm /077)" ] || { echo "$ENV is readable by others; chmod 600 $ENV"; exit 1; }
@@ -32,7 +32,7 @@ creds=$(
     "$OPI5_JELLYFIN_URL" "$OPI5_JELLYFIN_USER" "$OPI5_JELLYFIN_PASS"
 )
 
-# The desktop image has the tool in /usr/local/bin; the server image gets a copy
+# The test tool is not part of either image; it runs from a copy in /tmp
 STAGE=/tmp/opi5-jellyfin-hwtest
 RES=/tmp/opi5-jellyfin-hwtest-results
 ssh "${SSH[@]}" "$PI" "mkdir -p $STAGE && rm -rf $RES"

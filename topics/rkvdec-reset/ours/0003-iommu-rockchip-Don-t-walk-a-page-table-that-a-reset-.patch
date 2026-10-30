@@ -1,0 +1,52 @@
+From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
+From: Arun Iyengar <aiyengar1990@gmail.com>
+Date: Fri, 30 Oct 2026 18:26:15 +0000
+Subject: [PATCH] iommu/rockchip: Don't walk a page table that a reset took
+ away
+
+When a page fault is reported, log_iova() reads the directory address
+back from the MMU_DTE_ADDR register of the IOMMU and dereferences it
+through phys_to_virt() to log the page table entries of the faulting
+IOVA. The IOMMU of an RK3588 video decoder core is reset with the core:
+by the core's own soft reset, which the hardware also does by itself
+when a job times out, and by the core's AXI reset line. A fault taken
+just before such a reset is handled with MMU_DTE_ADDR reading 0, and
+log_iova() dereferences the physical address 4 * dte_index:
+
+rk_iommu fdc38700.iommu: Page fault at 0x0000000013400200 of type read
+Unable to handle kernel paging request at virtual address ffff600000000026
+KASAN: probably wild-memory-access in range [...0130-...0137]
+...
+rk_iommu_irq+0x490/0x758
+
+Only walk the directory if the register holds the address of memory, and
+say that the page table was lost to a reset otherwise. The fault is
+still acknowledged (zap, PAGE_FAULT_DONE, INT_CLEAR) as before.
+
+Assisted-by: Claude:claude-opus-5-5
+---
+ drivers/iommu/rockchip-iommu.c | 11 +++++++++++
+ 1 file changed, 11 insertions(+)
+
+diff --git a/drivers/iommu/rockchip-iommu.c b/drivers/iommu/rockchip-iommu.c
+index 21af2f621c76..d40e2a26b7be 100644
+--- a/drivers/iommu/rockchip-iommu.c
++++ b/drivers/iommu/rockchip-iommu.c
+@@ -564,6 +564,17 @@ static void log_iova(struct rk_iommu *iommu, int index, dma_addr_t iova)
+ 	mmu_dte_addr = rk_iommu_read(base, RK_MMU_DTE_ADDR);
+ 	mmu_dte_addr_phys = iommu->rk_ops->pt_address(mmu_dte_addr);
+ 
++	/*
++	 * A reset of the master can reset its IOMMU too, between the fault and
++	 * this handler: DTE_ADDR then reads 0. Don't walk a directory that
++	 * isn't in memory; the caller still acknowledges the fault.
++	 */
++	if (!mmu_dte_addr || !pfn_valid(PHYS_PFN(mmu_dte_addr_phys))) {
++		dev_err(iommu->dev, "iova = %pad: fault while page table lost to reset (MMU_DTE_ADDR %#08x)\n",
++			&iova, mmu_dte_addr);
++		return;
++	}
++
+ 	dte_addr_phys = mmu_dte_addr_phys + (4 * dte_index);
+ 	dte_addr = phys_to_virt(dte_addr_phys);
+ 	dte = *dte_addr;

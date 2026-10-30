@@ -1,0 +1,66 @@
+#!/bin/bash
+# opi5-install-ssd: run ON the Orange Pi 5 (booted from SD) to move to the M.2 SSD
+# (NVMe or SATA; U-Boot detects which is fitted and loads the matching DTB).
+#  1. writes U-Boot to the onboard 16 MB SPI NOR flash (so the board boots without SD)
+#  2. partitions the SSD and copies the running system onto it
+# Usage: opi5-install-ssd [/dev/nvme0n1|/dev/sda]   (default: the M.2 drive found)
+# Not part of the image (it carries no board tools): copy this script and
+# out/u-boot-rockchip-spi.bin to the board, into the same directory, and run it
+# there (needs flashcp: sudo apt install mtd-utils). SPI_IMG=... overrides the image.
+# Afterwards: power off, remove the SD card, power on -> boots from the SSD.
+set -euo pipefail
+if [ -n "${1:-}" ]; then
+  DISK=$1
+elif [ -b /dev/nvme0n1 ]; then
+  DISK=/dev/nvme0n1
+else
+  # M.2 SATA: the disk behind the SoC's AHCI controller (not a USB disk)
+  DISK=$(lsblk -dnpo NAME,TRAN | awk '$2 == "sata" {print $1; exit}')
+fi
+[ -n "$DISK" ] || { echo "no M.2 SSD found (NVMe or SATA)"; exit 1; }
+SPI_IMG=${SPI_IMG:-$(dirname "$(readlink -f "$0")")/u-boot-rockchip-spi.bin}
+LABEL=rootssd
+MNT=/mnt/opi5-ssd
+
+[ "$(id -u)" -eq 0 ] || { echo "run as root (sudo $0)"; exit 1; }
+[ -b "$DISK" ] || { echo "$DISK not found"; exit 1; }
+[ -f "$SPI_IMG" ] || { echo "missing $SPI_IMG (out/u-boot-rockchip-spi.bin from the build PC)"; exit 1; }
+command -v flashcp >/dev/null || { echo "flashcp not found: sudo apt install mtd-utils"; exit 1; }
+MTD=$(awk -F: '/nor|sfc|spi/ {print "/dev/" $1; exit}' /proc/mtd)
+[ -n "$MTD" ] || { echo "SPI NOR flash not found in /proc/mtd"; exit 1; }
+
+echo "This will ERASE $DISK ($(lsblk -dno SIZE,MODEL "$DISK")) and rewrite SPI flash $MTD."
+read -rp "Type YES to continue: " ok; [ "$ok" = YES ] || exit 1
+
+if cmp -s -n "$(stat -c %s "$SPI_IMG")" "$SPI_IMG" "$MTD"; then
+  echo "==> SPI flash ($MTD) already has this U-Boot"
+else
+  echo "==> Writing U-Boot to SPI flash ($MTD)"
+  flashcp "$SPI_IMG" "$MTD"
+fi
+
+echo "==> Partitioning $DISK"
+wipefs -a "$DISK"
+sfdisk -q "$DISK" <<SFDISK
+label: gpt
+start=16MiB, type=0FC63DAF-8483-4772-8E79-3D69D8477DE4, name="$LABEL", attrs="LegacyBIOSBootable"
+SFDISK
+udevadm settle
+PART=$(lsblk -lnpo NAME "$DISK" | sed -n 2p)
+mkfs.ext4 -q -F -L "$LABEL" "$PART"
+
+echo "==> Copying system to $PART"
+mkdir -p "$MNT"; mount "$PART" "$MNT"
+rsync -aAXH --info=progress2 --exclude={/dev/*,/proc/*,/sys/*,/run/*,/tmp/*,/mnt/*,/media/*,/lost+found} / "$MNT/"
+
+sed -i "s/^LABEL=rootfs\b/LABEL=$LABEL/" "$MNT/etc/fstab"
+sed -i "s/^U_BOOT_ROOT=.*/U_BOOT_ROOT=\"root=LABEL=$LABEL\"/" "$MNT/etc/default/u-boot"
+for d in dev proc sys; do mount --bind /$d "$MNT/$d"; done
+chroot "$MNT" u-boot-update
+# First boot already happened on SD; without the CIDATA partition cloud-init
+# would treat the SSD as a new instance (and e.g. regenerate SSH host keys)
+touch "$MNT/etc/cloud/cloud-init.disabled"
+for d in sys proc dev; do umount "$MNT/$d"; done
+umount "$MNT"
+
+echo "==> Done. Power off, remove the SD card, and power on to boot from the SSD."

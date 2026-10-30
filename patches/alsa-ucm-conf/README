@@ -1,0 +1,16 @@
+alsa-ucm-conf patches (upstream: https://github.com/alsa-project/alsa-ucm-conf)
+
+0001  ucm2: Rockchip: Add ES8388 and RK3588 HDMI/DP configurations
+      Made against upstream master d260eed (2026-10-09); applies unchanged to
+      Ubuntu's 1.2.16.1-1ubuntu1 (quilt handles the git symlink entries, as
+      for Debian's own Librem 5 patch). Built into the image by
+      scripts/build-media-debs.sh alsa-ucm-conf (1.2.16.1-1ubuntu1+opi5.1, all).
+
+Sending upstream (the user's decision): alsa-ucm-conf takes GitHub pull
+requests or patches to alsa-devel, and requires a Signed-off-by: add
+"git commit --amend -s" (your DCO sign-off) before you send it.
+
+Note: the hdmi0/hdmi1/dp0 conf.d names match the simple-audio-card names in
+rk3588-base.dtsi/rk3588-extra.dtsi. No other upstream DT uses those card
+names today; if one does later, the HiFi profile (a plain hw: PCM with no
+mixer) is still correct for it.

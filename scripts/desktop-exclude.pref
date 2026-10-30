@@ -24,8 +24,3 @@ Pin-Priority: -1
 Package: fwupd-signed kdump-tools
 Pin: version *
 Pin-Priority: -1
-
-# Crash/usage reporting to Canonical (a development board)
-Package: whoopsie ubuntu-insights
-Pin: version *
-Pin-Priority: -1

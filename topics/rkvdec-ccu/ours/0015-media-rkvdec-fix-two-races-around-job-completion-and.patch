@@ -1,0 +1,142 @@
+From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
+From: Arun Iyengar <aiyengar1990@gmail.com>
+Date: Fri, 30 Oct 2026 08:58:22 +0000
+Subject: [PATCH] media: rkvdec: fix two races around job completion and core
+ resets
+
+- A context being closed waits in stop_streaming() until it has no job
+  in flight, then may be freed. rkvdec_ctx_complete_jobs() still used it
+  after completing its last job (mutex_unlock(), wake_up(),
+  v4l2_m2m_try_schedule()), a use-after-free when a stream is closed
+  while its last frame completes, and a likely cause of the decoder
+  stalling when a stream is closed and another one opened. Pin the
+  context while the completion path uses it, and let the wait end only
+  when it is unpinned, with the wake-up issued under the same lock.
+
+- device_run() checked that no core reset was pending before taking a
+  core, under a separate acquisition of the lock: the reset work could
+  see that core idle and reset it while the job was being set up on it.
+  Check it in rkvdec_job_start(), under the lock that takes the core.
+
+Assisted-by: Claude:claude-opus-5-5
+---
+ .../media/platform/rockchip/rkvdec/rkvdec.c   | 56 +++++++++++++------
+ .../media/platform/rockchip/rkvdec/rkvdec.h   |  1 +
+ 2 files changed, 41 insertions(+), 16 deletions(-)
+
+diff --git a/drivers/media/platform/rockchip/rkvdec/rkvdec.c b/drivers/media/platform/rockchip/rkvdec/rkvdec.c
+index b3cc04b92b14..be2f8f502241 100644
+--- a/drivers/media/platform/rockchip/rkvdec/rkvdec.c
++++ b/drivers/media/platform/rockchip/rkvdec/rkvdec.c
+@@ -1076,9 +1076,20 @@ static void rkvdec_buf_request_complete(struct vb2_buffer *vb)
+ 	v4l2_ctrl_request_complete(vb->req_obj.req, &ctx->ctrl_hdl);
+ }
+ 
++static bool rkvdec_ctx_idle(struct rkvdec_ctx *ctx)
++{
++	guard(spinlock_irqsave)(&ctx->dev->cores_lock);
++
++	return !ctx->num_jobs && !ctx->num_completers;
++}
++
++/*
++ * Waits until no job of @ctx is in flight and no completion path uses @ctx
++ * anymore: the caller may free it once this returns.
++ */
+ static void rkvdec_ctx_wait_jobs(struct rkvdec_ctx *ctx)
+ {
+-	wait_event(ctx->jobs_wq, !READ_ONCE(ctx->num_jobs));
++	wait_event(ctx->jobs_wq, rkvdec_ctx_idle(ctx));
+ }
+ 
+ static int rkvdec_start_streaming(struct vb2_queue *q, unsigned int count)
+@@ -1211,6 +1222,17 @@ static struct rkvdec_job *rkvdec_job_start(struct rkvdec_ctx *ctx)
+ 	lockdep_assert_held(&ctx->done_lock);
+ 	guard(spinlock_irqsave)(&rkvdec->cores_lock);
+ 
++	/*
++	 * No new job while the cores wait to be reset, see rkvdec_core_failed():
++	 * the reset work runs this m2m job once it is done. Checked with the
++	 * core taken under the same lock, so that the reset never sees a core
++	 * idle that is being set up.
++	 */
++	if (rkvdec->ccu_reset_pending) {
++		rkvdec->deferred_ctx = ctx;
++		return ERR_PTR(-EAGAIN);
++	}
++
+ 	slot = find_first_zero_bit(&ctx->busy_slots, ctx->num_job_slots);
+ 	if (!rkvdec->available_core_count || slot >= ctx->num_job_slots)
+ 		return NULL;
+@@ -1303,7 +1325,15 @@ static struct rkvdec_job *rkvdec_ctx_next_dst_user(struct rkvdec_ctx *ctx,
+ static void rkvdec_ctx_complete_jobs(struct rkvdec_ctx *ctx)
+ {
+ 	struct rkvdec_dev *rkvdec = ctx->dev;
+-	bool completed = false, schedule = false;
++	bool schedule = false;
++
++	/*
++	 * Once the last job is completed, a context being closed may be freed
++	 * as soon as rkvdec_ctx_wait_jobs() sees it idle: pin it until this
++	 * function doesn't use it anymore.
++	 */
++	scoped_guard(spinlock_irqsave, &rkvdec->cores_lock)
++		ctx->num_completers++;
+ 
+ 	mutex_lock(&ctx->done_lock);
+ 	while (true) {
+@@ -1344,14 +1374,17 @@ static void rkvdec_ctx_complete_jobs(struct rkvdec_ctx *ctx)
+ 		 * rkvdec_job_ready() again.
+ 		 */
+ 		schedule |= detached;
+-		completed = true;
+ 	}
+ 	mutex_unlock(&ctx->done_lock);
+ 
+-	if (completed)
+-		wake_up(&ctx->jobs_wq);
+ 	if (schedule)
+ 		v4l2_m2m_try_schedule(ctx->fh.m2m_ctx);
++
++	/* @ctx may be freed as soon as the lock is released: don't touch it after. */
++	scoped_guard(spinlock_irqsave, &rkvdec->cores_lock) {
++		ctx->num_completers--;
++		wake_up(&ctx->jobs_wq);
++	}
+ }
+ 
+ /*
+@@ -1694,19 +1727,10 @@ static void rkvdec_device_run(void *priv)
+ 	struct rkvdec_job *job;
+ 	int ret;
+ 
+-	/*
+-	 * No new job while the cores wait to be reset, see rkvdec_core_failed():
+-	 * the reset work runs this m2m job once it is done.
+-	 */
+-	scoped_guard(spinlock_irqsave, &ctx->dev->cores_lock) {
+-		if (ctx->dev->ccu_reset_pending) {
+-			ctx->dev->deferred_ctx = ctx;
+-			return;
+-		}
+-	}
+-
+ 	scoped_guard(mutex, &ctx->done_lock)
+ 		job = rkvdec_job_start(ctx);
++	if (IS_ERR(job))
++		return;
+ 	if (WARN_ON(!job)) {
+ 		v4l2_m2m_buf_done_and_job_finish(m2m_ctx->m2m_dev, m2m_ctx,
+ 						 VB2_BUF_STATE_ERROR);
+diff --git a/drivers/media/platform/rockchip/rkvdec/rkvdec.h b/drivers/media/platform/rockchip/rkvdec/rkvdec.h
+index 7632dc9748c3..3f28a3a77d0d 100644
+--- a/drivers/media/platform/rockchip/rkvdec/rkvdec.h
++++ b/drivers/media/platform/rockchip/rkvdec/rkvdec.h
+@@ -264,6 +264,7 @@ struct rkvdec_ctx {
+ 	unsigned long busy_slots;
+ 	struct list_head jobs;
+ 	unsigned int num_jobs;
++	unsigned int num_completers; /* pin the context while completing jobs */
+ 	wait_queue_head_t jobs_wq;
+ 	/* completes the jobs in decoding order, serializes it with new jobs */
+ 	struct mutex done_lock;

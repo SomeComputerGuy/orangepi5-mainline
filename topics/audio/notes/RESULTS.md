@@ -114,3 +114,26 @@ Cards (by name; numbering changed): hdmi0, dp0, rockchipes8388. Verified by sign
   Audible checks pending: `/tmp/audio-t/seq.sh` (HDMI 440 Hz 3 s, pause, DP 880 Hz 3 s,
   prints times) and headphones via `listen-test.sh hp`.
 - Fixed `listen-test.sh` (speaker-test has no `-q`).
+
+## 2026-10-30: config moved to its upstream homes (image = mainline Ubuntu + patches)
+
+- **UCM** (was overlay/usr/share/{alsa/,}ucm2, files no package owned): now
+  `patches/alsa-ucm-conf/0001-ucm2-Rockchip-Add-ES8388-and-RK3588-HDMI-DP-configur.patch`
+  (upstream layout: `ucm2/Rockchip/es8388/`, `ucm2/Rockchip/rk3588-hdmi-dp/` (renamed from
+  `hdmi-dp`), `ucm2/conf.d/simple-card/{rockchip,es8388,hdmi0,hdmi1,dp0}.conf`; dp1 dropped:
+  no DT defines a dp1 sound card). Content unchanged apart from the SPDX lines (upstream files
+  carry none) and the directory rename. Shipped as Ubuntu's own package rebuilt with the patch:
+  `scripts/build-media-debs.sh alsa-ucm-conf` -> `alsa-ucm-conf_1.2.16.1-1ubuntu1+opi5.1_all.deb`.
+  The `/usr/share/ucm2` copy was a duplicate (alsa-lib reads `/usr/share/alsa/ucm2`).
+- **WirePlumber fragment dropped** (stock Ubuntu would not ship a board rule in /etc):
+  - Names: ACP's card description is "Built-in Audio" for every platform card (udev
+    SOUND_FORM_FACTOR=internal, `acp/compat.c`), but each output's route/port carries the UCM
+    device Comment, so GNOME lists "Headphones", "HDMI", "DisplayPort" - Built-in Audio.
+  - Priority: WirePlumber 0.5.17 gives every UCM HiFi node priority.session 1000
+    (`monitors/alsa.lua`), and `node-utils.compare_nodes` ranks route priority (where UCM
+    PlaybackPriority ends up) only *within* one device; across cards the tie goes to the lower
+    device serial (probe order). So no UCM value can rank the jack over HDMI across cards; that
+    would be a WirePlumber policy change (compare route priority across devices for internal
+    cards), not a small fix, and isn't written. Stock behaviour, as on the Rock 5B (ES8316 +
+    HDMI): the first card is the default; once the user picks an output in Settings,
+    WirePlumber remembers it (state-default-nodes).

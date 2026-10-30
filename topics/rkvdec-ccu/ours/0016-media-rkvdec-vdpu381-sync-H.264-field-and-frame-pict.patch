@@ -1,0 +1,102 @@
+From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
+From: Arun Iyengar <aiyengar1990@gmail.com>
+Date: Fri, 30 Oct 2026 09:15:08 +0000
+Subject: [PATCH] media: rkvdec: vdpu381: sync H.264 field and frame pictures
+ across cores correctly
+
+In CCU mode, the cores know a core's current picture by the POCs of
+registers 65/66 and the parity in register 204, and match the
+references of the other core's picture against them. Two cases weren't
+synchronized, and a stream mixing field and frame pictures
+(JVT-FR-EXT HCHP3_HHI_A) decoded wrong once in a few runs:
+
+- A field picture programmed the POC of both fields. Program only the
+  POC of its own field and 0 for the other one, as the Rockchip MPP does
+  (h264d_fill.c, CurrFieldOrderCnt).
+
+- A core writing a field picture is known by that field's POC and
+  parity, a core writing a frame picture by its POCs with parity 0: a
+  frame picture reading the bottom field of a field pair still being
+  written, or a field picture reading the bottom field of a frame, isn't
+  held back. Don't start a frame picture while a field picture of the
+  stream is being decoded, or the other way round.
+
+Assisted-by: Claude:claude-opus-5-5
+---
+ .../rockchip/rkvdec/rkvdec-vdpu381-h264.c     | 21 +++++++++++++++----
+ .../media/platform/rockchip/rkvdec/rkvdec.c   |  9 ++++++++
+ .../media/platform/rockchip/rkvdec/rkvdec.h   |  2 ++
+ 3 files changed, 28 insertions(+), 4 deletions(-)
+
+diff --git a/drivers/media/platform/rockchip/rkvdec/rkvdec-vdpu381-h264.c b/drivers/media/platform/rockchip/rkvdec/rkvdec-vdpu381-h264.c
+index 85206ed7322e..30afa8f84074 100644
+--- a/drivers/media/platform/rockchip/rkvdec/rkvdec-vdpu381-h264.c
++++ b/drivers/media/platform/rockchip/rkvdec/rkvdec-vdpu381-h264.c
+@@ -313,10 +313,23 @@ static void config_registers(struct rkvdec_ctx *ctx,
+ 	rkvdec_vdpu381_set_ccu_regs(ctx, &regs->common);
+ 
+ 	/* Set TOP and BOTTOM POCs */
+-	regs->h264_param.reg065_cur_top_poc = dec_params->top_field_order_cnt;
+-	regs->h264_param.reg066_cur_bot_poc = dec_params->bottom_field_order_cnt;
+-	rkvdec_job_add_poc(ctx, dec_params->top_field_order_cnt, false);
+-	rkvdec_job_add_poc(ctx, dec_params->bottom_field_order_cnt, false);
++	ctx->job->field_pic = !!(dec_params->flags & V4L2_H264_DECODE_PARAM_FLAG_FIELD_PIC);
++
++	/*
++	 * A field picture only has the POC of its own field, the other one is
++	 * 0, as in the Rockchip MPP (h264d_fill.c): in CCU mode, the cores take
++	 * these as the fields the core is writing.
++	 */
++	if (!(dec_params->flags & V4L2_H264_DECODE_PARAM_FLAG_FIELD_PIC) ||
++	    !(dec_params->flags & V4L2_H264_DECODE_PARAM_FLAG_BOTTOM_FIELD)) {
++		regs->h264_param.reg065_cur_top_poc = dec_params->top_field_order_cnt;
++		rkvdec_job_add_poc(ctx, dec_params->top_field_order_cnt, false);
++	}
++	if (!(dec_params->flags & V4L2_H264_DECODE_PARAM_FLAG_FIELD_PIC) ||
++	    (dec_params->flags & V4L2_H264_DECODE_PARAM_FLAG_BOTTOM_FIELD)) {
++		regs->h264_param.reg066_cur_bot_poc = dec_params->bottom_field_order_cnt;
++		rkvdec_job_add_poc(ctx, dec_params->bottom_field_order_cnt, false);
++	}
+ 
+ 	/*
+ 	 * POC high bits, which tell the cores what a reference is: the field
+diff --git a/drivers/media/platform/rockchip/rkvdec/rkvdec.c b/drivers/media/platform/rockchip/rkvdec/rkvdec.c
+index be2f8f502241..ba4c59f8613d 100644
+--- a/drivers/media/platform/rockchip/rkvdec/rkvdec.c
++++ b/drivers/media/platform/rockchip/rkvdec/rkvdec.c
+@@ -1556,6 +1556,15 @@ static int rkvdec_job_poc_alias(struct rkvdec_ctx *ctx)
+ 		/* It failed: this frame predicts from it, or waits for it. */
+ 		if (prev->core && prev->core->needs_reset)
+ 			return -EIO;
++		/*
++		 * A core writing a field picture is known to the CCU by the POC
++		 * and parity of that field, a core writing a frame picture by its
++		 * POCs with parity 0: a frame picture reading the bottom field
++		 * of a field pair, or a field picture reading the bottom field of
++		 * a frame, isn't held back. Don't overlap the two kinds.
++		 */
++		if (prev->field_pic != job->field_pic)
++			return 1;
+ 		for (i = 0; i < prev->num_ref_pocs; i++)
+ 			for (j = 0; j < job->num_pocs; j++)
+ 				if (prev->ref_pocs[i] == job->pocs[j])
+diff --git a/drivers/media/platform/rockchip/rkvdec/rkvdec.h b/drivers/media/platform/rockchip/rkvdec/rkvdec.h
+index 3f28a3a77d0d..8232189b7807 100644
+--- a/drivers/media/platform/rockchip/rkvdec/rkvdec.h
++++ b/drivers/media/platform/rockchip/rkvdec/rkvdec.h
+@@ -174,6 +174,7 @@ struct rkvdec_coded_fmt_desc {
+  * @refs: the CAPTURE buffers the frame predicts from
+  * @num_pocs: number of entries in @pocs
+  * @pocs: the POCs of the frame (H.264: top and bottom field)
++ * @field_pic: an H.264 field picture
+  * @num_ref_pocs: number of entries in @ref_pocs
+  * @ref_pocs: the POCs of the references of the frame
+  */
+@@ -195,6 +196,7 @@ struct rkvdec_job {
+ 	const struct vb2_buffer *refs[RKVDEC_MAX_REFS];
+ 	unsigned int num_pocs;
+ 	s32 pocs[2];
++	bool field_pic;
+ 	unsigned int num_ref_pocs;
+ 	s32 ref_pocs[2 * RKVDEC_MAX_REFS];
+ };

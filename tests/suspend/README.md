@@ -14,7 +14,10 @@ These are the scripts exactly as they were run on the test board, except that th
 ```
 Fast s2idle cycling proof: N cycles of real s2idle (default console, no
 pm_print_times), RTC wake, and device checks after every resume.
-usage: sudo s2idle-cycles.sh <N> [logdir]
+usage: sudo [COPY_DIR=/mnt/extreme] s2idle-cycles.sh <N> [logdir]
+COPY_DIR: a directory on a mounted filesystem of the USB3 drive; each cycle
+starts a 256 MiB file copy into it just before suspend and checks the copy
+after resume (never writes the raw block device).
 Stops at the first failed check. A wedge shows up as a watchdog reboot (the
 log then ends without "cycle k: OK").
 ```
@@ -44,7 +47,11 @@ FAIL: board wedges after wake; dw_wdt resets it ~44 s later (look at the serial 
 ### [`rtc-set.py`](rtc-set.py)
 
 ```
-Set /dev/rtc0 from the (NTP-synced) system clock: python3 -I rtc-set.py (as root)
+Set /dev/rtc0 from the (NTP-synced) system clock and read it back:
+python3 -I rtc-set.py          set + read back (as root)
+python3 -I rtc-set.py --read   read back only
+struct rtc_time: sec, min, hour, mday, mon (0-11), year-1900, wday (0=Sunday), yday (0-365), isdst.
+The weekday matters: the hym8563 alarm matches minute, hour, day AND weekday.
 ```
 
 ### [`resume_wd.c`](resume_wd.c)

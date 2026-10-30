@@ -9,7 +9,7 @@ STAGE=/tmp/opi5-update
 
 files=("$TOP"/out/debs/linux-image-*.deb "$TOP"/out/debs/linux-headers-*.deb
        "$TOP"/out/u-boot-rockchip.bin "$TOP"/out/u-boot-rockchip-spi.bin
-       "$TOP"/overlay/usr/local/sbin/opi5-install-ssd "$TOP"/scripts/pi-apply-update.sh)
+       "$TOP"/scripts/opi5-install-ssd "$TOP"/scripts/pi-apply-update.sh)
 for f in "${files[@]}"; do [ -f "$f" ] || { echo "missing $f"; exit 1; }; done
 
 ssh "${SSH[@]}" "$PI" "rm -rf $STAGE && mkdir -p $STAGE"

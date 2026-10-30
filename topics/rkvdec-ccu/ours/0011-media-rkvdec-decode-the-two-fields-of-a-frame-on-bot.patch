@@ -33,7 +33,7 @@ Assisted-by: Claude:claude-opus-5-5
  2 files changed, 77 insertions(+), 17 deletions(-)
 
 diff --git a/drivers/media/platform/rockchip/rkvdec/rkvdec.c b/drivers/media/platform/rockchip/rkvdec/rkvdec.c
-index 05e53e913a05..a13ead352bfa 100644
+index e0d177b67ac8..adeb748f2025 100644
 --- a/drivers/media/platform/rockchip/rkvdec/rkvdec.c
 +++ b/drivers/media/platform/rockchip/rkvdec/rkvdec.c
 @@ -1188,14 +1188,26 @@ static const struct media_device_ops rkvdec_media_ops = {
@@ -217,10 +217,10 @@ index 05e53e913a05..a13ead352bfa 100644
  	ctx->job = job;
  
 diff --git a/drivers/media/platform/rockchip/rkvdec/rkvdec.h b/drivers/media/platform/rockchip/rkvdec/rkvdec.h
-index e71390c0a98a..df7c58ecbe1d 100644
+index 85351133e1ff..1992e114b698 100644
 --- a/drivers/media/platform/rockchip/rkvdec/rkvdec.h
 +++ b/drivers/media/platform/rockchip/rkvdec/rkvdec.h
-@@ -161,6 +161,9 @@ struct rkvdec_coded_fmt_desc {
+@@ -164,6 +164,9 @@ struct rkvdec_coded_fmt_desc {
   *	      finished, so the next frame may start before this one is done
   * @hw_done: the hardware is done with the frame
   * @busy: the m2m state of the job is being changed, don't complete it
@@ -230,7 +230,7 @@ index e71390c0a98a..df7c58ecbe1d 100644
   * @num_refs: number of entries in @refs
   * @refs: the CAPTURE buffers the frame predicts from
   * @num_pocs: number of entries in @pocs
-@@ -179,6 +182,8 @@ struct rkvdec_job {
+@@ -182,6 +185,8 @@ struct rkvdec_job {
  	bool detached;
  	bool hw_done;
  	bool busy;
@@ -239,7 +239,7 @@ index e71390c0a98a..df7c58ecbe1d 100644
  	unsigned int num_refs;
  	const struct vb2_buffer *refs[RKVDEC_MAX_REFS];
  	unsigned int num_pocs;
-@@ -245,7 +250,8 @@ struct rkvdec_ctx {
+@@ -251,7 +256,8 @@ struct rkvdec_ctx {
  	struct list_head jobs;
  	unsigned int num_jobs;
  	wait_queue_head_t jobs_wq;

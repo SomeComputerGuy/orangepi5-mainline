@@ -241,3 +241,73 @@ pass with k4e).
   (only the MAINTAINERS note on 1605, which is covered by the existing rkvdec F: entry), one Assisted-by each,
   no SoB/Co-Authored-By. VP9 and field/MBAFF H.264 run dual-core through the CCU (1611-1613); no serial fallback
   remains. To go into patches/linux once k5e passes on the board.
+
+## Update 2026-10-30 (8): board slot 08:35-09:40 (kernel 5) -- NOT ready to land
+Builds tested (k5 tree, DEBUG): 9ac73df1 (k5e) -> d59a2687 (job-start/reset race) -> 48691f5b (+ context pin
+UAF fix, quiesce before IOMMU restore, H.264 field/frame CCU sync) -> 01ed182a (+ stop core / leave CCU mode
+before the reset, always CRU reset). Clean equivalents: `opi5/rkvdec-ccu-k6` (on opi5/image-k6-7.3, 314 patches),
+`patches-16xx/1601-1617` (each commit builds, checkpatch clean) -- DO NOT LAND yet, see the open bug below.
+
+Results with 48691f5b (pipeline/ccu on), same boot single-core reference (pipeline=0 ccu_hw=0):
+- ccu-repro: 5/5 for every pair (HCBP1+FM2_SVA_C, HCBP1+FM1_FT_E, HCHP3+Hi422FREXT17, sharpness-7+size-08x08).
+- fluster CCU vs single, per vector identical in all four suites: HEVC_V1 146/147, AVC_V1 129/135, FR-EXT 65/69,
+  VP9 230/305 (failing vectors = the single-core ones: `fluster-k5/`, `~/ccu/fluster-single/*.fail.txt`).
+  The H.264 run was repeated with fieldpair=Y (first run had it off by mistake): identical again.
+- ccu-verify: 600/600 bit-exact HEVC/H.264/VP9; HEVC 227 fps (130 single), H.264 121 (67), VP9 147 (137);
+  2 x HEVC 240 total, 121.6/121.4 fps each (fair), HEVC+H.264 85/84 fps.
+- reopen.sh 50 cycles x {normal, SIGKILL mid-stream, SIGKILL at start} with the 4K HEVC stream running: 0 hangs,
+  0 timeouts, 0 hung tasks.
+Root causes found and fixed in the slot: (1) a victim stream next to a broken stream (FM1_FT_E: hardware
+timeouts, sta 0x23) decoded wrong after the all-cores reset: soft reset alone left state behind; the BSP's
+unconditional CRU reset fixed it. (2) HCHP3_HHI_A: a frame picture and a field picture of the same stream in
+flight on two cores aren't synchronized by the CCU (parity of the producer); they no longer overlap, and field
+pictures program only their own POC (MPP). (3) the context use-after-free and the job-start/reset race.
+
+OPEN BUG (blocks landing): after a watchdog timeout on the broken FMO streams (FM1_BT_B/FM1_FT_E pairs in
+JVT-AVC_V1), the reset path produces "Page fault while iommu not attached to domain?" + "Enable stall request
+timed out" (11-15 per AVC_V1 run, 1 of 2 runs, on either core; also seen at 08:58 in single-core mode), and with
+01ed182a the board panicked (memory corruption: commoncap WARNING, NULL derefs in enqueue_task_fair from
+delayed_work_timer_fn) 60 s into an AVC_V1 run. Most likely cause: the CRU reset of a core also resets its IOMMU
+(same reset lines/power domain), leaving it in bypass while the core (or the CCU) can still master the bus, so
+DMA reaches physical memory. To do (fresh agent, KASAN + DEBUG_OBJECTS_WORK test kernel): stall/disable the IOMMU
+only with the core quiesced, order soft reset -> bus idle -> CRU reset -> IOMMU reinit -> restart, check what
+the CRU reset does to the IOMMU registers, and whether the in-tree driver (which never resets, only reattaches
+the IOMMU on error) faults on FM1_BT_B+FM1_FT_E too. Board left on plain kernel 5 (k5e removed, .pre-ccu-k5 DTB).
+
+## Hand-over (2026-10-30): branches, builds, scripts
+Ownership of the reset/IOMMU fix, the rebase onto reopen-fix 1801/1802, the KASAN proof and landing 16xx moved
+to a new agent (plan in the coordinator's message; summary: one reset path = 1802's `rkvdec_core_recover()`,
+CCU force-idle/leave-CCU-mode before and error-clear/reconnect after it, all-cores-idle reset kept, no
+always-on CRU pulse unless ccu-repro shows the victim corruption again).
+
+Branches (worktrees under `work/`):
+- `opi5/rkvdec-ccu-k6` (worktree `rkvdec-ccu-k6`): the clean series, 17 commits on `opi5/image-k6-7.3` (314
+  patches) = `patches-16xx/1601-1617`. Every commit builds W=1, checkpatch --strict clean, one Assisted-by each.
+  Contains everything of 48691f5b except the DEBUG parts. NOT ready to land (open IOMMU/reset bug, section 8).
+- `opi5/rkvdec-ccu-k5` (worktree `rkvdec-ccu-k5`): debug tree on the 318-patch kernel-5 stack, base = the stack
+  commit in `/tmp/ccu/k5stack` (git am of patches/linux at build 5). Board builds: k5e 9ac73df1 (commit 04519d4f
+  + DEBUG), k5f 7b5dff03 (9d71151a), 48691f5b and 01ed182a (both from a59b9263; 48691f5b without the changes in
+  `scripts/stopcore-01ed182a.py`). 48691f5b is the build behind every result in section 8; 01ed182a panicked.
+- `opi5/rkvdec-ccu-k5-clean`: superseded by `-k6` (contains USB3 patches 1501-1504 in its base).
+- Older: `opi5/rkvdec-ccu-k4` (k4c/k4d/k4e builds), `opi5/rkvdec-ccu-7.3` (kernel 3), `opi5/rkvdec-ccu-vp9hw`
+  and `opi5/rkvdec-ccu-fieldpair` (the two sub-agent branches, merged into k4/k5/k6).
+- Build dirs: `build/wt-rkvdec-ccu-k5` (kernel-5 config/symvers/key), `build/wt-rkvdec-ccu-k4`, `-7.3`.
+
+Scripts: host `work/_out/rkvdec-ccu/scripts/`, board `~/ccu/` (same names):
+- `build.sh` (W=/B= env: build + sign v4l2-mem2mem.ko and rockchip-vdec.ko for a build dir)
+- `ccu-verify.sh` + `ccu-lib.sh` (600-frame 4K bit-exact vs FFmpeg framemd5, fps A/B, two streams)
+- `fluster.sh <tag> [suites]` (rkvdec elements only, -j2, fixed private fluster copy `~/ccu/flpkg`; results
+  `~/ccu/fluster-<tag>/`, failing lists `*.fail.txt`), `ccu-repro.sh` (victim + broken-stream pairs, 5 runs),
+  `fmfm.sh [n]` (FM1_BT_B+FM1_FT_E together: timeouts / IOMMU faults), `reopen.sh [cycles]` (close/reopen one
+  context in 3 variants while 4K HEVC streams), `hhi-ab.sh`, `h3b.sh`, `fm.sh` (per-frame diffs), `baseline.sh`.
+- Board copies of builds: `~/ccu/k5e/` (install.sh applies the CCU overlay), `~/ccu/k5f/`; overlay `dt/`.
+
+Per-vector notes (for the fluster triage agent; single-core = in-tree behaviour, CCU identical on every vector
+with 48691f5b): the failing vectors are listed per suite in `fluster-k5/` (`fluster-single.tgz`,
+`fluster-ccu.tgz`) and on the board in `~/ccu/fluster-single/*.fail.txt`:
+- JVT-AVC_V1 129/135: CVFC1_Sony_C, FM1_BT_B, FM1_FT_E (hardware timeouts, sta 0x23, and the IOMMU-fault
+  trigger when run together), FM2_SVA_C (Error), SP1_BT_A, sp2_bt_b (SP slices).
+- JVT-FR-EXT 65/69: HPCAMOLQ_BRCM_B, HPCVMOLQ_BRCM_B, Hi422FREXT17_SONY_A, Hi422FREXT19_SONY_A.
+- JCT-VC-HEVC_V1 146/147: TSUNEQBD_A_MAIN10_Technicolor_2 (Error).
+- VP9-TEST-VECTORS 230/305: the 75 small-size/odd-size vectors (vp90-2-02-size-08x08 ... etc., unchanged from
+  the kernel-3 baseline in section 3).

@@ -193,3 +193,164 @@ and write the fix.
 FAIL ≈ 4 min (wake + 44 s watchdog + ~60 s boot + reload). A typical path is A1, A2, A3, A4, A5 plus 3 confirmations,
 8 attempts at about half FAIL: **≈ 30 min; plan a 40 min window.** Each FAIL is a watchdog reset that interrupts every other
 agent on the board.
+
+## Bug 3 on kernel 5 (2026-10-30 slot, 15:30-16:10)
+Setup: RTC set and read back with weekday (tools/rtc-set.py, fixed), awake alarm self-test OK, freezer OK.
+| # | change | result |
+|---|---|---|
+| B0b | none (fast: PRINT_TIMES=0) | WEDGE: `xHC error in resume, USBSTS 0x401, Reinit` (xhci-hcd.1 = fcd00000), root hub lost power, soft lockup rcu_exp_gp 26 s later |
+| A1 | 20 ms busy-wait before every normal-phase callback, suspend+resume | WEDGE |
+| A1b | same, all phases incl. late/early/noirq | WEDGE |
+| T1 | kprobe 20 ms at `xhci_halt` entry (inside xhci_resume, right before the reinit) | WEDGE |
+| V1 | verbose (pm_print_times on console) with fbcon unbound: serial-only | PASS |
+| M1/M2 | per-CPU markers in DRAM (dma_alloc_coherent, low DRAM and CMA) | WEDGE; markers did not survive the reset/boot |
+| F1 | dwc3 drop-in that reports `power_lost` to xhci-plat | WEDGE: the SRE is gone, but the xHC never completes a command: `Error while assigning device slot ID: Command Aborted` 11.8 s after resume, re-init, again 12 s later, `usb 6-1: device not accepting address`, then the wedge |
+Findings:
+- It is not a settle delay between or inside device callbacks: no injected delay hides it. Printing the PM trace to the serial console does (V1).
+- After a fast resume, the fcd00000 (USB3OTG2, combphy2) xHC is non-functional: the command ring never runs (Enable Slot times out), even after a clean reset. A register access on that block later stalls the interconnect.
+- `patches/candidate/0001-usb-dwc3-Tell-xhci-plat-when-the-core-lost-its-state.patch` (branch `opi5/suspend-fix-7.3-k5`, 82667eae3): correct handling for a power-lost core (as cdns3 does) and removes the bogus CRS/SRE, but **does not fix the wedge**. Not added to patches/linux.
+- My pm_marker v1 panicked the board (SError: the top 16 KiB of the 0xfd600000 SRAM window isn't backed). v2 used DRAM.
+Next (host-side first):
+1. Find what blocks the xHC's command ring/DMA after resume. Leading hypothesis: USB3OTG2 sits in the PHP block (with PCIe/SATA/combphys); its bus path or PHP-GRF/QoS state depends on the genpd "pcie" domain (or PHP NIU idle), which genpd powers off in suspend_noirq because its only modelled device is the fc900000 SMMU, while fcd00000 has no power-domains property in the DT. Check the TRM / vendor DT (BSP puts usbhost3_0 in a domain?) and PD_PCIE/PHP idle and QoS restore. A matching fix would be a DT power-domains link for usb_host2_xhci or a correct genpd hierarchy.
+2. Second hypothesis: the combphy2 PIPE clock or USB3 port state (reset released before the clocks in dwc3_core_init_for_resume; combphy exit gates the clocks before asserting reset).
+3. Persistent markers need a real reserved region: a DT reserved-memory ramoops node, with CONFIG_PSTORE_PMSG/CONSOLE or my marker module pointed at it.
+4. Then the 50-cycle proof (`tools/s2idle-cycles.sh`, now also fails on "xHC error in resume") plus 5 cycles with a copy to the Extreme (6-1).
+Board left: plain #5, updates/ empty (drop-in removed, depmod), initrd restored from /var/tmp/initrd.img-7.3.0-opi5.pre-suspendfix,
+no test modules loaded, vtcon1 rebound, pm_test none, RTC set correctly (weekday OK). Files left in /var/tmp (tools, modules, susp-logs).
+
+## Power-domain test slot (2026-10-30 16:20-16:32), plain kernel 5
+Verified with `pm_test=platform` and the genpd debugfs counters (`/sys/kernel/debug/pm_genpd/<pd>/idle_states` usage):
+without help, `pcie`, `usb` and `gmac` each power off once per s2idle (suspend_noirq). `tools/pd-keep` (wakeup path on
+fc900000.iommu → PD_PCIE; pd_keep2 on fc800000.usb → PD_USB) and `tools/pd-keep3` (PM syscore device fe1c0000.ethernet → PD_GMAC)
+hold them on (usage unchanged).
+| # | domains held on during s2idle | result |
+|---|---|---|
+| P1 | pcie | WEDGE (`xHC error ... 0x401`, Command Aborted 11 s later, soft lockup) |
+| P2 | pcie + usb | WEDGE (same) |
+| P3 | pcie + usb + gmac | WEDGE (same) |
+**Power-domain transitions are not the trigger**; the 0131 / PD_PCIE lead is dropped, and test 2 (DTB without 0131's PD link) was skipped as moot.
+TF-A's PHP CRU gate save/restore (our tf-a/0001) is only in the SYSTEM_SUSPEND (deep) path, which s2idle never enters.
+Still standing: after a fast s2idle resume the fcd00000 (USB3OTG2 + combphy2) xHC never executes a command, even after a clean
+reset (F1), and later an access wedges the interconnect. Only console printing of the PM trace hides it.
+Next (one slot, ~30 min, ≤3 resets, no reboot):
+- S1: `pd_keep3 devname=fcd00000.usb` (dwc3 host2 excluded from system suspend: no dwc3_core_exit/init, no combphy2 phy_exit/init;
+  its xhci child still suspends/resumes normally). PASS → the culprit is the dwc3/combphy2 teardown and re-init. FAIL → look outside host2.
+- S2 (if S1 passes): exclude only the combphy (keep dwc3 suspend) is not possible separately; instead check the reset/clock order
+  in dwc3_core_init_for_resume (reset deasserted before clocks) and combphy2 exit (clocks gated before reset asserted) with a patched dwc3/combphy module.
+- With a DTB slot: the ramoops overlay + pm_marker v3 (phys=0x30200000) to name the hanging access.
+
+## USB-controller exclusion slot (2026-10-30 16:33-16:43), plain kernel 5
+`tools/pd-keep3`/`pd-keep4` mark a device as a PM syscore device (the PM core skips it entirely in system suspend/resume).
+| # | excluded from system suspend | result |
+|---|---|---|
+| S1p | fcd00000.usb (pm_test=platform) | OK; xhci-hcd.1 no longer reports SRE (xhci-hcd.8 still does) |
+| S1 | fcd00000.usb (dwc3 host2) | WEDGE, no host2 xHC message at all |
+| S2 | fc000000.usb (dwc3 Type-C, USBDP, dock) | WEDGE (host2 SRE/Reinit, then lockup) |
+| S3 | both fcd00000.usb and fc000000.usb | WEDGE: serial stops right after `PM: early resume of devices complete`, before any normal-phase output |
+**The USB controllers are not the trigger**; the xHC lines were only the first (async) prints of the normal resume phase.
+The wedge is in the very first part of the normal resume phase, or in an interrupt handler that runs as soon as
+`resume_device_irqs()` re-enables device IRQs at the end of noirq resume (e.g. a handler touching a device whose
+normal-phase resume hasn't run yet).
+Next: bisect by exclusion (syscore), not delay. Extend pd-keep3 to a comma-separated device list and halve the early
+normal-phase set: usb2phy (fd5d*), naneng combphys (fee00000, fee20000), hdptx phy (fed60000), clk/qos/dfi, efuse,
+tsadc, pwm, saradc, i2s, pinctrl/gpio, rk806 regulators, SATA (fe210000). In parallel, check the threaded handlers that
+run first after wake (hym8563 alarm on i2c6/GPIO0_B0, fusb302, rk806) for accesses to not-yet-resumed hardware.
+
+## Exclusion bisect (2026-10-30 16:45-17:27, plain kernel 5) → **culprit: OHCI (ohci-platform) system suspend/resume**
+Tool: `tools/pm-exclude` (`modules/pm_exclude-k5.ko`): makes a list of platform/AMBA devices PM syscore devices (skipped by
+the PM core in system sleep); `prefix=1` matches name prefixes, `skip=` exempts (the watchdog must stay excluded-from-exclusion).
+IRQ trace of a passing verbose run (`susp-logs/V2.trace` on the board, irq_handler_entry + device_pm_callback_start): first device IRQs after
+resume_device_irqs are hym8563 (wake) and i2c6 transfers; display IRQs start only after their own resume — no early-IRQ hazard seen.
+| # | excluded | result |
+|---|---|---|
+| E1 | dw-dp, dfi, hdptx phy, tsadc, pwm, i2s, rng, connector-usb3 | WEDGE |
+| E2 | 3× pl330 (AMBA), 3× i2c, 2× spi, SATA | WEDGE |
+| E3 | all 151 MMIO platform devices (fb/fc/fd/fe/ff) except watchdog | **PASS** (first clean fast resume: devices 200 ms) |
+| E4 | media + NPU + their IOMMUs (fda/fdb/fdc, 35) | WEDGE (not rkvdec) |
+| E5 | display + GPU (fdd/fde/fb) | WEDGE |
+| E6 | fe* + fc* (31) | **PASS** |
+| E7 | console UART feb50000 | WEDGE |
+| E8 | 4× ehci/ohci, SMMU, USBDP phy, sdmmc | **PASS** |
+| E9 | 4× ehci/ohci | **PASS** |
+| E10 | both OHCI (fc840000, fc8c0000) | **PASS** |
+| E11 | OHCI host0 only | WEDGE |
+| E12 | OHCI host1 only | WEDGE |
+→ Either OHCI instance suspending/resuming is enough to wedge the SoC after a fast s2idle; with both OHCIs kept out of system sleep,
+fast s2idle resumes cleanly (SATA, GbE, USB3 links, DP and HDMI fine; the fcd00000 "xHC error ... Reinit" still appears and is harmless).
+Note: the OHCIs are runtime-suspended at idle (no runtime PM callbacks; genpd PM_CLK handles their clocks), while their EHCI
+companions (same HCLK_HOST*/HCLK_HOST_ARB*/ACLK_USB, same u2phy host port and 480M clock) have no runtime PM. Clock enable counts
+stayed balanced across a pm_test=platform cycle.
+Next (host-side): walk ohci_platform_suspend/resume + ohci_suspend/ohci_resume for a runtime-suspended, PD_USB-power-cycled
+OHCI on RK3588 (register access with the controller/PHY not clocked, reset ordering, the EHCI companion handshake), write the fix,
+test with fast s2idle, then the 50-cycle proof.
+
+## Root cause found and fixed in source (2026-10-30 17:50-18:11, kernel 5 + debug drop-ins)
+Debug drop-ins (branch `opi5/suspend-debug-ohci`, not for upstream): `ohci-platform` with `dbg_skip_resume_hw` /
+`dbg_skip_hw` / `dbg_keep_power`, `phy-rockchip-inno-usb2` with `dbg_no_reset` (all dev_dbg-only).
+| # | knob | result |
+|---|---|---|
+| Ka | inno-usb2 `dbg_no_reset=1` (no RK3588 PHY reset on port power-up) | WEDGE → PHY reset is not the cause |
+| Kb | ohci-platform `dbg_skip_resume_hw=1` (skip `ohci_resume()`) | PASS |
+| cyc5b | same, `s2idle-cycles.sh 5` (USB3 links, DP status+AUX, HDMI, SATA read, network, dmesg) | **5/5 OK** (+Kb and an earlier cycle: 7 consecutive clean fast resumes; ~25/25 wedges without) |
+After Kb the OHCI root hubs log "root hub lost power or was reset" during their own resume, i.e. the deferred restart works.
+**Root cause:** for a controller that lost power (PD_USB is cycled by genpd in every s2idle), `ohci_resume()` → `ohci_rh_resume()` →
+`ohci_restart()` runs `ohci_init()+ohci_run()` (USBOPERATIONAL, schedule DMA) from the controller's system resume callback,
+while the root hub PHY is still powered off — the USB core powers it only in `hcd_bus_resume()` (system resume, before
+`->bus_resume()`). On RK3588 that wedges the USB interconnect (xHCI commands abort, CPUs stop taking IPIs/NMIs).
+EHCI's lost-power path only resets and leaves the controller halted, which is why EHCI alone is fine.
+Runtime PM is unaffected: root hub PHYs are powered off only for system suspend (`!PMSG_IS_AUTO`).
+**Fix:** `patches/k5/0002-usb-ohci-Don-t-restart-a-controller-that-lost-power-.patch` (branch `opi5/suspend-fix-7.3-k5`,
+e9af7c77c4ad): in `ohci_resume()`, only `ohci_usb_reset()` when the controller lost its state; the root hub resume
+(`usb_hcd_resume_root_hub()`) then finds HCFS==USBRESET and restarts it from `hcd_bus_resume()` after the PHYs are up.
+ohci-hcd is built in (CONFIG_USB_OHCI_HCD=y) → needs a full kernel package to install. Builds clean with W=1; checkpatch: only the missing SoB.
+**Also:** `patches/k5/0001-usb-dwc3-Tell-xhci-plat-when-the-core-lost-its-state.patch` (82667eae3): independent; dwc3 reports
+power loss to xhci-plat (as cdns3 does) so xhci_resume skips the doomed CRS restore (`xHC error in resume, USBSTS 0x401, Reinit`)
+— correct on its own, not needed for the wedge. dwc3 is a module.
+Both apply on top of patches/linux (314) on clean v7.3 (316 total).
+Why the slow console hid it: not established. Injected delays (anywhere, incl. inside xhci_resume) never did; heavy serial
+printing did. The commit message says so instead of guessing.
+Proof still to do: 50 fast cycles + 5 with a copy to the Extreme (`COPY_DIR=` in s2idle-cycles.sh) on a kernel with the fix.
+
+## Proof attempt 1 (2026-10-30 20:15-20:25): FAILED
+Test kernel 7.3.0-opi5-susp (v7.3 + patches/linux 314 + ohci 0002 + dwc3 0001, branch `opi5/suspend-fix-7.3-susp`),
+installed side by side (`board/susp-install.sh`, own "lsusp" label + susp-bootonce, no dpkg/u-boot-update).
+Wedged on fast cycle 1 (journal ends at suspend entry; dw_wdt reset ~50 s after the alarm wake; kernel.printk=4 hid
+the PM lines on serial). 0/50, 0/5, 0/20 RPM. Board restored (test kernel removed).
+Differences from the passing Kb runs: (1) the patch still reads/writes OHCI registers in ohci_resume() (Kb skipped
+it entirely) → possibly ANY early OHCI register access wedges; (2) on the test kernel the Extreme did not link
+SuperSpeed at boot and came up at 480M via EHCI host1 (the blue port's USB2 lines go to fc880000/u2phy3, its SS
+lines to host2), so a USB2 device was active on host1 during suspend; (3) the dwc3 power_lost patch.
+The ohci patch is therefore NOT proven; it is not to be added to patches/linux yet.
+
+## Follow-up slot (2026-10-30 20:25-20:41, kernel 5 + drop-ins: debug ohci-platform + dwc3 power_lost)
+| # | setup | result |
+|---|---|---|
+| boot | dwc3 power_lost drop-in | Extreme SuperSpeed 6-1 at boot → dwc3 patch is not the 480M regression |
+| C1 | Kb (skip ohci_resume) + dwc3 power_lost | PASS; "xHC error in resume, USBSTS 0x401" gone (only "root hub lost power") → dwc3 patch works and is harmless |
+| A1x | emulate patch 0002 (read HcControl, write reset value, kick root hub) | WEDGE |
+| A2x | only read HcControl, kick root hub | WEDGE |
+| B1x | Kb with the Extreme forced onto OHCI host1 (host2 SS port disabled, device at 12M on fc8c0000) | PASS (device re-enumerated on EHCI host1 at 480M after resume) |
+**Conclusion:** any OHCI register access from the controller's system resume callback (before the root hub's
+hcd_bus_resume() powers the USB2 PHY) wedges RK3588 after PD_USB was power-cycled; a single HcControl read is enough.
+EHCI register access in the same state is fine. Patch 0002 (which still reads/writes HcControl there) is wrong and is
+withdrawn. Next: `dbg_phy_first` (built, `modules/ohci-platform-dbg2-k5.ko`: usb_phy_roothub_resume() before
+ohci_resume(), unmodified ohci_resume) to prove "OHCI registers need the PHY up"; then v2 fix accordingly
+(e.g. power the root hub PHYs before touching the controller on resume in ohci-platform, or defer the controller
+resume work to the root hub resume without any register access).
+Extreme at 480M on the test kernel: on plain #5 the drive always enumerates first at HS via EHCI host1 (usb 4-1,
+3.16 s) and switches to SS on host2 (usb 6-1, 3.76 s); on the test kernel the SS link on host2 never came up. The dwc3
+patch is cleared (SS on #5 with it), so it is a difference between build 5's stack and the current patches/linux
+(e.g. 0270 / tcpm 0271-0274 / dwc3-rockchip changes) — to bisect separately.
+
+## dbg_phy_first and v2 (2026-10-30 20:44-20:55, kernel 5 + debug ohci-platform)
+PF1, PF2: root hub PHYs powered (usb_phy_roothub_resume) before the UNMODIFIED ohci_resume() → **PASS 2/2** (all four USB2
+root hubs re-init, USB3/DP/HDMI/net fine). Mechanism proven: on RK3588 OHCI registers are only accessible with the USB2 PHY up.
+**v2 fix** (`patches/v2/0002-usb-ohci-platform-Power-the-root-hub-PHYs-up-before-.patch`, branch `opi5/suspend-fix-7.3-v2`
+477426cccf2d / on the 321 stack `opi5/suspend-fix-7.3-susp2` 46a5fdf42aca): ohci_platform_resume_common() brackets
+ohci_resume() with usb_phy_roothub_resume()/usb_phy_roothub_suspend(). No double power-on: phy_init/exit and
+phy_power_on/off are refcounted and only act on 0↔1, so the bracket is balanced and leaves the counts as hcd_bus_resume()
+expects; a no-op on hardware if the EHCI companion already powered the shared PHY. `patches/v2/0001` = dwc3 power_lost (1104).
+Other HCDs: xhci-plat on RK3588 is a dwc3 child without its own phys (dwc3_core_init powers the PHYs in the parent's
+resume, before the child) → not affected. ehci-platform has the same structure but its registers are accessible with the
+PHY down on RK3588 (E10, all Kb runs) → no change without evidence. v2 covers every generic-ohci + inno-usb2 SoC.
+Test kernel 7.3.0-opi5-susp (pkg 7.3.0-susp2) = patches/linux (321) + 1104 + v2: building.

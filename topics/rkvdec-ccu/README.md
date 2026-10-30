@@ -1,11 +1,11 @@
-# rkvdec-ccu: IN PROGRESS, NOT IN THE IMAGE: rkvdec decodes one stream on both RK3588 cores through the CCU, including VP9 (hardware probability adaptation) and field/MBAFF H.264 (field pairs on both cores); on the image-k6 stack, planned as patches/linux 1601-1614
+# rkvdec-ccu: IN PROGRESS, NOT IN THE IMAGE: rkvdec decodes one stream on both RK3588 cores through the CCU, including VP9 (hardware probability adaptation) and field/MBAFF H.264 (field pairs on both cores); rebased on the rkvdec-reset timeout recovery (planned as patches/linux 1601-1616)
 
-- Workspace branch: `opi5/rkvdec-ccu-k6-7.3` (exported 2026-10-30)
+- Workspace branch: `opi5/rkvdec-reset-ccu-7.3` (exported 2026-10-30)
 - Kernel fork branch: `opi5/rkvdec-ccu` (see PUBLISH.md)
-- Sits on: `image-k6` (base commit `996168d5c3b1`)
-- Hardware test: in progress: earlier build HEVC 4K 130->228 fps and H.264 4K 67.6->121.4 fps bit-exact; this series (reset-all-cores-once-idle, VP9/field on the CCU) awaits board validation (ccu-repro, fluster, ccu-verify)
-- Next upstream step: finish the board tests and fluster, then RFC to linux-media
-- Patches: 14 = 14 ours, 0 carried from others, 0 local-only
+- Sits on: `rkvdec-reset` (base commit `ef49dbd97305`)
+- Hardware test: in progress: earlier builds bit-exact (fluster identical to single-core, 600/600, HEVC 4K 130->227 fps, H.264 67->121 fps); the P4 board proof of this rebased series (KASAN kernel, recovery stress) is running
+- Next upstream step: finish the P4 board proof and fluster, then RFC to linux-media
+- Patches: 16 = 16 ours, 0 carried from others, 0 local-only
 
 Apply with `git am` in the order listed in [`series`](series), on top of the parent topic (or check out the fork branch). Patch numbers are the position in that order.
 
@@ -21,12 +21,14 @@ Apply with `git am` in the order listed in [`series`](series), on top of the par
 | 0006 | arm64: dts: rockchip: add the RK3588 video decoder CCU | Arun Iyengar |  |
 | 0007 | media: rkvdec: vdpu381: enable and flush the read caches for every job | Arun Iyengar |  |
 | 0008 | media: rkvdec: vdpu381: program the H.264 POC high bits for the CCU | Arun Iyengar |  |
-| 0009 | media: rkvdec: vdpu381: reset failed cores, don't let POC aliases deadlock the CCU | Arun Iyengar |  |
+| 0009 | media: rkvdec: vdpu381: reset failed cores in the CCU, avoid POC alias deadlocks | Arun Iyengar |  |
 | 0010 | media: v4l2-mem2mem: let detached jobs hold the capture buffer | Arun Iyengar |  |
 | 0011 | media: rkvdec: decode the two fields of a frame on both cores | Arun Iyengar |  |
 | 0012 | media: rkvdec: vdpu381: adapt the VP9 probabilities in hardware | Arun Iyengar |  |
 | 0013 | media: rkvdec: vdpu381: decode VP9 on both RK3588 cores with the CCU | Arun Iyengar |  |
 | 0014 | media: rkvdec: vdpu381: reset the cores together once they are idle | Arun Iyengar |  |
+| 0015 | media: rkvdec: fix two races around job completion and core resets | Arun Iyengar |  |
+| 0016 | media: rkvdec: vdpu381: sync H.264 field and frame pictures across cores correctly | Arun Iyengar |  |
 
 ## Notes, results and test tools
 
@@ -40,7 +42,12 @@ Apply with `git am` in the order listed in [`series`](series), on top of the par
 - [notes/scripts/ccu-repro.sh](notes/scripts/ccu-repro.sh)
 - [notes/scripts/ccu-verify.sh](notes/scripts/ccu-verify.sh)
 - [notes/scripts/fluster.sh](notes/scripts/fluster.sh)
+- [notes/scripts/fm.sh](notes/scripts/fm.sh)
+- [notes/scripts/fmfm.sh](notes/scripts/fmfm.sh)
+- [notes/scripts/h3b.sh](notes/scripts/h3b.sh)
 - [notes/scripts/hhi-ab.sh](notes/scripts/hhi-ab.sh)
+- [notes/scripts/reopen.sh](notes/scripts/reopen.sh)
+- [notes/scripts/stopcore-01ed182a.py](notes/scripts/stopcore-01ed182a.py)
 - [notes/vp9hw/NOTES.md](notes/vp9hw/NOTES.md)
 - [notes/vp9hw/harness/build.sh](notes/vp9hw/harness/build.sh)
 - [notes/vp9hw/harness/gen/coef.c](notes/vp9hw/harness/gen/coef.c)

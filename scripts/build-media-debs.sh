@@ -4,6 +4,7 @@
 #   mpv                 v4l2request hwdec + DRM PRIME interop; needs our ffmpeg
 #   gst-plugins-bad1.0  v4l2codecs and kmssink fixes (patches/gstreamer)
 #   gst-plugins-good1.0 v4l2transform colorimetry, souphttpsrc HEAD race (patches/gst-plugins-good)
+#   alsa-ucm-conf       UCM for the RK3588 HDMI/DP and ES8388 sound cards (Architecture: all)
 # Rootless: mmdebstrap --mode=unshare + qemu-user binfmt, no sudo.
 # Usage: build-media-debs.sh [source...]     (default: all of the above, in that order)
 # Output: out/debs-media/*.deb plus a Packages index (a flat apt repository that
@@ -18,7 +19,7 @@ set -euo pipefail
 
 if [ "${1:-}" = --in-chroot ]; then
   # Runs inside the build chroot (as the unshared root user): fetch, patch, build.
-  src=$2 ver=$3 rev=$4 jobs=$5 pdir_name=${6:-$2}
+  src=$2 ver=$3 rev=$4 jobs=$5 pdir_name=${6:-$2} build=${7:-any}
   export DEBIAN_FRONTEND=noninteractive
   mkdir -p /build/debs && cd /build
   apt-get update -q
@@ -49,9 +50,11 @@ if [ "${1:-}" = --in-chroot ]; then
     cat debian/changelog
   } > debian/changelog.new
   mv debian/changelog.new debian/changelog
-  apt-get build-dep -q -y --arch-only -Pnocheck ./
+  # any: the arm64 packages (-B); all: an Architecture: all source (-A)
+  if [ "$build" = all ]; then bd=--indep-only bt=-A; else bd=--arch-only bt=-B; fi
+  apt-get build-dep -q -y $bd -Pnocheck ./
   DEB_BUILD_OPTIONS="nocheck noautodbgsym parallel=$jobs" \
-    dpkg-buildpackage -B -us -uc -Pnocheck
+    dpkg-buildpackage $bt -us -uc -Pnocheck
   mv ../*.deb /build/debs/
   exit 0
 fi
@@ -71,14 +74,17 @@ declare -A VERSION=(
   [mpv]=0.41.0-2ubuntu5
   [gst-plugins-bad1.0]=1.28.6-1ubuntu1
   [gst-plugins-good1.0]=1.28.7-1build1
+  [alsa-ucm-conf]=1.2.16.1-1ubuntu1
 )
-declare -A REV=([ffmpeg]=2 [mpv]=1 [gst-plugins-bad1.0]=3 [gst-plugins-good1.0]=1)
-declare -A PDIR=([ffmpeg]=ffmpeg [mpv]=mpv [gst-plugins-bad1.0]=gstreamer [gst-plugins-good1.0]=gst-plugins-good)
+declare -A REV=([ffmpeg]=2 [mpv]=2 [gst-plugins-bad1.0]=4 [gst-plugins-good1.0]=1 [alsa-ucm-conf]=1)
+declare -A PDIR=([ffmpeg]=ffmpeg [mpv]=mpv [gst-plugins-bad1.0]=gstreamer [gst-plugins-good1.0]=gst-plugins-good [alsa-ucm-conf]=alsa-ucm-conf)
+# Architecture: all sources (built with -A); the rest build their arm64 packages
+declare -A BUILD=([alsa-ucm-conf]=all)
 
 if [ $# -gt 0 ]; then
   SOURCES=("$@")
 else
-  SOURCES=(ffmpeg mpv gst-plugins-bad1.0 gst-plugins-good1.0)
+  SOURCES=(ffmpeg mpv gst-plugins-bad1.0 gst-plugins-good1.0 alsa-ucm-conf)
 fi
 
 mkdir -p "$REPO" "$WORK"
@@ -119,7 +125,7 @@ for src in "${SOURCES[@]}"; do
     --customize-hook="copy-in '$pdir' /tmp" \
     --customize-hook="mv \"\$1/tmp/${PDIR[$src]}\" \"\$1/tmp/opi5-patches\"" \
     --customize-hook="copy-in '$SELF' /tmp" \
-    --customize-hook="chroot \"\$1\" /bin/bash /tmp/$(basename "$SELF") --in-chroot '$src' '$ver' '$rev' '$JOBS' '${PDIR[$src]}'" \
+    --customize-hook="chroot \"\$1\" /bin/bash /tmp/$(basename "$SELF") --in-chroot '$src' '$ver' '$rev' '$JOBS' '${PDIR[$src]}' '${BUILD[$src]:-any}'" \
     --customize-hook="sync-out /build/debs '$w/debs'" \
     "$SUITE" /dev/null \
     "deb $MIRROR $SUITE $COMPONENTS" \

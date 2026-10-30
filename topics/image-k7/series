@@ -1,0 +1,6 @@
+# Apply in this order on top of the parent topic (see topic.env):
+#   while read -r p sha; do git am "$p"; done < <(grep -v '^#' series)
+# Second column: the original commit in the workspace clone (for reference).
+ours/0001-media-rkvdec-Handle-interrupts-of-a-core-that-has-no.patch 9fcf47518ce059ef4654d3e71be7460c122cdb8a
+ours/0002-media-rkvdec-Reset-a-core-whose-job-failed-or-timed-.patch 830138428460b471b4ca0b84fd4e2d34c96e95dd
+ours/0003-iommu-rockchip-Don-t-walk-a-page-table-that-a-reset-.patch 87e407cf771dad0fa2523b4a7797913f09647baf

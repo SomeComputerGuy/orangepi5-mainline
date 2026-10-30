@@ -177,3 +177,12 @@ discovery fixes) added, not yet board-tested.
 
 ## 1501-1504 (USB3 Type-A boot race) — DROPPED 2026-10-30, moved to patches/linux-dropped/
 Tested on build 5: the port pairing works and the SuperSpeed retry fires, but the SanDisk stays at 480M after every software reset (usbreset, USB2 suspend/resume, EHCI and dwc3 rebind). The device only tries SuperSpeed when VBUS rises; the board's Type-A VBUS is always on (no GPIO), so it rises before combphy2/xHCI exist. Hot-plug gives 5000M every time. No kernel or DT fix; it would need a switchable VBUS. Details: work/_out/usb3-port/RESULTS.md.
+
+## 1801, 1802, 1804: rkvdec timeout recovery + rockchip-iommu fault logging (2026-10-30, branch opi5/rkvdec-reset-7.3)
+- 1801 media: rkvdec: Handle interrupts of a core that has no job: a late IRQ after a timeout dereferenced a NULL ctx (panic at 0x2f8 seen on the board).
+- 1802 media: rkvdec: Reset a core whose job failed or timed out: rkvdec_core_recover() = mask IRQ, soft reset, wait for reset-ready and bus idle, CRU pulse, reprogram the IOMMU (soft reset and SRST_A put it in bypass), then complete the job. The stock driver leaves a timed-out core running → stall/paging timeouts → SError panic (reproduced).
+- 1804 iommu/rockchip: Don't walk a page table that a reset took away: log_iova() dereferenced DTE_ADDR=0 after the core reset its IOMMU (KASAN wild access, panic).
+- Proof (KASAN kernel, work/_out/rkvdec-reset/RESULTS.md): 3178 recoveries, 0 crash/KASAN/ODEBUG, 0 canary hits, 600/600 bit-exact after every stress step, fluster unchanged, 600 reopen cycles. 1803 (reopen agent: rk-iommu map runs + iotlb_sync_map) is NOT landed yet (unproven).
+
+## 1501-1504 RESTORED (2026-10-30 20:45). The earlier "DROPPED" entry was wrong
+On kernel 5 (which has them), the SanDisk Extreme (0781:5580) on the top Type-A port enumerates first at HS on EHCI host1 and is then moved to SuperSpeed by 1503 ("usb 4-1: SuperSpeed peer port available, resetting", then usb 6-1 at 5000M). On a kernel without 1501-1504 (the 7.3.0-opi5-susp test build), it stays at 480M. So the patches fix devices that retry SuperSpeed on a USB2 reset, as the USB3 spec requires. The SanDisk Ultra Fit (0781:5583) doesn't, and only a VBUS cycle helps it (hardware: VBUS always on). Back in patches/linux (321 patches; all apply in order on v7.3).

@@ -188,7 +188,7 @@ index 6709f916ee00..560c6ec26a9d 100644
  	rkvdec_write_regs(ctx);
  }
 diff --git a/drivers/media/platform/rockchip/rkvdec/rkvdec.c b/drivers/media/platform/rockchip/rkvdec/rkvdec.c
-index a13ead352bfa..4cccc27d85e2 100644
+index adeb748f2025..cad725ba8f46 100644
 --- a/drivers/media/platform/rockchip/rkvdec/rkvdec.c
 +++ b/drivers/media/platform/rockchip/rkvdec/rkvdec.c
 @@ -639,6 +639,7 @@ static const struct rkvdec_coded_fmt_desc vdpu381_coded_fmts[] = {
@@ -200,7 +200,7 @@ index a13ead352bfa..4cccc27d85e2 100644
  };
  
 diff --git a/drivers/media/platform/rockchip/rkvdec/rkvdec.h b/drivers/media/platform/rockchip/rkvdec/rkvdec.h
-index df7c58ecbe1d..9b46865ed3a4 100644
+index 1992e114b698..0b11f0dc8156 100644
 --- a/drivers/media/platform/rockchip/rkvdec/rkvdec.h
 +++ b/drivers/media/platform/rockchip/rkvdec/rkvdec.h
 @@ -59,6 +59,8 @@ struct rkvdec_vp9_decoded_buffer_info {

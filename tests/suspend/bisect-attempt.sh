@@ -12,6 +12,6 @@ echo "$ev" > $M/events; echo "$ph" > $M/phases; echo "$inv" > $M/invert
 echo "$d" > $M/delay_ms; printf '%s\n' "$m" > $M/match   # always write (an empty write would keep the old value)
 echo "BISECT $tag events=$ev phases=$ph invert=$inv delay=$d match='$m'" | tee -a /var/tmp/susp-logs/bisect.txt > /dev/kmsg
 # hym8563 needs a valid time (no backup battery)
-grep -q "rtc_date.*2026" /proc/driver/rtc || { echo "RTC invalid: set it first"; exit 1; }
+python3 -I /var/tmp/rtc-set.py >/dev/null	# also fixes the weekday the hym8563 alarm matches
 PRINT_TIMES=0 /var/tmp/susp-run.sh "$tag" s2idle none 120
 grep -q rc=0 /var/tmp/susp-logs/$tag.log && echo "$tag PASS" | tee -a /var/tmp/susp-logs/bisect.txt
