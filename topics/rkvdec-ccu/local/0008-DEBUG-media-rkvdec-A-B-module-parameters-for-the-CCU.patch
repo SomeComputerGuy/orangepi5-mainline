@@ -1,0 +1,94 @@
+From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
+From: Arun Iyengar <aiyengar1990@gmail.com>
+Date: Thu, 29 Oct 2026 23:16:37 +0000
+Subject: [PATCH] DEBUG: media: rkvdec: A/B module parameters for the CCU board
+ tests
+
+Not for upstream: switches for the pipelining, the CCU mode and the
+cache setup, and job counters, so that one boot can compare them.
+
+Assisted-by: Claude:claude-opus-5-5
+---
+ .../platform/rockchip/rkvdec/rkvdec-ccu.c     |  7 +++++-
+ .../media/platform/rockchip/rkvdec/rkvdec.c   | 22 +++++++++++++++++--
+ 2 files changed, 26 insertions(+), 3 deletions(-)
+
+diff --git a/drivers/media/platform/rockchip/rkvdec/rkvdec-ccu.c b/drivers/media/platform/rockchip/rkvdec/rkvdec-ccu.c
+index cb497a1a4..5eaddb0bb 100644
+--- a/drivers/media/platform/rockchip/rkvdec/rkvdec-ccu.c
++++ b/drivers/media/platform/rockchip/rkvdec/rkvdec-ccu.c
+@@ -36,6 +36,11 @@
+ #define VDPU381_LINK_CORE_WORK_MODE	BIT(16)
+ #define VDPU381_LINK_CCU_WORK_MODE	BIT(17)
+ 
++/* DEBUG, not for upstream: keep every format out of CCU mode */
++static bool ccu_hw = true;
++module_param(ccu_hw, bool, 0644);
++MODULE_PARM_DESC(ccu_hw, "DEBUG: run H.264/HEVC in CCU mode (read at every job)");
++
+ struct rkvdec_ccu {
+ 	struct device *dev;
+ 	void __iomem *regs;
+@@ -62,7 +67,7 @@ void rkvdec_ccu_put(struct rkvdec_ccu *ccu)
+  */
+ static bool rkvdec_ctx_uses_ccu(struct rkvdec_ctx *ctx)
+ {
+-	return ctx->dev->ccu &&
++	return ctx->dev->ccu && READ_ONCE(ccu_hw) &&
+ 	       (ctx->coded_fmt_desc->flags & RKVDEC_FMT_FLAG_PIPELINE);
+ }
+ 
+diff --git a/drivers/media/platform/rockchip/rkvdec/rkvdec.c b/drivers/media/platform/rockchip/rkvdec/rkvdec.c
+index d501f3576..6d326a14d 100644
+--- a/drivers/media/platform/rockchip/rkvdec/rkvdec.c
++++ b/drivers/media/platform/rockchip/rkvdec/rkvdec.c
+@@ -38,6 +38,20 @@
+ #include "rkvdec-vdpu383-regs.h"
+ #include "rkvdec-rcb.h"
+ 
++/* DEBUG, not for upstream: A/B switches and counters for the board tests */
++static bool pipeline = true;
++module_param(pipeline, bool, 0644);
++MODULE_PARM_DESC(pipeline, "DEBUG: decode two frames of a stream at once (read at STREAMON)");
++static bool cache = true;
++module_param(cache, bool, 0644);
++MODULE_PARM_DESC(cache, "DEBUG: set up and flush the core caches (read at every job)");
++static unsigned int stat_jobs;
++module_param(stat_jobs, uint, 0444);
++MODULE_PARM_DESC(stat_jobs, "DEBUG: jobs started");
++static unsigned int stat_overlap;
++module_param(stat_overlap, uint, 0444);
++MODULE_PARM_DESC(stat_overlap, "DEBUG: jobs started while the previous frame of the stream was still in flight");
++
+ static bool rkvdec_image_fmt_match(enum rkvdec_image_fmt fmt1,
+ 				   enum rkvdec_image_fmt fmt2)
+ {
+@@ -1092,7 +1106,8 @@ static int rkvdec_start_streaming(struct vb2_queue *q, unsigned int count)
+ 		return -EINVAL;
+ 
+ 	ctx->num_job_slots = 1;
+-	if (ctx->dev->ccu && (desc->flags & RKVDEC_FMT_FLAG_PIPELINE))
++	if (ctx->dev->ccu && (desc->flags & RKVDEC_FMT_FLAG_PIPELINE) &&
++	    READ_ONCE(pipeline))
+ 		ctx->num_job_slots = min_t(unsigned int, ctx->dev->core_count,
+ 					   RKVDEC_MAX_JOBS);
+ 
+@@ -1214,6 +1229,9 @@ static struct rkvdec_job *rkvdec_job_start(struct rkvdec_ctx *ctx)
+ 
+ 	__set_bit(slot, &ctx->busy_slots);
+ 	list_add_tail(&job->node, &ctx->jobs);
++	stat_jobs++;
++	if (ctx->num_jobs)
++		stat_overlap++;
+ 	ctx->num_jobs++;
+ 
+ 	return job;
+@@ -1551,7 +1569,7 @@ static void rkvdec_core_reset_cache(struct rkvdec_core *core)
+ {
+ 	unsigned int i;
+ 
+-	if (!core->cache)
++	if (!core->cache || !READ_ONCE(cache))
+ 		return;
+ 
+ 	for (i = 0; i < VDPU381_NUM_CACHES; i++) {

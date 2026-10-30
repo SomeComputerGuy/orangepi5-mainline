@@ -1,0 +1,624 @@
+From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
+From: Arun Iyengar <aiyengar1990@gmail.com>
+Date: Thu, 29 Oct 2026 23:03:23 +0000
+Subject: [PATCH] media: rkvdec: complete decode jobs independently of the m2m
+ job
+
+With several cores, rkvdec lets the m2m framework run one job per core
+(v4l2_m2m_set_max_parallel_jobs()), and each job holds its context until
+the hardware is done. That keeps every context serial: a stream only
+ever uses one core at a time.
+
+To decode consecutive frames of one stream on different cores, a frame
+must be able to start before the previous one is done. Track the frames
+being decoded as rkvdec jobs instead: once the hardware is started, the
+buffers are taken off the m2m queues with
+v4l2_m2m_buf_detach_and_job_finish() and the m2m job is finished, as
+soon as another core is free for the next job. With no free core, the
+m2m job is held until a core becomes free. The m2m framework now runs
+one job at a time, so device_run() always finds a free core, and the
+jobs of a context are completed in decoding order.
+
+Jobs whose OUTPUT buffer holds the CAPTURE buffer keep the m2m job until
+they are done, as before. Whether the next frame of a context may start
+early is decided by the new job_ready() callback; for now it waits for
+the previous frame, which keeps the current behaviour: different
+streams run on different cores in parallel, a single stream is serial.
+
+The interrupt handlers and the watchdog now work on the core they were
+called for rather than on ctx->core, which is only valid while a job is
+being set up.
+
+Assisted-by: Claude:claude-opus-5-5
+---
+ .../media/platform/rockchip/rkvdec/rkvdec.c   | 322 ++++++++++++++----
+ .../media/platform/rockchip/rkvdec/rkvdec.h   |  47 ++-
+ 2 files changed, 301 insertions(+), 68 deletions(-)
+
+diff --git a/drivers/media/platform/rockchip/rkvdec/rkvdec.c b/drivers/media/platform/rockchip/rkvdec/rkvdec.c
+index 256bfe5b5..d9463d6db 100644
+--- a/drivers/media/platform/rockchip/rkvdec/rkvdec.c
++++ b/drivers/media/platform/rockchip/rkvdec/rkvdec.c
+@@ -1070,6 +1070,11 @@ static void rkvdec_buf_request_complete(struct vb2_buffer *vb)
+ 	v4l2_ctrl_request_complete(vb->req_obj.req, &ctx->ctrl_hdl);
+ }
+ 
++static void rkvdec_ctx_wait_jobs(struct rkvdec_ctx *ctx)
++{
++	wait_event(ctx->jobs_wq, !READ_ONCE(ctx->num_jobs));
++}
++
+ static int rkvdec_start_streaming(struct vb2_queue *q, unsigned int count)
+ {
+ 	struct rkvdec_ctx *ctx = vb2_get_drv_priv(q);
+@@ -1114,6 +1119,9 @@ static void rkvdec_stop_streaming(struct vb2_queue *q)
+ {
+ 	struct rkvdec_ctx *ctx = vb2_get_drv_priv(q);
+ 
++	/* The jobs still being decoded own buffers of both queues. */
++	rkvdec_ctx_wait_jobs(ctx);
++
+ 	if (V4L2_TYPE_IS_OUTPUT(q->type)) {
+ 		const struct rkvdec_coded_fmt_desc *desc = ctx->coded_fmt_desc;
+ 
+@@ -1155,66 +1163,219 @@ static const struct media_device_ops rkvdec_media_ops = {
+ 	.req_queue = v4l2_m2m_request_queue,
+ };
+ 
+-/**
+- * Return a core that is available for decoding or null if no core is found.
+- * The caller should make sure to call release_core() when the core is no longer needed.
++/*
++ * Job scheduling
++ *
++ * A decode job starts when the m2m framework calls device_run() and gets a
++ * free core. Once the hardware is started, the buffers of the job are taken
++ * off the m2m queues and the m2m job is finished as soon as another core is
++ * free, so that the next job, of this context or another one, can run on that
++ * core while this one is still being decoded. With a single free core, the
++ * m2m job is held (rkvdec_dev.held_job) until a core becomes free. The m2m
++ * framework runs one m2m job at a time, so there's at most one held job and
++ * device_run() always finds a free core.
++ *
++ * The jobs of a context complete in decoding order. Whether the next frame of
++ * a context may start before the previous one is done is decided by
++ * rkvdec_job_ready().
+  */
+-static struct rkvdec_core *acquire_core(struct rkvdec_dev *rkvdec, struct rkvdec_ctx *ctx)
++static struct rkvdec_job *rkvdec_job_start(struct rkvdec_ctx *ctx)
+ {
+-	struct rkvdec_core *core = NULL;
++	struct rkvdec_dev *rkvdec = ctx->dev;
++	struct rkvdec_core *core;
++	struct rkvdec_job *job;
++	unsigned int slot;
+ 
+ 	guard(spinlock_irqsave)(&rkvdec->cores_lock);
+ 
+-	if (rkvdec->available_core_count) {
+-		core = rkvdec->available_cores[--rkvdec->available_core_count];
++	slot = find_first_zero_bit(&ctx->busy_slots, ctx->num_job_slots);
++	if (!rkvdec->available_core_count || slot >= ctx->num_job_slots)
++		return NULL;
+ 
+-		// Set the current core's ctx to this ctx
+-		core->curr_ctx = ctx;
+-	}
++	core = rkvdec->available_cores[--rkvdec->available_core_count];
++	core->curr_ctx = ctx;
+ 
+-	return core;
++	job = &ctx->job_slots[slot];
++	memset(job, 0, sizeof(*job));
++	job->ctx = ctx;
++	job->core = core;
++	job->slot = slot;
++	job->state = VB2_BUF_STATE_ERROR;
++	job->busy = true;
++	core->job = job;
++
++	__set_bit(slot, &ctx->busy_slots);
++	list_add_tail(&job->node, &ctx->jobs);
++	ctx->num_jobs++;
++
++	return job;
+ }
+ 
+-/**
+- * Release the core to make it available for a next job.
+- */
+-static void release_core(struct rkvdec_dev *rkvdec, struct rkvdec_core *core)
++/* Takes the buffers of @job off the m2m queues and finishes the m2m job. */
++static void rkvdec_job_detach(struct rkvdec_job *job)
+ {
+-	guard(spinlock_irqsave)(&rkvdec->cores_lock);
++	struct rkvdec_ctx *ctx = job->ctx;
++	struct v4l2_m2m_ctx *m2m_ctx = ctx->fh.m2m_ctx;
++	struct vb2_v4l2_buffer *src, *dst;
++	bool detached;
+ 
+-	core->curr_ctx = NULL;
+-	rkvdec->available_cores[rkvdec->available_core_count++] = core;
++	detached = v4l2_m2m_buf_detach_and_job_finish(m2m_ctx->m2m_dev, m2m_ctx,
++						      &src, &dst);
++	WARN_ON(detached && (src != job->src || dst != job->dst));
++
++	scoped_guard(spinlock_irqsave, &ctx->dev->cores_lock) {
++		job->detached = detached;
++		job->busy = false;
++	}
+ }
+ 
+-static void rkvdec_job_finish_no_pm(struct rkvdec_ctx *ctx,
+-				  enum vb2_buffer_state result)
++static void rkvdec_job_complete(struct rkvdec_job *job)
+ {
++	struct rkvdec_ctx *ctx = job->ctx;
+ 	struct v4l2_m2m_ctx *m2m_ctx = ctx->fh.m2m_ctx;
+-	struct v4l2_m2m_dev *m2m_dev = m2m_ctx->m2m_dev;
+ 
+-	if (ctx->coded_fmt_desc->ops->done) {
+-		struct vb2_v4l2_buffer *src_buf, *dst_buf;
++	if (ctx->coded_fmt_desc->ops->done)
++		ctx->coded_fmt_desc->ops->done(ctx, job->src, job->dst, job->state);
+ 
+-		src_buf = v4l2_m2m_next_src_buf(m2m_ctx);
+-		dst_buf = v4l2_m2m_next_dst_buf(m2m_ctx);
+-		ctx->coded_fmt_desc->ops->done(ctx, src_buf, dst_buf, result);
++	if (job->detached) {
++		/* Return the CAPTURE buffer first, see v4l2_m2m_buf_done_and_job_finish() */
++		v4l2_m2m_buf_done(job->dst, job->state);
++		v4l2_m2m_buf_done(job->src, job->state);
++	} else {
++		v4l2_m2m_buf_done_and_job_finish(m2m_ctx->m2m_dev, m2m_ctx,
++						 job->state);
+ 	}
++}
++
++/* Completes the finished jobs at the head of the job list of @ctx. */
++static void rkvdec_ctx_complete_jobs(struct rkvdec_ctx *ctx)
++{
++	struct rkvdec_dev *rkvdec = ctx->dev;
++	bool completed = false, schedule = false;
++
++	mutex_lock(&ctx->done_lock);
++	while (true) {
++		struct rkvdec_job *job;
++		bool detached;
++
++		scoped_guard(spinlock_irqsave, &rkvdec->cores_lock) {
++			job = list_first_entry_or_null(&ctx->jobs,
++						       struct rkvdec_job, node);
++			if (job && (!job->hw_done || job->busy))
++				job = NULL;
++			if (job)
++				list_del(&job->node);
++		}
++		if (!job)
++			break;
++
++		detached = job->detached;
++		rkvdec_job_complete(job);
+ 
+-	if (ctx->core) {
+-		release_core(ctx->dev, ctx->core);
+-		ctx->core = NULL;
++		scoped_guard(spinlock_irqsave, &rkvdec->cores_lock) {
++			__clear_bit(job->slot, &ctx->busy_slots);
++			ctx->num_jobs--;
++		}
++		/*
++		 * A detached job has no m2m job anymore that would schedule the
++		 * next one when it completes: let the m2m framework check
++		 * rkvdec_job_ready() again.
++		 */
++		schedule |= detached;
++		completed = true;
+ 	}
++	mutex_unlock(&ctx->done_lock);
+ 
+-	v4l2_m2m_buf_done_and_job_finish(m2m_dev, m2m_ctx, result);
++	if (completed)
++		wake_up(&ctx->jobs_wq);
++	if (schedule)
++		v4l2_m2m_try_schedule(ctx->fh.m2m_ctx);
+ }
+ 
+-static void rkvdec_job_finish(struct rkvdec_ctx *ctx,
+-			    enum vb2_buffer_state result)
++/*
++ * Called when the hardware is done with the job of @core, or when the job
++ * couldn't be started. Releases the core and completes the job when the
++ * jobs decoded before it are done.
++ */
++static void rkvdec_job_hw_done(struct rkvdec_core *core,
++			       enum vb2_buffer_state state, bool pm_put)
+ {
+-	pm_runtime_mark_last_busy(ctx->core->dev);
+-	pm_runtime_put_autosuspend(ctx->core->dev);
++	struct rkvdec_job *job, *held = NULL;
++	struct rkvdec_dev *rkvdec;
++	struct rkvdec_ctx *ctx;
++
++	ctx = core->curr_ctx;
++	if (WARN_ON(!ctx))
++		return;
++	rkvdec = ctx->dev;
++
++	scoped_guard(spinlock_irqsave, &rkvdec->cores_lock) {
++		job = core->job;
++		core->job = NULL;
++		core->curr_ctx = NULL;
++		rkvdec->available_cores[rkvdec->available_core_count++] = core;
++
++		job->core = NULL;
++		job->state = state;
++		job->hw_done = true;
++
++		/* A core is free now: the held m2m job can be finished. */
++		held = rkvdec->held_job;
++		rkvdec->held_job = NULL;
++		if (held)
++			held->busy = true;
++	}
++
++	if (pm_put) {
++		pm_runtime_mark_last_busy(core->dev);
++		pm_runtime_put_autosuspend(core->dev);
++	}
+ 
+-	rkvdec_job_finish_no_pm(ctx, result);
++	if (held) {
++		rkvdec_job_detach(held);
++		if (held->ctx != ctx)
++			rkvdec_ctx_complete_jobs(held->ctx);
++	}
++
++	rkvdec_ctx_complete_jobs(ctx);
++}
++
++/*
++ * Called at the end of device_run(), once the hardware runs the job: lets
++ * the next m2m job start if a core is free for it.
++ */
++static void rkvdec_job_started(struct rkvdec_job *job)
++{
++	struct rkvdec_ctx *ctx = job->ctx;
++	struct rkvdec_dev *rkvdec = ctx->dev;
++	bool detach = false;
++
++	scoped_guard(spinlock_irqsave, &rkvdec->cores_lock) {
++		if (job->src->flags & V4L2_BUF_FLAG_M2M_HOLD_CAPTURE_BUF) {
++			/* Keeps the CAPTURE buffer: complete it the usual way. */
++			job->busy = false;
++		} else if (rkvdec->available_core_count) {
++			detach = true;
++		} else {
++			rkvdec->held_job = job;
++			job->busy = false;
++		}
++	}
++
++	if (detach)
++		rkvdec_job_detach(job);
++
++	/* The hardware may already be done. */
++	rkvdec_ctx_complete_jobs(ctx);
++}
++
++static int rkvdec_job_ready(void *priv)
++{
++	struct rkvdec_ctx *ctx = priv;
++
++	guard(spinlock_irqsave)(&ctx->dev->cores_lock);
++
++	return !ctx->num_jobs;
+ }
+ 
+ void rkvdec_run_preamble(struct rkvdec_ctx *ctx, struct rkvdec_run *run)
+@@ -1223,8 +1384,8 @@ void rkvdec_run_preamble(struct rkvdec_ctx *ctx, struct rkvdec_run *run)
+ 
+ 	memset(run, 0, sizeof(*run));
+ 
+-	run->bufs.src = v4l2_m2m_next_src_buf(ctx->fh.m2m_ctx);
+-	run->bufs.dst = v4l2_m2m_next_dst_buf(ctx->fh.m2m_ctx);
++	run->bufs.src = ctx->job->src;
++	run->bufs.dst = ctx->job->dst;
+ 
+ 	/* Apply request(s) controls if needed. */
+ 	src_req = run->bufs.src->vb2_buf.req_obj.req;
+@@ -1281,42 +1442,66 @@ static void rkvdec_device_run(void *priv)
+ {
+ 	struct rkvdec_ctx *ctx = priv;
+ 	const struct rkvdec_coded_fmt_desc *desc = ctx->coded_fmt_desc;
++	struct v4l2_m2m_ctx *m2m_ctx = ctx->fh.m2m_ctx;
++	struct rkvdec_core *core;
++	struct rkvdec_job *job;
+ 	int ret;
+ 
+-	if (WARN_ON(!desc))
++	job = rkvdec_job_start(ctx);
++	if (WARN_ON(!job)) {
++		v4l2_m2m_buf_done_and_job_finish(m2m_ctx->m2m_dev, m2m_ctx,
++						 VB2_BUF_STATE_ERROR);
+ 		return;
++	}
+ 
+-	ctx->core = acquire_core(ctx->dev, ctx);
+-	if (WARN_ON(!ctx->core))
+-		return;
++	core = job->core;
++	job->src = v4l2_m2m_next_src_buf(m2m_ctx);
++	job->dst = v4l2_m2m_next_dst_buf(m2m_ctx);
++	ctx->core = core;
++	ctx->job = job;
+ 
+-	ret = pm_runtime_resume_and_get(ctx->core->dev);
++	ret = pm_runtime_resume_and_get(core->dev);
+ 	if (ret < 0) {
+-		rkvdec_job_finish_no_pm(ctx, VB2_BUF_STATE_ERROR);
+-		return;
++		rkvdec_job_hw_done(core, VB2_BUF_STATE_ERROR, false);
++		goto out;
+ 	}
+ 
++	if (WARN_ON(!desc))
++		goto err;
++
+ 	if (!rkvdec_rcb_buf_validate_size(ctx)) {
+-		rkvdec_free_rcb(ctx->dev, ctx->core);
++		rkvdec_free_rcb(ctx->dev, core);
+ 
+-		ret = rkvdec_allocate_rcb(ctx->dev, ctx->core,
++		ret = rkvdec_allocate_rcb(ctx->dev, core,
+ 					  ctx->decoded_fmt.fmt.pix_mp.width,
+ 					  ctx->decoded_fmt.fmt.pix_mp.height,
+ 					  ctx->dev->variant->rcb_sizes,
+ 					  ctx->dev->variant->num_rcb_sizes);
+-		if (ret) {
+-			rkvdec_job_finish(ctx, VB2_BUF_STATE_ERROR);
+-			return;
+-		}
++		if (ret)
++			goto err;
+ 	}
+ 
+ 	ret = desc->ops->run(ctx);
+ 	if (ret)
+-		rkvdec_job_finish(ctx, VB2_BUF_STATE_ERROR);
++		goto err;
++
++	ctx->core = NULL;
++	ctx->job = NULL;
++	rkvdec_job_started(job);
++	return;
++
++err:
++	cancel_delayed_work(&core->watchdog_work);
++	rkvdec_job_hw_done(core, VB2_BUF_STATE_ERROR, true);
++out:
++	ctx->core = NULL;
++	ctx->job = NULL;
++	rkvdec_job_started(job);
+ }
+ 
+ static const struct v4l2_m2m_ops rkvdec_m2m_ops = {
+ 	.device_run = rkvdec_device_run,
++	.job_ready = rkvdec_job_ready,
+ };
+ 
+ static int rkvdec_queue_init(void *priv,
+@@ -1423,6 +1608,10 @@ static int rkvdec_open(struct file *filp)
+ 		return -ENOMEM;
+ 
+ 	ctx->dev = rkvdec;
++	INIT_LIST_HEAD(&ctx->jobs);
++	init_waitqueue_head(&ctx->jobs_wq);
++	mutex_init(&ctx->done_lock);
++	ctx->num_job_slots = 1;
+ 	rkvdec_reset_coded_fmt(ctx);
+ 	rkvdec_reset_decoded_fmt(ctx);
+ 	v4l2_fh_init(&ctx->fh, video_devdata(filp));
+@@ -1458,6 +1647,7 @@ static int rkvdec_release(struct file *filp)
+ 	v4l2_m2m_ctx_release(ctx->fh.m2m_ctx);
+ 	v4l2_ctrl_handler_free(&ctx->ctrl_hdl);
+ 	v4l2_fh_exit(&ctx->fh);
++	mutex_destroy(&ctx->done_lock);
+ 	kfree(ctx);
+ 
+ 	return 0;
+@@ -1578,9 +1768,8 @@ static void rkvdec_iommu_restore(struct rkvdec_core *core)
+ 	}
+ }
+ 
+-static irqreturn_t rk3399_irq_handler(struct rkvdec_ctx *ctx)
++static irqreturn_t rk3399_irq_handler(struct rkvdec_core *core)
+ {
+-	struct rkvdec_core *core = ctx->core;
+ 	enum vb2_buffer_state state;
+ 	u32 status;
+ 
+@@ -1596,14 +1785,13 @@ static irqreturn_t rk3399_irq_handler(struct rkvdec_ctx *ctx)
+ 	}
+ 
+ 	if (cancel_delayed_work(&core->watchdog_work))
+-		rkvdec_job_finish(ctx, state);
++		rkvdec_job_hw_done(core, state, true);
+ 
+ 	return IRQ_HANDLED;
+ }
+ 
+-static irqreturn_t vdpu381_irq_handler(struct rkvdec_ctx *ctx)
++static irqreturn_t vdpu381_irq_handler(struct rkvdec_core *core)
+ {
+-	struct rkvdec_core *core = ctx->core;
+ 	enum vb2_buffer_state state;
+ 	u32 status;
+ 
+@@ -1621,14 +1809,13 @@ static irqreturn_t vdpu381_irq_handler(struct rkvdec_ctx *ctx)
+ 	}
+ 
+ 	if (cancel_delayed_work(&core->watchdog_work))
+-		rkvdec_job_finish(ctx, state);
++		rkvdec_job_hw_done(core, state, true);
+ 
+ 	return IRQ_HANDLED;
+ }
+ 
+-static irqreturn_t vdpu383_irq_handler(struct rkvdec_ctx *ctx)
++static irqreturn_t vdpu383_irq_handler(struct rkvdec_core *core)
+ {
+-	struct rkvdec_core *core = ctx->core;
+ 	enum vb2_buffer_state state;
+ 	u32 status;
+ 
+@@ -1646,7 +1833,7 @@ static irqreturn_t vdpu383_irq_handler(struct rkvdec_ctx *ctx)
+ 	}
+ 
+ 	if (cancel_delayed_work(&core->watchdog_work))
+-		rkvdec_job_finish(ctx, state);
++		rkvdec_job_hw_done(core, state, true);
+ 
+ 	return IRQ_HANDLED;
+ }
+@@ -1656,9 +1843,13 @@ static irqreturn_t rkvdec_irq_handler(int irq, void *priv)
+ 	irqreturn_t ret;
+ 	struct rkvdec_core *core = priv;
+ 	struct rkvdec_ctx *ctx = core->curr_ctx;
+-	const struct rkvdec_variant *variant = ctx->dev->variant;
++	const struct rkvdec_variant *variant;
++
++	if (!ctx)
++		return IRQ_NONE;
+ 
+-	ret = variant->ops->irq_handler(ctx);
++	variant = ctx->dev->variant;
++	ret = variant->ops->irq_handler(core);
+ 
+ 	return ret;
+ }
+@@ -1746,7 +1937,7 @@ static void rkvdec_watchdog_func(struct work_struct *work)
+ 	if (ctx) {
+ 		dev_err(core->dev, "Frame processing timed out!\n");
+ 		writel(RKVDEC_IRQ_DIS, core->regs + RKVDEC_REG_INTERRUPT);
+-		rkvdec_job_finish(ctx, VB2_BUF_STATE_ERROR);
++		rkvdec_job_hw_done(core, VB2_BUF_STATE_ERROR, true);
+ 	}
+ }
+ 
+@@ -1890,7 +2081,8 @@ static int rkvdec_core_bind(struct device *dev, struct device *master, void *dat
+ 		}
+ 	}
+ 
+-	release_core(rkvdec, core);
++	scoped_guard(spinlock_irqsave, &rkvdec->cores_lock)
++		rkvdec->available_cores[rkvdec->available_core_count++] = core;
+ 	rkvdec->core_count++;
+ 
+ 	dev_info(dev, "Registered core %d\n", id);
+@@ -2057,8 +2249,6 @@ static int rkvdec_bind(struct device *dev)
+ 	if (ret)
+ 		goto err_unbind;
+ 
+-	v4l2_m2m_set_max_parallel_jobs(rkvdec->m2m_dev, rkvdec->core_count);
+-
+ 	return 0;
+ 
+ err_unbind:
+diff --git a/drivers/media/platform/rockchip/rkvdec/rkvdec.h b/drivers/media/platform/rockchip/rkvdec/rkvdec.h
+index 338ce1efb..f0c8a530a 100644
+--- a/drivers/media/platform/rockchip/rkvdec/rkvdec.h
++++ b/drivers/media/platform/rockchip/rkvdec/rkvdec.h
+@@ -30,7 +30,11 @@
+ #define RKVDEC_4K_PIXELS		(4096 * 2304)
+ #define RKVDEC_8K_PIXELS		(7680 * 4320)
+ 
++/* Maximum number of frames of one context decoded at the same time */
++#define RKVDEC_MAX_JOBS			2
++
+ struct rkvdec_ctx;
++struct rkvdec_core;
+ struct rkvdec_rcb_config;
+ 
+ struct rkvdec_ctrl_desc {
+@@ -73,7 +77,7 @@ vb2_to_rkvdec_decoded_buf(struct vb2_buffer *buf)
+ }
+ 
+ struct rkvdec_variant_ops {
+-	irqreturn_t (*irq_handler)(struct rkvdec_ctx *ctx);
++	irqreturn_t (*irq_handler)(struct rkvdec_core *core);
+ 	u32 (*colmv_size)(u16 width, u16 height);
+ 	void (*flatten_matrices)(u8 *output, const u8 *input, int matrices, int row_length);
+ };
+@@ -126,6 +130,34 @@ struct rkvdec_coded_fmt_desc {
+ 	u32 subsystem_flags;
+ };
+ 
++/**
++ * struct rkvdec_job - a frame being decoded
++ * @node: entry in the &rkvdec_ctx.jobs list
++ * @ctx: the context the frame belongs to
++ * @core: the core decoding the frame, NULL once the hardware is done
++ * @src: the OUTPUT buffer
++ * @dst: the CAPTURE buffer
++ * @state: the result of the decoding
++ * @slot: index of the job in &rkvdec_ctx.job_slots, selects the per-job
++ *	  auxiliary buffers of the coded format
++ * @detached: the buffers were taken off the m2m queues and the m2m job is
++ *	      finished, so the next frame may start before this one is done
++ * @hw_done: the hardware is done with the frame
++ * @busy: the m2m state of the job is being changed, don't complete it
++ */
++struct rkvdec_job {
++	struct list_head node;
++	struct rkvdec_ctx *ctx;
++	struct rkvdec_core *core;
++	struct vb2_v4l2_buffer *src;
++	struct vb2_v4l2_buffer *dst;
++	enum vb2_buffer_state state;
++	unsigned int slot;
++	bool detached;
++	bool hw_done;
++	bool busy;
++};
++
+ struct rkvdec_core {
+ 	struct device *dev;
+ 	struct clk_bulk_data *clocks;
+@@ -138,6 +170,7 @@ struct rkvdec_core {
+ 	struct iommu_domain *empty_domain;
+ 	struct rkvdec_rcb_config *rcb_config;
+ 	struct rkvdec_ctx *curr_ctx;
++	struct rkvdec_job *job;
+ 	int id;
+ };
+ 
+@@ -152,9 +185,10 @@ struct rkvdec_dev {
+ 	int core_count;
+ 	struct rkvdec_core **available_cores;
+ 	unsigned int available_core_count;
+-	spinlock_t cores_lock; /* serializes core list access */
++	spinlock_t cores_lock; /* protects the cores, the job lists and held_job */
+ 	struct rkvdec_core *main_core;
+ 	struct iommu_domain *iommu_global_domain;
++	struct rkvdec_job *held_job;
+ };
+ 
+ struct rkvdec_ctx {
+@@ -166,7 +200,16 @@ struct rkvdec_ctx {
+ 	struct rkvdec_dev *dev;
+ 	enum rkvdec_image_fmt image_fmt;
+ 	u32 colmv_offset;
++	/* The core and job being set up, only valid in &rkvdec_coded_fmt_ops.run */
+ 	struct rkvdec_core *core;
++	struct rkvdec_job *job;
++	struct rkvdec_job job_slots[RKVDEC_MAX_JOBS];
++	unsigned int num_job_slots;
++	unsigned long busy_slots;
++	struct list_head jobs;
++	unsigned int num_jobs;
++	wait_queue_head_t jobs_wq;
++	struct mutex done_lock; /* completes the jobs in decoding order */
+ 	void *priv;
+ 	u8 has_sps_st_rps: 1;
+ 	u8 has_sps_lt_rps: 1;

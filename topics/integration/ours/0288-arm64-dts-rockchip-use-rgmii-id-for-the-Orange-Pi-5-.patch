@@ -1,0 +1,50 @@
+From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
+From: Arun Iyengar <aiyengar1990@gmail.com>
+Date: Thu, 29 Oct 2026 16:45:58 +0000
+Subject: [PATCH] arm64: dts: rockchip: use rgmii-id for the Orange Pi 5/5B
+ ethernet PHY
+
+The Orange Pi 5 and 5B have a Motorcomm YT8531C RGMII PHY on gmac1
+(the PHY driver binds as "YT8531 Gigabit Ethernet"). The board neither
+uses extra long clock traces for TX nor for RX, yet the device tree
+describes it as "rgmii-rxid", which according to ethernet-controller.yaml
+means that the PCB provides the TX delay, and then makes the MAC insert
+the TX delay with tx_delay = <0x42>. The setting was copied from the
+vendor kernel, which uses the MAC delay lines everywhere.
+
+Describe the PCB correctly as "rgmii-id" and drop tx_delay, so that the
+MAC adds no delay and the PHY adds both: motorcomm.c programs its
+default 1950 ps for RX (as now) and for TX. This is the setup the
+binding recommends, and the one the same vendor's Orange Pi CM5
+(rk3588s-orangepi-cm5-base.dts), with a YT8531C on gmac1 of the same
+SoC, already uses in mainline.
+
+Besides being the correct description, this removes the MAC from the
+timing path for both directions, so no board-specific delay-line value
+is needed any more.
+
+Assisted-by: Claude:claude-opus-5-5
+---
+ arch/arm64/boot/dts/rockchip/rk3588s-orangepi-5-5b.dtsi | 3 +--
+ 1 file changed, 1 insertion(+), 2 deletions(-)
+
+diff --git a/arch/arm64/boot/dts/rockchip/rk3588s-orangepi-5-5b.dtsi b/arch/arm64/boot/dts/rockchip/rk3588s-orangepi-5-5b.dtsi
+index 6e081bc06..8d9fad010 100644
+--- a/arch/arm64/boot/dts/rockchip/rk3588s-orangepi-5-5b.dtsi
++++ b/arch/arm64/boot/dts/rockchip/rk3588s-orangepi-5-5b.dtsi
+@@ -72,14 +72,13 @@ vbus_typec: regulator-vbus-typec {
+ &gmac1 {
+ 	clock_in_out = "output";
+ 	phy-handle = <&rgmii_phy1>;
+-	phy-mode = "rgmii-rxid";
++	phy-mode = "rgmii-id";
+ 	pinctrl-0 = <&gmac1_miim
+ 			&gmac1_tx_bus2
+ 			&gmac1_rx_bus2
+ 			&gmac1_rgmii_clk
+ 			&gmac1_rgmii_bus>;
+ 	pinctrl-names = "default";
+-	tx_delay = <0x42>;
+ 	status = "okay";
+ };
+ 

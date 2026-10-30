@@ -1,0 +1,12 @@
+# Apply in this order on top of the parent topic (see topic.env):
+#   while read -r p sha; do git am "$p"; done < <(grep -v '^#' series)
+# Second column: the original commit in the workspace clone (for reference).
+ours/0001-media-v4l2-mem2mem-add-v4l2_m2m_buf_detach_and_job_f.patch a1e0eeef85bf7b4c67d40c06fc6a186e38ba8a5c
+ours/0002-media-rkvdec-complete-decode-jobs-independently-of-t.patch 2830df71637af8eb2ba288910930c2628df173e0
+ours/0003-media-rkvdec-vdpu381-give-every-job-its-own-H.264-HE.patch a54eb557ca531e7bbcd9803d98177f074304df7e
+ours/0004-dt-bindings-media-rockchip-add-the-RK3588-video-deco.patch cdd2c8c3e68651c8bd6c33f4c14301c7835f40c8
+ours/0005-media-rkvdec-decode-one-stream-on-both-RK3588-cores-.patch 3d29e1638b6dbaac4eb9ca37a9307593eb9eb956
+ours/0006-arm64-dts-rockchip-add-the-RK3588-video-decoder-CCU.patch 364d0fe3a82b67e5b923753467d28cbada543997
+ours/0007-media-rkvdec-vdpu381-enable-and-flush-the-read-cache.patch e90410fac61934a2b9d5cc95c7c03874dd5b7bd3
+local/0008-DEBUG-media-rkvdec-A-B-module-parameters-for-the-CCU.patch 245b333d3d7d8b1a56965cdfe444c2351282f244
+ours/0009-media-rkvdec-keep-interlaced-H.264-off-the-CCU-progr.patch d8385cca8bdbb10ed58e90a55f0ff8131478ae31

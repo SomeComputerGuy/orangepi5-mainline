@@ -1,0 +1,11 @@
+# Apply in this order on top of the parent topic (see topic.env):
+#   while read -r p sha; do git am "$p"; done < <(grep -v '^#' series)
+# Second column: the original commit in the workspace clone (for reference).
+ours/0001-media-rockchip-rkjpegd-Return-a-CAPTURE-buffer-for-u.patch 10c42dbc4c16c20de32b8d876813c419030ddd68
+ours/0002-media-verisilicon-Support-holding-the-CAPTURE-buffer.patch 8a581d2faa88bac13202453082a58ad952da6e13
+ours/0003-media-verisilicon-Don-t-report-frame-rate-ioctls-whe.patch 35e81f4b490a54c911234ebb3ac160aae2172a30
+ours/0004-media-verisilicon-Find-the-second-MPEG-2-field-witho.patch 075187e39e22ba980b02e4c1bc0e170894e2715d
+ours/0005-media-rkvdec-vdpu381-Compress-the-co-located-motion-.patch 3616a0df4fe1e26d234ac88e148bd95a9b2a038b
+ours/0006-media-rkvdec-vdpu381-Compress-the-co-located-motion-.patch bcfbb4a5fdb88074ed67ebd31c76b7ea172af1c2
+ours/0007-media-rkvdec-Give-the-HEVC-SPS-control-a-default-the.patch 122c12a7b814235d7d70a3252d70dd4268e6f83b
+ours/0008-media-verisilicon-Don-t-offer-VP8-above-1080p-on-the.patch 53ff0a1853975a0fdb9ed8f5d1a6add943dadd0a

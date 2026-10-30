@@ -1,0 +1,42 @@
+From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
+From: Igor Paunovic <royalnet026@gmail.com>
+Date: Sun, 26 Jul 2026 15:25:37 -0500
+Subject: [PATCH] media: rkvdec: align bytesperline to 64 bytes in
+ rkvdec_fill_decoded_pixfmt()
+
+Ensure bytesperline is 64-byte aligned and scale sizeimage accordingly.
+
+Signed-off-by: Igor Paunovic <royalnet026@gmail.com>
+Signed-off-by: Francesco Saverio Pavone <pavone.lawyer@gmail.com>
+Signed-off-by: Venkata Atchuta Bheemeswara Sarma Darbha <vdarbha0473@gmail.com>
+---
+ drivers/media/platform/rockchip/rkvdec/rkvdec.c | 12 ++++++++++--
+ 1 file changed, 10 insertions(+), 2 deletions(-)
+
+diff --git a/drivers/media/platform/rockchip/rkvdec/rkvdec.c b/drivers/media/platform/rockchip/rkvdec/rkvdec.c
+index bf65daf6f..c7cc9eb4d 100644
+--- a/drivers/media/platform/rockchip/rkvdec/rkvdec.c
++++ b/drivers/media/platform/rockchip/rkvdec/rkvdec.c
+@@ -104,12 +104,20 @@ static void rkvdec_fill_decoded_pixfmt(struct rkvdec_ctx *ctx,
+ 				       struct v4l2_pix_format_mplane *pix_mp)
+ {
+ 	const struct rkvdec_variant *variant = ctx->dev->variant;
++	struct v4l2_plane_pix_format *plane = &pix_mp->plane_fmt[0];
++	u32 aligned_bpl;
+ 
+ 	v4l2_fill_pixfmt_mp(pix_mp, pix_mp->pixelformat, pix_mp->width, pix_mp->height);
+ 
+-	ctx->colmv_offset = pix_mp->plane_fmt[0].sizeimage;
++	/* ensure bpl is 64 byte aligned and scale sizeimage accordingly. */
++	aligned_bpl = ALIGN(plane->bytesperline, 64);
++	if (aligned_bpl != plane->bytesperline) {
++		plane->sizeimage = plane->sizeimage / plane->bytesperline * aligned_bpl;
++		plane->bytesperline = aligned_bpl;
++	}
+ 
+-	pix_mp->plane_fmt[0].sizeimage += variant->ops->colmv_size(pix_mp->width, pix_mp->height);
++	ctx->colmv_offset = plane->sizeimage;
++	plane->sizeimage += variant->ops->colmv_size(pix_mp->width, pix_mp->height);
+ }
+ 
+ static void rkvdec_reset_fmt(struct rkvdec_ctx *ctx, struct v4l2_format *f,

@@ -1,0 +1,5 @@
+# Firefox (and its language packs) from Mozilla's repository, not Ubuntu's snap
+# transition package (whose version sorts higher)
+Package: *
+Pin: origin packages.mozilla.org
+Pin-Priority: 1000

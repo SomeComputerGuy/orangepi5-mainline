@@ -1,0 +1,9 @@
+# Apply in this order on top of the parent topic (see topic.env):
+#   while read -r p sha; do git am "$p"; done < <(grep -v '^#' series)
+# Second column: the original commit in the workspace clone (for reference).
+ours/0001-media-rkvdec-hevc-Apply-the-request-controls-before-.patch 8f14db67036e058b86c3447d08b6e13ca5ee2b54
+ours/0002-media-rkvdec-hevc-Notice-SPS-RPS-controls-set-to-the.patch cb9e6bd97e5861a11af4503959b6bb6521481af7
+ours/0003-media-rkvdec-hevc-Don-t-read-past-the-end-of-the-SPS.patch e71442cc89083c9cd9c3f042922cb18a72e064cb
+ours/0004-media-rkvdec-vdpu383-Complete-the-request-when-rejec.patch a4c2eca7334dd578516b7790f035dd88fa6d2e6d
+ours/0005-media-rkvdec-hevc-Rebuild-the-short-term-RPS-table-w.patch 5d69a4c150f18d4f5fe221fe874084217354bedc
+ours/0006-media-rkvdec-hevc-Handle-allocation-failure-of-the-s.patch 0f5de1ec5381b1039a1b004ddd365f92a41a3bcc

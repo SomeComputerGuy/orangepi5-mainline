@@ -1,2 +1,0 @@
-# First-boot config comes from the FAT partition labelled CIDATA on the SD card
-datasource_list: [ NoCloud, None ]

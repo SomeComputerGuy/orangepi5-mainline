@@ -1,0 +1,59 @@
+From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
+From: Arun Iyengar <aiyengar1990@gmail.com>
+Date: Thu, 29 Oct 2026 12:21:09 +0000
+Subject: [PATCH] arm64: dts: rockchip: add Orange Pi 5 M.2 SATA variant
+
+Local board patch (patches/linux/0001), carried here so the branch builds
+the DTB the board actually boots.
+
+Assisted-by: Claude:claude-opus-5-5
+---
+ arch/arm64/boot/dts/rockchip/Makefile         |  1 +
+ .../dts/rockchip/rk3588s-orangepi-5-sata.dts  | 26 +++++++++++++++++++
+ 2 files changed, 27 insertions(+)
+ create mode 100644 arch/arm64/boot/dts/rockchip/rk3588s-orangepi-5-sata.dts
+
+diff --git a/arch/arm64/boot/dts/rockchip/Makefile b/arch/arm64/boot/dts/rockchip/Makefile
+index e7936a21c..96bcfde1c 100644
+--- a/arch/arm64/boot/dts/rockchip/Makefile
++++ b/arch/arm64/boot/dts/rockchip/Makefile
+@@ -233,6 +233,7 @@ dtb-$(CONFIG_ARCH_ROCKCHIP) += rk3588s-nanopi-r6s.dtb
+ dtb-$(CONFIG_ARCH_ROCKCHIP) += rk3588s-nanopi-r6c.dtb
+ dtb-$(CONFIG_ARCH_ROCKCHIP) += rk3588s-odroid-m2.dtb
+ dtb-$(CONFIG_ARCH_ROCKCHIP) += rk3588s-orangepi-5.dtb
++dtb-$(CONFIG_ARCH_ROCKCHIP) += rk3588s-orangepi-5-sata.dtb
+ dtb-$(CONFIG_ARCH_ROCKCHIP) += rk3588s-orangepi-5b.dtb
+ dtb-$(CONFIG_ARCH_ROCKCHIP) += rk3588s-orangepi-5-pro.dtb
+ dtb-$(CONFIG_ARCH_ROCKCHIP) += rk3588s-orangepi-cm5-base.dtb
+diff --git a/arch/arm64/boot/dts/rockchip/rk3588s-orangepi-5-sata.dts b/arch/arm64/boot/dts/rockchip/rk3588s-orangepi-5-sata.dts
+new file mode 100644
+index 000000000..770bfe640
+--- /dev/null
++++ b/arch/arm64/boot/dts/rockchip/rk3588s-orangepi-5-sata.dts
+@@ -0,0 +1,26 @@
++// SPDX-License-Identifier: (GPL-2.0+ OR MIT)
++/*
++ * Orange Pi 5 with an M.2 SATA SSD. The M.2 slot's single lane (combphy0)
++ * is shared between PCIe (NVMe) and SATA; this runs it in SATA mode.
++ */
++
++#include "rk3588s-orangepi-5.dts"
++
++/ {
++	model = "Xunlong Orange Pi 5 (M.2 SATA)";
++};
++
++&pcie2x1l2 {
++	status = "disabled";
++};
++
++&sata0 {
++	status = "okay";
++};
++
++&sata0 {
++	sata-port@0 {
++		/* M.2 slot 3.3 V; without a consumer it is switched off as unused */
++		target-supply = <&vcc3v3_pcie20>;
++	};
++};

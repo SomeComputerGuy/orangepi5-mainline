@@ -12,11 +12,11 @@
 # line or in the results. Results can name your library's titles, so they go to
 # out/ (not exported), not work/_out/.
 set -euo pipefail
-TOP=$(cd "$(dirname "$0")/.." && pwd)
-PI=<user>@<board-ip>
+. "$(dirname "$0")/env.sh"
+PI=$OPI5_PI
 if [ $# -gt 0 ] && [ "$1" != -- ]; then PI=$1; shift; fi
 [ "${1:-}" = -- ] && shift
-SSH=(-o BatchMode=yes -o UserKnownHostsFile="$TOP/.ssh/known_hosts" -i "$TOP/.ssh/opi5_ed25519")
+SSH=(-o BatchMode=yes -o UserKnownHostsFile="$OPI5_KNOWN_HOSTS" -i "$OPI5_SSH_KEY")
 ENV=$TOP/local.env
 TOOL=$TOP/overlay-desktop/usr/local/bin/opi5-jellyfin-hwtest
 

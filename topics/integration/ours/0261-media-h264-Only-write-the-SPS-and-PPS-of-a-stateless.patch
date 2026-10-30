@@ -1,0 +1,57 @@
+From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
+From: Arun Iyengar <aiyengar1990@gmail.com>
+Date: Thu, 29 Oct 2026 12:49:14 +0000
+Subject: [PATCH] media: h264: Only write the SPS and PPS of a stateless encode
+ when they change
+
+The stateless encode core is meant to write the SPS and PPS for the first
+picture of a stream, and then only when they change. The check is
+inverted: the first picture compares the new SPS and PPS with the zeroed
+active state, which always differs, and all the following pictures get
+them unconditionally. This wastes some bits on every picture, and skews
+the size statistics of the rate control.
+
+Compare with the active state once a picture was encoded, and write them
+unconditionally for the first picture. The
+V4L2_CID_MPEG_VIDEO_PREPEND_SPSPPS_TO_IDR control still forces them on
+IDR pictures.
+
+To be squashed into "media: h264: Add stateless encode core" from
+https://patch.msgid.link/20260522101653.2565125-5-paulk@sys-base.io
+
+Assisted-by: Claude:claude-opus-5-5
+---
+ drivers/media/v4l2-core/v4l2-h264-enc.c | 11 +++++++----
+ 1 file changed, 7 insertions(+), 4 deletions(-)
+
+diff --git a/drivers/media/v4l2-core/v4l2-h264-enc.c b/drivers/media/v4l2-core/v4l2-h264-enc.c
+index 67ea82ceb..af925b662 100644
+--- a/drivers/media/v4l2-core/v4l2-h264-enc.c
++++ b/drivers/media/v4l2-core/v4l2-h264-enc.c
+@@ -762,9 +762,12 @@ static int rbsp_update(struct v4l2_h264_enc *enc)
+ 	if (ctrl && ctrl->cur.val)
+ 		enc->rbsp_update |= V4L2_H264_ENC_RBSP_UPDATE_AUD;
+ 
+-	/* SPS */
++	/*
++	 * SPS: always written for the first picture of the stream, then only
++	 * when it changes.
++	 */
+ 
+-	if (!enc->state_serial) {
++	if (enc->state_serial) {
+ 		if (memcmp(&state_active->sps, &state->sps,
+ 			   sizeof(state_active->sps)) ||
+ 		    memcmp(&state_active->sps_video, &state->sps_video,
+@@ -774,9 +777,9 @@ static int rbsp_update(struct v4l2_h264_enc *enc)
+ 		enc->rbsp_update |= V4L2_H264_ENC_RBSP_UPDATE_SPS;
+ 	}
+ 
+-	/* PPS */
++	/* PPS: same as the SPS. */
+ 
+-	if (!enc->state_serial) {
++	if (enc->state_serial) {
+ 		if (memcmp(&state_active->pps, &state->pps,
+ 			   sizeof(state_active->pps)))
+ 			enc->rbsp_update |= V4L2_H264_ENC_RBSP_UPDATE_PPS;

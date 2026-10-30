@@ -1,0 +1,6 @@
+# Apply in this order on top of the parent topic (see topic.env):
+#   while read -r p sha; do git am "$p"; done < <(grep -v '^#' series)
+# Second column: the original commit in the workspace clone (for reference).
+ours/0001-media-rkvdec-vdpu381-Compress-the-co-located-motion-.patch 42f4ecfa6af5a2a85ef26eb1184e14148095ac25
+ours/0002-media-rkvdec-vdpu381-Compress-the-co-located-motion-.patch cba074f89a97ac5ede38f464057988db3658d768
+ours/0003-media-rkvdec-Give-the-HEVC-SPS-control-a-default-the.patch 866097dbb931df35fa8e7db582cae394e8311f5a

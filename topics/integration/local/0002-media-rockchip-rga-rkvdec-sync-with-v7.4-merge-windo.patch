@@ -1,0 +1,174 @@
+From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
+From: Arun Iyengar <aiyengar1990@gmail.com>
+Date: Thu, 29 Oct 2026 11:19:21 +0000
+Subject: [PATCH] media: rockchip: rga, rkvdec: sync with v7.4 merge window
+ (c339f4010)
+
+Local backport only, not for upstream: brings the rga and rkvdec
+drivers to their state at c339f4010 so that the multi-core series,
+which is based on that tree, applies on v7.3 for on-board testing.
+Changes are cleanups (pm_ptr/RUNTIME_PM_OPS, devres), the rga irq
+field, and removal of an rga rotation size workaround.
+
+Assisted-by: Claude:claude-opus-5-5
+---
+ drivers/media/platform/rockchip/rga/rga-hw.c    |  8 --------
+ drivers/media/platform/rockchip/rga/rga.c       | 13 +++++++------
+ drivers/media/platform/rockchip/rga/rga.h       |  1 +
+ drivers/media/platform/rockchip/rkvdec/rkvdec.c | 16 ++++------------
+ 4 files changed, 12 insertions(+), 26 deletions(-)
+
+diff --git a/drivers/media/platform/rockchip/rga/rga-hw.c b/drivers/media/platform/rockchip/rga/rga-hw.c
+index be1bc8ddb..2e7ec8b7c 100644
+--- a/drivers/media/platform/rockchip/rga/rga-hw.c
++++ b/drivers/media/platform/rockchip/rga/rga-hw.c
+@@ -158,7 +158,6 @@ static void rga_cmd_set_dst_addr(struct rga_ctx *ctx, dma_addr_t dma_addr)
+ 
+ static void rga_cmd_set_trans_info(struct rga_ctx *ctx)
+ {
+-	struct rockchip_rga *rga = ctx->rga;
+ 	u32 *dest = ctx->cmdbuf_virt;
+ 	unsigned int scale_dst_w, scale_dst_h;
+ 	unsigned int src_h, src_w, dst_h, dst_w;
+@@ -251,13 +250,6 @@ static void rga_cmd_set_trans_info(struct rga_ctx *ctx)
+ 	 */
+ 	if (src_info.data.rot_mode == RGA_SRC_ROT_MODE_90_DEGREE ||
+ 	    src_info.data.rot_mode == RGA_SRC_ROT_MODE_270_DEGREE) {
+-		if (rga->version.major == 0 || rga->version.minor == 0) {
+-			if (dst_w == src_h)
+-				src_h -= 8;
+-			if (abs(src_w - dst_h) < 16)
+-				src_w -= 16;
+-		}
+-
+ 		scale_dst_h = dst_w;
+ 		scale_dst_w = dst_h;
+ 	} else {
+diff --git a/drivers/media/platform/rockchip/rga/rga.c b/drivers/media/platform/rockchip/rga/rga.c
+index b3cb6bf8e..543a0da75 100644
+--- a/drivers/media/platform/rockchip/rga/rga.c
++++ b/drivers/media/platform/rockchip/rga/rga.c
+@@ -797,6 +797,7 @@ static int rga_probe(struct platform_device *pdev)
+ 		ret = irq;
+ 		goto err_put_clk;
+ 	}
++	rga->irq = irq;
+ 
+ 	ret = devm_request_irq(rga->dev, irq, rga_isr,
+ 			       rga_has_internal_iommu(rga) ? 0 : IRQF_SHARED,
+@@ -876,14 +877,15 @@ static void rga_remove(struct platform_device *pdev)
+ 
+ 	v4l2_info(&rga->v4l2_dev, "Removing\n");
+ 
+-	v4l2_m2m_release(rga->m2m_dev);
+ 	video_unregister_device(rga->vfd);
++	devm_free_irq(rga->dev, rga->irq, rga);
++	v4l2_m2m_release(rga->m2m_dev);
+ 	v4l2_device_unregister(&rga->v4l2_dev);
+ 
+ 	pm_runtime_disable(rga->dev);
+ }
+ 
+-static int __maybe_unused rga_runtime_suspend(struct device *dev)
++static int rga_runtime_suspend(struct device *dev)
+ {
+ 	struct rockchip_rga *rga = dev_get_drvdata(dev);
+ 
+@@ -892,7 +894,7 @@ static int __maybe_unused rga_runtime_suspend(struct device *dev)
+ 	return 0;
+ }
+ 
+-static int __maybe_unused rga_runtime_resume(struct device *dev)
++static int rga_runtime_resume(struct device *dev)
+ {
+ 	struct rockchip_rga *rga = dev_get_drvdata(dev);
+ 
+@@ -900,8 +902,7 @@ static int __maybe_unused rga_runtime_resume(struct device *dev)
+ }
+ 
+ static const struct dev_pm_ops rga_pm = {
+-	SET_RUNTIME_PM_OPS(rga_runtime_suspend,
+-			   rga_runtime_resume, NULL)
++	RUNTIME_PM_OPS(rga_runtime_suspend, rga_runtime_resume, NULL)
+ };
+ 
+ static const struct of_device_id rockchip_rga_match[] = {
+@@ -927,7 +928,7 @@ static struct platform_driver rga_pdrv = {
+ 	.remove = rga_remove,
+ 	.driver = {
+ 		.name = RGA_NAME,
+-		.pm = &rga_pm,
++		.pm = pm_ptr(&rga_pm),
+ 		.of_match_table = rockchip_rga_match,
+ 	},
+ };
+diff --git a/drivers/media/platform/rockchip/rga/rga.h b/drivers/media/platform/rockchip/rga/rga.h
+index bd431534d..7bcdf36c1 100644
+--- a/drivers/media/platform/rockchip/rga/rga.h
++++ b/drivers/media/platform/rockchip/rga/rga.h
+@@ -73,6 +73,7 @@ struct rockchip_rga {
+ 	struct device *dev;
+ 	struct regmap *grf;
+ 	void __iomem *regs;
++	int irq;
+ 	struct clk_bulk_data *clks;
+ 	int num_clks;
+ 	struct rockchip_rga_version version;
+diff --git a/drivers/media/platform/rockchip/rkvdec/rkvdec.c b/drivers/media/platform/rockchip/rkvdec/rkvdec.c
+index 061281f90..fbcd0f175 100644
+--- a/drivers/media/platform/rockchip/rkvdec/rkvdec.c
++++ b/drivers/media/platform/rockchip/rkvdec/rkvdec.c
+@@ -1824,10 +1824,8 @@ static int rkvdec_probe(struct platform_device *pdev)
+ 	ret = devm_request_threaded_irq(&pdev->dev, irq, NULL,
+ 					rkvdec_irq_handler, IRQF_ONESHOT,
+ 					dev_name(&pdev->dev), rkvdec);
+-	if (ret) {
+-		dev_err(&pdev->dev, "Could not request vdec IRQ\n");
++	if (ret)
+ 		return ret;
+-	}
+ 
+ 	rkvdec->sram_pool = of_gen_pool_get(pdev->dev.of_node, "sram", 0);
+ 	if (!rkvdec->sram_pool && rkvdec->variant->num_rcb_sizes > 0)
+@@ -1857,9 +1855,6 @@ static int rkvdec_probe(struct platform_device *pdev)
+ 	pm_runtime_dont_use_autosuspend(&pdev->dev);
+ 	pm_runtime_disable(&pdev->dev);
+ 
+-	if (rkvdec->sram_pool)
+-		gen_pool_destroy(rkvdec->sram_pool);
+-
+ 	return ret;
+ }
+ 
+@@ -1877,7 +1872,6 @@ static void rkvdec_remove(struct platform_device *pdev)
+ 		iommu_domain_free(rkvdec->empty_domain);
+ }
+ 
+-#ifdef CONFIG_PM
+ static int rkvdec_runtime_resume(struct device *dev)
+ {
+ 	struct rkvdec_dev *rkvdec = dev_get_drvdata(dev);
+@@ -1892,12 +1886,10 @@ static int rkvdec_runtime_suspend(struct device *dev)
+ 	clk_bulk_disable_unprepare(rkvdec->num_clocks, rkvdec->clocks);
+ 	return 0;
+ }
+-#endif
+ 
+ static const struct dev_pm_ops rkvdec_pm_ops = {
+-	SET_SYSTEM_SLEEP_PM_OPS(pm_runtime_force_suspend,
+-				pm_runtime_force_resume)
+-	SET_RUNTIME_PM_OPS(rkvdec_runtime_suspend, rkvdec_runtime_resume, NULL)
++	SYSTEM_SLEEP_PM_OPS(pm_runtime_force_suspend, pm_runtime_force_resume)
++	RUNTIME_PM_OPS(rkvdec_runtime_suspend, rkvdec_runtime_resume, NULL)
+ };
+ 
+ static struct platform_driver rkvdec_driver = {
+@@ -1906,7 +1898,7 @@ static struct platform_driver rkvdec_driver = {
+ 	.driver = {
+ 		   .name = "rkvdec",
+ 		   .of_match_table = of_rkvdec_match,
+-		   .pm = &rkvdec_pm_ops,
++		   .pm = pm_ptr(&rkvdec_pm_ops),
+ 	},
+ };
+ module_platform_driver(rkvdec_driver);

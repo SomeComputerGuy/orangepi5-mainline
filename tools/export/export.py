@@ -304,8 +304,15 @@ def export_static(ws, repo):
     od = repo / "overlay"
     shutil.rmtree(od, ignore_errors=True)
     for p in sorted((ws / "overlay").rglob("*")):
-        if p.is_file():
+        if p.is_file() and not BACKUP_RE.search(p.name):
             copy_text(p, od / p.relative_to(ws / "overlay"))
+    # overlay-desktop/: extra files for the desktop image (build-image.sh --variant desktop)
+    odd = repo / "overlay-desktop"
+    shutil.rmtree(odd, ignore_errors=True)
+    if (ws / "overlay-desktop").is_dir():
+        for p in sorted((ws / "overlay-desktop").rglob("*")):
+            if p.is_file() and not BACKUP_RE.search(p.name):
+                copy_text(p, odd / p.relative_to(ws / "overlay-desktop"))
     cd = repo / "cidata"
     shutil.rmtree(cd, ignore_errors=True)
     for n in ("meta-data", "network-config"):

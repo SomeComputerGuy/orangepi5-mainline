@@ -1,0 +1,83 @@
+From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
+From: Arun Iyengar <aiyengar1990@gmail.com>
+Date: Thu, 29 Oct 2026 23:24:20 +0000
+Subject: [PATCH] media: rkvdec: hevc: Notice SPS RPS controls set to their
+ current value
+
+has_sps_st_rps and has_sps_lt_rps tell the VDPU381/VDPU383 HEVC backends
+that userspace provides the EXT_SPS_ST_RPS and EXT_SPS_LT_RPS controls.
+rkvdec_s_ctrl() sets them when the control has_changed, but the control
+framework only calls s_ctrl at all when the new value differs from the
+current one. A first value that equals the default (one element,
+all-zero) therefore never sets the flag. For a stream whose SPS has one
+empty short-term set, or one long-term candidate with POC LSB 0 that
+isn't used by the current picture, VDPU381 then warns "Long and short
+term RPS not set" and doesn't build the RPS table, and VDPU383 rejects
+every job with -EINVAL, although userspace did set the controls.
+
+Mark both controls EXECUTE_ON_WRITE, so that every write from userspace
+reaches s_ctrl with has_changed set, whether or not the value changed.
+Keep the has_changed test: v4l2_ctrl_handler_setup() calls s_ctrl for
+every control when the context is opened, without has_changed, and that
+call must not count as a write.
+
+v4l2_ctrl_new_custom() takes the flags of a standard control from
+v4l2_ctrl_fill() and drops cfg->flags, so add EXECUTE_ON_WRITE to the
+control once it is created.
+
+Assisted-by: Claude:claude-opus-5-5
+---
+ .../media/platform/rockchip/rkvdec/rkvdec.c    | 18 +++++++++++++++++-
+ 1 file changed, 17 insertions(+), 1 deletion(-)
+
+diff --git a/drivers/media/platform/rockchip/rkvdec/rkvdec.c b/drivers/media/platform/rockchip/rkvdec/rkvdec.c
+index c7cc9eb4d..cd8d60e0a 100644
+--- a/drivers/media/platform/rockchip/rkvdec/rkvdec.c
++++ b/drivers/media/platform/rockchip/rkvdec/rkvdec.c
+@@ -163,6 +163,12 @@ static int rkvdec_s_ctrl(struct v4l2_ctrl *ctrl)
+ 	enum rkvdec_image_fmt image_fmt;
+ 	struct vb2_queue *vq;
+ 
++	/*
++	 * The RPS controls are EXECUTE_ON_WRITE, so every write by userspace
++	 * gets here with has_changed set, even when the value (such as the
++	 * default) equals the current one. v4l2_ctrl_handler_setup() calls
++	 * this without has_changed, which mustn't count as a write.
++	 */
+ 	if (ctrl->id == V4L2_CID_STATELESS_HEVC_EXT_SPS_ST_RPS) {
+ 		ctx->has_sps_st_rps |= !!(ctrl->has_changed);
+ 		return 0;
+@@ -287,11 +293,13 @@ static const struct rkvdec_ctrl_desc vdpu38x_hevc_ctrl_descs[] = {
+ 	},
+ 	{
+ 		.cfg.id = V4L2_CID_STATELESS_HEVC_EXT_SPS_ST_RPS,
++		.cfg.flags = V4L2_CTRL_FLAG_EXECUTE_ON_WRITE,
+ 		.cfg.ops = &rkvdec_ctrl_ops,
+ 		.cfg.dims = { 64 },
+ 	},
+ 	{
+ 		.cfg.id = V4L2_CID_STATELESS_HEVC_EXT_SPS_LT_RPS,
++		.cfg.flags = V4L2_CTRL_FLAG_EXECUTE_ON_WRITE,
+ 		.cfg.ops = &rkvdec_ctrl_ops,
+ 		.cfg.dims = { 32 },
+ 	},
+@@ -1346,10 +1354,18 @@ static int rkvdec_add_ctrls(struct rkvdec_ctx *ctx,
+ 
+ 	for (i = 0; i < ctrls->num_ctrls; i++) {
+ 		const struct v4l2_ctrl_config *cfg = &ctrls->ctrls[i].cfg;
++		struct v4l2_ctrl *ctrl;
+ 
+-		v4l2_ctrl_new_custom(&ctx->ctrl_hdl, cfg, ctx);
++		ctrl = v4l2_ctrl_new_custom(&ctx->ctrl_hdl, cfg, ctx);
+ 		if (ctx->ctrl_hdl.error)
+ 			return ctx->ctrl_hdl.error;
++
++		/*
++		 * v4l2_ctrl_fill() replaces cfg->flags for standard controls.
++		 * EXECUTE_ON_WRITE only changes when s_ctrl is called, so it
++		 * can be added afterwards.
++		 */
++		ctrl->flags |= cfg->flags & V4L2_CTRL_FLAG_EXECUTE_ON_WRITE;
+ 	}
+ 
+ 	return 0;

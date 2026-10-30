@@ -1,0 +1,5 @@
+# Apply in this order on top of the parent topic (see topic.env):
+#   while read -r p sha; do git am "$p"; done < <(grep -v '^#' series)
+# Second column: the original commit in the workspace clone (for reference).
+ours/0001-drm-rockchip-dw_dp-Add-system-sleep-PM-ops.patch d9fc41cb1ea55ab867f35c3576dbe129fadd120d
+ours/0002-cpufreq-Defer-the-unlisted-frequency-check-on-CPU-on.patch 741e2e2dfdedf0a134af77db45733ea2e0595e4e

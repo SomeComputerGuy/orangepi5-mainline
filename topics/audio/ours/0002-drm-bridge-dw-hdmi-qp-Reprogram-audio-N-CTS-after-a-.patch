@@ -1,0 +1,113 @@
+From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
+From: Arun Iyengar <aiyengar1990@gmail.com>
+Date: Thu, 29 Oct 2026 23:02:25 +0000
+Subject: [PATCH] drm/bridge: dw-hdmi-qp: Reprogram audio N/CTS after a link
+ rate change
+
+The audio clock regeneration N and CTS values depend on the link: the
+TMDS character rate, or the FRL rate per lane in FRL mode. The driver
+programs them only in .hdmi_audio_prepare(), so an audio stream that
+stays open across a modeset (for example 4K60 TMDS to 4K120 FRL), or
+across an FRL rate fallback during link training, keeps the N/CTS of
+the old link and the sink loses or garbles the audio. Sound servers
+keep the PCM open while playing, so this happens whenever a player
+changes the display mode during playback.
+
+Remember the sample rate of the active stream and reprogram N/CTS from
+atomic_enable, once the new TMDS/FRL rate is known, and whenever the
+FRL rate changes. A mutex serializes this with the audio callbacks.
+dw-hdmi does the same through hdmi_set_clk_regenerator() on modeset.
+
+Assisted-by: Claude:claude-opus-5-5
+---
+ drivers/gpu/drm/bridge/synopsys/dw-hdmi-qp.c | 35 +++++++++++++++++++-
+ 1 file changed, 34 insertions(+), 1 deletion(-)
+
+diff --git a/drivers/gpu/drm/bridge/synopsys/dw-hdmi-qp.c b/drivers/gpu/drm/bridge/synopsys/dw-hdmi-qp.c
+index 364a29daa..e05c62b38 100644
+--- a/drivers/gpu/drm/bridge/synopsys/dw-hdmi-qp.c
++++ b/drivers/gpu/drm/bridge/synopsys/dw-hdmi-qp.c
+@@ -89,6 +89,11 @@ struct dw_hdmi_qp {
+ 	u8 frl_rate_per_lane;
+ 	u8 frl_lanes;
+ 
++	/* Serializes ACR (N/CTS) programming against link rate changes */
++	struct mutex audio_lock;
++	/* Sample rate of the active audio stream, 0 when there is none */
++	unsigned int audio_sample_rate;
++
+ 	bool no_hpd;
+ };
+ 
+@@ -264,6 +269,19 @@ static void dw_hdmi_qp_set_sample_rate(struct dw_hdmi_qp *hdmi, unsigned long lo
+ 	dw_hdmi_qp_set_cts_n(hdmi, cts, n);
+ }
+ 
++/*
++ * N and CTS depend on the link rate, so an audio stream that stays open across
++ * a modeset or an FRL rate change needs them reprogrammed for the new link.
++ */
++static void dw_hdmi_qp_update_acr(struct dw_hdmi_qp *hdmi)
++{
++	guard(mutex)(&hdmi->audio_lock);
++
++	if (hdmi->audio_sample_rate && hdmi->tmds_char_rate)
++		dw_hdmi_qp_set_sample_rate(hdmi, hdmi->tmds_char_rate,
++					   hdmi->audio_sample_rate);
++}
++
+ static int dw_hdmi_qp_audio_enable(struct drm_bridge *bridge,
+ 				   struct drm_connector *connector)
+ {
+@@ -295,7 +313,11 @@ static int dw_hdmi_qp_audio_prepare(struct drm_bridge *bridge,
+ 		ref2stream = true;
+ 
+ 	dw_hdmi_qp_set_audio_interface(hdmi, fmt, hparms);
+-	dw_hdmi_qp_set_sample_rate(hdmi, hdmi->tmds_char_rate, hparms->sample_rate);
++	scoped_guard(mutex, &hdmi->audio_lock) {
++		hdmi->audio_sample_rate = hparms->sample_rate;
++		dw_hdmi_qp_set_sample_rate(hdmi, hdmi->tmds_char_rate,
++					   hparms->sample_rate);
++	}
+ 	dw_hdmi_qp_set_channel_status(hdmi, hparms->iec.status, ref2stream);
+ 	drm_atomic_helper_connector_hdmi_update_audio_infoframe(connector, &hparms->cea);
+ 
+@@ -328,6 +350,9 @@ static void dw_hdmi_qp_audio_disable(struct drm_bridge *bridge,
+ 
+ 	drm_atomic_helper_connector_hdmi_clear_audio_infoframe(connector);
+ 
++	scoped_guard(mutex, &hdmi->audio_lock)
++		hdmi->audio_sample_rate = 0;
++
+ 	if (hdmi->tmds_char_rate)
+ 		dw_hdmi_qp_audio_disable_regs(hdmi);
+ }
+@@ -619,6 +644,8 @@ static void dw_hdmi_qp_bridge_atomic_enable(struct drm_bridge *bridge,
+ 	ret = drm_connector_hdmi_enable_frl(connector, conn_state);
+ 	if (ret)
+ 		dev_warn(hdmi->dev, "Failed to enable FRL: %d\n", ret);
++
++	dw_hdmi_qp_update_acr(hdmi);
+ }
+ 
+ static void dw_hdmi_qp_bridge_atomic_disable(struct drm_bridge *bridge,
+@@ -698,6 +725,8 @@ static int dw_hdmi_qp_bridge_frl_configure(struct drm_bridge *bridge,
+ 	hdmi->frl_rate_per_lane = rate_per_lane;
+ 	hdmi->frl_lanes = lanes;
+ 
++	dw_hdmi_qp_update_acr(hdmi);
++
+ link_config:
+ 	dw_hdmi_qp_mod(hdmi, OPMODE_FRL | (lanes == 4 ? OPMODE_FRL_4LANES : 0),
+ 		       OPMODE_FRL | OPMODE_FRL_4LANES | OPMODE_DVI, LINK_CONFIG0);
+@@ -1257,6 +1286,10 @@ struct dw_hdmi_qp *dw_hdmi_qp_bind(struct platform_device *pdev,
+ 
+ 	hdmi->dev = dev;
+ 
++	ret = devm_mutex_init(dev, &hdmi->audio_lock);
++	if (ret)
++		return ERR_PTR(ret);
++
+ 	regs = devm_platform_ioremap_resource(pdev, 0);
+ 	if (IS_ERR(regs))
+ 		return ERR_CAST(regs);

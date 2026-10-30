@@ -93,7 +93,9 @@ git -C .work/linux -c push.negotiate=true push --force \
 - one branch per topic with commits: `multicore board-sata shutdown-hang board-hygiene
   gpu-npu rkvdec-vp9 vp9-conf vp9-perf hantro-validate hantro-robust hantro-multicore
   hantro-robust-mc hantro-integrated vepu121-h264enc rkvenc rkvenc-hevc hevc-enc-uapi
-  jpeg-dec iep2 camera dsi hdmi-frl dp-altmode board-dt`. These stack on each other the
+  jpeg-dec iep2 camera dsi hdmi-frl dp-altmode board-dt integration codec-quality
+  vop2-underflow-int dp-smooth audio suspend-k3 rkvdec-hevc-rps rkvdec-ccu-base rkvdec-ccu`
+  (`rkvdec-ccu` is work in progress and not in the image kernel). These stack on each other the
   same way as the topics, and each still contains its few `local/` commits (for example
   the v4l2-core symbol-version shims), so that it builds and tests exactly as it did on the
   board. Those commits are labelled in the subject (`DO NOT UPSTREAM: ...`) and in the
@@ -118,7 +120,7 @@ offered for deletion by `publish.sh`.
   kept, and the committer is the owner with the author date. So the commit IDs are
   reproducible, and the same patches always give the same IDs.
 - Every recreated topic tip has been checked against the tree ID of the original
-  workspace branch (`TIP_TREE` in `topic.env`), and all 29 topics with commits match. `opi5/image-7.3`
+  workspace branch (`TIP_TREE` in `topic.env`), and every topic with commits matches. `opi5/image-7.3`
   is identical to the source tree that `scripts/build-kernel.sh` last built.
 - The scratch repository borrows objects from the workspace clone, so nothing is
   downloaded. Like that clone, it is shallow, cut at v7.3 (`c03c1a14`) and at

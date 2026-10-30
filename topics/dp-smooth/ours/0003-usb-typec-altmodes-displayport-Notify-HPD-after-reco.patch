@@ -1,0 +1,50 @@
+From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
+From: Arun Iyengar <aiyengar1990@gmail.com>
+Date: Thu, 29 Oct 2026 22:17:27 +0000
+Subject: [PATCH] usb: typec: altmodes/displayport: Notify HPD after
+ reconfiguring with HPD high
+
+A Configure command sent while the sink asserts HPD, for example after
+writing a new pin assignment to sysfs, goes through USB Safe State and
+switches the lanes. This tears down the DisplayPort main link, but the
+sink keeps HPD asserted, so dp_altmode_configured() sends no hotplug
+event and the DisplayPort driver is never told that it must check and
+retrain the link. Partners are not required to send an Attention after
+the Configure command, and the one seen here does not after switching
+from pin assignment C back to D, so the display stays black.
+
+Send an out-of-band "connected" event once the new configuration has
+been applied to the mux, so that the DisplayPort driver can check the
+link status and retrain.
+
+Assisted-by: Claude:claude-opus-5-5
+---
+ drivers/usb/typec/altmodes/displayport.c | 15 +++++++++++++++
+ 1 file changed, 15 insertions(+)
+
+diff --git a/drivers/usb/typec/altmodes/displayport.c b/drivers/usb/typec/altmodes/displayport.c
+index 51c92dd88..dc2673834 100644
+--- a/drivers/usb/typec/altmodes/displayport.c
++++ b/drivers/usb/typec/altmodes/displayport.c
+@@ -220,6 +220,21 @@ static int dp_altmode_configured(struct dp_altmode *dp)
+ 			sysfs_notify(&dp->alt->dev.kobj, "displayport", "irq_hpd");
+ 			dp->pending_irq_hpd = false;
+ 		}
++	} else if (dp->hpd) {
++		int ret;
++
++		/*
++		 * A Configure command while HPD is asserted (for example a new
++		 * pin assignment written to sysfs) passes through USB Safe State
++		 * and switches the lanes, which tears down the DisplayPort main
++		 * link. The sink keeps HPD asserted, so nothing else tells the
++		 * DisplayPort driver: notify it once the new configuration is
++		 * in place, so that it can check the link and retrain it.
++		 */
++		ret = dp_altmode_notify(dp);
++		drm_connector_oob_hotplug_event(dp->connector_fwnode,
++						connector_status_connected);
++		return ret;
+ 	}
+ 
+ 	return dp_altmode_notify(dp);

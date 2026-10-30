@@ -3,7 +3,7 @@
 # (default: src/). Nothing third-party is stored in this repository; this is
 # where it comes from. See docs/SOURCES.md.
 #
-# Usage: fetch-sources.sh [linux] [u-boot] [tf-a] [rkbin] [u-boot-upstream]
+# Usage: fetch-sources.sh [linux] [u-boot] [tf-a] [rkbin] [libva-v4l2-request] [u-boot-upstream]
 #        (no argument: all of them except u-boot-upstream)
 # Existing trees are left alone (only their pinned commit is checked).
 # Shallow clones keep the downloads small (Linux ~250 MB instead of ~5 GB).
@@ -16,12 +16,14 @@ PINS=(
   "u-boot https://source.denx.de/u-boot/u-boot.git v2026.10 5508406582f6f7120dce0c4b3059819a41788db2"
   "tf-a https://github.com/ARM-software/arm-trusted-firmware.git v2.15.0 da738d5eae93af342fdc4995dd3c05acb4c9d757"
   "rkbin https://github.com/rockchip-linux/rkbin.git - 3e288fe814e059dd06833495f845cab04ac20a5c"
+  # VA-API driver (scripts/build-va-driver.sh; GPL-3.0-or-later, branch opi5/main)
+  "libva-v4l2-request https://github.com/SomeComputerGuy/libva-v4l2_request.git - 069af0906f8803047457309d8e1d46f861a1c0d0"
   # Base for patches/upstream/u-boot (only needed to regenerate those patches)
   "u-boot-upstream https://source.denx.de/u-boot/u-boot.git v2027.01-rc1 dfcfc4c9f78d1743f490a497082a4ec8e058aae8"
 )
 
 want=("$@")
-[ ${#want[@]} -gt 0 ] || want=(linux u-boot tf-a rkbin)
+[ ${#want[@]} -gt 0 ] || want=(linux u-boot tf-a rkbin libva-v4l2-request)
 mkdir -p "$OPI5_SRC"
 for w in "${want[@]}"; do
   found=

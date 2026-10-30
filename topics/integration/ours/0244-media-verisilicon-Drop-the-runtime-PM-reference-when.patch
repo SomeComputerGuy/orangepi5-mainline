@@ -1,0 +1,51 @@
+From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
+From: Arun Iyengar <aiyengar1990@gmail.com>
+Date: Thu, 29 Oct 2026 12:15:45 +0000
+Subject: [PATCH] media: verisilicon: Drop the runtime PM reference when clocks
+ fail to enable
+
+device_run() takes a runtime PM reference with pm_runtime_resume_and_get()
+and then enables the clocks. If clk_bulk_enable() fails, the job is
+finished with hantro_job_finish_no_pm(), which doesn't drop the runtime PM
+reference, so the device can never runtime suspend again.
+
+Usage count on this path, before:
+  pm_runtime_resume_and_get()   +1
+  clk_bulk_enable() fails        (no clock enabled)
+  hantro_job_finish_no_pm()      0 -> leaks one reference
+after:
+  pm_runtime_resume_and_get()   +1
+  clk_bulk_enable() fails
+  pm_runtime_put_autosuspend()  -1
+  hantro_job_finish_no_pm()      balanced
+
+The pm_runtime_resume_and_get() failure path is already balanced, as the
+helper drops the reference itself when it fails.
+
+Assisted-by: Claude:claude-opus-5-5
+---
+ drivers/media/platform/verisilicon/hantro_drv.c | 4 +++-
+ 1 file changed, 3 insertions(+), 1 deletion(-)
+
+diff --git a/drivers/media/platform/verisilicon/hantro_drv.c b/drivers/media/platform/verisilicon/hantro_drv.c
+index 8e5c3d02f..4806821e6 100644
+--- a/drivers/media/platform/verisilicon/hantro_drv.c
++++ b/drivers/media/platform/verisilicon/hantro_drv.c
+@@ -233,7 +233,7 @@ static void device_run(void *priv)
+ 
+ 	ret = clk_bulk_enable(core->variant->num_clocks, core->clocks);
+ 	if (ret)
+-		goto err_cancel_job;
++		goto err_pm_put;
+ 
+ 	v4l2_m2m_buf_copy_metadata(src, dst);
+ 
+@@ -242,6 +242,8 @@ static void device_run(void *priv)
+ 
+ 	return;
+ 
++err_pm_put:
++	pm_runtime_put_autosuspend(core->dev);
+ err_cancel_job:
+ 	hantro_job_finish_no_pm(ctx->dev, ctx, VB2_BUF_STATE_ERROR);
+ }

@@ -26,6 +26,7 @@ and identical recreated commit IDs.
 |---|---|---|
 | `scripts/`, `install-deps.sh` | `scripts/`, `install-deps.sh` | `.work/private/scripts-public.patch` is applied: `scripts/env.sh` + `local.env` for site values, `scripts/fetch-sources.sh`, build identity |
 | `patches/**` | `patches/**` | copied as is, whatever the layout (the image-kernel stack may be reorganised) |
+| `overlay-desktop/` | `overlay-desktop/` | desktop-image overlay (`build-image.sh --variant desktop`) |
 | `overlay/`, `cidata/` | `overlay/`, `cidata/` | `cidata/user-data` becomes `cidata/user-data.example`; the real one stays local |
 | `docs/*.md`, `work/_out/GSTREAMER-FOLLOWUPS.md` | `docs/workspace/` | |
 | `work/_out/integration/` (MANIFEST.md, ...) | `docs/image-kernel/` | provenance of each `patches/linux` range, if present |

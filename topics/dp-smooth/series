@@ -1,0 +1,6 @@
+# Apply in this order on top of the parent topic (see topic.env):
+#   while read -r p sha; do git am "$p"; done < <(grep -v '^#' series)
+# Second column: the original commit in the workspace clone (for reference).
+ours/0001-phy-rockchip-usbdp-Re-enable-DP-lanes-after-a-re-ini.patch 66700cbd44f4ce6fccd8ab931f3cb3f5bccb3e3b
+ours/0002-drm-bridge-synopsys-dw-dp-Treat-OOB-HPD-events-with-.patch 86cc5bb81aadacee70a217c18f68290d8040f195
+ours/0003-usb-typec-altmodes-displayport-Notify-HPD-after-reco.patch 24b75a5854fb98d112a40379da3041280d34b530

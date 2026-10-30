@@ -1,0 +1,59 @@
+From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
+From: Arun Iyengar <aiyengar1990@gmail.com>
+Date: Thu, 29 Oct 2026 22:44:27 +0000
+Subject: [PATCH] media: rkvdec: Give the HEVC SPS control a default the driver
+ accepts
+
+The default value of V4L2_CID_STATELESS_HEVC_SPS is all zeros, so its
+chroma_format_idc is 0 (monochrome). rkvdec_hevc_validate_sps() refuses
+anything but 4:2:0, both in try_ctrl and when streaming starts. So the
+control rejects its own default value, and the OUTPUT queue can't start
+streaming before userspace has set an SPS. HEVC being the default coded
+format, v4l2-compliance fails three tests on the RK3588 decoder:
+VIDIOC_G/S/TRY_EXT_CTRLS ("try_ext_ctrls returned an error (22)") and,
+in the blocking DQBUF test, VIDIOC_STREAMON and the wait itself.
+
+Make 4:2:0 the default chroma_format_idc of the SPS control.
+
+Assisted-by: Claude:claude-opus-5-5
+---
+ drivers/media/platform/rockchip/rkvdec/rkvdec.c | 12 ++++++++++++
+ 1 file changed, 12 insertions(+)
+
+diff --git a/drivers/media/platform/rockchip/rkvdec/rkvdec.c b/drivers/media/platform/rockchip/rkvdec/rkvdec.c
+index 9d7b0d279..256bfe5b5 100644
+--- a/drivers/media/platform/rockchip/rkvdec/rkvdec.c
++++ b/drivers/media/platform/rockchip/rkvdec/rkvdec.c
+@@ -212,6 +212,16 @@ static const struct v4l2_ctrl_ops rkvdec_ctrl_ops = {
+ 	.s_ctrl = rkvdec_s_ctrl,
+ };
+ 
++/*
++ * The all-zero default SPS has chroma_format_idc 0 (monochrome), which the
++ * driver doesn't support and refuses, so the default value of the control
++ * itself would fail VIDIOC_TRY_EXT_CTRLS and streaming would not start.
++ * Default to 4:2:0 instead.
++ */
++static const struct v4l2_ctrl_hevc_sps rkvdec_hevc_default_sps = {
++	.chroma_format_idc = 1,
++};
++
+ static const struct rkvdec_ctrl_desc rkvdec_hevc_ctrl_descs[] = {
+ 	{
+ 		.cfg.id = V4L2_CID_STATELESS_HEVC_SLICE_PARAMS,
+@@ -222,6 +232,7 @@ static const struct rkvdec_ctrl_desc rkvdec_hevc_ctrl_descs[] = {
+ 	{
+ 		.cfg.id = V4L2_CID_STATELESS_HEVC_SPS,
+ 		.cfg.ops = &rkvdec_ctrl_ops,
++		.cfg.p_def.p_const = &rkvdec_hevc_default_sps,
+ 	},
+ 	{
+ 		.cfg.id = V4L2_CID_STATELESS_HEVC_PPS,
+@@ -269,6 +280,7 @@ static const struct rkvdec_ctrl_desc vdpu38x_hevc_ctrl_descs[] = {
+ 	{
+ 		.cfg.id = V4L2_CID_STATELESS_HEVC_SPS,
+ 		.cfg.ops = &rkvdec_ctrl_ops,
++		.cfg.p_def.p_const = &rkvdec_hevc_default_sps,
+ 	},
+ 	{
+ 		.cfg.id = V4L2_CID_STATELESS_HEVC_PPS,

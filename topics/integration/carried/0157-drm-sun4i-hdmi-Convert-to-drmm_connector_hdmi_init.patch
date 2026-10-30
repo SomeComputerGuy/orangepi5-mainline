@@ -1,0 +1,78 @@
+From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
+From: Cristian Ciocaltea <cristian.ciocaltea@collabora.com>
+Date: Wed, 15 Jul 2026 03:59:25 +0300
+Subject: [PATCH] drm/sun4i: hdmi: Convert to drmm_connector_hdmi_init()
+
+Switch driver over to the new drmm_connector_hdmi_init() signature and
+advertise HDMI 1.2 support.  The vendor, product, supported_formats and
+max_bpc values previously passed as arguments are now provided through
+struct drm_connector_hdmi_funcs, together with the new
+supported_hdmi_ver field.
+
+The HDMI connector helpers infer the 165 MHz TMDS character rate ceiling
+from supported_hdmi_ver and reject modes exceeding it before invoking
+the driver's .tmds_char_rate_valid() hook.  This makes the explicit mode
+clock check in sun4i_hdmi_connector_clock_valid() redundant, so drop it.
+
+No functional change intended.
+
+Reviewed-by: Maxime Ripard <mripard@kernel.org>
+Signed-off-by: Cristian Ciocaltea <cristian.ciocaltea@collabora.com>
+Link: https://gitlab.collabora.com/hardware-enablement/rockchip-3588/linux/-/commit/d06e091f93b79e9d52c50e1fa3abb952bfe53c44
+---
+ drivers/gpu/drm/sun4i/sun4i_hdmi_enc.c | 25 +++++++++++--------------
+ 1 file changed, 11 insertions(+), 14 deletions(-)
+
+diff --git a/drivers/gpu/drm/sun4i/sun4i_hdmi_enc.c b/drivers/gpu/drm/sun4i/sun4i_hdmi_enc.c
+index d98b6f12a..6f4fe0c8e 100644
+--- a/drivers/gpu/drm/sun4i/sun4i_hdmi_enc.c
++++ b/drivers/gpu/drm/sun4i/sun4i_hdmi_enc.c
+@@ -192,10 +192,6 @@ sun4i_hdmi_connector_clock_valid(const struct drm_connector *connector,
+ 	if (mode->flags & DRM_MODE_FLAG_DBLCLK)
+ 		return MODE_BAD;
+ 
+-	/* HDMI 1.0 max TMDS character rate */
+-	if (clock > HDMI_1_0_TMDS_CHAR_RATE_MAX_HZ)
+-		return MODE_CLOCK_HIGH;
+-
+ 	rounded_rate = clk_round_rate(hdmi->tmds_clk, clock);
+ 	if (rounded_rate > 0 &&
+ 	    max_t(unsigned long, rounded_rate, clock) -
+@@ -253,6 +249,15 @@ static struct i2c_adapter *sun4i_hdmi_get_ddc(struct device *dev)
+ }
+ 
+ static const struct drm_connector_hdmi_funcs sun4i_hdmi_hdmi_connector_funcs = {
++	/*
++	 * NOTE: Those are likely to be wrong, but I couldn't find
++	 * the actual ones in the BSP.
++	 */
++	.vendor = "AW",
++	.product = "HDMI",
++	.supported_hdmi_ver = HDMI_VERSION_1_2,
++	.supported_formats = BIT(DRM_OUTPUT_COLOR_FORMAT_RGB444),
++	.max_bpc = 8,
+ 	.tmds_char_rate_valid	= sun4i_hdmi_connector_clock_valid,
+ 	.avi = {
+ 		.clear_infoframe	= sun4i_hdmi_clear_avi_infoframe,
+@@ -654,19 +659,11 @@ static int sun4i_hdmi_bind(struct device *dev, struct device *master,
+ 
+ 	drm_connector_helper_add(&hdmi->connector,
+ 				 &sun4i_hdmi_connector_helper_funcs);
+-	ret = drmm_connector_hdmi_ini2(drm, &hdmi->connector,
+-				       /*
+-					* NOTE: Those are likely to be
+-					* wrong, but I couldn't find the
+-					* actual ones in the BSP.
+-					*/
+-				       "AW", "HDMI",
++	ret = drmm_connector_hdmi_init(drm, &hdmi->connector,
+ 				       &sun4i_hdmi_connector_funcs,
+ 				       &sun4i_hdmi_hdmi_connector_funcs,
+ 				       DRM_MODE_CONNECTOR_HDMIA,
+-				       hdmi->ddc_i2c,
+-				       BIT(DRM_OUTPUT_COLOR_FORMAT_RGB444),
+-				       8);
++				       hdmi->ddc_i2c);
+ 	if (ret) {
+ 		dev_err(dev,
+ 			"Couldn't initialise the HDMI connector\n");

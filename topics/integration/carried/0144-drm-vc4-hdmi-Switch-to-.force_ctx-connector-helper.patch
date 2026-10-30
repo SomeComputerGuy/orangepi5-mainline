@@ -1,0 +1,43 @@
+From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
+From: Cristian Ciocaltea <cristian.ciocaltea@collabora.com>
+Date: Thu, 30 Jul 2026 22:51:50 +0300
+Subject: [PATCH] drm/vc4: hdmi: Switch to .force_ctx() connector helper
+
+Use drm_atomic_helper_connector_hdmi_force_ctx() as the .force_ctx()
+implementation, so that the acquire context created by the probe helper
+reaches the HDMI connector framework.
+
+This is a prerequisite for converting the driver to the common HDMI 2.0
+scrambling infrastructure, which implicitly handles SCDC state recovery
+through a CRTC reset when the sink reconnects while the display pipeline
+is active.  Note that this does not interfere with the local SCDC
+state-management implementation, since the driver's scrambler capability
+has not yet been exposed through the common helpers.
+
+Reviewed-by: Maxime Ripard <mripard@kernel.org>
+Signed-off-by: Cristian Ciocaltea <cristian.ciocaltea@collabora.com>
+Link: https://gitlab.collabora.com/hardware-enablement/rockchip-3588/linux/-/commit/6b6ee9c206b4f1dbb782fddff08cf0db90761c58
+---
+ drivers/gpu/drm/vc4/vc4_hdmi.c | 2 +-
+ 1 file changed, 1 insertion(+), 1 deletion(-)
+
+diff --git a/drivers/gpu/drm/vc4/vc4_hdmi.c b/drivers/gpu/drm/vc4/vc4_hdmi.c
+index 7f6c7b41c..249c4e556 100644
+--- a/drivers/gpu/drm/vc4/vc4_hdmi.c
++++ b/drivers/gpu/drm/vc4/vc4_hdmi.c
+@@ -505,7 +505,6 @@ static void vc4_hdmi_connector_reset(struct drm_connector *connector)
+ 
+ static const struct drm_connector_funcs vc4_hdmi_connector_funcs = {
+ 	.debugfs_init = drm_hdmi_connector_debugfs_init,
+-	.force = drm_atomic_helper_connector_hdmi_force,
+ 	.fill_modes = drm_helper_probe_single_connector_modes,
+ 	.reset = vc4_hdmi_connector_reset,
+ 	.atomic_duplicate_state = drm_atomic_helper_connector_duplicate_state,
+@@ -514,6 +513,7 @@ static const struct drm_connector_funcs vc4_hdmi_connector_funcs = {
+ 
+ static const struct drm_connector_helper_funcs vc4_hdmi_connector_helper_funcs = {
+ 	.detect_ctx = vc4_hdmi_connector_detect_ctx,
++	.force_ctx = drm_atomic_helper_connector_hdmi_force_ctx,
+ 	.get_modes = vc4_hdmi_connector_get_modes,
+ 	.atomic_check = vc4_hdmi_connector_atomic_check,
+ 	.mode_valid = drm_hdmi_connector_mode_valid,

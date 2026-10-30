@@ -6,5 +6,6 @@ sudo apt-get install -y \
   build-essential gcc-aarch64-linux-gnu bison flex bc libssl-dev libelf-dev dwarves \
   dpkg-dev debhelper libdw-dev rsync kmod cpio device-tree-compiler \
   python3-pyelftools python3-setuptools python3-dev swig libgnutls28-dev uuid-dev libncurses-dev \
-  mmdebstrap qemu-user-binfmt arch-test \
+  mmdebstrap qemu-user-binfmt arch-test ubuntu-keyring \
+  git curl ca-certificates \
   e2fsprogs dosfstools fdisk xz-utils zstd

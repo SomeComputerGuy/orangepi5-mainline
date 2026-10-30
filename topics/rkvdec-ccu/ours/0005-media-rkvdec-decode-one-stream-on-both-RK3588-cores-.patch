@@ -1,0 +1,958 @@
+From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
+From: Arun Iyengar <aiyengar1990@gmail.com>
+Date: Thu, 29 Oct 2026 23:13:58 +0000
+Subject: [PATCH] media: rkvdec: decode one stream on both RK3588 cores with
+ the CCU
+
+The RK3588 has two VDPU381 cores and a core coordination unit (CCU)
+between them. In the Rockchip BSP, the cores work in "CCU" mode: every
+frame goes to whichever core is idle, so consecutive frames of one
+stream are decoded at the same time, and the CCU makes a core that
+reads reference pixels or co-located motion vectors from a frame
+another core is still decoding wait until they are written. The frames
+of a stream are told apart from other streams by a film index in the
+multi-core control register (reg028). Userspace programs nothing
+special for it: the BSP kernel driver connects the cores to the CCU and
+sets the film index.
+
+Support the CCU, described by a rockchip,rk3588-vdec-ccu node that the
+cores refer to with rockchip,ccu:
+
+ - Connect every core to the CCU before a job (work mode bits in the
+   link block, core enable in the CCU) and tell the CCU when the core
+   starts.
+ - Give every context a film index, and don't let a core reset itself
+   when a reference read waits for the other core.
+ - Keep all the cores and the CCU powered while one of the cores works,
+   as the BSP does.
+ - For H.264 and HEVC, give contexts one job slot per core and let
+   job_ready() start the next frame of a stream while the previous one
+   is still being decoded, unless the CAPTURE buffer is held for a
+   second field, or the frames being decoded still read from the next
+   CAPTURE buffer: userspace may queue a buffer again as soon as no
+   future frame predicts from it.
+
+VP9 stays serial within a stream: rkvdec adapts the probabilities of
+the next frame in software from the symbol counts of the previous one.
+Without a CCU node, nothing changes.
+
+The CCU register layout and the programming sequence come from the
+Rockchip BSP kernel, drivers/video/rockchip/mpp/mpp_rkvdec2_link.c
+(soft CCU mode) and the MPP userspace register definitions
+(mpp/hal/rkdec/vdpu34x_com.h, SWREG28_MULTIPLY_CORE_CTRL).
+
+Assisted-by: Claude:claude-opus-5-5
+---
+ .../media/platform/rockchip/rkvdec/Makefile   |   1 +
+ .../platform/rockchip/rkvdec/rkvdec-ccu.c     | 230 +++++++++++++++++
+ .../platform/rockchip/rkvdec/rkvdec-ccu.h     |  27 ++
+ .../rockchip/rkvdec/rkvdec-vdpu381-h264.c     |   8 +-
+ .../rockchip/rkvdec/rkvdec-vdpu381-hevc.c     |   7 +
+ .../rockchip/rkvdec/rkvdec-vdpu381-vp9.c      |   3 +
+ .../media/platform/rockchip/rkvdec/rkvdec.c   | 232 +++++++++++++++++-
+ .../media/platform/rockchip/rkvdec/rkvdec.h   |  25 ++
+ 8 files changed, 529 insertions(+), 4 deletions(-)
+ create mode 100644 drivers/media/platform/rockchip/rkvdec/rkvdec-ccu.c
+ create mode 100644 drivers/media/platform/rockchip/rkvdec/rkvdec-ccu.h
+
+diff --git a/drivers/media/platform/rockchip/rkvdec/Makefile b/drivers/media/platform/rockchip/rkvdec/Makefile
+index 5eae59e87..8588e8905 100644
+--- a/drivers/media/platform/rockchip/rkvdec/Makefile
++++ b/drivers/media/platform/rockchip/rkvdec/Makefile
+@@ -3,6 +3,7 @@ obj-$(CONFIG_VIDEO_ROCKCHIP_VDEC) += rockchip-vdec.o
+ rockchip-vdec-y += \
+ 		   rkvdec.o \
+ 		   rkvdec-cabac.o \
++		   rkvdec-ccu.o \
+ 		   rkvdec-h264.o \
+ 		   rkvdec-h264-common.o \
+ 		   rkvdec-hevc.o \
+diff --git a/drivers/media/platform/rockchip/rkvdec/rkvdec-ccu.c b/drivers/media/platform/rockchip/rkvdec/rkvdec-ccu.c
+new file mode 100644
+index 000000000..cb497a1a4
+--- /dev/null
++++ b/drivers/media/platform/rockchip/rkvdec/rkvdec-ccu.c
+@@ -0,0 +1,230 @@
++// SPDX-License-Identifier: GPL-2.0
++/*
++ * Rockchip RK3588 video decoder core coordination unit (CCU)
++ *
++ * The two VDPU381 cores of the RK3588 can decode consecutive frames of one
++ * stream at the same time. A core that is connected to the CCU tells it which
++ * stream (film index) and which part of a frame it has written so far, and
++ * the reads of reference pixels and co-located motion vectors from a frame
++ * that another core is still decoding wait until that part is written.
++ *
++ * The register layout follows the Rockchip BSP driver (mpp_rkvdec2_link.c).
++ * The core bit registers use the upper 16 bits as write enable mask.
++ */
++
++#include <linux/clk.h>
++#include <linux/io.h>
++#include <linux/of_platform.h>
++#include <linux/pm_runtime.h>
++#include <linux/reset.h>
++
++#include "rkvdec.h"
++#include "rkvdec-ccu.h"
++#include "rkvdec-vdpu381-regs.h"
++
++#define RKVDEC_CCU_WORK			0x018
++#define RKVDEC_CCU_WORK_EN		BIT(0)
++#define RKVDEC_CCU_WORK_MODE		0x040
++#define RKVDEC_CCU_WORK_MODE_TASK	BIT(0)
++#define RKVDEC_CCU_CORE_WORK		0x044
++#define RKVDEC_CCU_CORE_STA		0x048
++/* Sets the bit of a core in the CORE_* registers */
++#define RKVDEC_CCU_CORE_SET(port)	(BIT((port) + 16) | BIT(port))
++
++/* Register in the link block of each core */
++#define VDPU381_LINK_CTRL		0x000
++#define VDPU381_LINK_CORE_WORK_MODE	BIT(16)
++#define VDPU381_LINK_CCU_WORK_MODE	BIT(17)
++
++struct rkvdec_ccu {
++	struct device *dev;
++	void __iomem *regs;
++	struct clk_bulk_data *clocks;
++	int num_clocks;
++	unsigned int users;
++};
++
++int rkvdec_ccu_get(struct rkvdec_ccu *ccu)
++{
++	return pm_runtime_resume_and_get(ccu->dev);
++}
++
++void rkvdec_ccu_put(struct rkvdec_ccu *ccu)
++{
++	pm_runtime_mark_last_busy(ccu->dev);
++	pm_runtime_put_autosuspend(ccu->dev);
++}
++
++/*
++ * Only formats whose frames are pipelined (H.264, HEVC) run in CCU mode. The
++ * VP9 back-end doesn't program the POC, probability and segmentation-map
++ * references the cores synchronize VP9 on, and decodes garbage in CCU mode.
++ */
++static bool rkvdec_ctx_uses_ccu(struct rkvdec_ctx *ctx)
++{
++	return ctx->dev->ccu &&
++	       (ctx->coded_fmt_desc->flags & RKVDEC_FMT_FLAG_PIPELINE);
++}
++
++/*
++ * Connects the core of the job being set up to the CCU, or disconnects it for
++ * a format that doesn't use the CCU, before the registers are written.
++ */
++void rkvdec_ccu_prepare(struct rkvdec_ctx *ctx)
++{
++	struct rkvdec_ccu *ccu = ctx->dev->ccu;
++	struct rkvdec_core *core = ctx->core;
++
++	if (!rkvdec_ctx_uses_ccu(ctx)) {
++		writel(0, core->link + VDPU381_LINK_CTRL);
++		writel(BIT(core->ccu_port + 16), ccu->regs + RKVDEC_CCU_CORE_WORK);
++		return;
++	}
++
++	writel(VDPU381_LINK_CORE_WORK_MODE | VDPU381_LINK_CCU_WORK_MODE,
++	       core->link + VDPU381_LINK_CTRL);
++	writel(RKVDEC_CCU_WORK_EN, ccu->regs + RKVDEC_CCU_WORK);
++	writel(RKVDEC_CCU_WORK_MODE_TASK, ccu->regs + RKVDEC_CCU_WORK_MODE);
++	writel(RKVDEC_CCU_CORE_SET(core->ccu_port), ccu->regs + RKVDEC_CCU_CORE_WORK);
++}
++
++/* Tells the CCU that the core of the job being set up starts decoding. */
++void rkvdec_ccu_start(struct rkvdec_ctx *ctx)
++{
++	struct rkvdec_ccu *ccu = ctx->dev->ccu;
++
++	if (rkvdec_ctx_uses_ccu(ctx))
++		writel(RKVDEC_CCU_CORE_SET(ctx->core->ccu_port),
++		       ccu->regs + RKVDEC_CCU_CORE_STA);
++}
++
++void rkvdec_vdpu381_set_ccu_regs(struct rkvdec_ctx *ctx,
++				 struct rkvdec_vdpu381_regs_common *common)
++{
++	if (!rkvdec_ctx_uses_ccu(ctx))
++		return;
++
++	/* Tells the frames of different streams apart. */
++	common->reg028_multiply_core_ctrl.film_idx = ctx->film_idx;
++	/*
++	 * Waiting for the other core is expected: don't reset the core when a
++	 * reference or co-located motion vector read takes long.
++	 */
++	common->reg013_en_mode_set.req_timeout_rst_sel = 1;
++}
++
++/*
++ * Returns the CCU of @np if its driver is bound, NULL otherwise: the decoder
++ * then works without it. Release it with rkvdec_ccu_release().
++ */
++struct rkvdec_ccu *rkvdec_ccu_find(struct device_node *np)
++{
++	struct platform_device *pdev;
++	struct rkvdec_ccu *ccu;
++
++	pdev = of_find_device_by_node(np);
++	if (!pdev)
++		return NULL;
++
++	device_lock(&pdev->dev);
++	ccu = platform_get_drvdata(pdev);
++	if (ccu)
++		ccu->users++;
++	device_unlock(&pdev->dev);
++
++	if (!ccu)
++		put_device(&pdev->dev);
++
++	return ccu;
++}
++
++void rkvdec_ccu_release(struct rkvdec_ccu *ccu)
++{
++	struct device *dev = ccu->dev;
++
++	device_lock(dev);
++	ccu->users--;
++	device_unlock(dev);
++	put_device(dev);
++}
++
++static int rkvdec_ccu_probe(struct platform_device *pdev)
++{
++	struct device *dev = &pdev->dev;
++	struct reset_control *rst;
++	struct rkvdec_ccu *ccu;
++	int ret;
++
++	ccu = devm_kzalloc(dev, sizeof(*ccu), GFP_KERNEL);
++	if (!ccu)
++		return -ENOMEM;
++
++	ccu->dev = dev;
++	ccu->regs = devm_platform_ioremap_resource(pdev, 0);
++	if (IS_ERR(ccu->regs))
++		return PTR_ERR(ccu->regs);
++
++	ccu->num_clocks = devm_clk_bulk_get_all(dev, &ccu->clocks);
++	if (ccu->num_clocks < 0)
++		return dev_err_probe(dev, ccu->num_clocks, "failed to get clocks\n");
++
++	rst = devm_reset_control_get_optional_exclusive_deasserted(dev, NULL);
++	if (IS_ERR(rst))
++		return dev_err_probe(dev, PTR_ERR(rst), "failed to get reset\n");
++
++	pm_runtime_set_autosuspend_delay(dev, 100);
++	pm_runtime_use_autosuspend(dev);
++	ret = devm_pm_runtime_enable(dev);
++	if (ret)
++		return ret;
++
++	platform_set_drvdata(pdev, ccu);
++
++	return 0;
++}
++
++static void rkvdec_ccu_remove(struct platform_device *pdev)
++{
++	struct rkvdec_ccu *ccu = platform_get_drvdata(pdev);
++
++	/* The decoder is unbound before the CCU when the module is removed. */
++	WARN_ON(ccu->users);
++	platform_set_drvdata(pdev, NULL);
++}
++
++static int rkvdec_ccu_runtime_resume(struct device *dev)
++{
++	struct rkvdec_ccu *ccu = dev_get_drvdata(dev);
++
++	return clk_bulk_prepare_enable(ccu->num_clocks, ccu->clocks);
++}
++
++static int rkvdec_ccu_runtime_suspend(struct device *dev)
++{
++	struct rkvdec_ccu *ccu = dev_get_drvdata(dev);
++
++	clk_bulk_disable_unprepare(ccu->num_clocks, ccu->clocks);
++
++	return 0;
++}
++
++static const struct dev_pm_ops rkvdec_ccu_pm_ops = {
++	SYSTEM_SLEEP_PM_OPS(pm_runtime_force_suspend, pm_runtime_force_resume)
++	RUNTIME_PM_OPS(rkvdec_ccu_runtime_suspend, rkvdec_ccu_runtime_resume, NULL)
++};
++
++static const struct of_device_id rkvdec_ccu_of_match[] = {
++	{ .compatible = "rockchip,rk3588-vdec-ccu" },
++	{ /* sentinel */ }
++};
++MODULE_DEVICE_TABLE(of, rkvdec_ccu_of_match);
++
++struct platform_driver rkvdec_ccu_pdrv = {
++	.probe = rkvdec_ccu_probe,
++	.remove = rkvdec_ccu_remove,
++	.driver = {
++		.name = "rkvdec-ccu",
++		.of_match_table = rkvdec_ccu_of_match,
++		.pm = pm_ptr(&rkvdec_ccu_pm_ops),
++	},
++};
+diff --git a/drivers/media/platform/rockchip/rkvdec/rkvdec-ccu.h b/drivers/media/platform/rockchip/rkvdec/rkvdec-ccu.h
+new file mode 100644
+index 000000000..39806bbc1
+--- /dev/null
++++ b/drivers/media/platform/rockchip/rkvdec/rkvdec-ccu.h
+@@ -0,0 +1,27 @@
++/* SPDX-License-Identifier: GPL-2.0 */
++/*
++ * Rockchip RK3588 video decoder core coordination unit
++ */
++#ifndef RKVDEC_CCU_H_
++#define RKVDEC_CCU_H_
++
++#include <linux/of.h>
++#include <linux/platform_device.h>
++
++struct rkvdec_core;
++struct rkvdec_ctx;
++struct rkvdec_vdpu381_regs_common;
++
++extern struct platform_driver rkvdec_ccu_pdrv;
++
++struct rkvdec_ccu *rkvdec_ccu_find(struct device_node *np);
++void rkvdec_ccu_release(struct rkvdec_ccu *ccu);
++
++int rkvdec_ccu_get(struct rkvdec_ccu *ccu);
++void rkvdec_ccu_put(struct rkvdec_ccu *ccu);
++void rkvdec_ccu_prepare(struct rkvdec_ctx *ctx);
++void rkvdec_ccu_start(struct rkvdec_ctx *ctx);
++void rkvdec_vdpu381_set_ccu_regs(struct rkvdec_ctx *ctx,
++				 struct rkvdec_vdpu381_regs_common *common);
++
++#endif /* RKVDEC_CCU_H_ */
+diff --git a/drivers/media/platform/rockchip/rkvdec/rkvdec-vdpu381-h264.c b/drivers/media/platform/rockchip/rkvdec/rkvdec-vdpu381-h264.c
+index e5d325999..dca2a6ba4 100644
+--- a/drivers/media/platform/rockchip/rkvdec/rkvdec-vdpu381-h264.c
++++ b/drivers/media/platform/rockchip/rkvdec/rkvdec-vdpu381-h264.c
+@@ -11,6 +11,7 @@
+ 
+ #include "rkvdec.h"
+ #include "rkvdec-cabac.h"
++#include "rkvdec-ccu.h"
+ #include "rkvdec-rcb.h"
+ #include "rkvdec-h264-common.h"
+ #include "rkvdec-vdpu381-regs.h"
+@@ -307,6 +308,8 @@ static void config_registers(struct rkvdec_ctx *ctx,
+ 	else
+ 		regs->common.reg032_timeout_threshold = RKVDEC_TIMEOUT_MAX;
+ 
++	rkvdec_vdpu381_set_ccu_regs(ctx, &regs->common);
++
+ 	/* Set TOP and BOTTOM POCs */
+ 	regs->h264_param.reg065_cur_top_poc = dec_params->top_field_order_cnt;
+ 	regs->h264_param.reg066_cur_bot_poc = dec_params->bottom_field_order_cnt;
+@@ -320,7 +323,9 @@ static void config_registers(struct rkvdec_ctx *ctx,
+ 		 * If a DPB entry is unused or invalid, address of current destination
+ 		 * buffer is returned.
+ 		 */
+-		if (!vb_buf)
++		if (vb_buf)
++			rkvdec_job_add_ref(ctx, vb_buf);
++		else
+ 			vb_buf = &dst_buf->vb2_buf;
+ 
+ 		buf_dma = vb2_dma_contig_plane_dma_addr(vb_buf, 0);
+@@ -477,6 +482,7 @@ static int rkvdec_h264_run(struct rkvdec_ctx *ctx)
+ 	rkvdec_schedule_watchdog(core, h264_ctx->regs.common.reg032_timeout_threshold);
+ 
+ 	/* Start decoding! */
++	rkvdec_ccu_start(ctx);
+ 	writel(VDPU381_DEC_E_BIT, core->regs + VDPU381_REG_DEC_E);
+ 
+ 	return 0;
+diff --git a/drivers/media/platform/rockchip/rkvdec/rkvdec-vdpu381-hevc.c b/drivers/media/platform/rockchip/rkvdec/rkvdec-vdpu381-hevc.c
+index 333dcb026..80646885a 100644
+--- a/drivers/media/platform/rockchip/rkvdec/rkvdec-vdpu381-hevc.c
++++ b/drivers/media/platform/rockchip/rkvdec/rkvdec-vdpu381-hevc.c
+@@ -10,6 +10,7 @@
+ 
+ #include "rkvdec.h"
+ #include "rkvdec-cabac.h"
++#include "rkvdec-ccu.h"
+ #include "rkvdec-rcb.h"
+ #include "rkvdec-hevc-common.h"
+ #include "rkvdec-vdpu381-regs.h"
+@@ -470,6 +471,8 @@ static void config_registers(struct rkvdec_ctx *ctx,
+ 	else
+ 		regs->common.reg032_timeout_threshold = RKVDEC_TIMEOUT_MAX;
+ 
++	rkvdec_vdpu381_set_ccu_regs(ctx, &regs->common);
++
+ 	/* Set POC val */
+ 	regs->hevc_param.reg065_cur_top_poc = dec_params->pic_order_cnt_val;
+ 
+@@ -479,6 +482,9 @@ static void config_registers(struct rkvdec_ctx *ctx,
+ 		dma_addr_t buf_dma = vb2_dma_contig_plane_dma_addr(vb_buf, 0);
+ 		u32 valid = !!(dec_params->num_active_dpb_entries > i);
+ 
++		if (valid)
++			rkvdec_job_add_ref(ctx, vb_buf);
++
+ 		/* Set reference addresses */
+ 		regs->hevc_addr.reg164_180_ref_base[i] = buf_dma;
+ 
+@@ -650,6 +656,7 @@ static int rkvdec_hevc_run(struct rkvdec_ctx *ctx)
+ 	rkvdec_schedule_watchdog(core, hevc_ctx->regs.common.reg032_timeout_threshold);
+ 
+ 	/* Start decoding! */
++	rkvdec_ccu_start(ctx);
+ 	writel(VDPU381_DEC_E_BIT, ctx->core->regs + VDPU381_REG_DEC_E);
+ 
+ 	return 0;
+diff --git a/drivers/media/platform/rockchip/rkvdec/rkvdec-vdpu381-vp9.c b/drivers/media/platform/rockchip/rkvdec/rkvdec-vdpu381-vp9.c
+index c22b48d7b..e06a915f3 100644
+--- a/drivers/media/platform/rockchip/rkvdec/rkvdec-vdpu381-vp9.c
++++ b/drivers/media/platform/rockchip/rkvdec/rkvdec-vdpu381-vp9.c
+@@ -26,6 +26,7 @@
+ 
+ #include "rkvdec-rcb.h"
+ #include "rkvdec.h"
++#include "rkvdec-ccu.h"
+ #include "rkvdec-vdpu381-regs.h"
+ #include "rkvdec-vp9-common.h"
+ 
+@@ -484,6 +485,7 @@ static void config_registers(struct rkvdec_ctx *ctx,
+ 	memset(regs, 0, sizeof(*regs));
+ 
+ 	regs->common.reg009_dec_mode.dec_mode = VDPU381_MODE_VP9;
++	rkvdec_vdpu381_set_ccu_regs(ctx, &regs->common);
+ 
+ 	regs->vp9_param.reg103.vp9_intra_only_flag = intra_only;
+ 
+@@ -806,6 +808,7 @@ static int rkvdec_vp9_run(struct rkvdec_ctx *ctx)
+ 
+ 	rkvdec_schedule_watchdog(core, vp9_ctx->regs.common.reg032_timeout_threshold);
+ 
++	rkvdec_ccu_start(ctx);
+ 	writel(VDPU381_DEC_E_BIT, core->regs + VDPU381_REG_DEC_E);
+ 
+ 	return 0;
+diff --git a/drivers/media/platform/rockchip/rkvdec/rkvdec.c b/drivers/media/platform/rockchip/rkvdec/rkvdec.c
+index d9463d6db..f0ca0d5c6 100644
+--- a/drivers/media/platform/rockchip/rkvdec/rkvdec.c
++++ b/drivers/media/platform/rockchip/rkvdec/rkvdec.c
+@@ -32,6 +32,7 @@
+ #include <media/videobuf2-vmalloc.h>
+ 
+ #include "rkvdec.h"
++#include "rkvdec-ccu.h"
+ #include "rkvdec-regs.h"
+ #include "rkvdec-vdpu381-regs.h"
+ #include "rkvdec-vdpu383-regs.h"
+@@ -603,6 +604,7 @@ static const struct rkvdec_coded_fmt_desc vdpu381_coded_fmts[] = {
+ 		.num_decoded_fmts = ARRAY_SIZE(rkvdec_hevc_decoded_fmts),
+ 		.decoded_fmts = rkvdec_hevc_decoded_fmts,
+ 		.subsystem_flags = VB2_V4L2_FL_SUPPORTS_M2M_HOLD_CAPTURE_BUF,
++		.flags = RKVDEC_FMT_FLAG_PIPELINE,
+ 	},
+ 	{
+ 		.fourcc = V4L2_PIX_FMT_H264_SLICE,
+@@ -619,6 +621,7 @@ static const struct rkvdec_coded_fmt_desc vdpu381_coded_fmts[] = {
+ 		.num_decoded_fmts = ARRAY_SIZE(rkvdec_h264_decoded_fmts),
+ 		.decoded_fmts = rkvdec_h264_decoded_fmts,
+ 		.subsystem_flags = VB2_V4L2_FL_SUPPORTS_M2M_HOLD_CAPTURE_BUF,
++		.flags = RKVDEC_FMT_FLAG_PIPELINE,
+ 	},
+ 	{
+ 		.fourcc = V4L2_PIX_FMT_VP9_FRAME,
+@@ -1088,6 +1091,11 @@ static int rkvdec_start_streaming(struct vb2_queue *q, unsigned int count)
+ 	if (WARN_ON(!desc))
+ 		return -EINVAL;
+ 
++	ctx->num_job_slots = 1;
++	if (ctx->dev->ccu && (desc->flags & RKVDEC_FMT_FLAG_PIPELINE))
++		ctx->num_job_slots = min_t(unsigned int, ctx->dev->core_count,
++					   RKVDEC_MAX_JOBS);
++
+ 	if (desc->ops->start)
+ 		ret = desc->ops->start(ctx);
+ 
+@@ -1292,6 +1300,44 @@ static void rkvdec_ctx_complete_jobs(struct rkvdec_ctx *ctx)
+ 		v4l2_m2m_try_schedule(ctx->fh.m2m_ctx);
+ }
+ 
++/*
++ * The cores connected to the CCU are kept powered while one of them works, as
++ * the Rockchip BSP does: the CCU synchronizes the core with the other ones.
++ */
++static int rkvdec_ccu_power_get(struct rkvdec_dev *rkvdec)
++{
++	int i, ret;
++
++	ret = rkvdec_ccu_get(rkvdec->ccu);
++	if (ret < 0)
++		return ret;
++
++	for (i = 0; i < rkvdec->core_count; i++) {
++		ret = pm_runtime_resume_and_get(rkvdec->cores[i]->dev);
++		if (ret < 0)
++			goto err_put;
++	}
++
++	return 0;
++
++err_put:
++	while (i--)
++		pm_runtime_put_autosuspend(rkvdec->cores[i]->dev);
++	rkvdec_ccu_put(rkvdec->ccu);
++	return ret;
++}
++
++static void rkvdec_ccu_power_put(struct rkvdec_dev *rkvdec)
++{
++	int i;
++
++	for (i = 0; i < rkvdec->core_count; i++) {
++		pm_runtime_mark_last_busy(rkvdec->cores[i]->dev);
++		pm_runtime_put_autosuspend(rkvdec->cores[i]->dev);
++	}
++	rkvdec_ccu_put(rkvdec->ccu);
++}
++
+ /*
+  * Called when the hardware is done with the job of @core, or when the job
+  * couldn't be started. Releases the core and completes the job when the
+@@ -1327,6 +1373,8 @@ static void rkvdec_job_hw_done(struct rkvdec_core *core,
+ 	}
+ 
+ 	if (pm_put) {
++		if (rkvdec->ccu)
++			rkvdec_ccu_power_put(rkvdec);
+ 		pm_runtime_mark_last_busy(core->dev);
+ 		pm_runtime_put_autosuspend(core->dev);
+ 	}
+@@ -1369,13 +1417,69 @@ static void rkvdec_job_started(struct rkvdec_job *job)
+ 	rkvdec_ctx_complete_jobs(ctx);
+ }
+ 
++void rkvdec_job_add_ref(struct rkvdec_ctx *ctx, const struct vb2_buffer *ref)
++{
++	struct rkvdec_job *job = ctx->job;
++	unsigned int i;
++
++	if (!ref)
++		return;
++
++	for (i = 0; i < job->num_refs; i++)
++		if (job->refs[i] == ref)
++			return;
++
++	if (!WARN_ON(job->num_refs >= ARRAY_SIZE(job->refs)))
++		job->refs[job->num_refs++] = ref;
++}
++
++/* Is @buf a reference of a frame of @ctx that is still being decoded? */
++static bool rkvdec_ctx_buf_is_ref(struct rkvdec_ctx *ctx,
++				  const struct vb2_buffer *buf)
++{
++	struct rkvdec_job *job;
++	unsigned int i;
++
++	list_for_each_entry(job, &ctx->jobs, node)
++		for (i = 0; i < job->num_refs; i++)
++			if (job->refs[i] == buf)
++				return true;
++
++	return false;
++}
++
+ static int rkvdec_job_ready(void *priv)
+ {
+ 	struct rkvdec_ctx *ctx = priv;
++	struct v4l2_m2m_ctx *m2m_ctx = ctx->fh.m2m_ctx;
++	struct vb2_v4l2_buffer *src, *dst;
++
++	src = v4l2_m2m_next_src_buf(m2m_ctx);
++	dst = v4l2_m2m_next_dst_buf(m2m_ctx);
+ 
+ 	guard(spinlock_irqsave)(&ctx->dev->cores_lock);
+ 
+-	return !ctx->num_jobs;
++	if (!ctx->num_jobs)
++		return 1;
++
++	/* Only formats with more than one job slot can be pipelined. */
++	if (ctx->num_jobs >= ctx->num_job_slots)
++		return 0;
++
++	/* A CAPTURE buffer shared by two jobs (two fields): one at a time. */
++	if (!src || !dst || dst->is_held ||
++	    (src->flags & V4L2_BUF_FLAG_M2M_HOLD_CAPTURE_BUF))
++		return 0;
++
++	/*
++	 * Userspace may queue a CAPTURE buffer again as soon as no future frame
++	 * predicts from it, possibly before the frames being decoded are done
++	 * reading it.
++	 */
++	if (rkvdec_ctx_buf_is_ref(ctx, &dst->vb2_buf))
++		return 0;
++
++	return 1;
+ }
+ 
+ void rkvdec_run_preamble(struct rkvdec_ctx *ctx, struct rkvdec_run *run)
+@@ -1466,9 +1570,22 @@ static void rkvdec_device_run(void *priv)
+ 		goto out;
+ 	}
+ 
++	if (ctx->dev->ccu) {
++		ret = rkvdec_ccu_power_get(ctx->dev);
++		if (ret < 0) {
++			pm_runtime_put_autosuspend(core->dev);
++			rkvdec_job_hw_done(core, VB2_BUF_STATE_ERROR, false);
++			goto out;
++		}
++
++	}
++
+ 	if (WARN_ON(!desc))
+ 		goto err;
+ 
++	if (ctx->dev->ccu)
++		rkvdec_ccu_prepare(ctx);
++
+ 	if (!rkvdec_rcb_buf_validate_size(ctx)) {
+ 		rkvdec_free_rcb(ctx->dev, core);
+ 
+@@ -1612,6 +1729,12 @@ static int rkvdec_open(struct file *filp)
+ 	init_waitqueue_head(&ctx->jobs_wq);
+ 	mutex_init(&ctx->done_lock);
+ 	ctx->num_job_slots = 1;
++
++	ret = ida_alloc_range(&rkvdec->film_ida, 1, RKVDEC_MAX_FILM_IDX, GFP_KERNEL);
++	if (ret < 0)
++		goto err_free_ctx;
++	ctx->film_idx = ret;
++
+ 	rkvdec_reset_coded_fmt(ctx);
+ 	rkvdec_reset_decoded_fmt(ctx);
+ 	v4l2_fh_init(&ctx->fh, video_devdata(filp));
+@@ -1620,7 +1743,7 @@ static int rkvdec_open(struct file *filp)
+ 					    rkvdec_queue_init);
+ 	if (IS_ERR(ctx->fh.m2m_ctx)) {
+ 		ret = PTR_ERR(ctx->fh.m2m_ctx);
+-		goto err_free_ctx;
++		goto err_free_film;
+ 	}
+ 
+ 	ret = rkvdec_init_ctrls(ctx);
+@@ -1634,6 +1757,9 @@ static int rkvdec_open(struct file *filp)
+ err_cleanup_m2m_ctx:
+ 	v4l2_m2m_ctx_release(ctx->fh.m2m_ctx);
+ 
++err_free_film:
++	ida_free(&rkvdec->film_ida, ctx->film_idx);
++
+ err_free_ctx:
+ 	kfree(ctx);
+ 	return ret;
+@@ -1647,6 +1773,7 @@ static int rkvdec_release(struct file *filp)
+ 	v4l2_m2m_ctx_release(ctx->fh.m2m_ctx);
+ 	v4l2_ctrl_handler_free(&ctx->ctrl_hdl);
+ 	v4l2_fh_exit(&ctx->fh);
++	ida_free(&ctx->dev->film_ida, ctx->film_idx);
+ 	mutex_destroy(&ctx->done_lock);
+ 	kfree(ctx);
+ 
+@@ -1997,6 +2124,7 @@ static const struct rkvdec_variant vdpu381_variant = {
+ 	.rcb_sizes = vdpu381_rcb_sizes,
+ 	.num_rcb_sizes = ARRAY_SIZE(vdpu381_rcb_sizes),
+ 	.ops = &vdpu381_variant_ops,
++	.has_ccu = true,
+ };
+ 
+ static const struct rcb_size_info vdpu383_rcb_sizes[] = {
+@@ -2112,8 +2240,20 @@ static int rkvdec_core_probe(struct platform_device *pdev)
+ 		return -ENOMEM;
+ 
+ 	core->dev = &pdev->dev;
++	core->ccu_port = -1;
+ 	INIT_DELAYED_WORK(&core->watchdog_work, rkvdec_watchdog_func);
+ 
++	if (variant->has_ccu) {
++		struct of_phandle_args args;
++
++		if (!of_parse_phandle_with_fixed_args(pdev->dev.of_node,
++						      "rockchip,ccu", 1, 0,
++						      &args)) {
++			core->ccu_port = args.args[0];
++			of_node_put(args.np);
++		}
++	}
++
+ 	ret = devm_clk_bulk_get_all_enabled(&pdev->dev, &core->clocks);
+ 	if (ret < 0)
+ 		return ret;
+@@ -2234,6 +2374,40 @@ static struct platform_driver rkvdec_core_pdrv = {
+ 	},
+ };
+ 
++/*
++ * Returns the CCU the available cores are connected to, if they all are
++ * connected to the same available one.
++ */
++static struct device_node *rkvdec_find_ccu_node(const char *compatible)
++{
++	struct device_node *core_node, *ccu_node = NULL;
++
++	for_each_compatible_node(core_node, NULL, compatible) {
++		struct device_node *np;
++
++		if (!of_device_is_available(core_node))
++			continue;
++
++		np = of_parse_phandle(core_node, "rockchip,ccu", 0);
++		if (!np || (ccu_node && np != ccu_node)) {
++			of_node_put(np);
++			of_node_put(ccu_node);
++			of_node_put(core_node);
++			return NULL;
++		}
++
++		of_node_put(ccu_node);
++		ccu_node = np;
++	}
++
++	if (ccu_node && !of_device_is_available(ccu_node)) {
++		of_node_put(ccu_node);
++		return NULL;
++	}
++
++	return ccu_node;
++}
++
+ static int rkvdec_bind(struct device *dev)
+ {
+ 	struct rkvdec_dev *rkvdec = dev_get_drvdata(dev);
+@@ -2245,6 +2419,40 @@ static int rkvdec_bind(struct device *dev)
+ 		return ret;
+ 	}
+ 
++	if (rkvdec->variant->has_ccu) {
++		const struct of_device_id *match_desc = dev->platform_data;
++		struct device_node *np;
++
++		np = rkvdec_find_ccu_node(match_desc->compatible);
++		if (np) {
++			rkvdec->ccu = rkvdec_ccu_find(np);
++			of_node_put(np);
++		}
++	}
++
++	if (rkvdec->ccu) {
++		unsigned long ports = 0;
++		int i;
++
++		for (i = 0; i < rkvdec->core_count; i++) {
++			int port = rkvdec->cores[i]->ccu_port;
++
++			if (port < 0 || port >= 16 || (ports & BIT(port)))
++				break;
++			ports |= BIT(port);
++		}
++
++		if (i < rkvdec->core_count) {
++			dev_warn(rkvdec->cores[i]->dev,
++				 "invalid CCU port, not using the CCU\n");
++			rkvdec_ccu_release(rkvdec->ccu);
++			rkvdec->ccu = NULL;
++		} else {
++			dev_info(dev, "%d cores, decoding with the CCU\n",
++				 rkvdec->core_count);
++		}
++	}
++
+ 	ret = rkvdec_v4l2_init(rkvdec);
+ 	if (ret)
+ 		goto err_unbind;
+@@ -2252,6 +2460,9 @@ static int rkvdec_bind(struct device *dev)
+ 	return 0;
+ 
+ err_unbind:
++	if (rkvdec->ccu)
++		rkvdec_ccu_release(rkvdec->ccu);
++	rkvdec->ccu = NULL;
+ 	component_unbind_all(dev, NULL);
+ 	return ret;
+ }
+@@ -2269,6 +2480,10 @@ static void rkvdec_unbind(struct device *dev)
+ 	for (i = 0; i < rkvdec->core_count; i++)
+ 		rkvdec_free_rcb(rkvdec, rkvdec->cores[i]);
+ 
++	if (rkvdec->ccu)
++		rkvdec_ccu_release(rkvdec->ccu);
++	rkvdec->ccu = NULL;
++
+ 	component_unbind_all(dev, NULL);
+ }
+ 
+@@ -2324,6 +2539,7 @@ static int rkvdec_probe(struct platform_device *pdev)
+ 
+ 	mutex_init(&rkvdec->vdev_lock);
+ 	spin_lock_init(&rkvdec->cores_lock);
++	ida_init(&rkvdec->film_ida);
+ 
+ 	dev_set_drvdata(dev, rkvdec);
+ 
+@@ -2332,7 +2548,10 @@ static int rkvdec_probe(struct platform_device *pdev)
+ 
+ static void rkvdec_remove(struct platform_device *pdev)
+ {
++	struct rkvdec_dev *rkvdec = platform_get_drvdata(pdev);
++
+ 	component_master_del(&pdev->dev, &rkvdec_master_ops);
++	ida_destroy(&rkvdec->film_ida);
+ }
+ 
+ static struct platform_driver rkvdec_pdrv = {
+@@ -2401,10 +2620,14 @@ static int __init rkvdec_init(void)
+ 	if (ret)
+ 		return ret;
+ 
+-	ret = platform_driver_register(&rkvdec_pdrv);
++	ret = platform_driver_register(&rkvdec_ccu_pdrv);
+ 	if (ret)
+ 		goto unregister_core_driver;
+ 
++	ret = platform_driver_register(&rkvdec_pdrv);
++	if (ret)
++		goto unregister_ccu_driver;
++
+ 	for (i = 0; i < ARRAY_SIZE(master_pdevs); i++) {
+ 		if (!rkvdec_of_has_available_node(of_rkvdec_match[i].compatible))
+ 			continue;
+@@ -2425,6 +2648,8 @@ static int __init rkvdec_init(void)
+ 		}
+ 	}
+ 	platform_driver_unregister(&rkvdec_pdrv);
++unregister_ccu_driver:
++	platform_driver_unregister(&rkvdec_ccu_pdrv);
+ unregister_core_driver:
+ 	platform_driver_unregister(&rkvdec_core_pdrv);
+ 	return ret;
+@@ -2442,6 +2667,7 @@ static void __exit rkvdec_exit(void)
+ 		}
+ 	}
+ 	platform_driver_unregister(&rkvdec_pdrv);
++	platform_driver_unregister(&rkvdec_ccu_pdrv);
+ 	platform_driver_unregister(&rkvdec_core_pdrv);
+ }
+ module_exit(rkvdec_exit);
+diff --git a/drivers/media/platform/rockchip/rkvdec/rkvdec.h b/drivers/media/platform/rockchip/rkvdec/rkvdec.h
+index f0c8a530a..fea8e2ba8 100644
+--- a/drivers/media/platform/rockchip/rkvdec/rkvdec.h
++++ b/drivers/media/platform/rockchip/rkvdec/rkvdec.h
+@@ -35,6 +35,7 @@
+ 
+ struct rkvdec_ctx;
+ struct rkvdec_core;
++struct rkvdec_ccu;
+ struct rkvdec_rcb_config;
+ 
+ struct rkvdec_ctrl_desc {
+@@ -91,6 +92,7 @@ struct rkvdec_variant {
+ 	const struct rkvdec_variant_ops *ops;
+ 	bool has_single_reg_region;
+ 	unsigned int quirks;
++	bool has_ccu;
+ };
+ 
+ struct rkvdec_coded_fmt_ops {
+@@ -120,6 +122,13 @@ struct rkvdec_decoded_fmt_desc {
+ 	enum rkvdec_image_fmt image_fmt;
+ };
+ 
++/*
++ * The next frame of a stream may be decoded while the previous one, which it
++ * may predict from, is still being decoded on another core: the hardware
++ * synchronizes the reference reads with the core coordination unit.
++ */
++#define RKVDEC_FMT_FLAG_PIPELINE	BIT(0)
++
+ struct rkvdec_coded_fmt_desc {
+ 	u32 fourcc;
+ 	struct v4l2_frmsize_stepwise frmsize;
+@@ -128,8 +137,15 @@ struct rkvdec_coded_fmt_desc {
+ 	unsigned int num_decoded_fmts;
+ 	const struct rkvdec_decoded_fmt_desc *decoded_fmts;
+ 	u32 subsystem_flags;
++	u32 flags;
+ };
+ 
++/* Largest film index, which tells the streams apart in the CCU */
++#define RKVDEC_MAX_FILM_IDX		1023
++
++/* Maximum number of reference frames of a job */
++#define RKVDEC_MAX_REFS			17
++
+ /**
+  * struct rkvdec_job - a frame being decoded
+  * @node: entry in the &rkvdec_ctx.jobs list
+@@ -144,6 +160,8 @@ struct rkvdec_coded_fmt_desc {
+  *	      finished, so the next frame may start before this one is done
+  * @hw_done: the hardware is done with the frame
+  * @busy: the m2m state of the job is being changed, don't complete it
++ * @num_refs: number of entries in @refs
++ * @refs: the CAPTURE buffers the frame predicts from
+  */
+ struct rkvdec_job {
+ 	struct list_head node;
+@@ -156,6 +174,8 @@ struct rkvdec_job {
+ 	bool detached;
+ 	bool hw_done;
+ 	bool busy;
++	unsigned int num_refs;
++	const struct vb2_buffer *refs[RKVDEC_MAX_REFS];
+ };
+ 
+ struct rkvdec_core {
+@@ -172,6 +192,7 @@ struct rkvdec_core {
+ 	struct rkvdec_ctx *curr_ctx;
+ 	struct rkvdec_job *job;
+ 	int id;
++	int ccu_port;
+ };
+ 
+ struct rkvdec_dev {
+@@ -189,6 +210,8 @@ struct rkvdec_dev {
+ 	struct rkvdec_core *main_core;
+ 	struct iommu_domain *iommu_global_domain;
+ 	struct rkvdec_job *held_job;
++	struct rkvdec_ccu *ccu;
++	struct ida film_ida;
+ };
+ 
+ struct rkvdec_ctx {
+@@ -210,6 +233,7 @@ struct rkvdec_ctx {
+ 	unsigned int num_jobs;
+ 	wait_queue_head_t jobs_wq;
+ 	struct mutex done_lock; /* completes the jobs in decoding order */
++	int film_idx;
+ 	void *priv;
+ 	u8 has_sps_st_rps: 1;
+ 	u8 has_sps_lt_rps: 1;
+@@ -236,6 +260,7 @@ void rkvdec_run_preamble(struct rkvdec_ctx *ctx, struct rkvdec_run *run);
+ void rkvdec_run_postamble(struct rkvdec_ctx *ctx, struct rkvdec_run *run);
+ void rkvdec_memcpy_toio(void __iomem *dst, void *src, size_t len);
+ void rkvdec_schedule_watchdog(struct rkvdec_core *core, u32 timeout_threshold);
++void rkvdec_job_add_ref(struct rkvdec_ctx *ctx, const struct vb2_buffer *ref);
+ 
+ void rkvdec_quirks_disable_qos(struct rkvdec_ctx *ctx);
+ 

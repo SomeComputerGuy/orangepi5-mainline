@@ -1,0 +1,5 @@
+# Apply in this order on top of the parent topic (see topic.env):
+#   while read -r p sha; do git am "$p"; done < <(grep -v '^#' series)
+# Second column: the original commit in the workspace clone (for reference).
+ours/0001-drm-rockchip-vop2-Balance-window-fetches-across-both.patch 2ef556731aa3963be336e1a967549ba3d2014a46
+ours/0002-drm-rockchip-vop2-Report-POST_BUF_EMPTY-at-most-once.patch ebcd65af06f7aad92455384d694c25b6b137249b

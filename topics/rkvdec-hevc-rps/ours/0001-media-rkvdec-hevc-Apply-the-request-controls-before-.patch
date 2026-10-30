@@ -1,0 +1,61 @@
+From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
+From: Arun Iyengar <aiyengar1990@gmail.com>
+Date: Thu, 29 Oct 2026 23:23:11 +0000
+Subject: [PATCH] media: rkvdec: hevc: Apply the request controls before
+ reading them
+
+rkvdec_hevc_run_preamble() looks up the HEVC controls and stores their
+p_cur pointers, the slice count and the SPS RPS pointers first, and only
+then calls rkvdec_run_preamble(), which applies the request's controls
+with v4l2_ctrl_request_setup().
+
+For the fixed-size compound controls this happens to work: p_cur points
+to storage that stays in place, and its contents are updated by the
+setup before the codec code reads them. It is wrong for the rest:
+
+- SLICE_PARAMS, EXT_SPS_ST_RPS and EXT_SPS_LT_RPS are dynamic arrays.
+  When a request holds more elements than the control has room for,
+  req_to_new() allocates a new p_array and frees the old one, so the
+  pointer read before the setup is left dangling for that job.
+- num_slices is taken from new_elems before the setup. That is the
+  count last stored there: of the previous request, or of a later one
+  whose controls userspace has already set. The RK3399 HEVC backend
+  programs it into the hardware and walks that many slice parameters.
+- ext_sps_st_rps/ext_sps_lt_rps are chosen from has_sps_st_rps and
+  has_sps_lt_rps, which rkvdec_s_ctrl() sets while the request is
+  applied. On the first request that carries the controls the pointers
+  are therefore NULL and the RPS table isn't built for that job.
+
+Apply the request first, as cedrus and hantro do, then read the
+controls.
+
+Assisted-by: Claude:claude-opus-5-5
+---
+ .../media/platform/rockchip/rkvdec/rkvdec-hevc-common.c  | 9 +++++++--
+ 1 file changed, 7 insertions(+), 2 deletions(-)
+
+diff --git a/drivers/media/platform/rockchip/rkvdec/rkvdec-hevc-common.c b/drivers/media/platform/rockchip/rkvdec/rkvdec-hevc-common.c
+index 2b8e04dd1..f581212fc 100644
+--- a/drivers/media/platform/rockchip/rkvdec/rkvdec-hevc-common.c
++++ b/drivers/media/platform/rockchip/rkvdec/rkvdec-hevc-common.c
+@@ -429,6 +429,13 @@ void rkvdec_hevc_run_preamble(struct rkvdec_ctx *ctx,
+ {
+ 	struct v4l2_ctrl *ctrl;
+ 
++	/*
++	 * Apply the request's controls first: they are only copied to the
++	 * current values here, and a dynamic array control may get a new
++	 * p_cur buffer when the request holds more elements than before.
++	 */
++	rkvdec_run_preamble(ctx, &run->base);
++
+ 	ctrl = v4l2_ctrl_find(&ctx->ctrl_hdl,
+ 			      V4L2_CID_STATELESS_HEVC_DECODE_PARAMS);
+ 	run->decode_params = ctrl ? ctrl->p_cur.p : NULL;
+@@ -460,6 +467,4 @@ void rkvdec_hevc_run_preamble(struct rkvdec_ctx *ctx,
+ 	} else {
+ 		run->ext_sps_lt_rps = NULL;
+ 	}
+-
+-	rkvdec_run_preamble(ctx, &run->base);
+ }

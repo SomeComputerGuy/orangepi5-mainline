@@ -1,0 +1,99 @@
+From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
+From: =?UTF-8?q?Sven=20P=C3=BCschel?= <s.pueschel@pengutronix.de>
+Date: Wed, 16 Sep 2026 17:09:53 +0200
+Subject: [PATCH] media: rockchip: rga: move rockchip_rga allocation to master
+ probe
+MIME-Version: 1.0
+Content-Type: text/plain; charset=UTF-8
+Content-Transfer-Encoding: 8bit
+
+Move the rockchip_rga struct allocation to the master component probe
+function in preparation of enabling all cores. This also adjusts the
+allocation to use the actual number of cores found in the of tree
+instead of being fixed to one core.
+
+Signed-off-by: Sven Püschel <s.pueschel@pengutronix.de>
+---
+ drivers/media/platform/rockchip/rga/rga.c | 32 ++++++++++++++---------
+ 1 file changed, 19 insertions(+), 13 deletions(-)
+
+diff --git a/drivers/media/platform/rockchip/rga/rga.c b/drivers/media/platform/rockchip/rga/rga.c
+index 13c0e469c..94db38102 100644
+--- a/drivers/media/platform/rockchip/rga/rga.c
++++ b/drivers/media/platform/rockchip/rga/rga.c
+@@ -741,7 +741,7 @@ static int rga_parse_dt(struct rga_core *core)
+ static int rga_core_bind(struct device *dev, struct device *master, void *data)
+ {
+ 	struct platform_device *pdev = to_platform_device(dev);
+-	struct rockchip_rga *rga;
++	struct rockchip_rga *rga = data;
+ 	struct rga_core *core;
+ 	struct video_device *vfd;
+ 	int ret = 0;
+@@ -750,17 +750,6 @@ static int rga_core_bind(struct device *dev, struct device *master, void *data)
+ 	if (!pdev->dev.of_node)
+ 		return -ENODEV;
+ 
+-	rga = devm_kzalloc(&pdev->dev, sizeof(*rga) + 1 * sizeof(*rga->cores), GFP_KERNEL);
+-	if (!rga)
+-		return -ENOMEM;
+-
+-	rga->hw = of_device_get_match_data(&pdev->dev);
+-	if (!rga->hw)
+-		return dev_err_probe(&pdev->dev, -ENODEV, "failed to get match data\n");
+-
+-	spin_lock_init(&rga->ctrl_lock);
+-	mutex_init(&rga->mutex);
+-
+ 	core = devm_kzalloc(&pdev->dev, sizeof(*core), GFP_KERNEL);
+ 	if (!core)
+ 		return -ENOMEM;
+@@ -942,9 +931,10 @@ static struct platform_driver rga_core_pdrv = {
+ 
+ static int rga_bind(struct device *dev)
+ {
++	struct rockchip_rga *rga = dev_get_drvdata(dev);
+ 	int ret;
+ 
+-	ret = component_bind_all(dev, NULL);
++	ret = component_bind_all(dev, rga);
+ 	if (ret) {
+ 		dev_err(dev, "component bind failed\n");
+ 		return ret;
+@@ -969,6 +959,8 @@ static int rga_probe(struct platform_device *pdev)
+ 	struct device *dev = &pdev->dev;
+ 	struct component_match *match = NULL;
+ 	struct device_node *core_node;
++	struct rockchip_rga *rga;
++	u8 num_cores = 0;
+ 
+ 	if (!match_desc)
+ 		return dev_err_probe(dev, -ENODEV, "missing platform data\n");
+@@ -980,6 +972,7 @@ static int rga_probe(struct platform_device *pdev)
+ 		of_node_get(core_node);
+ 		component_match_add_release(dev, &match, component_release_of,
+ 					    component_compare_of, core_node);
++		num_cores++;
+ 
+ 		/*
+ 		 * As multi core is not implemented yet,
+@@ -990,6 +983,19 @@ static int rga_probe(struct platform_device *pdev)
+ 		break;
+ 	}
+ 
++	rga = devm_kzalloc(dev, sizeof(*rga) + num_cores * sizeof(*rga->cores), GFP_KERNEL);
++	if (!rga)
++		return -ENOMEM;
++
++	rga->hw = match_desc->data;
++	if (!rga->hw)
++		return dev_err_probe(dev, -ENODEV, "failed to get match data\n");
++
++	spin_lock_init(&rga->ctrl_lock);
++	mutex_init(&rga->mutex);
++
++	dev_set_drvdata(dev, rga);
++
+ 	return component_master_add_with_match(dev, &rga_master_ops, match);
+ }
+ 

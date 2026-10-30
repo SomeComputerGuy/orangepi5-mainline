@@ -1,0 +1,82 @@
+From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
+From: Frank Zhang <rmxpzlb@gmail.com>
+Date: Tue, 12 May 2026 18:31:53 +0800
+Subject: [PATCH] drm/bridge: dw-hdmi-qp: Guard clear_audio_infoframe when PHY
+ is down
+
+The following panic was observed during system reboot:
+
+Kernel panic - not syncing: Asynchronous SError Interrupt
+CPU: 6 UID: 1000 PID: 2348 Comm: pipewire ... 7.0.5+ #4 PREEMPT(full)
+Call trace:
+ ...
+ regmap_update_bits_base+0x70/0xa8
+ dw_hdmi_qp_bridge_clear_audio_infoframe+0x3c/0x58 [dw_hdmi_qp]
+ drm_bridge_connector_clear_audio_infoframe+0x2c/0x48 [drm_display_helper]
+ ...
+ dw_hdmi_qp_audio_disable+0x28/0xa8 [dw_hdmi_qp]
+ drm_bridge_connector_audio_shutdown+0x38/0x68 [drm_display_helper]
+ drm_connector_hdmi_audio_shutdown+0x28/0x40 [drm_display_helper]
+ hdmi_codec_shutdown+0x60/0x90 [snd_soc_hdmi_codec]
+ ...
+ snd_pcm_release_substream+0xcc/0x120 [snd_pcm]
+ snd_pcm_release+0x4c/0xc0 [snd_pcm]
+ ...
+
+The root cause is pipewire tries to close the HDMI audio device after
+atomic_disable(), which sets tmds_char_rate to 0 and disables the PHY.
+
+In this case, dw_hdmi_qp_audio_disable() will call
+dw_hdmi_qp_bridge_clear_audio_infoframe(), accessing register without
+checking tmds_char_rate.
+
+Add a tmds_char_rate guard in dw_hdmi_qp_bridge_clear_audio_infoframe().
+Decouple write_audio_infoframe from clear_audio_infoframe to avoid the
+redundant check in the write path.
+Add PKTSCHED_AMD_TX_EN to the clear mask to keep the enable/disable
+balance.
+
+Fixes: fd0141d1a8a2 ("drm/bridge: synopsys: Add audio support for dw-hdmi-qp")
+Cc: stable@vger.kernel.org
+Signed-off-by: Frank Zhang <rmxpzlb@gmail.com>
+Link: https://patch.msgid.link/20260512103153.8861-1-rmxpzlb@gmail.com
+Signed-off-by: Cristian Ciocaltea <cristian.ciocaltea@collabora.com>
+[ Collabora subject prefix: [FROM-ML] ]
+Link: https://gitlab.collabora.com/hardware-enablement/rockchip-3588/linux/-/commit/66689431479746ecda2eb2247e7ab22a75c50d52
+---
+ drivers/gpu/drm/bridge/synopsys/dw-hdmi-qp.c | 15 +++++++++------
+ 1 file changed, 9 insertions(+), 6 deletions(-)
+
+diff --git a/drivers/gpu/drm/bridge/synopsys/dw-hdmi-qp.c b/drivers/gpu/drm/bridge/synopsys/dw-hdmi-qp.c
+index 3a3f32bd1..364a29daa 100644
+--- a/drivers/gpu/drm/bridge/synopsys/dw-hdmi-qp.c
++++ b/drivers/gpu/drm/bridge/synopsys/dw-hdmi-qp.c
+@@ -828,11 +828,11 @@ static int dw_hdmi_qp_bridge_clear_audio_infoframe(struct drm_bridge *bridge)
+ {
+ 	struct dw_hdmi_qp *hdmi = bridge->driver_private;
+ 
+-	dw_hdmi_qp_mod(hdmi, 0,
+-		       PKTSCHED_ACR_TX_EN |
+-		       PKTSCHED_AUDS_TX_EN |
+-		       PKTSCHED_AUDI_TX_EN,
+-		       PKTSCHED_PKT_EN);
++	if (hdmi->tmds_char_rate)
++		dw_hdmi_qp_mod(hdmi, 0,
++			       PKTSCHED_ACR_TX_EN | PKTSCHED_AMD_TX_EN |
++			       PKTSCHED_AUDS_TX_EN | PKTSCHED_AUDI_TX_EN,
++			       PKTSCHED_PKT_EN);
+ 
+ 	return 0;
+ }
+@@ -931,7 +931,10 @@ static int dw_hdmi_qp_bridge_write_audio_infoframe(struct drm_bridge *bridge,
+ {
+ 	struct dw_hdmi_qp *hdmi = bridge->driver_private;
+ 
+-	dw_hdmi_qp_bridge_clear_audio_infoframe(bridge);
++	dw_hdmi_qp_mod(hdmi, 0,
++		       PKTSCHED_ACR_TX_EN | PKTSCHED_AMD_TX_EN |
++		       PKTSCHED_AUDS_TX_EN | PKTSCHED_AUDI_TX_EN,
++		       PKTSCHED_PKT_EN);
+ 
+ 	/*
+ 	 * AUDI_CONTENTS0: { RSV, HB2, HB1, RSV }

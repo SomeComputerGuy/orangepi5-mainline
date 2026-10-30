@@ -1,0 +1,117 @@
+From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
+From: Arun Iyengar <aiyengar1990@gmail.com>
+Date: Thu, 29 Oct 2026 22:58:31 +0000
+Subject: [PATCH] media: v4l2-mem2mem: add v4l2_m2m_buf_detach_and_job_finish()
+
+A mem2mem job ends when the driver returns its buffers, and the next
+job of the same context can only start after that. Some hardware can
+work on several consecutive jobs of one context at a time: the RK3588
+video decoder has two cores and a core coordination unit that lets one
+core decode a frame while the other is still writing the reference
+frame it predicts from. Such a driver needs the next job to be
+scheduled while the previous one is still being processed.
+
+Add a helper that removes the source and destination buffers of the
+running job from the ready lists without returning them, and finishes
+the job. The driver owns the buffers until the hardware is done and
+returns them with v4l2_m2m_buf_done(). Unlike v4l2_m2m_job_finish(),
+the helper may be used by drivers that support holding capture buffers:
+a job that holds its capture buffer for the next one isn't detached,
+and the caller finishes it with v4l2_m2m_buf_done_and_job_finish() as
+before.
+
+Assisted-by: Claude:claude-opus-5-5
+---
+ drivers/media/v4l2-core/v4l2-mem2mem.c | 38 ++++++++++++++++++++++++++
+ include/media/v4l2-mem2mem.h           | 29 ++++++++++++++++++++
+ 2 files changed, 67 insertions(+)
+
+diff --git a/drivers/media/v4l2-core/v4l2-mem2mem.c b/drivers/media/v4l2-core/v4l2-mem2mem.c
+index f1b625598..01f3bba40 100644
+--- a/drivers/media/v4l2-core/v4l2-mem2mem.c
++++ b/drivers/media/v4l2-core/v4l2-mem2mem.c
+@@ -569,6 +569,44 @@ void v4l2_m2m_buf_done_and_job_finish(struct v4l2_m2m_dev *m2m_dev,
+ }
+ EXPORT_SYMBOL(v4l2_m2m_buf_done_and_job_finish);
+ 
++bool v4l2_m2m_buf_detach_and_job_finish(struct v4l2_m2m_dev *m2m_dev,
++					struct v4l2_m2m_ctx *m2m_ctx,
++					struct vb2_v4l2_buffer **src_buf,
++					struct vb2_v4l2_buffer **dst_buf)
++{
++	struct vb2_v4l2_buffer *src, *dst;
++	bool schedule_next = false;
++	unsigned long flags;
++
++	spin_lock_irqsave(&m2m_dev->job_spinlock, flags);
++	if (WARN_ON(!(m2m_ctx->job_flags & TRANS_RUNNING)))
++		goto unlock;
++
++	src = v4l2_m2m_next_src_buf(m2m_ctx);
++	dst = v4l2_m2m_next_dst_buf(m2m_ctx);
++	if (WARN_ON(!src || !dst))
++		goto unlock;
++
++	/* A held capture buffer must stay on the queue for the next job. */
++	if (src->flags & V4L2_BUF_FLAG_M2M_HOLD_CAPTURE_BUF)
++		goto unlock;
++
++	v4l2_m2m_src_buf_remove(m2m_ctx);
++	v4l2_m2m_dst_buf_remove(m2m_ctx);
++	dst->is_held = false;
++	*src_buf = src;
++	*dst_buf = dst;
++	schedule_next = _v4l2_m2m_job_finish(m2m_dev, m2m_ctx);
++unlock:
++	spin_unlock_irqrestore(&m2m_dev->job_spinlock, flags);
++
++	if (schedule_next)
++		v4l2_m2m_schedule_next_job(m2m_dev, m2m_ctx);
++
++	return schedule_next;
++}
++EXPORT_SYMBOL_GPL(v4l2_m2m_buf_detach_and_job_finish);
++
+ void v4l2_m2m_suspend(struct v4l2_m2m_dev *m2m_dev)
+ {
+ 	unsigned long flags;
+diff --git a/include/media/v4l2-mem2mem.h b/include/media/v4l2-mem2mem.h
+index 37ffd33b6..2e1dd1108 100644
+--- a/include/media/v4l2-mem2mem.h
++++ b/include/media/v4l2-mem2mem.h
+@@ -231,6 +231,35 @@ void v4l2_m2m_buf_done_and_job_finish(struct v4l2_m2m_dev *m2m_dev,
+ 				      struct v4l2_m2m_ctx *m2m_ctx,
+ 				      enum vb2_buffer_state state);
+ 
++/**
++ * v4l2_m2m_buf_detach_and_job_finish() - take the source/destination buffers
++ * of the running job and inform the framework that the job has been finished
++ *
++ * @m2m_dev: opaque pointer to the internal data to handle M2M context
++ * @m2m_ctx: m2m context assigned to the instance given by struct &v4l2_m2m_ctx
++ * @src_buf: set to the source buffer of the job
++ * @dst_buf: set to the destination buffer of the job
++ *
++ * For drivers that keep processing a job after the next one may start, e.g.
++ * on hardware with several cores that can work on consecutive jobs of the
++ * same context. The source and destination buffers of the job are removed
++ * from the ready lists without being returned, and the job is finished, so
++ * that the next job can be scheduled while the hardware still processes
++ * this one. The driver then owns both buffers and must return them with
++ * v4l2_m2m_buf_done(), the destination buffer first.
++ *
++ * A job whose source buffer has %V4L2_BUF_FLAG_M2M_HOLD_CAPTURE_BUF set keeps
++ * its destination buffer for the next job, so it can't be detached: nothing
++ * is done and the job has to be finished with
++ * v4l2_m2m_buf_done_and_job_finish() as usual.
++ *
++ * Return: true if the buffers were detached and the job finished.
++ */
++bool v4l2_m2m_buf_detach_and_job_finish(struct v4l2_m2m_dev *m2m_dev,
++					struct v4l2_m2m_ctx *m2m_ctx,
++					struct vb2_v4l2_buffer **src_buf,
++					struct vb2_v4l2_buffer **dst_buf);
++
+ static inline void
+ v4l2_m2m_buf_done(struct vb2_v4l2_buffer *buf, enum vb2_buffer_state state)
+ {

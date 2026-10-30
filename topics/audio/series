@@ -1,0 +1,5 @@
+# Apply in this order on top of the parent topic (see topic.env):
+#   while read -r p sha; do git am "$p"; done < <(grep -v '^#' series)
+# Second column: the original commit in the workspace clone (for reference).
+ours/0001-arm64-dts-rockchip-Add-DP0-audio-to-RK3588-and-Orang.patch 22ef6b1e3abeb51f3264d04cc18d60ecd7254c11
+ours/0002-drm-bridge-dw-hdmi-qp-Reprogram-audio-N-CTS-after-a-.patch e4eadf14d019265e1fd15026ecdabad860b36c80
