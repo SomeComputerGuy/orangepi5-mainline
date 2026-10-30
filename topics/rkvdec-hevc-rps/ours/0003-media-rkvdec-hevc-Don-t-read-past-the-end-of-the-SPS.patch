@@ -26,7 +26,7 @@ Assisted-by: Claude:claude-opus-5-5
  3 files changed, 16 insertions(+), 10 deletions(-)
 
 diff --git a/drivers/media/platform/rockchip/rkvdec/rkvdec-hevc-common.c b/drivers/media/platform/rockchip/rkvdec/rkvdec-hevc-common.c
-index f581212fc..39d2a61d6 100644
+index f581212fc6f5..39d2a61d623f 100644
 --- a/drivers/media/platform/rockchip/rkvdec/rkvdec-hevc-common.c
 +++ b/drivers/media/platform/rockchip/rkvdec/rkvdec-hevc-common.c
 @@ -453,18 +453,24 @@ void rkvdec_hevc_run_preamble(struct rkvdec_ctx *ctx,
@@ -61,7 +61,7 @@ index f581212fc..39d2a61d6 100644
  	}
  }
 diff --git a/drivers/media/platform/rockchip/rkvdec/rkvdec-vdpu381-hevc.c b/drivers/media/platform/rockchip/rkvdec/rkvdec-vdpu381-hevc.c
-index ca5224365..b57be2a20 100644
+index ca52243650ec..b57be2a20ff4 100644
 --- a/drivers/media/platform/rockchip/rkvdec/rkvdec-vdpu381-hevc.c
 +++ b/drivers/media/platform/rockchip/rkvdec/rkvdec-vdpu381-hevc.c
 @@ -604,8 +604,8 @@ static int rkvdec_hevc_run(struct rkvdec_ctx *ctx)
@@ -76,7 +76,7 @@ index ca5224365..b57be2a20 100644
  	} else {
  		rkvdec_hevc_assemble_hw_rps(&run, &tbl->rps, &hevc_ctx->st_cache);
 diff --git a/drivers/media/platform/rockchip/rkvdec/rkvdec-vdpu383-hevc.c b/drivers/media/platform/rockchip/rkvdec/rkvdec-vdpu383-hevc.c
-index d29de4e6c..a672fa894 100644
+index d29de4e6c5d7..a672fa8940f4 100644
 --- a/drivers/media/platform/rockchip/rkvdec/rkvdec-vdpu383-hevc.c
 +++ b/drivers/media/platform/rockchip/rkvdec/rkvdec-vdpu383-hevc.c
 @@ -550,8 +550,8 @@ static int rkvdec_hevc_run(struct rkvdec_ctx *ctx)

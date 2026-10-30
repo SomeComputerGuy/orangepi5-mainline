@@ -32,7 +32,7 @@ Link: https://gitlab.collabora.com/hardware-enablement/rockchip-3588/linux/-/com
  4 files changed, 26 insertions(+), 11 deletions(-)
 
 diff --git a/drivers/gpu/drm/display/drm_bridge_connector.c b/drivers/gpu/drm/display/drm_bridge_connector.c
-index 9ba888255..0459ab4f1 100644
+index 9ba888255ebf..0459ab4f1b30 100644
 --- a/drivers/gpu/drm/display/drm_bridge_connector.c
 +++ b/drivers/gpu/drm/display/drm_bridge_connector.c
 @@ -306,12 +306,16 @@ static int drm_bridge_connector_detect_ctx(struct drm_connector *connector,
@@ -55,7 +55,7 @@ index 9ba888255..0459ab4f1 100644
  		drm_bridge_connector_hpd_notify(connector, status);
  	} else {
 diff --git a/drivers/gpu/drm/display/drm_hdmi_state_helper.c b/drivers/gpu/drm/display/drm_hdmi_state_helper.c
-index 3ef6de31d..485fcca2d 100644
+index 3ef6de31dc02..485fcca2de4b 100644
 --- a/drivers/gpu/drm/display/drm_hdmi_state_helper.c
 +++ b/drivers/gpu/drm/display/drm_hdmi_state_helper.c
 @@ -1356,8 +1356,9 @@ drm_atomic_helper_connector_hdmi_clear_audio_infoframe(struct drm_connector *con
@@ -119,7 +119,7 @@ index 3ef6de31d..485fcca2d 100644
  }
  EXPORT_SYMBOL(drm_atomic_helper_connector_hdmi_force);
 diff --git a/drivers/gpu/drm/vc4/vc4_hdmi.c b/drivers/gpu/drm/vc4/vc4_hdmi.c
-index 990e3547d..2cc46036f 100644
+index 990e3547dfa1..2cc46036f11d 100644
 --- a/drivers/gpu/drm/vc4/vc4_hdmi.c
 +++ b/drivers/gpu/drm/vc4/vc4_hdmi.c
 @@ -375,7 +375,7 @@ static void vc4_hdmi_handle_hotplug(struct vc4_hdmi *vc4_hdmi,
@@ -132,7 +132,7 @@ index 990e3547d..2cc46036f 100644
  	if (status != connector_status_connected)
  		return;
 diff --git a/include/drm/display/drm_hdmi_state_helper.h b/include/drm/display/drm_hdmi_state_helper.h
-index 596c57d9d..2439bad15 100644
+index 596c57d9d250..2439bad15c4b 100644
 --- a/include/drm/display/drm_hdmi_state_helper.h
 +++ b/include/drm/display/drm_hdmi_state_helper.h
 @@ -8,6 +8,7 @@ struct drm_atomic_commit;

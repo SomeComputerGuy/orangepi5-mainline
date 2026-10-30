@@ -52,7 +52,7 @@ Assisted-by: Claude:claude-opus-5-5
  5 files changed, 397 insertions(+)
 
 diff --git a/drivers/media/v4l2-core/v4l2-ctrls-core.c b/drivers/media/v4l2-core/v4l2-ctrls-core.c
-index a1d1ec53b..93fc06c54 100644
+index a1d1ec53b91b..93fc06c54622 100644
 --- a/drivers/media/v4l2-core/v4l2-ctrls-core.c
 +++ b/drivers/media/v4l2-core/v4l2-ctrls-core.c
 @@ -11,6 +11,7 @@
@@ -313,7 +313,7 @@ index a1d1ec53b..93fc06c54 100644
  		elem_size = sizeof(struct v4l2_ctrl_hdr10_cll_info);
  		break;
 diff --git a/drivers/media/v4l2-core/v4l2-ctrls-defs.c b/drivers/media/v4l2-core/v4l2-ctrls-defs.c
-index a0ac85896..123b56a32 100644
+index a0ac858968b6..123b56a32ed5 100644
 --- a/drivers/media/v4l2-core/v4l2-ctrls-defs.c
 +++ b/drivers/media/v4l2-core/v4l2-ctrls-defs.c
 @@ -1239,6 +1239,8 @@ const char *v4l2_ctrl_get_name(u32 id)
@@ -340,7 +340,7 @@ index a0ac85896..123b56a32 100644
  		*type = V4L2_CTRL_TYPE_VP9_COMPRESSED_HDR;
  		break;
 diff --git a/include/media/v4l2-ctrls.h b/include/media/v4l2-ctrls.h
-index 327976b14..e817d1674 100644
+index 327976b14d50..e817d1674094 100644
 --- a/include/media/v4l2-ctrls.h
 +++ b/include/media/v4l2-ctrls.h
 @@ -49,6 +49,8 @@ struct video_device;
@@ -362,7 +362,7 @@ index 327976b14..e817d1674 100644
  	struct v4l2_ctrl_vp9_frame *p_vp9_frame;
  	struct v4l2_ctrl_hdr10_cll_info *p_hdr10_cll;
 diff --git a/include/uapi/linux/v4l2-controls.h b/include/uapi/linux/v4l2-controls.h
-index e2c005fde..a6bc3ca97 100644
+index e2c005fde6f1..a6bc3ca9742b 100644
 --- a/include/uapi/linux/v4l2-controls.h
 +++ b/include/uapi/linux/v4l2-controls.h
 @@ -2138,6 +2138,8 @@ struct v4l2_ctrl_mpeg2_quantisation {
@@ -568,7 +568,7 @@ index e2c005fde..a6bc3ca97 100644
  
  #define V4L2_VP9_LOOP_FILTER_FLAG_DELTA_ENABLED	0x1
 diff --git a/include/uapi/linux/videodev2.h b/include/uapi/linux/videodev2.h
-index eb0a2b584..74a8959f0 100644
+index eb0a2b5846b5..74a8959f010b 100644
 --- a/include/uapi/linux/videodev2.h
 +++ b/include/uapi/linux/videodev2.h
 @@ -1992,6 +1992,8 @@ enum v4l2_ctrl_type {

@@ -34,7 +34,7 @@ Link: https://gitlab.collabora.com/hardware-enablement/rockchip-3588/linux/-/com
  1 file changed, 13 insertions(+), 2 deletions(-)
 
 diff --git a/drivers/gpu/drm/rockchip/rockchip_drm_vop2.c b/drivers/gpu/drm/rockchip/rockchip_drm_vop2.c
-index 5746480b4..d33e99a66 100644
+index 5746480b449f..d33e99a6600f 100644
 --- a/drivers/gpu/drm/rockchip/rockchip_drm_vop2.c
 +++ b/drivers/gpu/drm/rockchip/rockchip_drm_vop2.c
 @@ -2103,8 +2103,19 @@ static void vop2_crtc_atomic_flush(struct drm_crtc *crtc,

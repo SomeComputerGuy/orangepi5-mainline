@@ -25,7 +25,7 @@ Assisted-by: Claude:claude-opus-5-5
  5 files changed, 436 insertions(+)
 
 diff --git a/Documentation/userspace-api/media/v4l/ext-ctrls-codec-stateless.rst b/Documentation/userspace-api/media/v4l/ext-ctrls-codec-stateless.rst
-index d7a3b8ef0..177940a6f 100644
+index d7a3b8ef03a7..177940a6f987 100644
 --- a/Documentation/userspace-api/media/v4l/ext-ctrls-codec-stateless.rst
 +++ b/Documentation/userspace-api/media/v4l/ext-ctrls-codec-stateless.rst
 @@ -3079,6 +3079,417 @@ This structure contains all loop filter related parameters. See sections
@@ -447,7 +447,7 @@ index d7a3b8ef0..177940a6f 100644
  
  ``V4L2_CID_STATELESS_AV1_SEQUENCE (struct)``
 diff --git a/Documentation/userspace-api/media/v4l/pixfmt-compressed.rst b/Documentation/userspace-api/media/v4l/pixfmt-compressed.rst
-index 235f955d3..7483444ec 100644
+index 235f955d3cd5..7483444ec823 100644
 --- a/Documentation/userspace-api/media/v4l/pixfmt-compressed.rst
 +++ b/Documentation/userspace-api/media/v4l/pixfmt-compressed.rst
 @@ -221,6 +221,9 @@ Compressed Formats
@@ -461,7 +461,7 @@ index 235f955d3..7483444ec 100644
  
        - ``V4L2_PIX_FMT_FWHT``
 diff --git a/Documentation/userspace-api/media/v4l/videodev2.h.rst.exceptions b/Documentation/userspace-api/media/v4l/videodev2.h.rst.exceptions
-index 6182b4e2d..6c8ac5634 100644
+index 6182b4e2d2ee..6c8ac563413f 100644
 --- a/Documentation/userspace-api/media/v4l/videodev2.h.rst.exceptions
 +++ b/Documentation/userspace-api/media/v4l/videodev2.h.rst.exceptions
 @@ -168,6 +168,8 @@ replace symbol V4L2_CTRL_TYPE_HEVC_PPS :c:type:`V4L.v4l2_ctrl_type`
@@ -474,7 +474,7 @@ index 6182b4e2d..6c8ac5634 100644
  replace symbol V4L2_CTRL_TYPE_AV1_TILE_GROUP_ENTRY :c:type:`V4L.v4l2_ctrl_type`
  replace symbol V4L2_CTRL_TYPE_AV1_FRAME :c:type:`V4L.v4l2_ctrl_type`
 diff --git a/Documentation/userspace-api/media/v4l/vidioc-g-ext-ctrls.rst b/Documentation/userspace-api/media/v4l/vidioc-g-ext-ctrls.rst
-index d78328152..0cc67e210 100644
+index d78328152b75..0cc67e210359 100644
 --- a/Documentation/userspace-api/media/v4l/vidioc-g-ext-ctrls.rst
 +++ b/Documentation/userspace-api/media/v4l/vidioc-g-ext-ctrls.rst
 @@ -286,6 +286,14 @@ still cause this situation.
@@ -493,7 +493,7 @@ index d78328152..0cc67e210 100644
        - ``p_av1_sequence``
        - A pointer to a struct :c:type:`v4l2_ctrl_av1_sequence`. Valid if this control is
 diff --git a/Documentation/userspace-api/media/v4l/vidioc-queryctrl.rst b/Documentation/userspace-api/media/v4l/vidioc-queryctrl.rst
-index 82c8b52e7..cd9ef6b55 100644
+index 82c8b52e771c..cd9ef6b559a4 100644
 --- a/Documentation/userspace-api/media/v4l/vidioc-queryctrl.rst
 +++ b/Documentation/userspace-api/media/v4l/vidioc-queryctrl.rst
 @@ -543,6 +543,18 @@ See also the examples in :ref:`control`.

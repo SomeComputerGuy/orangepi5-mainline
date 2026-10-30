@@ -26,7 +26,7 @@ Link: https://gitlab.collabora.com/hardware-enablement/rockchip-3588/linux/-/com
  2 files changed, 40 insertions(+)
 
 diff --git a/drivers/gpu/drm/rockchip/rockchip_drm_vop2.c b/drivers/gpu/drm/rockchip/rockchip_drm_vop2.c
-index aca40b1b0..67d9abb80 100644
+index aca40b1b01e6..67d9abb80aff 100644
 --- a/drivers/gpu/drm/rockchip/rockchip_drm_vop2.c
 +++ b/drivers/gpu/drm/rockchip/rockchip_drm_vop2.c
 @@ -17,6 +17,7 @@
@@ -108,7 +108,7 @@ index aca40b1b0..67d9abb80 100644
  	if (vop2->irq < 0)
  		return dev_err_probe(drm->dev, vop2->irq, "cannot find irq for vop2\n");
 diff --git a/drivers/gpu/drm/rockchip/rockchip_drm_vop2.h b/drivers/gpu/drm/rockchip/rockchip_drm_vop2.h
-index b95ca1140..cc06904b4 100644
+index b95ca11403e3..cc06904b4053 100644
 --- a/drivers/gpu/drm/rockchip/rockchip_drm_vop2.h
 +++ b/drivers/gpu/drm/rockchip/rockchip_drm_vop2.h
 @@ -165,6 +165,8 @@ enum vop2_win_regs {

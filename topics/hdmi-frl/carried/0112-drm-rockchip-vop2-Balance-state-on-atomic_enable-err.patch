@@ -43,7 +43,7 @@ Link: https://gitlab.collabora.com/hardware-enablement/rockchip-3588/linux/-/com
  2 files changed, 59 insertions(+), 15 deletions(-)
 
 diff --git a/drivers/gpu/drm/rockchip/rockchip_drm_vop2.c b/drivers/gpu/drm/rockchip/rockchip_drm_vop2.c
-index 338d8d8ad..5746480b4 100644
+index 338d8d8ad208..5746480b449f 100644
 --- a/drivers/gpu/drm/rockchip/rockchip_drm_vop2.c
 +++ b/drivers/gpu/drm/rockchip/rockchip_drm_vop2.c
 @@ -1035,6 +1035,9 @@ static void vop2_crtc_atomic_disable(struct drm_crtc *crtc,
@@ -197,7 +197,7 @@ index 338d8d8ad..5746480b4 100644
  	spin_lock_irq(&crtc->dev->event_lock);
  
 diff --git a/drivers/gpu/drm/rockchip/rockchip_drm_vop2.h b/drivers/gpu/drm/rockchip/rockchip_drm_vop2.h
-index 994609233..b95ca1140 100644
+index 994609233c77..b95ca11403e3 100644
 --- a/drivers/gpu/drm/rockchip/rockchip_drm_vop2.h
 +++ b/drivers/gpu/drm/rockchip/rockchip_drm_vop2.h
 @@ -243,6 +243,12 @@ struct vop2_video_port {

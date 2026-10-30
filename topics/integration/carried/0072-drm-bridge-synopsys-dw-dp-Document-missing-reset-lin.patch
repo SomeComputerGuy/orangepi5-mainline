@@ -28,7 +28,7 @@ Link: https://patch.msgid.link/20260806-synopsys-dw-dp-improvements-v11-4-0d5085
  1 file changed, 4 insertions(+)
 
 diff --git a/drivers/gpu/drm/bridge/synopsys/dw-dp.c b/drivers/gpu/drm/bridge/synopsys/dw-dp.c
-index 21d60e891..52e3b3725 100644
+index 21d60e89126f..52e3b37259a6 100644
 --- a/drivers/gpu/drm/bridge/synopsys/dw-dp.c
 +++ b/drivers/gpu/drm/bridge/synopsys/dw-dp.c
 @@ -2090,6 +2090,10 @@ struct dw_dp *dw_dp_probe(struct platform_device *pdev, const struct dw_dp_plat_

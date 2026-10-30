@@ -16,7 +16,7 @@ Link: https://gitlab.collabora.com/hardware-enablement/rockchip-3588/linux/-/com
  2 files changed, 115 deletions(-)
 
 diff --git a/drivers/gpu/drm/drm_connector.c b/drivers/gpu/drm/drm_connector.c
-index d94c86bfe..c9540d587 100644
+index d94c86bfed86..c9540d58719a 100644
 --- a/drivers/gpu/drm/drm_connector.c
 +++ b/drivers/gpu/drm/drm_connector.c
 @@ -686,112 +686,6 @@ int drmm_connector_hdmi_init(struct drm_device *dev,
@@ -133,7 +133,7 @@ index d94c86bfe..c9540d587 100644
   * drm_connector_attach_edid_property - attach edid property.
   * @connector: the connector
 diff --git a/include/drm/drm_connector.h b/include/drm/drm_connector.h
-index 6b2cce2fa..3198afa36 100644
+index 6b2cce2fa3af..3198afa36e13 100644
 --- a/include/drm/drm_connector.h
 +++ b/include/drm/drm_connector.h
 @@ -2676,15 +2676,6 @@ int drmm_connector_hdmi_init(struct drm_device *dev,

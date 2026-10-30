@@ -1,0 +1,52 @@
+From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
+From: Cristian Ciocaltea <cristian.ciocaltea@collabora.com>
+Date: Tue, 4 Aug 2026 02:21:20 +0300
+Subject: [PATCH] drm/bridge: Fix NULL deref in drm_bridge_add() for legacy
+ bridges
+
+Legacy bridge drivers that embed struct drm_bridge in a zero-initialized
+allocation, rather than obtaining it from devm_drm_bridge_alloc(), never
+run INIT_LIST_HEAD() on bridge->list, leaving next and prev NULL.
+list_empty() compares next against &bridge->list, so it reports such a
+list head as non-empty.  list_del_init() therefore runs and dereferences
+the NULL pointers, panicking the kernel during probe.  Only builds with
+CONFIG_DEBUG_LIST survive, with a list corruption report.
+
+This affects rk3066_hdmi and the i.MX8 LDB bridges, which still embed a
+bridge in a devm_kzalloc()'d struct.
+
+Initialize the list head when it is found to be NULL, so that the bridge
+ends up with a valid empty list head and list_del_init() is only reached
+for bridges that can actually be linked.
+
+Fixes: 17805a15d175 ("drm/bridge: add list of removed refcounted bridges")
+Reported-by: Sashiko <sashiko-bot@kernel.org>
+Closes: https://lore.kernel.org/all/20260731175016.C5D591F00AC4@smtp.kernel.org/
+Signed-off-by: Cristian Ciocaltea <cristian.ciocaltea@collabora.com>
+Link: https://gitlab.collabora.com/hardware-enablement/rockchip-3588/linux/-/commit/22b9dcba830a9421b4e70325ef1f0c44a6f438e0
+---
+ drivers/gpu/drm/drm_bridge.c | 9 ++++++++-
+ 1 file changed, 8 insertions(+), 1 deletion(-)
+
+diff --git a/drivers/gpu/drm/drm_bridge.c b/drivers/gpu/drm/drm_bridge.c
+index 98eaee7916dc..10dde3600c70 100644
+--- a/drivers/gpu/drm/drm_bridge.c
++++ b/drivers/gpu/drm/drm_bridge.c
+@@ -453,9 +453,16 @@ void drm_bridge_add(struct drm_bridge *bridge)
+ 	 * If the bridge was previously added and then removed, it is now
+ 	 * in bridge_lingering_list. Remove it or bridge_lingering_list will be
+ 	 * corrupted when adding this bridge to bridge_list below.
++	 *
++	 * Legacy drivers that allocate the bridge with kzalloc() rather than
++	 * devm_drm_bridge_alloc() leave list.next NULL. Such a bridge cannot
++	 * be on any list, and list_del_init() would dereference NULL, so
++	 * initialize the list head first.
+ 	 */
+ 	mutex_lock(&bridge_lock);
+-	if (!list_empty(&bridge->list))
++	if (!bridge->list.next)
++		INIT_LIST_HEAD(&bridge->list);
++	else if (!list_empty(&bridge->list))
+ 		list_del_init(&bridge->list);
+ 	mutex_unlock(&bridge_lock);
+ 

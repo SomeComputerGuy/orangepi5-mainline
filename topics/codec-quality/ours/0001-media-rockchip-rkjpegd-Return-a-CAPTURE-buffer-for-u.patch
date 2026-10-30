@@ -29,7 +29,7 @@ Assisted-by: Claude:claude-opus-5-5
  1 file changed, 41 insertions(+), 12 deletions(-)
 
 diff --git a/drivers/media/platform/rockchip/rkjpegd/rkjpegd.c b/drivers/media/platform/rockchip/rkjpegd/rkjpegd.c
-index 5206b461c..83891bf0f 100644
+index 5206b461c97b..83891bf0f198 100644
 --- a/drivers/media/platform/rockchip/rkjpegd/rkjpegd.c
 +++ b/drivers/media/platform/rockchip/rkjpegd/rkjpegd.c
 @@ -505,6 +505,7 @@ static void rkjpegd_buf_queue(struct vb2_buffer *vb)

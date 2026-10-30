@@ -1,0 +1,174 @@
+From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
+From: Cristian Ciocaltea <cristian.ciocaltea@collabora.com>
+Date: Fri, 12 Jun 2026 14:39:36 +0300
+Subject: [PATCH] drm/display: bridge-connector: Add optional TxFFE level
+ control
+
+Provide infrastructure to manage frl_set_ffe_level via an optional
+callback to be invoked by the FRL link training helper when the sink
+requests a TxFFE (Transmitter Feed-Forward Equalization) level increase.
+
+Also provide a max_ffe_level field indicating the maximum TxFFE level
+the source can advertise during link training (0..3, per HDMI 2.1 spec).
+The level is raised incrementally up to this limit before giving up.
+
+Signed-off-by: Cristian Ciocaltea <cristian.ciocaltea@collabora.com>
+Link: https://gitlab.collabora.com/hardware-enablement/rockchip-3588/linux/-/commit/ff419783e924db1fcf2c2ea1413bcba165585bf5
+---
+ .../gpu/drm/display/drm_bridge_connector.c    | 21 +++++++++++++++
+ drivers/gpu/drm/drm_connector.c               | 10 +++++++
+ include/drm/drm_bridge.h                      | 21 +++++++++++++++
+ include/drm/drm_connector.h                   | 27 +++++++++++++++++++
+ 4 files changed, 79 insertions(+)
+
+diff --git a/drivers/gpu/drm/display/drm_bridge_connector.c b/drivers/gpu/drm/display/drm_bridge_connector.c
+index 5265aa57de28..18502f54d5ec 100644
+--- a/drivers/gpu/drm/display/drm_bridge_connector.c
++++ b/drivers/gpu/drm/display/drm_bridge_connector.c
+@@ -705,6 +705,20 @@ static int drm_bridge_connector_frl_fallback_tmds(struct drm_connector *connecto
+ 	return bridge->funcs->hdmi_frl_fallback_tmds(bridge);
+ }
+ 
++static int drm_bridge_connector_frl_set_ffe_level(struct drm_connector *connector,
++						  u8 ffe_level)
++{
++	struct drm_bridge_connector *bridge_connector =
++		to_drm_bridge_connector(connector);
++	struct drm_bridge *bridge;
++
++	bridge = bridge_connector->bridge_hdmi;
++	if (!bridge)
++		return -EINVAL;
++
++	return bridge->funcs->hdmi_frl_set_ffe_level(bridge, ffe_level);
++}
++
+ static const struct drm_edid *
+ drm_bridge_connector_read_edid(struct drm_connector *connector)
+ {
+@@ -1169,6 +1183,10 @@ struct drm_connector *drm_bridge_connector_init(struct drm_device *drm,
+ 			connector->hdmi.max_frl_lanes =
+ 				bridge_connector->bridge_hdmi->max_frl_lanes;
+ 
++		if (bridge_connector->bridge_hdmi->max_ffe_level)
++			connector->hdmi.max_ffe_level =
++				bridge_connector->bridge_hdmi->max_ffe_level;
++
+ 		if (bridge_connector->bridge_hdmi->max_bpc)
+ 			bridge_connector->hdmi_funcs.max_bpc =
+ 				bridge_connector->bridge_hdmi->max_bpc;
+@@ -1203,6 +1221,9 @@ struct drm_connector *drm_bridge_connector_init(struct drm_device *drm,
+ 				drm_bridge_connector_frl_tx_stop;
+ 			bridge_connector->hdmi_funcs.frl_fallback_tmds =
+ 				drm_bridge_connector_frl_fallback_tmds;
++			if (bridge_connector->bridge_hdmi->funcs->hdmi_frl_set_ffe_level)
++				bridge_connector->hdmi_funcs.frl_set_ffe_level =
++					drm_bridge_connector_frl_set_ffe_level;
+ 		}
+ 
+ 		ret = drmm_connector_hdmi_init(drm, connector,
+diff --git a/drivers/gpu/drm/drm_connector.c b/drivers/gpu/drm/drm_connector.c
+index 5eddee41e357..5c043a3e9c4e 100644
+--- a/drivers/gpu/drm/drm_connector.c
++++ b/drivers/gpu/drm/drm_connector.c
+@@ -682,6 +682,16 @@ int drmm_connector_hdmi_init(struct drm_device *dev,
+ 			drm_err(dev, "Invalid FRL rate/lane limits\n");
+ 			return -EINVAL;
+ 		}
++
++		if (!!connector->hdmi.max_ffe_level != !!hdmi_funcs->frl_set_ffe_level) {
++			drm_err(dev, "Invalid FFE level config\n");
++			return -EINVAL;
++		}
++
++		if (connector->hdmi.max_ffe_level > HDMI_2_1_FRL_FFE_LEVEL_MAX) {
++			drm_err(dev, "Invalid FFE level limit\n");
++			return -EINVAL;
++		}
+ 	}
+ 
+ 	/*
+diff --git a/include/drm/drm_bridge.h b/include/drm/drm_bridge.h
+index 48d0bf82d966..b70bf8d4e05a 100644
+--- a/include/drm/drm_bridge.h
++++ b/include/drm/drm_bridge.h
+@@ -683,6 +683,20 @@ struct drm_bridge_funcs {
+ 	 */
+ 	int (*hdmi_frl_fallback_tmds)(struct drm_bridge *bridge);
+ 
++	/**
++	 * @hdmi_frl_set_ffe_level:
++	 *
++	 * Optional callback used to increase the per-lane TxFFE
++	 * (Transmitter Feed-Forward Equalization) level when the sink
++	 * requests stronger equalization during LTS:3.
++	 *
++	 * Bridges that implement this callback must set the
++	 * DRM_BRIDGE_OP_HDMI_FRL flag in their &drm_bridge->ops.
++	 *
++	 * @ffe_level: target TxFFE level (1..3).
++	 */
++	int (*hdmi_frl_set_ffe_level)(struct drm_bridge *bridge, u8 ffe_level);
++
+ 	/**
+ 	 * @hdmi_frl_rate_valid:
+ 	 *
+@@ -1289,6 +1303,13 @@ struct drm_bridge {
+ 	 */
+ 	u8 max_frl_lanes;
+ 
++	/**
++	 * @max_ffe_level: Maximum TxFFE (Transmitter Feed-Forward Equalization)
++	 * level the HDMI bridge supports. Valid range is 0..3, as defined by
++	 * HDMI 2.1 spec. This is only relevant if @DRM_BRIDGE_OP_HDMI is set.
++	 */
++	u8 max_ffe_level;
++
+ 	/**
+ 	 * @hdmi_cec_dev: device to be used as a containing device for CEC
+ 	 * functions.
+diff --git a/include/drm/drm_connector.h b/include/drm/drm_connector.h
+index 6cd8eda4f391..9b43559e94e2 100644
+--- a/include/drm/drm_connector.h
++++ b/include/drm/drm_connector.h
+@@ -1645,6 +1645,24 @@ struct drm_connector_hdmi_funcs {
+ 	 */
+ 	int (*frl_fallback_tmds)(struct drm_connector *connector);
+ 
++	/**
++	 * @frl_set_ffe_level:
++	 *
++	 * Optional callback invoked by the FRL link training helper from
++	 * LTS:3 when the sink requests a TxFFE (Transmitter Feed-Forward
++	 * Equalization) level increase on one or more lanes. The helper
++	 * increments the level incrementally up to
++	 * &drm_connector_hdmi.max_ffe_level before giving up.
++	 *
++	 * Bridges that do not implement this callback will cause the helper
++	 * to fall back to LTS:L (legacy TMDS) on any FFE level update
++	 * request from the sink.
++	 *
++	 * Returns:
++	 * 0 on success, a negative error code otherwise.
++	 */
++	int (*frl_set_ffe_level)(struct drm_connector *connector, u8 ffe_level);
++
+ 	/**
+ 	 * @avi:
+ 	 *
+@@ -2313,6 +2331,15 @@ struct drm_connector_hdmi {
+ 	 */
+ 	u8 max_frl_lanes;
+ 
++	/**
++	 * @max_ffe_level: Maximum TxFFE (Transmitter Feed-Forward Equalization)
++	 * level supported by the source for the advertised FRL rate.
++	 *
++	 * Valid range is 0..3, as defined by HDMI 2.1 spec. Only meaningful
++	 * when drm_connector_hdmi_frl_supported() returns true.
++	 */
++	u8 max_ffe_level;
++
+ 	/**
+ 	 * @scdc_work: Work item that has a dual role, depending on the
+ 	 * link operating mode.

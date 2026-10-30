@@ -21,7 +21,7 @@ Signed-off-by: Sven Püschel <s.pueschel@pengutronix.de>
  4 files changed, 14 insertions(+), 8 deletions(-)
 
 diff --git a/drivers/media/platform/rockchip/rga/rga-hw.c b/drivers/media/platform/rockchip/rga/rga-hw.c
-index c24e03431..691e605b0 100644
+index c24e03431e95..691e605b04a5 100644
 --- a/drivers/media/platform/rockchip/rga/rga-hw.c
 +++ b/drivers/media/platform/rockchip/rga/rga-hw.c
 @@ -466,10 +466,14 @@ static bool rga_handle_irq(struct rockchip_rga *rga)
@@ -43,7 +43,7 @@ index c24e03431..691e605b0 100644
  
  static struct rga_fmt formats[] = {
 diff --git a/drivers/media/platform/rockchip/rga/rga.c b/drivers/media/platform/rockchip/rga/rga.c
-index 6c60bb7f4..581b03a1e 100644
+index 6c60bb7f499d..581b03a1e24a 100644
 --- a/drivers/media/platform/rockchip/rga/rga.c
 +++ b/drivers/media/platform/rockchip/rga/rga.c
 @@ -861,7 +861,7 @@ static int rga_probe(struct platform_device *pdev)
@@ -56,7 +56,7 @@ index 6c60bb7f4..581b03a1e 100644
  	v4l2_info(&rga->v4l2_dev, "HW Version: 0x%02x.%02x\n",
  		  rga->version.major, rga->version.minor);
 diff --git a/drivers/media/platform/rockchip/rga/rga.h b/drivers/media/platform/rockchip/rga/rga.h
-index a7ca80b18..adde4d071 100644
+index a7ca80b187f2..adde4d071782 100644
 --- a/drivers/media/platform/rockchip/rga/rga.h
 +++ b/drivers/media/platform/rockchip/rga/rga.h
 @@ -159,7 +159,7 @@ struct rga_hw {
@@ -69,7 +69,7 @@ index a7ca80b18..adde4d071 100644
  				       struct v4l2_pix_format_mplane *format,
  				       bool is_output);
 diff --git a/drivers/media/platform/rockchip/rga/rga3-hw.c b/drivers/media/platform/rockchip/rga/rga3-hw.c
-index 46ba6d270..a80dd7609 100644
+index 46ba6d270f23..a80dd7609ccf 100644
 --- a/drivers/media/platform/rockchip/rga/rga3-hw.c
 +++ b/drivers/media/platform/rockchip/rga/rga3-hw.c
 @@ -299,12 +299,14 @@ static bool rga3_handle_irq(struct rockchip_rga *rga)

@@ -30,7 +30,7 @@ Signed-off-by: Igor Paunovic <royalnet026@gmail.com>
  2 files changed, 27 insertions(+)
 
 diff --git a/drivers/accel/rocket/rocket_devfreq.c b/drivers/accel/rocket/rocket_devfreq.c
-index 871fa370e..c81887734 100644
+index 871fa370eb43..c81887734de7 100644
 --- a/drivers/accel/rocket/rocket_devfreq.c
 +++ b/drivers/accel/rocket/rocket_devfreq.c
 @@ -3,6 +3,7 @@
@@ -80,7 +80,7 @@ index 871fa370e..c81887734 100644
  	rdevfreq->devfreq = NULL;
  
 diff --git a/drivers/accel/rocket/rocket_devfreq.h b/drivers/accel/rocket/rocket_devfreq.h
-index 65a9de6d3..26a374907 100644
+index 65a9de6d3738..26a3749078b9 100644
 --- a/drivers/accel/rocket/rocket_devfreq.h
 +++ b/drivers/accel/rocket/rocket_devfreq.h
 @@ -10,9 +10,11 @@

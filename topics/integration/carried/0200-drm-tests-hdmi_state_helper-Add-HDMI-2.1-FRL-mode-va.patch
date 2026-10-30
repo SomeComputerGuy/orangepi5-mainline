@@ -28,7 +28,7 @@ Link: https://gitlab.collabora.com/hardware-enablement/rockchip-3588/linux/-/com
  1 file changed, 329 insertions(+)
 
 diff --git a/drivers/gpu/drm/tests/drm_hdmi_state_helper_test.c b/drivers/gpu/drm/tests/drm_hdmi_state_helper_test.c
-index 415d82e75..4f3fd45cd 100644
+index 415d82e75eaa..4f3fd45cde29 100644
 --- a/drivers/gpu/drm/tests/drm_hdmi_state_helper_test.c
 +++ b/drivers/gpu/drm/tests/drm_hdmi_state_helper_test.c
 @@ -244,6 +244,106 @@ static const struct drm_connector_hdmi_funcs scrambler_connector_hdmi_funcs = {

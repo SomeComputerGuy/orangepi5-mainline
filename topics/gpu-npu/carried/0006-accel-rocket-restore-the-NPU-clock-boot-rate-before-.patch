@@ -38,7 +38,7 @@ Signed-off-by: Igor Paunovic <royalnet026@gmail.com>
  3 files changed, 72 insertions(+)
 
 diff --git a/drivers/accel/rocket/rocket_core.c b/drivers/accel/rocket/rocket_core.c
-index 5dd260bac..c736537cf 100644
+index 5dd260bacbff..c736537cf28f 100644
 --- a/drivers/accel/rocket/rocket_core.c
 +++ b/drivers/accel/rocket/rocket_core.c
 @@ -12,6 +12,7 @@
@@ -66,7 +66,7 @@ index 5dd260bac..c736537cf 100644
  	if (IS_ERR(core->pc_iomem)) {
  		dev_err(dev, "couldn't find PC registers %ld\n", PTR_ERR(core->pc_iomem));
 diff --git a/drivers/accel/rocket/rocket_device.h b/drivers/accel/rocket/rocket_device.h
-index abb88a254..ba7c977cd 100644
+index abb88a254e56..ba7c977cd695 100644
 --- a/drivers/accel/rocket/rocket_device.h
 +++ b/drivers/accel/rocket/rocket_device.h
 @@ -22,6 +22,21 @@ struct rocket_device {
@@ -92,7 +92,7 @@ index abb88a254..ba7c977cd 100644
  
  struct rocket_device *rocket_device_init(struct platform_device *pdev,
 diff --git a/drivers/accel/rocket/rocket_drv.c b/drivers/accel/rocket/rocket_drv.c
-index 0e092c9c3..d5f0aef49 100644
+index 0e092c9c3127..d5f0aef49845 100644
 --- a/drivers/accel/rocket/rocket_drv.c
 +++ b/drivers/accel/rocket/rocket_drv.c
 @@ -300,6 +300,30 @@ static int find_core_for_dev(struct device *dev)

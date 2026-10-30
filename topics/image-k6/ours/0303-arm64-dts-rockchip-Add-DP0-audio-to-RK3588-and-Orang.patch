@@ -1,0 +1,76 @@
+From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
+From: Arun Iyengar <aiyengar1990@gmail.com>
+Date: Thu, 29 Oct 2026 23:00:35 +0000
+Subject: [PATCH] arm64: dts: rockchip: Add DP0 audio to RK3588 and Orange Pi
+ 5/5B
+
+The RK3588 DisplayPort controller takes audio from SPDIF_TX2 or I2S4,
+but no sound card describes that, so DP0 has no audio. Add a disabled
+"dp0" simple-audio-card to rk3588-base.dtsi, next to hdmi0_sound, that
+connects SPDIF_TX2 to the dw-dp SPDIF DAI (<&dp0 1>). The driver notes
+SPDIF is the preferred input, as the controller inserts the IEC 60958
+channel status bits itself; in I2S mode userspace would have to provide
+them. The SPDIF BMC clock is 128 fs, hence mclk-fs = <128>. The Rockchip
+BSP uses SPDIF_TX2 for DP0 audio as well.
+
+Enable the card and SPDIF_TX2 on the Orange Pi 5 and 5B, which route DP0
+to the USB-C connector in DisplayPort alternate mode.
+
+Assisted-by: Claude:claude-opus-5-5
+---
+ arch/arm64/boot/dts/rockchip/rk3588-base.dtsi     | 15 +++++++++++++++
+ .../boot/dts/rockchip/rk3588s-orangepi-5-5b.dtsi  |  8 ++++++++
+ 2 files changed, 23 insertions(+)
+
+diff --git a/arch/arm64/boot/dts/rockchip/rk3588-base.dtsi b/arch/arm64/boot/dts/rockchip/rk3588-base.dtsi
+index 3d944f9b0b29..4189f3d518f9 100644
+--- a/arch/arm64/boot/dts/rockchip/rk3588-base.dtsi
++++ b/arch/arm64/boot/dts/rockchip/rk3588-base.dtsi
+@@ -388,6 +388,21 @@ simple-audio-card,cpu {
+ 		};
+ 	};
+ 
++	dp0_sound: dp0-sound {
++		compatible = "simple-audio-card";
++		simple-audio-card,mclk-fs = <128>;
++		simple-audio-card,name = "dp0";
++		status = "disabled";
++
++		simple-audio-card,codec {
++			sound-dai = <&dp0 1>;
++		};
++
++		simple-audio-card,cpu {
++			sound-dai = <&spdif_tx2>;
++		};
++	};
++
+ 	pmu-a55 {
+ 		compatible = "arm,cortex-a55-pmu";
+ 		interrupts = <GIC_PPI 7 IRQ_TYPE_LEVEL_HIGH &ppi_partition0>;
+diff --git a/arch/arm64/boot/dts/rockchip/rk3588s-orangepi-5-5b.dtsi b/arch/arm64/boot/dts/rockchip/rk3588s-orangepi-5-5b.dtsi
+index ff81b355a29e..ea6374294de5 100644
+--- a/arch/arm64/boot/dts/rockchip/rk3588s-orangepi-5-5b.dtsi
++++ b/arch/arm64/boot/dts/rockchip/rk3588s-orangepi-5-5b.dtsi
+@@ -85,6 +85,10 @@ dp0_out_con: endpoint {
+ 	};
+ };
+ 
++&dp0_sound {
++	status = "okay";
++};
++
+ &gmac1 {
+ 	clock_in_out = "output";
+ 	phy-handle = <&rgmii_phy1>;
+@@ -240,6 +244,10 @@ regulator-state-mem {
+ };
+ 
+ 
++&spdif_tx2 {
++	status = "okay";
++};
++
+ &usb_host0_xhci {
+ 	dr_mode = "otg";
+ 	usb-role-switch;

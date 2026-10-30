@@ -1,0 +1,113 @@
+From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
+From: Cristian Ciocaltea <cristian.ciocaltea@collabora.com>
+Date: Fri, 21 Aug 2026 11:54:24 +0000
+Subject: [PATCH] video/hdmi: Define SPD InfoFrame field lengths and use
+ strtomem_pad()
+
+HDMI specification defines the SPD InfoFrame Vendor Name and Product
+Description as fixed-size fields, 8 and 16 bytes respectively, padded
+with zeros and left without any trailing NUL when a name spans the whole
+field.
+
+Give those lengths a name and mark the fields as non-strings, so that
+the copies can be handed over to strtomem_pad(), which implements
+precisely the required semantics.  This also bounds the reads from the
+source strings, whereas the open-coded strlen() could run past the end
+of the buffer in the hdmi_spd_infoframe_unpack() path, where the names
+come straight from the wire and are not NUL-terminated.
+
+While at it, replace the related magic numbers in the pack and unpack
+helpers with the new defines.
+
+Signed-off-by: Cristian Ciocaltea <cristian.ciocaltea@collabora.com>
+Link: https://gitlab.collabora.com/hardware-enablement/rockchip-3588/linux/-/commit/3ff0fab2d3fcd6bafc7fa895183baa8fb037971f
+---
+ drivers/video/hdmi.c | 23 +++++++++++++----------
+ include/linux/hdmi.h |  7 +++++--
+ 2 files changed, 18 insertions(+), 12 deletions(-)
+
+diff --git a/drivers/video/hdmi.c b/drivers/video/hdmi.c
+index 45b42f14a750..e729c26d61c4 100644
+--- a/drivers/video/hdmi.c
++++ b/drivers/video/hdmi.c
+@@ -217,23 +217,22 @@ EXPORT_SYMBOL(hdmi_avi_infoframe_pack);
+  * @vendor: vendor string
+  * @product: product string
+  *
++ * Both strings are copied into the fixed-size infoframe fields,
++ * truncated if too long and padded with zeros otherwise.
++ *
+  * Returns 0 on success or a negative error code on failure.
+  */
+ int hdmi_spd_infoframe_init(struct hdmi_spd_infoframe *frame,
+ 			    const char *vendor, const char *product)
+ {
+-	size_t len;
+-
+ 	memset(frame, 0, sizeof(*frame));
+ 
+ 	frame->type = HDMI_INFOFRAME_TYPE_SPD;
+ 	frame->version = 1;
+ 	frame->length = HDMI_SPD_INFOFRAME_SIZE;
+ 
+-	len = strlen(vendor);
+-	memcpy(frame->vendor, vendor, min(len, sizeof(frame->vendor)));
+-	len = strlen(product);
+-	memcpy(frame->product, product, min(len, sizeof(frame->product)));
++	strtomem_pad(frame->vendor, vendor, 0);
++	strtomem_pad(frame->product, product, 0);
+ 
+ 	return 0;
+ }
+@@ -305,9 +304,11 @@ ssize_t hdmi_spd_infoframe_pack_only(const struct hdmi_spd_infoframe *frame,
+ 	ptr += HDMI_INFOFRAME_HEADER_SIZE;
+ 
+ 	memcpy(ptr, frame->vendor, sizeof(frame->vendor));
+-	memcpy(ptr + 8, frame->product, sizeof(frame->product));
++	memcpy(ptr + HDMI_SPD_INFOFRAME_VENDOR_LEN, frame->product,
++	       sizeof(frame->product));
+ 
+-	ptr[24] = frame->sdi;
++	ptr[HDMI_SPD_INFOFRAME_VENDOR_LEN + HDMI_SPD_INFOFRAME_PRODUCT_LEN] =
++		frame->sdi;
+ 
+ 	hdmi_infoframe_set_checksum(buffer, length);
+ 
+@@ -1643,11 +1644,13 @@ static int hdmi_spd_infoframe_unpack(struct hdmi_spd_infoframe *frame,
+ 
+ 	ptr += HDMI_INFOFRAME_HEADER_SIZE;
+ 
+-	ret = hdmi_spd_infoframe_init(frame, ptr, ptr + 8);
++	ret = hdmi_spd_infoframe_init(frame, ptr,
++				      ptr + HDMI_SPD_INFOFRAME_VENDOR_LEN);
+ 	if (ret)
+ 		return ret;
+ 
+-	frame->sdi = ptr[24];
++	frame->sdi = ptr[HDMI_SPD_INFOFRAME_VENDOR_LEN +
++			 HDMI_SPD_INFOFRAME_PRODUCT_LEN];
+ 
+ 	return 0;
+ }
+diff --git a/include/linux/hdmi.h b/include/linux/hdmi.h
+index b80a5ee63bb2..d73ad7b3fa94 100644
+--- a/include/linux/hdmi.h
++++ b/include/linux/hdmi.h
+@@ -267,12 +267,15 @@ enum hdmi_spd_sdi {
+ 	HDMI_SPD_SDI_PMP,
+ };
+ 
++#define HDMI_SPD_INFOFRAME_VENDOR_LEN   8
++#define HDMI_SPD_INFOFRAME_PRODUCT_LEN 16
++
+ struct hdmi_spd_infoframe {
+ 	enum hdmi_infoframe_type type;
+ 	unsigned char version;
+ 	unsigned char length;
+-	char vendor[8];
+-	char product[16];
++	unsigned char vendor[HDMI_SPD_INFOFRAME_VENDOR_LEN] __nonstring;
++	unsigned char product[HDMI_SPD_INFOFRAME_PRODUCT_LEN] __nonstring;
+ 	enum hdmi_spd_sdi sdi;
+ };
+ 

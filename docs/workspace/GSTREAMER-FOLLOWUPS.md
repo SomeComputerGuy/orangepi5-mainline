@@ -46,3 +46,17 @@ primaries (BT.709) on CAPTURE while honouring the requested ycbcr_enc/quantizati
 strictly and refuses. Fix (GStreamer, sys/v4l2 v4l2transform): when fixating src caps for YUV→YUV, prefer the sink's
 colorimetry (as videoconvert does), and/or accept the driver's adjusted colorimetry instead of erroring. Workaround:
 `colorimetry=bt709` in the intermediate caps (used in `work/_out/maxout/maxout.sh`). Not a kernel bug.
+
+## 10. h265parse leaves PTS unset on a raw HEVC byte-stream, so matroskamux drops every frame (2026-10-30, maxout)
+Raw Annex-B HEVC from a stateless encoder client (no container, no timestamps) muxed with GStreamer:
+```
+head -c 3000000 venc.hevc | gst-launch-1.0 -e fdsrc fd=0 ! \
+  video/x-h265,stream-format=byte-stream,width=3840,height=2160,framerate=30/1 ! h265parse ! matroskamux ! filesink location=v.mkv
+```
+This writes a 638-byte file with headers only. `GST_DEBUG=matroskamux:5` shows "Invalid buffer timestamp; dropping buffer" for
+every frame. The `fakesink silent=false` output shows h265parse sets DTS (0, 33.3 ms, ...) and duration from the framerate, but `pts: none`.
+`h265timestamper` doesn't help: it only derives DTS from PTS. splitmuxsink fails the same way. ffmpeg (`-f hevc -framerate 30`)
+muxes the same stream fine, and cam-record.sh uses it for now. Suggested fix (gst-plugins-bad videoparsers):
+- h265parse should set PTS=DTS when the active SPS/VPS says no reordering (sps_max_num_reorder_pics[HighestTid] == 0,
+  sps_max_latency_increase 0), or, more generally, compute PTS from POC once the GOP structure is known.
+- h264parse has the same gap for max_num_reorder_frames == 0.

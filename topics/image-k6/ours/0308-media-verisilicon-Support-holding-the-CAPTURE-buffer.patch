@@ -1,0 +1,49 @@
+From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
+From: Arun Iyengar <aiyengar1990@gmail.com>
+Date: Thu, 29 Oct 2026 22:00:29 +0000
+Subject: [PATCH] media: verisilicon: Support holding the CAPTURE buffer for
+ MPEG-2
+
+An MPEG-2 frame can be coded as two field pictures, each decoded by its
+own request. Both fields have to land in the same CAPTURE buffer: the
+G1 and VPU2 back-ends already write a bottom field one line into the
+destination buffer and use the current buffer as the reference for the
+second field of a P picture, so the second field must be decoded into
+the buffer that holds the first one.
+
+Userspace asks for that with V4L2_BUF_FLAG_M2M_HOLD_CAPTURE_BUF, which
+the driver only allows for H.264. GStreamer's v4l2slmpeg2dec sets it on
+the first field of every field-coded frame, so queueing that request
+fails ("Driver does not support holding capture buffer") and decoding
+stops. On RK3588 none of the field-picture streams of the ISO/IEC
+13818-4 main-profile conformance suite (sony-ct1..4, tcela-8/9/10/16/19,
+hhi_burst_*) decoded.
+
+Allow holding the CAPTURE buffer for MPEG-2 too. Job completion goes
+through v4l2_m2m_buf_done_and_job_finish(), which already keeps a held
+CAPTURE buffer queued until the last field has been decoded.
+
+Assisted-by: Claude:claude-opus-5-5
+---
+ drivers/media/platform/verisilicon/hantro_v4l2.c | 2 +-
+ 1 file changed, 1 insertion(+), 1 deletion(-)
+
+diff --git a/drivers/media/platform/verisilicon/hantro_v4l2.c b/drivers/media/platform/verisilicon/hantro_v4l2.c
+index dacffed93aa4..15617080589a 100644
+--- a/drivers/media/platform/verisilicon/hantro_v4l2.c
++++ b/drivers/media/platform/verisilicon/hantro_v4l2.c
+@@ -594,13 +594,13 @@ hantro_update_requires_hold_capture_buf(struct hantro_ctx *ctx, u32 fourcc)
+ 
+ 	switch (fourcc) {
+ 	case V4L2_PIX_FMT_JPEG:
+-	case V4L2_PIX_FMT_MPEG2_SLICE:
+ 	case V4L2_PIX_FMT_VP8_FRAME:
+ 	case V4L2_PIX_FMT_HEVC_SLICE:
+ 	case V4L2_PIX_FMT_VP9_FRAME:
+ 		vq->subsystem_flags &= ~(VB2_V4L2_FL_SUPPORTS_M2M_HOLD_CAPTURE_BUF);
+ 		break;
+ 	case V4L2_PIX_FMT_H264_SLICE:
++	case V4L2_PIX_FMT_MPEG2_SLICE:
+ 		vq->subsystem_flags |= VB2_V4L2_FL_SUPPORTS_M2M_HOLD_CAPTURE_BUF;
+ 		break;
+ 	default:

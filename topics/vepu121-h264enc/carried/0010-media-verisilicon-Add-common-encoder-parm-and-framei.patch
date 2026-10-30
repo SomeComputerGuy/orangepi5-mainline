@@ -17,7 +17,7 @@ Link: https://patch.msgid.link/20260522101653.2565125-12-paulk@sys-base.io
  3 files changed, 105 insertions(+)
 
 diff --git a/drivers/media/platform/verisilicon/hantro.h b/drivers/media/platform/verisilicon/hantro.h
-index 80151d9af..2d5b3d374 100644
+index 80151d9afac1..2d5b3d374489 100644
 --- a/drivers/media/platform/verisilicon/hantro.h
 +++ b/drivers/media/platform/verisilicon/hantro.h
 @@ -304,6 +304,9 @@ struct hantro_ctx {
@@ -31,7 +31,7 @@ index 80151d9af..2d5b3d374 100644
  	int jpeg_quality;
  	int bit_depth;
 diff --git a/drivers/media/platform/verisilicon/hantro_drv.c b/drivers/media/platform/verisilicon/hantro_drv.c
-index 8890d4cd0..a3dde312c 100644
+index 8890d4cd0314..a3dde312cb9c 100644
 --- a/drivers/media/platform/verisilicon/hantro_drv.c
 +++ b/drivers/media/platform/verisilicon/hantro_drv.c
 @@ -1022,8 +1022,11 @@ static int hantro_add_func(struct hantro_dev *vpu, unsigned int funcid)
@@ -47,7 +47,7 @@ index 8890d4cd0..a3dde312c 100644
  
  	video_set_drvdata(vfd, vpu);
 diff --git a/drivers/media/platform/verisilicon/hantro_v4l2.c b/drivers/media/platform/verisilicon/hantro_v4l2.c
-index 0910a7bcf..84e1dacc9 100644
+index 0910a7bcfd62..84e1dacc91cd 100644
 --- a/drivers/media/platform/verisilicon/hantro_v4l2.c
 +++ b/drivers/media/platform/verisilicon/hantro_v4l2.c
 @@ -213,6 +213,41 @@ static int vidioc_enum_framesizes(struct file *file, void *priv,

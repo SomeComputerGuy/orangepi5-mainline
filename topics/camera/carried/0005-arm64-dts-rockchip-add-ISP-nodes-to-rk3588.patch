@@ -13,7 +13,7 @@ Link: https://patch.msgid.link/20260827-rkisp2-v3-5-e91ff0a604d6@ideasonboard.co
  1 file changed, 57 insertions(+)
 
 diff --git a/arch/arm64/boot/dts/rockchip/rk3588-base.dtsi b/arch/arm64/boot/dts/rockchip/rk3588-base.dtsi
-index 376ad04e0..5825bf879 100644
+index 376ad04e0786..5825bf8791c4 100644
 --- a/arch/arm64/boot/dts/rockchip/rk3588-base.dtsi
 +++ b/arch/arm64/boot/dts/rockchip/rk3588-base.dtsi
 @@ -3590,6 +3590,63 @@ gpio4: gpio@fec50000 {

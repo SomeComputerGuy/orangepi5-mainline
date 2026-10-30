@@ -37,7 +37,7 @@ Assisted-by: Claude:claude-opus-5-5
  1 file changed, 18 insertions(+), 2 deletions(-)
 
 diff --git a/drivers/media/platform/verisilicon/hantro_drv.c b/drivers/media/platform/verisilicon/hantro_drv.c
-index 7bd6a7c15..8e5c3d02f 100644
+index 7bd6a7c156cd..8e5c3d02fc4e 100644
 --- a/drivers/media/platform/verisilicon/hantro_drv.c
 +++ b/drivers/media/platform/verisilicon/hantro_drv.c
 @@ -1152,6 +1152,22 @@ static struct v4l2_m2m_dev *hantro_get_v4l2_m2m_dev(struct hantro_dev *vpu)

@@ -20,7 +20,7 @@ Signed-off-by: Sven Püschel <s.pueschel@pengutronix.de>
  2 files changed, 28 insertions(+), 3 deletions(-)
 
 diff --git a/drivers/media/platform/rockchip/rga/rga.c b/drivers/media/platform/rockchip/rga/rga.c
-index 7094ac90c..26eeee58d 100644
+index 7094ac90c6b6..26eeee58dbf4 100644
 --- a/drivers/media/platform/rockchip/rga/rga.c
 +++ b/drivers/media/platform/rockchip/rga/rga.c
 @@ -38,13 +38,29 @@ static void device_run(void *prv)
@@ -119,7 +119,7 @@ index 7094ac90c..26eeee58d 100644
  
  	dev_set_drvdata(dev, rga);
 diff --git a/drivers/media/platform/rockchip/rga/rga.h b/drivers/media/platform/rockchip/rga/rga.h
-index f8652ea46..f241e3c7b 100644
+index f8652ea46549..f241e3c7b2ac 100644
 --- a/drivers/media/platform/rockchip/rga/rga.h
 +++ b/drivers/media/platform/rockchip/rga/rga.h
 @@ -87,6 +87,7 @@ struct rockchip_rga {

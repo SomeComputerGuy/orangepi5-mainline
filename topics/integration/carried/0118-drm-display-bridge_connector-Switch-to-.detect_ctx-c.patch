@@ -22,7 +22,7 @@ Link: https://gitlab.collabora.com/hardware-enablement/rockchip-3588/linux/-/com
  1 file changed, 35 insertions(+), 34 deletions(-)
 
 diff --git a/drivers/gpu/drm/display/drm_bridge_connector.c b/drivers/gpu/drm/display/drm_bridge_connector.c
-index d27e9b37b..a06f1821c 100644
+index d27e9b37bd77..a06f1821c9dc 100644
 --- a/drivers/gpu/drm/display/drm_bridge_connector.c
 +++ b/drivers/gpu/drm/display/drm_bridge_connector.c
 @@ -214,39 +214,6 @@ static void drm_bridge_connector_disable_hpd(struct drm_connector *connector)

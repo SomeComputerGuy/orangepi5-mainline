@@ -1,0 +1,46 @@
+From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
+From: Arun Iyengar <aiyengar1990@gmail.com>
+Date: Fri, 30 Oct 2026 06:12:46 +0000
+Subject: [PATCH] dt-bindings: usb: generic-ehci: Allow describing the root hub
+ ports
+
+The USB 2.0 lines and the SuperSpeed lanes of a USB 3 connector don't
+always reach the same host controller. On the Rockchip RK3588, the
+SuperSpeed-only USB 3.0 host 2 (xHCI) is paired on the board with one
+of the separate USB 2.0 hosts (EHCI/OHCI). Only the device tree knows
+which EHCI root hub port shares a connector with which SuperSpeed port.
+
+The USB core already reads a hub's OF graph, with one graph port per
+downstream port, and uses it for the port connect type. Allow the same
+"ports" node on EHCI controllers, so that a root hub port can be linked
+to its usb-connector node.
+
+Assisted-by: Claude:claude-opus-5-5
+---
+ .../devicetree/bindings/usb/generic-ehci.yaml       | 13 +++++++++++++
+ 1 file changed, 13 insertions(+)
+
+diff --git a/Documentation/devicetree/bindings/usb/generic-ehci.yaml b/Documentation/devicetree/bindings/usb/generic-ehci.yaml
+index ae9fb70d0212..f48856bcd89e 100644
+--- a/Documentation/devicetree/bindings/usb/generic-ehci.yaml
++++ b/Documentation/devicetree/bindings/usb/generic-ehci.yaml
+@@ -153,6 +153,19 @@ properties:
+       - host
+       - otg
+ 
++  ports:
++    $ref: /schemas/graph.yaml#/properties/ports
++    description:
++      The root hub's downstream facing ports, linked to the connectors they
++      are wired to. Needed when a connector's SuperSpeed lanes go to a
++      different host controller, which then pairs with the root hub port
++      through the connector.
++
++    patternProperties:
++      "^port@[1-9a-f][0-9a-f]*$":
++        $ref: /schemas/graph.yaml#/properties/port
++        description: Root hub port, numbered from 1.
++
+ required:
+   - compatible
+   - reg

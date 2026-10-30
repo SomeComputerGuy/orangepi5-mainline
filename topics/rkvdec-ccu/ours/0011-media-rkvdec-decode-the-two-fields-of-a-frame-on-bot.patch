@@ -1,0 +1,251 @@
+From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
+From: Arun Iyengar <aiyengar1990@gmail.com>
+Date: Fri, 30 Oct 2026 03:57:06 +0000
+Subject: [PATCH] media: rkvdec: decode the two fields of a frame on both cores
+
+With the CCU, a frame of a stream may start on one core while the
+previous one is still being decoded on the other, but the two fields of
+an interlaced H.264 frame were still decoded one after the other: their
+jobs write the same CAPTURE buffer, which the first one holds for the
+second one, and such jobs kept the m2m job until they were done.
+
+The m2m framework now lets jobs that hold their CAPTURE buffer be
+detached as well. Detach them like the other jobs, and let
+rkvdec_job_ready() start the second field of a frame, and the first
+field of the next frame, while earlier jobs are in flight. The cores
+synchronize the second field's reads of the first field like any other
+reference: the CCU tells the two fields of the buffer apart by their POC
+high bits. This is what the Rockchip BSP does: MPP's default fast parse
+mode queues every field as a task without waiting for the previous one,
+and the kernel's soft CCU worker starts each task on whichever core is
+idle.
+
+A CAPTURE buffer written by two jobs in flight is returned by the last
+of them to complete, with an error if either failed, or left held on the
+m2m queue if the hold isn't released yet. Jobs are now registered under
+the lock that completes them, so a completing job sees every job that
+writes its CAPTURE buffer.
+
+Assisted-by: Claude:claude-opus-5-5
+---
+ .../media/platform/rockchip/rkvdec/rkvdec.c   | 86 +++++++++++++++----
+ .../media/platform/rockchip/rkvdec/rkvdec.h   |  8 +-
+ 2 files changed, 77 insertions(+), 17 deletions(-)
+
+diff --git a/drivers/media/platform/rockchip/rkvdec/rkvdec.c b/drivers/media/platform/rockchip/rkvdec/rkvdec.c
+index 05e53e913a05..a13ead352bfa 100644
+--- a/drivers/media/platform/rockchip/rkvdec/rkvdec.c
++++ b/drivers/media/platform/rockchip/rkvdec/rkvdec.c
+@@ -1188,14 +1188,26 @@ static const struct media_device_ops rkvdec_media_ops = {
+  * The jobs of a context complete in decoding order. Whether the next frame of
+  * a context may start before the previous one is done is decided by
+  * rkvdec_job_ready().
++ *
++ * The two fields of an interlaced frame are two jobs that write the same
++ * CAPTURE buffer, which the first one holds for the second one
++ * (V4L2_BUF_FLAG_M2M_HOLD_CAPTURE_BUF). Detaching the first job keeps the
++ * buffer held on the m2m queue, so the second field can start while the first
++ * one is being decoded. The CAPTURE buffer is returned by the last of the
++ * jobs that write it to complete (or kept held by m2m if the hold isn't
++ * released yet), see rkvdec_ctx_complete_jobs(). Jobs are registered under
++ * ctx->done_lock, so that a completing job sees every other job that uses its
++ * CAPTURE buffer.
+  */
+ static struct rkvdec_job *rkvdec_job_start(struct rkvdec_ctx *ctx)
+ {
++	struct v4l2_m2m_ctx *m2m_ctx = ctx->fh.m2m_ctx;
+ 	struct rkvdec_dev *rkvdec = ctx->dev;
+ 	struct rkvdec_core *core;
+ 	struct rkvdec_job *job;
+ 	unsigned int slot;
+ 
++	lockdep_assert_held(&ctx->done_lock);
+ 	guard(spinlock_irqsave)(&rkvdec->cores_lock);
+ 
+ 	slot = find_first_zero_bit(&ctx->busy_slots, ctx->num_job_slots);
+@@ -1212,6 +1224,8 @@ static struct rkvdec_job *rkvdec_job_start(struct rkvdec_ctx *ctx)
+ 	job->slot = slot;
+ 	job->state = VB2_BUF_STATE_ERROR;
+ 	job->busy = true;
++	job->src = v4l2_m2m_next_src_buf(m2m_ctx);
++	job->dst = v4l2_m2m_next_dst_buf(m2m_ctx);
+ 	core->job = job;
+ 
+ 	__set_bit(slot, &ctx->busy_slots);
+@@ -1239,24 +1253,51 @@ static void rkvdec_job_detach(struct rkvdec_job *job)
+ 	}
+ }
+ 
+-static void rkvdec_job_complete(struct rkvdec_job *job)
++/*
++ * Returns the buffers of @job. @dst_in_use: a later job writes the CAPTURE
++ * buffer too, and returns it.
++ */
++static void rkvdec_job_complete(struct rkvdec_job *job, bool dst_in_use)
+ {
+ 	struct rkvdec_ctx *ctx = job->ctx;
+ 	struct v4l2_m2m_ctx *m2m_ctx = ctx->fh.m2m_ctx;
++	enum vb2_buffer_state dst_state = job->state;
++
++	if (job->dst_error)
++		dst_state = VB2_BUF_STATE_ERROR;
+ 
+ 	if (ctx->coded_fmt_desc->ops->done)
+ 		ctx->coded_fmt_desc->ops->done(ctx, job->src, job->dst, job->state);
+ 
+ 	if (job->detached) {
+ 		/* Return the CAPTURE buffer first, see v4l2_m2m_buf_done_and_job_finish() */
+-		v4l2_m2m_buf_done(job->dst, job->state);
++		if (!dst_in_use)
++			v4l2_m2m_detached_buf_done(m2m_ctx, job->dst, dst_state);
+ 		v4l2_m2m_buf_done(job->src, job->state);
+ 	} else {
+ 		v4l2_m2m_buf_done_and_job_finish(m2m_ctx->m2m_dev, m2m_ctx,
+ 						 job->state);
++		/* m2m hands a held buffer that detached jobs wrote over to us. */
++		if (job->dst_shared)
++			v4l2_m2m_detached_buf_done(m2m_ctx, job->dst, dst_state);
+ 	}
+ }
+ 
++/* Returns the next job of @ctx that writes the CAPTURE buffer of @job. */
++static struct rkvdec_job *rkvdec_ctx_next_dst_user(struct rkvdec_ctx *ctx,
++						   struct rkvdec_job *job)
++{
++	struct rkvdec_job *next;
++
++	lockdep_assert_held(&ctx->dev->cores_lock);
++
++	list_for_each_entry(next, &ctx->jobs, node)
++		if (next->dst == job->dst)
++			return next;
++
++	return NULL;
++}
++
+ /* Completes the finished jobs at the head of the job list of @ctx. */
+ static void rkvdec_ctx_complete_jobs(struct rkvdec_ctx *ctx)
+ {
+@@ -1265,22 +1306,32 @@ static void rkvdec_ctx_complete_jobs(struct rkvdec_ctx *ctx)
+ 
+ 	mutex_lock(&ctx->done_lock);
+ 	while (true) {
+-		struct rkvdec_job *job;
+-		bool detached;
++		struct rkvdec_job *job, *next = NULL;
++		bool detached, dst_in_use = false;
+ 
+ 		scoped_guard(spinlock_irqsave, &rkvdec->cores_lock) {
+ 			job = list_first_entry_or_null(&ctx->jobs,
+ 						       struct rkvdec_job, node);
+ 			if (job && (!job->hw_done || job->busy))
+ 				job = NULL;
+-			if (job)
++			if (job) {
+ 				list_del(&job->node);
++				next = rkvdec_ctx_next_dst_user(ctx, job);
++			}
+ 		}
+ 		if (!job)
+ 			break;
+ 
++		/* The other field of the frame is still being decoded. */
++		if (next) {
++			next->dst_shared = true;
++			if (job->dst_error || job->state == VB2_BUF_STATE_ERROR)
++				next->dst_error = true;
++			dst_in_use = true;
++		}
++
+ 		detached = job->detached;
+-		rkvdec_job_complete(job);
++		rkvdec_job_complete(job, dst_in_use);
+ 
+ 		scoped_guard(spinlock_irqsave, &rkvdec->cores_lock) {
+ 			__clear_bit(job->slot, &ctx->busy_slots);
+@@ -1402,10 +1453,7 @@ static void rkvdec_job_started(struct rkvdec_job *job)
+ 	bool detach = false;
+ 
+ 	scoped_guard(spinlock_irqsave, &rkvdec->cores_lock) {
+-		if (job->src->flags & V4L2_BUF_FLAG_M2M_HOLD_CAPTURE_BUF) {
+-			/* Keeps the CAPTURE buffer: complete it the usual way. */
+-			job->busy = false;
+-		} else if (rkvdec->available_core_count) {
++		if (rkvdec->available_core_count) {
+ 			detach = true;
+ 		} else {
+ 			rkvdec->held_job = job;
+@@ -1521,11 +1569,18 @@ static int rkvdec_job_ready(void *priv)
+ 	if (ctx->num_jobs >= ctx->num_job_slots || !rkvdec_ctx_uses_ccu(ctx))
+ 		return 0;
+ 
+-	/* A CAPTURE buffer shared by two jobs (two fields): one at a time. */
+-	if (!src || !dst || dst->is_held ||
+-	    (src->flags & V4L2_BUF_FLAG_M2M_HOLD_CAPTURE_BUF))
++	if (!src || !dst)
+ 		return 0;
+ 
++	/*
++	 * A held CAPTURE buffer is written by the job of the first field of
++	 * the frame: the second field may start while the first one is being
++	 * decoded, the CCU makes it wait for the first field's lines it
++	 * predicts from (the fields are told apart by their POC high bits).
++	 */
++	if (dst->is_held)
++		return 1;
++
+ 	/*
+ 	 * Userspace may queue a CAPTURE buffer again as soon as no future frame
+ 	 * predicts from it, possibly before the frames being decoded are done
+@@ -1625,7 +1680,8 @@ static void rkvdec_device_run(void *priv)
+ 	struct rkvdec_job *job;
+ 	int ret;
+ 
+-	job = rkvdec_job_start(ctx);
++	scoped_guard(mutex, &ctx->done_lock)
++		job = rkvdec_job_start(ctx);
+ 	if (WARN_ON(!job)) {
+ 		v4l2_m2m_buf_done_and_job_finish(m2m_ctx->m2m_dev, m2m_ctx,
+ 						 VB2_BUF_STATE_ERROR);
+@@ -1633,8 +1689,6 @@ static void rkvdec_device_run(void *priv)
+ 	}
+ 
+ 	core = job->core;
+-	job->src = v4l2_m2m_next_src_buf(m2m_ctx);
+-	job->dst = v4l2_m2m_next_dst_buf(m2m_ctx);
+ 	ctx->core = core;
+ 	ctx->job = job;
+ 
+diff --git a/drivers/media/platform/rockchip/rkvdec/rkvdec.h b/drivers/media/platform/rockchip/rkvdec/rkvdec.h
+index e71390c0a98a..df7c58ecbe1d 100644
+--- a/drivers/media/platform/rockchip/rkvdec/rkvdec.h
++++ b/drivers/media/platform/rockchip/rkvdec/rkvdec.h
+@@ -161,6 +161,9 @@ struct rkvdec_coded_fmt_desc {
+  *	      finished, so the next frame may start before this one is done
+  * @hw_done: the hardware is done with the frame
+  * @busy: the m2m state of the job is being changed, don't complete it
++ * @dst_shared: an earlier job wrote @dst too (the other field of the frame)
++ *		and left returning it to this one
++ * @dst_error: an earlier job that wrote @dst failed
+  * @num_refs: number of entries in @refs
+  * @refs: the CAPTURE buffers the frame predicts from
+  * @num_pocs: number of entries in @pocs
+@@ -179,6 +182,8 @@ struct rkvdec_job {
+ 	bool detached;
+ 	bool hw_done;
+ 	bool busy;
++	bool dst_shared;
++	bool dst_error;
+ 	unsigned int num_refs;
+ 	const struct vb2_buffer *refs[RKVDEC_MAX_REFS];
+ 	unsigned int num_pocs;
+@@ -245,7 +250,8 @@ struct rkvdec_ctx {
+ 	struct list_head jobs;
+ 	unsigned int num_jobs;
+ 	wait_queue_head_t jobs_wq;
+-	struct mutex done_lock; /* completes the jobs in decoding order */
++	/* completes the jobs in decoding order, serializes it with new jobs */
++	struct mutex done_lock;
+ 	int film_idx;
+ 	void *priv;
+ 	u8 has_sps_st_rps: 1;

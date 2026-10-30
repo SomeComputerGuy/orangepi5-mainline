@@ -34,7 +34,7 @@ Assisted-by: Claude:claude-opus-5-5
  2 files changed, 69 insertions(+)
 
 diff --git a/drivers/media/platform/verisilicon/hantro.h b/drivers/media/platform/verisilicon/hantro.h
-index 2a3a0fc3e..80151d9af 100644
+index 2a3a0fc3e355..80151d9afac1 100644
 --- a/drivers/media/platform/verisilicon/hantro.h
 +++ b/drivers/media/platform/verisilicon/hantro.h
 @@ -222,6 +222,8 @@ enum hantro_core_role {
@@ -55,7 +55,7 @@ index 2a3a0fc3e..80151d9af 100644
  
  /**
 diff --git a/drivers/media/platform/verisilicon/hantro_drv.c b/drivers/media/platform/verisilicon/hantro_drv.c
-index 2c1ce4010..d47d85cfd 100644
+index 2c1ce4010fa0..d47d85cfdacf 100644
 --- a/drivers/media/platform/verisilicon/hantro_drv.c
 +++ b/drivers/media/platform/verisilicon/hantro_drv.c
 @@ -161,6 +161,41 @@ void hantro_irq_done(struct hantro_dev *vpu,

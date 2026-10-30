@@ -1,0 +1,57 @@
+From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
+From: Arun Iyengar <aiyengar1990@gmail.com>
+Date: Thu, 29 Oct 2026 16:47:17 +0000
+Subject: [PATCH] arm64: dts: rockchip: set the RK806 reset mode on Orange Pi 5
+ boards
+
+The RK806 on the Orange Pi 5, 5B and 5 Pro has no rockchip,reset-mode,
+so the driver leaves the RST_FUN field of SYS_CFG3 at whatever the PMIC
+OTP or the boot firmware left there. It selects how the PMIC reacts to
+a reset request on RESETB or on a PWRCTRL pin configured as reset:
+
+  0 (RK806_RESTART)       power-cycle the PMIC and all its rails
+  1 (RK806_RESET)         reset the "power off reset" registers and go
+                          to ACTIVE; rails stay up, the SoC is not reset
+  2 (RK806_RESET_NOTIFY)  as 1, and pull RESETB low for 5 ms
+
+On a running Orange Pi 5, SYS_CFG3 reads 0x02, i.e. mode 0. Make that
+explicit instead of relying on the firmware (mainline U-Boot's rk8xx
+driver reads the same property and programs mode 2 when it is absent):
+mode 0 is the only one that returns the whole board, including the
+PMU1 (always-on) domain of the SoC, to its power-on state when the PMIC
+is asked to reset. It is also what other RK806 boards that care about
+a full reset use (Jaguar, Tiger). The vendor kernel programs mode 1 from
+a generic Rockchip include shared by all its single-RK806 boards, but
+mode 1 only resets the PMIC registers, so a hung SoC is not recovered.
+
+Note that neither a reboot nor a watchdog timeout requests a PMIC reset
+on these boards: PSCI SYSTEM_RESET and the watchdog use the CRU global
+reset, the PWRCTRL pins are configured as "pin_fun0" (no function) and
+the TSADC uses CRU mode for its over-temperature reset. This property
+only fixes the behaviour for the cases where the PMIC is reset.
+
+Assisted-by: Claude:claude-opus-5-5
+---
+ arch/arm64/boot/dts/rockchip/rk3588s-orangepi-5.dtsi | 2 ++
+ 1 file changed, 2 insertions(+)
+
+diff --git a/arch/arm64/boot/dts/rockchip/rk3588s-orangepi-5.dtsi b/arch/arm64/boot/dts/rockchip/rk3588s-orangepi-5.dtsi
+index fd0efa8d1bfb..352e0552f62f 100644
+--- a/arch/arm64/boot/dts/rockchip/rk3588s-orangepi-5.dtsi
++++ b/arch/arm64/boot/dts/rockchip/rk3588s-orangepi-5.dtsi
+@@ -7,6 +7,7 @@
+ #include <dt-bindings/leds/common.h>
+ #include <dt-bindings/pinctrl/rockchip.h>
+ #include <dt-bindings/soc/rockchip,vop2.h>
++#include "rk8xx.h"
+ #include "rk3588s.dtsi"
+ 
+ / {
+@@ -334,6 +335,7 @@ rk806: pmic@0 {
+ 				<&rk806_dvs2_null>, <&rk806_dvs3_null>;
+ 		spi-max-frequency = <1000000>;
+ 		system-power-controller;
++		rockchip,reset-mode = <RK806_RESTART>;
+ 
+ 		vcc1-supply = <&vcc5v0_sys>;
+ 		vcc2-supply = <&vcc5v0_sys>;

@@ -30,7 +30,7 @@ Assisted-by: Claude:claude-opus-5-5
  2 files changed, 60 insertions(+)
 
 diff --git a/drivers/media/platform/verisilicon/hantro.h b/drivers/media/platform/verisilicon/hantro.h
-index 0353de154..51bc40668 100644
+index 0353de154a1e..51bc40668c6f 100644
 --- a/drivers/media/platform/verisilicon/hantro.h
 +++ b/drivers/media/platform/verisilicon/hantro.h
 @@ -193,6 +193,8 @@ hantro_vdev_to_func(struct video_device *vdev)
@@ -51,7 +51,7 @@ index 0353de154..51bc40668 100644
  
  /**
 diff --git a/drivers/media/platform/verisilicon/hantro_drv.c b/drivers/media/platform/verisilicon/hantro_drv.c
-index 6037ae6c3..57dc1c130 100644
+index 6037ae6c3ee1..57dc1c1304a1 100644
 --- a/drivers/media/platform/verisilicon/hantro_drv.c
 +++ b/drivers/media/platform/verisilicon/hantro_drv.c
 @@ -11,6 +11,7 @@

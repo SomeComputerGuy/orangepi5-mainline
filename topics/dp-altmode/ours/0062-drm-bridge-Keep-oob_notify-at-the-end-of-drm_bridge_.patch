@@ -24,7 +24,7 @@ Assisted-by: Claude:claude-opus-5-5
  1 file changed, 17 insertions(+), 14 deletions(-)
 
 diff --git a/include/drm/drm_bridge.h b/include/drm/drm_bridge.h
-index 713652fca..a2b99ed24 100644
+index 713652fca033..a2b99ed24a1d 100644
 --- a/include/drm/drm_bridge.h
 +++ b/include/drm/drm_bridge.h
 @@ -540,20 +540,6 @@ struct drm_bridge_funcs {

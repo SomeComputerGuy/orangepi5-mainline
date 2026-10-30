@@ -32,7 +32,7 @@ Link: https://gitlab.collabora.com/hardware-enablement/rockchip-3588/linux/-/com
  6 files changed, 162 insertions(+), 157 deletions(-)
 
 diff --git a/drivers/gpu/drm/display/drm_bridge_connector.c b/drivers/gpu/drm/display/drm_bridge_connector.c
-index 632cc3ae3..814c48aba 100644
+index 632cc3ae3b54..814c48aba258 100644
 --- a/drivers/gpu/drm/display/drm_bridge_connector.c
 +++ b/drivers/gpu/drm/display/drm_bridge_connector.c
 @@ -269,6 +269,9 @@ static void drm_bridge_connector_debugfs_init(struct drm_connector *connector,
@@ -46,7 +46,7 @@ index 632cc3ae3..814c48aba 100644
  
  static struct drm_connector_state *
 diff --git a/drivers/gpu/drm/display/drm_hdmi_state_helper.c b/drivers/gpu/drm/display/drm_hdmi_state_helper.c
-index d6669e36c..3f0995f82 100644
+index d6669e36ca1b..3f0995f82937 100644
 --- a/drivers/gpu/drm/display/drm_hdmi_state_helper.c
 +++ b/drivers/gpu/drm/display/drm_hdmi_state_helper.c
 @@ -1,5 +1,6 @@
@@ -217,7 +217,7 @@ index d6669e36c..3f0995f82 100644
  			   const struct drm_connector_infoframe_funcs *funcs,
  			   const char *type)
 diff --git a/drivers/gpu/drm/drm_debugfs.c b/drivers/gpu/drm/drm_debugfs.c
-index ae1c6126c..a72f9723d 100644
+index ae1c6126c2c5..a72f9723d3a9 100644
 --- a/drivers/gpu/drm/drm_debugfs.c
 +++ b/drivers/gpu/drm/drm_debugfs.c
 @@ -633,161 +633,6 @@ static const struct file_operations drm_connector_fops = {
@@ -392,7 +392,7 @@ index ae1c6126c..a72f9723d 100644
  		connector->funcs->debugfs_init(connector, root);
  }
 diff --git a/drivers/gpu/drm/sun4i/sun4i_hdmi_enc.c b/drivers/gpu/drm/sun4i/sun4i_hdmi_enc.c
-index 97253d631..91844a396 100644
+index 97253d631b2b..91844a396a2b 100644
 --- a/drivers/gpu/drm/sun4i/sun4i_hdmi_enc.c
 +++ b/drivers/gpu/drm/sun4i/sun4i_hdmi_enc.c
 @@ -292,6 +292,7 @@ static void sun4i_hdmi_connector_reset(struct drm_connector *connector)
@@ -404,7 +404,7 @@ index 97253d631..91844a396 100644
  	.fill_modes		= drm_helper_probe_single_connector_modes,
  	.reset			= sun4i_hdmi_connector_reset,
 diff --git a/drivers/gpu/drm/vc4/vc4_hdmi.c b/drivers/gpu/drm/vc4/vc4_hdmi.c
-index d4672aa81..caaa096fe 100644
+index d4672aa81d85..caaa096fe04d 100644
 --- a/drivers/gpu/drm/vc4/vc4_hdmi.c
 +++ b/drivers/gpu/drm/vc4/vc4_hdmi.c
 @@ -513,6 +513,7 @@ static void vc4_hdmi_connector_reset(struct drm_connector *connector)
@@ -416,7 +416,7 @@ index d4672aa81..caaa096fe 100644
  	.fill_modes = drm_helper_probe_single_connector_modes,
  	.reset = vc4_hdmi_connector_reset,
 diff --git a/include/drm/display/drm_hdmi_state_helper.h b/include/drm/display/drm_hdmi_state_helper.h
-index 13375bd0f..596c57d9d 100644
+index 13375bd0f4ae..596c57d9d250 100644
 --- a/include/drm/display/drm_hdmi_state_helper.h
 +++ b/include/drm/display/drm_hdmi_state_helper.h
 @@ -3,6 +3,7 @@

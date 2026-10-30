@@ -1,0 +1,47 @@
+From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
+From: Arun Iyengar <aiyengar1990@gmail.com>
+Date: Thu, 29 Oct 2026 22:17:26 +0000
+Subject: [PATCH] phy: rockchip: usbdp: Re-enable DP lanes after a re-init with
+ DP powered on
+
+rk_udphy_init() programs the lane mux with all DP lanes disabled; they
+are only enabled in rk_udphy_dp_phy_power_on(). When the Type-C mux
+changes the configuration while the DP PHY is powered on, for example
+when the DisplayPort Alt Mode pin assignment is changed from D to C or
+back, rk_udphy_update_power_state() re-initializes the PHY but leaves
+the DP lanes disabled. The DP controller then cannot retrain the link
+(clock recovery fails on every lane) until DP is powered off and on
+again by a full modeset.
+
+Re-apply the DP bus width, lane enables and lane selection for the new
+configuration after a re-init when DP is in use.
+
+Assisted-by: Claude:claude-opus-5-5
+---
+ drivers/phy/rockchip/phy-rockchip-usbdp.c | 13 +++++++++++++
+ 1 file changed, 13 insertions(+)
+
+diff --git a/drivers/phy/rockchip/phy-rockchip-usbdp.c b/drivers/phy/rockchip/phy-rockchip-usbdp.c
+index b0b777ccae04..4c90ddccdc63 100644
+--- a/drivers/phy/rockchip/phy-rockchip-usbdp.c
++++ b/drivers/phy/rockchip/phy-rockchip-usbdp.c
+@@ -1106,6 +1106,19 @@ static int rk_udphy_update_power_state(struct rk_udphy *udphy)
+ 			rk_udphy_run_reset_handler(udphy, false);
+ 			return ret;
+ 		}
++
++		/*
++		 * rk_udphy_init() leaves all DP lanes disabled. If the DP PHY
++		 * is powered on (the Type-C mux changed the pin assignment
++		 * while DP is in use), enable the lanes of the new
++		 * configuration again, as rk_udphy_dp_phy_power_on() does, so
++		 * that the DP controller can retrain the link.
++		 */
++		if ((udphy->sw_mode & UDPHY_MODE_DP) && (target_mode & UDPHY_MODE_DP)) {
++			phy_set_bus_width(udphy->phy_dp, udphy->dp_lanes);
++			rk_udphy_dp_lane_enable(udphy, udphy->dp_lanes);
++			rk_udphy_dp_lane_select(udphy);
++		}
+ 	}
+ 
+ 	/* Ensure USB3 support is enabled when supported */

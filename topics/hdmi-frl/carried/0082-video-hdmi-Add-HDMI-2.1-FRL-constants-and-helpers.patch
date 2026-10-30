@@ -45,7 +45,7 @@ Link: https://gitlab.collabora.com/hardware-enablement/rockchip-3588/linux/-/com
  2 files changed, 204 insertions(+)
 
 diff --git a/drivers/video/hdmi.c b/drivers/video/hdmi.c
-index e729c26d6..60fb7294c 100644
+index e729c26d61c4..60fb7294c437 100644
 --- a/drivers/video/hdmi.c
 +++ b/drivers/video/hdmi.c
 @@ -32,6 +32,150 @@
@@ -200,7 +200,7 @@ index e729c26d6..60fb7294c 100644
  {
  	u8 csum = 0;
 diff --git a/include/linux/hdmi.h b/include/linux/hdmi.h
-index d73ad7b3f..150ffcf25 100644
+index d73ad7b3fa94..150ffcf25886 100644
 --- a/include/linux/hdmi.h
 +++ b/include/linux/hdmi.h
 @@ -68,6 +68,66 @@ enum hdmi_infoframe_type {

@@ -19,7 +19,7 @@ Assisted-by: Claude:claude-opus-5-5
  4 files changed, 12 insertions(+), 26 deletions(-)
 
 diff --git a/drivers/media/platform/rockchip/rga/rga-hw.c b/drivers/media/platform/rockchip/rga/rga-hw.c
-index be1bc8ddb..2e7ec8b7c 100644
+index be1bc8ddbd03..2e7ec8b7c20f 100644
 --- a/drivers/media/platform/rockchip/rga/rga-hw.c
 +++ b/drivers/media/platform/rockchip/rga/rga-hw.c
 @@ -158,7 +158,6 @@ static void rga_cmd_set_dst_addr(struct rga_ctx *ctx, dma_addr_t dma_addr)
@@ -45,7 +45,7 @@ index be1bc8ddb..2e7ec8b7c 100644
  		scale_dst_w = dst_h;
  	} else {
 diff --git a/drivers/media/platform/rockchip/rga/rga.c b/drivers/media/platform/rockchip/rga/rga.c
-index b3cb6bf8e..543a0da75 100644
+index b3cb6bf8eb86..543a0da75572 100644
 --- a/drivers/media/platform/rockchip/rga/rga.c
 +++ b/drivers/media/platform/rockchip/rga/rga.c
 @@ -797,6 +797,7 @@ static int rga_probe(struct platform_device *pdev)
@@ -103,7 +103,7 @@ index b3cb6bf8e..543a0da75 100644
  	},
  };
 diff --git a/drivers/media/platform/rockchip/rga/rga.h b/drivers/media/platform/rockchip/rga/rga.h
-index bd431534d..7bcdf36c1 100644
+index bd431534d0d3..7bcdf36c11b4 100644
 --- a/drivers/media/platform/rockchip/rga/rga.h
 +++ b/drivers/media/platform/rockchip/rga/rga.h
 @@ -73,6 +73,7 @@ struct rockchip_rga {
@@ -115,7 +115,7 @@ index bd431534d..7bcdf36c1 100644
  	int num_clks;
  	struct rockchip_rga_version version;
 diff --git a/drivers/media/platform/rockchip/rkvdec/rkvdec.c b/drivers/media/platform/rockchip/rkvdec/rkvdec.c
-index 061281f90..fbcd0f175 100644
+index 061281f903f3..fbcd0f175ad3 100644
 --- a/drivers/media/platform/rockchip/rkvdec/rkvdec.c
 +++ b/drivers/media/platform/rockchip/rkvdec/rkvdec.c
 @@ -1824,10 +1824,8 @@ static int rkvdec_probe(struct platform_device *pdev)

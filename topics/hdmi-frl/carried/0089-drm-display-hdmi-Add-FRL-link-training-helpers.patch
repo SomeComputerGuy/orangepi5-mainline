@@ -29,7 +29,7 @@ Link: https://gitlab.collabora.com/hardware-enablement/rockchip-3588/linux/-/com
  2 files changed, 524 insertions(+), 3 deletions(-)
 
 diff --git a/drivers/gpu/drm/display/drm_hdmi_helper.c b/drivers/gpu/drm/display/drm_hdmi_helper.c
-index f85cce3d6..015a79a42 100644
+index f85cce3d6254..015a79a42c45 100644
 --- a/drivers/gpu/drm/display/drm_hdmi_helper.c
 +++ b/drivers/gpu/drm/display/drm_hdmi_helper.c
 @@ -1,5 +1,6 @@
@@ -603,7 +603,7 @@ index f85cce3d6..015a79a42 100644
 +}
 +EXPORT_SYMBOL(drm_connector_hdmi_disable_frl);
 diff --git a/include/drm/display/drm_hdmi_helper.h b/include/drm/display/drm_hdmi_helper.h
-index 2cdd6e3bc..0b88e4dc0 100644
+index 2cdd6e3bc090..0b88e4dc08c6 100644
 --- a/include/drm/display/drm_hdmi_helper.h
 +++ b/include/drm/display/drm_hdmi_helper.h
 @@ -50,4 +50,7 @@ int

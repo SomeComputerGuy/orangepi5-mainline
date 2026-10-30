@@ -14,7 +14,7 @@ Link: https://patch.msgid.link/20260522101653.2565125-11-paulk@sys-base.io
  1 file changed, 4 insertions(+), 1 deletion(-)
 
 diff --git a/drivers/media/platform/verisilicon/hantro_drv.c b/drivers/media/platform/verisilicon/hantro_drv.c
-index d47d85cfd..8890d4cd0 100644
+index d47d85cfdacf..8890d4cd0314 100644
 --- a/drivers/media/platform/verisilicon/hantro_drv.c
 +++ b/drivers/media/platform/verisilicon/hantro_drv.c
 @@ -341,7 +341,10 @@ queue_init(void *priv, struct vb2_queue *src_vq, struct vb2_queue *dst_vq)

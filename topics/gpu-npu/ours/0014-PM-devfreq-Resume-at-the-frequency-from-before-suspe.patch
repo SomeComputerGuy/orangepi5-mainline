@@ -30,7 +30,7 @@ Assisted-by: Claude:claude-opus-5-5
  1 file changed, 9 insertions(+)
 
 diff --git a/drivers/devfreq/devfreq.c b/drivers/devfreq/devfreq.c
-index 82dd9a43d..510aa7920 100644
+index 82dd9a43dc62..510aa7920434 100644
 --- a/drivers/devfreq/devfreq.c
 +++ b/drivers/devfreq/devfreq.c
 @@ -1146,6 +1146,7 @@ EXPORT_SYMBOL(devm_devfreq_remove_device);

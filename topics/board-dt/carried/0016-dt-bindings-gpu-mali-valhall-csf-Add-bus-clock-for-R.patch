@@ -19,7 +19,7 @@ Link: https://github.com/armbian/linux-rockchip/pull/380
  1 file changed, 10 insertions(+), 1 deletion(-)
 
 diff --git a/Documentation/devicetree/bindings/gpu/arm,mali-valhall-csf.yaml b/Documentation/devicetree/bindings/gpu/arm,mali-valhall-csf.yaml
-index 8eccd4338..875d3b8e8 100644
+index 8eccd4338a2b..875d3b8e8d22 100644
 --- a/Documentation/devicetree/bindings/gpu/arm,mali-valhall-csf.yaml
 +++ b/Documentation/devicetree/bindings/gpu/arm,mali-valhall-csf.yaml
 @@ -40,7 +40,7 @@ properties:

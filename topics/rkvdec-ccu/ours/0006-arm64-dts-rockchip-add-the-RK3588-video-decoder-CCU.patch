@@ -16,10 +16,10 @@ Assisted-by: Claude:claude-opus-5-5
  1 file changed, 12 insertions(+)
 
 diff --git a/arch/arm64/boot/dts/rockchip/rk3588-base.dtsi b/arch/arm64/boot/dts/rockchip/rk3588-base.dtsi
-index 3d944f9b0..5dfb82aa0 100644
+index 4189f3d518f9..6617fc2b5dd9 100644
 --- a/arch/arm64/boot/dts/rockchip/rk3588-base.dtsi
 +++ b/arch/arm64/boot/dts/rockchip/rk3588-base.dtsi
-@@ -1511,6 +1511,16 @@ vepu580_1_mmu: iommu@fdbef000 {
+@@ -1526,6 +1526,16 @@ vepu580_1_mmu: iommu@fdbef000 {
  		#iommu-cells = <0>;
  	};
  
@@ -36,7 +36,7 @@ index 3d944f9b0..5dfb82aa0 100644
  	vdec0: video-codec@fdc38000 {
  		compatible = "rockchip,rk3588-vdec";
  		reg = <0x0 0xfdc38000 0x0 0x100>,
-@@ -1530,6 +1540,7 @@ vdec0: video-codec@fdc38000 {
+@@ -1545,6 +1555,7 @@ vdec0: video-codec@fdc38000 {
  		resets = <&cru SRST_A_RKVDEC0>, <&cru SRST_H_RKVDEC0>, <&cru SRST_RKVDEC0_CA>,
  			 <&cru SRST_RKVDEC0_CORE>, <&cru SRST_RKVDEC0_HEVC_CA>;
  		reset-names = "axi", "ahb", "cabac", "core", "hevc_cabac";
@@ -44,7 +44,7 @@ index 3d944f9b0..5dfb82aa0 100644
  		sram = <&vdec0_sram>;
  	};
  
-@@ -1562,6 +1573,7 @@ vdec1: video-codec@fdc40000 {
+@@ -1577,6 +1588,7 @@ vdec1: video-codec@fdc40000 {
  		resets = <&cru SRST_A_RKVDEC1>, <&cru SRST_H_RKVDEC1>, <&cru SRST_RKVDEC1_CA>,
  			 <&cru SRST_RKVDEC1_CORE>, <&cru SRST_RKVDEC1_HEVC_CA>;
  		reset-names = "axi", "ahb", "cabac", "core", "hevc_cabac";

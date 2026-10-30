@@ -35,7 +35,7 @@ Link: https://gitlab.collabora.com/hardware-enablement/rockchip-3588/linux/-/com
  2 files changed, 232 insertions(+), 4 deletions(-)
 
 diff --git a/drivers/gpu/drm/drm_connector.c b/drivers/gpu/drm/drm_connector.c
-index 4da59a7ee..5eddee41e 100644
+index 4da59a7ee83d..5eddee41e357 100644
 --- a/drivers/gpu/drm/drm_connector.c
 +++ b/drivers/gpu/drm/drm_connector.c
 @@ -639,6 +639,16 @@ int drmm_connector_hdmi_init(struct drm_device *dev,
@@ -90,7 +90,7 @@ index 4da59a7ee..5eddee41e 100644
  	 * The supported HDMI version can be used to determinate the maximum
  	 * TMDS character rate allowed by the specification. Some controllers,
 diff --git a/include/drm/drm_connector.h b/include/drm/drm_connector.h
-index 0516e3d5f..6f6d44eac 100644
+index 0516e3d5f407..6f6d44eac84c 100644
 --- a/include/drm/drm_connector.h
 +++ b/include/drm/drm_connector.h
 @@ -1143,6 +1143,23 @@ struct drm_connector_hdmi_state {

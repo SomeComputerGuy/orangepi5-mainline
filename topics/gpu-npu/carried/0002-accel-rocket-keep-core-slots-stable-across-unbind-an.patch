@@ -60,7 +60,7 @@ Signed-off-by: Igor Paunovic <royalnet026@gmail.com>
  3 files changed, 77 insertions(+), 18 deletions(-)
 
 diff --git a/drivers/accel/rocket/rocket_device.h b/drivers/accel/rocket/rocket_device.h
-index c62d56701..abb88a254 100644
+index c62d56701069..abb88a254e56 100644
 --- a/drivers/accel/rocket/rocket_device.h
 +++ b/drivers/accel/rocket/rocket_device.h
 @@ -18,7 +18,9 @@ struct rocket_device {
@@ -74,7 +74,7 @@ index c62d56701..abb88a254 100644
  };
  
 diff --git a/drivers/accel/rocket/rocket_drv.c b/drivers/accel/rocket/rocket_drv.c
-index 4313d34dc..0e092c9c3 100644
+index 4313d34dc238..0e092c9c3127 100644
 --- a/drivers/accel/rocket/rocket_drv.c
 +++ b/drivers/accel/rocket/rocket_drv.c
 @@ -68,11 +68,21 @@ rocket_iommu_domain_put(struct rocket_iommu_domain *domain)
@@ -181,7 +181,7 @@ index 4313d34dc..0e092c9c3 100644
  
  	if (rdev->num_cores == 0) {
 diff --git a/drivers/accel/rocket/rocket_job.c b/drivers/accel/rocket/rocket_job.c
-index 4bc4f9c8e..25ee4ab17 100644
+index 4bc4f9c8ee40..25ee4ab172a8 100644
 --- a/drivers/accel/rocket/rocket_job.c
 +++ b/drivers/accel/rocket/rocket_job.c
 @@ -284,7 +284,7 @@ static struct rocket_core *sched_to_core(struct rocket_device *rdev,

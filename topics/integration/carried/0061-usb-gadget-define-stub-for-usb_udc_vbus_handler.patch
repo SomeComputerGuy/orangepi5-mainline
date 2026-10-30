@@ -17,7 +17,7 @@ Link: https://patch.msgid.link/20261021-b4-rockchip-dwc3-rockchip-glue-v18-6-600
  1 file changed, 5 insertions(+)
 
 diff --git a/include/linux/usb/gadget.h b/include/linux/usb/gadget.h
-index 8285b19a2..551e71b6e 100644
+index 8285b19a25e0..551e71b6eda0 100644
 --- a/include/linux/usb/gadget.h
 +++ b/include/linux/usb/gadget.h
 @@ -979,7 +979,12 @@ extern int usb_gadget_ep_match_desc(struct usb_gadget *gadget,

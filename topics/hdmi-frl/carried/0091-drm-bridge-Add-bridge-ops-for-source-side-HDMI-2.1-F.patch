@@ -30,7 +30,7 @@ Link: https://gitlab.collabora.com/hardware-enablement/rockchip-3588/linux/-/com
  1 file changed, 105 insertions(+)
 
 diff --git a/include/drm/drm_bridge.h b/include/drm/drm_bridge.h
-index 77b3ffe69..432585e6d 100644
+index 77b3ffe69230..432585e6d238 100644
 --- a/include/drm/drm_bridge.h
 +++ b/include/drm/drm_bridge.h
 @@ -596,6 +596,79 @@ struct drm_bridge_funcs {

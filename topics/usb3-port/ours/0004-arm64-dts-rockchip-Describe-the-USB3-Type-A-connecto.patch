@@ -1,0 +1,105 @@
+From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
+From: Arun Iyengar <aiyengar1990@gmail.com>
+Date: Fri, 30 Oct 2026 06:12:47 +0000
+Subject: [PATCH] arm64: dts: rockchip: Describe the USB3 Type-A connector on
+ Orange Pi 5/5B
+
+The upper Type-A port of the Orange Pi 5 and 5B has its USB 2.0 lines
+on USB 2.0 host 1 (EHCI/OHCI) and its SuperSpeed lanes on the
+SuperSpeed-only USB 3.0 host 2 (xHCI). The lower Type-A port is USB 2.0
+only, on host 0.
+
+Describe the upper port as a usb-a-connector linked to both
+controllers, so that the USB core pairs the EHCI root hub port with the
+xHCI SuperSpeed port. Without that, a USB 3 device plugged in at boot
+is enumerated by the EHCI before the xHCI is up and stays at high
+speed.
+
+VBUS of the port is not switched (the vendor DT has it on an always-on
+5 V rail), so it is described as coming from vcc5v0_sys.
+
+Assisted-by: Claude:claude-opus-5-5
+---
+ .../dts/rockchip/rk3588s-orangepi-5-5b.dtsi   | 60 +++++++++++++++++++
+ 1 file changed, 60 insertions(+)
+
+diff --git a/arch/arm64/boot/dts/rockchip/rk3588s-orangepi-5-5b.dtsi b/arch/arm64/boot/dts/rockchip/rk3588s-orangepi-5-5b.dtsi
+index ea6374294de5..f72afbafd5d5 100644
+--- a/arch/arm64/boot/dts/rockchip/rk3588s-orangepi-5-5b.dtsi
++++ b/arch/arm64/boot/dts/rockchip/rk3588s-orangepi-5-5b.dtsi
+@@ -56,6 +56,38 @@ led {
+ 		};
+ 	};
+ 
++	/*
++	 * The upper Type-A port: its USB 2.0 lines go to USB 2.0 host 1
++	 * (EHCI/OHCI), its SuperSpeed lanes to the SuperSpeed-only USB 3.0
++	 * host 2 (xHCI).
++	 */
++	usb3_con: connector-usb3 {
++		compatible = "usb-a-connector";
++		label = "USB3";
++		vbus-supply = <&vcc5v0_sys>;
++
++		ports {
++			#address-cells = <1>;
++			#size-cells = <0>;
++
++			port@0 {
++				reg = <0>;
++
++				usb3_con_hs: endpoint {
++					remote-endpoint = <&usb_host1_ehci_port1>;
++				};
++			};
++
++			port@1 {
++				reg = <1>;
++
++				usb3_con_ss: endpoint {
++					remote-endpoint = <&usb_host2_xhci_ss>;
++				};
++			};
++		};
++	};
++
+ 	vbus_typec: regulator-vbus-typec {
+ 		compatible = "regulator-fixed";
+ 		enable-active-high;
+@@ -274,8 +306,36 @@ usb_host0_xhci_ss: endpoint {
+ 	};
+ };
+ 
++&usb_host1_ehci {
++	ports {
++		#address-cells = <1>;
++		#size-cells = <0>;
++
++		port@1 {
++			reg = <1>;
++
++			usb_host1_ehci_port1: endpoint {
++				remote-endpoint = <&usb3_con_hs>;
++			};
++		};
++	};
++};
++
+ &usb_host2_xhci {
+ 	status = "okay";
++
++	ports {
++		#address-cells = <1>;
++		#size-cells = <0>;
++
++		port@1 {
++			reg = <1>;
++
++			usb_host2_xhci_ss: endpoint {
++				remote-endpoint = <&usb3_con_ss>;
++			};
++		};
++	};
+ };
+ 
+ &usbdp_phy0 {

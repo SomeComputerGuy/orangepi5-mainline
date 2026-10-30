@@ -1,0 +1,4 @@
+# Apply in this order on top of the parent topic (see topic.env):
+#   while read -r p sha; do git am "$p"; done < <(grep -v '^#' series)
+# Second column: the original commit in the workspace clone (for reference).
+ours/0001-drm-bridge-synopsys-dw-dp-Detect-the-sink-again-on-H.patch 63b92076d68be59a7925f32ffb057fff612b6fe7

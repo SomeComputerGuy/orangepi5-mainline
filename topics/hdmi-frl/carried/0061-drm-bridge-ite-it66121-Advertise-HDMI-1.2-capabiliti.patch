@@ -27,7 +27,7 @@ Link: https://gitlab.collabora.com/hardware-enablement/rockchip-3588/linux/-/com
  1 file changed, 4 insertions(+), 9 deletions(-)
 
 diff --git a/drivers/gpu/drm/bridge/ite-it66121.c b/drivers/gpu/drm/bridge/ite-it66121.c
-index 51fc68ffd..c8d0a26e8 100644
+index 51fc68ffdf8f..c8d0a26e8e90 100644
 --- a/drivers/gpu/drm/bridge/ite-it66121.c
 +++ b/drivers/gpu/drm/bridge/ite-it66121.c
 @@ -10,6 +10,7 @@

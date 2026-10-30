@@ -1,0 +1,54 @@
+From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
+From: Arun Iyengar <aiyengar1990@gmail.com>
+Date: Thu, 29 Oct 2026 21:51:14 +0000
+Subject: [PATCH] drm/rockchip: dw_dp: Add system sleep PM ops
+
+The PM core takes a runtime PM reference on every device in
+device_prepare(), so the autosuspend that the bridge's atomic_disable
+queues during drm_mode_config_helper_suspend() never runs and the DP
+controller stays runtime-active across system suspend. Its power domain
+(PD_VO0 on RK3588) is still switched off by genpd in the noirq phase,
+because that only depends on the system-wide state of the devices in
+the domain.
+
+On resume the domain is powered on again, but the controller is still
+marked runtime-active, so dw_dp_runtime_resume() is not called and the
+registers set up by dw_dp_init_hw() (and the HPD software override in
+the VO GRF) are lost. The atomic_enable from
+drm_mode_config_helper_resume() then fails AUX transfers:
+
+  dw-dp fde50000.dp: timeout waiting for AUX reply
+  dw-dp fde50000.dp: failed to enable link: -110
+
+and the display stays dark until the next full disable/enable cycle.
+
+Use pm_runtime_force_suspend()/pm_runtime_force_resume() as late
+system sleep callbacks. They run after the DRM device has been
+suspended and before it is resumed, so the controller is properly
+runtime-suspended before its power domain goes down and is re-initialised
+by the regular runtime resume path when the bridge is enabled again.
+
+Found on Orange Pi 5 (RK3588S) with a USB-C DP alt-mode monitor: with
+pm_test=platform and with real s2idle the link fails on every resume. Not
+yet tested on hardware with the fix (the DP sink was moved to HDMI).
+
+Fixes the runtime PM support added in:
+Link: https://patch.msgid.link/20260806-synopsys-dw-dp-improvements-v11-15-0d508505f383@collabora.com
+
+Assisted-by: Claude:claude-opus-5-5
+---
+ drivers/gpu/drm/rockchip/dw_dp-rockchip.c | 1 +
+ 1 file changed, 1 insertion(+)
+
+diff --git a/drivers/gpu/drm/rockchip/dw_dp-rockchip.c b/drivers/gpu/drm/rockchip/dw_dp-rockchip.c
+index 770ab042a187..59c66b657031 100644
+--- a/drivers/gpu/drm/rockchip/dw_dp-rockchip.c
++++ b/drivers/gpu/drm/rockchip/dw_dp-rockchip.c
+@@ -271,6 +271,7 @@ static int dw_dp_rockchip_runtime_resume(struct device *dev)
+ 
+ static const struct dev_pm_ops dw_dp_pm_ops = {
+ 	RUNTIME_PM_OPS(dw_dp_rockchip_runtime_suspend, dw_dp_rockchip_runtime_resume, NULL)
++	LATE_SYSTEM_SLEEP_PM_OPS(pm_runtime_force_suspend, pm_runtime_force_resume)
+ };
+ 
+ static const struct rockchip_dw_dp_plat_data rk3588_dp_plat_data = {

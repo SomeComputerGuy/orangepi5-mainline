@@ -25,7 +25,7 @@ Signed-off-by: Sven Püschel <s.pueschel@pengutronix.de>
  2 files changed, 13 insertions(+), 12 deletions(-)
 
 diff --git a/drivers/media/platform/rockchip/rga/rga-buf.c b/drivers/media/platform/rockchip/rga/rga-buf.c
-index c0ea60033..3f7c3c68e 100644
+index c0ea6003336b..3f7c3c68e0cb 100644
 --- a/drivers/media/platform/rockchip/rga/rga-buf.c
 +++ b/drivers/media/platform/rockchip/rga/rga-buf.c
 @@ -242,14 +242,6 @@ static int rga_buf_prepare_streaming(struct vb2_queue *q)
@@ -56,7 +56,7 @@ index c0ea60033..3f7c3c68e 100644
  
  const struct vb2_ops rga_qops = {
 diff --git a/drivers/media/platform/rockchip/rga/rga.c b/drivers/media/platform/rockchip/rga/rga.c
-index 36e9c474a..6c60bb7f4 100644
+index 36e9c474a2f0..6c60bb7f499d 100644
 --- a/drivers/media/platform/rockchip/rga/rga.c
 +++ b/drivers/media/platform/rockchip/rga/rga.c
 @@ -37,6 +37,14 @@ static void device_run(void *prv)

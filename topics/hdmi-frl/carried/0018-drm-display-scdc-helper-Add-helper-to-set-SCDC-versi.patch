@@ -37,7 +37,7 @@ Link: https://gitlab.collabora.com/hardware-enablement/rockchip-3588/linux/-/com
  2 files changed, 49 insertions(+), 3 deletions(-)
 
 diff --git a/drivers/gpu/drm/display/drm_scdc_helper.c b/drivers/gpu/drm/display/drm_scdc_helper.c
-index 1e7c41d4f..74388481f 100644
+index 1e7c41d4f926..74388481fc55 100644
 --- a/drivers/gpu/drm/display/drm_scdc_helper.c
 +++ b/drivers/gpu/drm/display/drm_scdc_helper.c
 @@ -22,12 +22,13 @@
@@ -108,7 +108,7 @@ index 1e7c41d4f..74388481f 100644
  drm_scdc_parse_status0_flags(u8 val, struct drm_scdc_status_flags *flags)
  {
 diff --git a/include/drm/display/drm_scdc_helper.h b/include/drm/display/drm_scdc_helper.h
-index a3b20adaa..6a8be1f16 100644
+index a3b20adaac7e..6a8be1f16ce0 100644
 --- a/include/drm/display/drm_scdc_helper.h
 +++ b/include/drm/display/drm_scdc_helper.h
 @@ -168,6 +168,8 @@ bool drm_scdc_get_scrambling_status(struct drm_connector *connector);

@@ -1,0 +1,51 @@
+From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
+From: Arun Iyengar <aiyengar1990@gmail.com>
+Date: Fri, 30 Oct 2026 05:11:18 +0000
+Subject: [PATCH] usb: typec: tcpm: Don't answer unexpected VDM responses with
+ Not_Supported
+
+A Structured VDM that matches no alternate mode, arrives outside a VDM
+AMS, and finds no Discover Identity response configured (nr_snk_vdo == 0)
+is answered with Not_Supported on PD 3.x. That is right for a request
+the port does not support, but the same path is taken by a response
+(ACK, NAK or BUSY) that does not belong to an outstanding request, most
+often one that arrives after VDMResponseTimer expired. A response is
+not a request and must not be answered; worse, the port partner may take
+the Not_Supported as the reply to whatever it sends next, or, as seen
+with a USB-C DP/USB3 dongle, answer it with a Not_Supported of its own:
+
+  AMS DISCOVER_SVIDS finished     <- VDMResponseTimer expired
+  PD RX, header: 0x248f [1]       <- the late Discover SVIDs ACK
+  PD TX, header: 0xbb0            <- Not_Supported from tcpm
+  ...
+  PD RX, header: 0x690 [1]        <- Not_Supported from the dongle
+
+Drop unexpected Structured VDM responses instead, and log them.
+
+Fixes: a20dcf53ea98 ("usb: typec: tcpm: Respond Not_Supported if no snk_vdo")
+Assisted-by: Claude:claude-opus-5-5
+---
+ drivers/usb/typec/tcpm/tcpm.c | 10 ++++++++++
+ 1 file changed, 10 insertions(+)
+
+diff --git a/drivers/usb/typec/tcpm/tcpm.c b/drivers/usb/typec/tcpm/tcpm.c
+index 3253355b1785..0445db4efdfa 100644
+--- a/drivers/usb/typec/tcpm/tcpm.c
++++ b/drivers/usb/typec/tcpm/tcpm.c
+@@ -2827,6 +2827,16 @@ static void tcpm_handle_vdm_request(struct tcpm_port *port,
+ 		port->vdm_sm_running = true;
+ 		rlen = tcpm_pd_svdm(port, adev, p, cnt, response, &adev_action,
+ 				    rx_sop_type, &response_tx_sop_type);
++	} else if (PD_VDO_SVDM(p[0]) && PD_VDO_CMDT(p[0]) != CMDT_INIT) {
++		/*
++		 * A Structured VDM response (ACK, NAK or BUSY) that does not
++		 * belong to an outstanding request, for example one that
++		 * arrives after VDMResponseTimer expired. Not_Supported is the
++		 * reply to a request the port does not support, and must not be
++		 * sent for a response: the port partner may take it as a reply
++		 * to its next message. Drop it.
++		 */
++		tcpm_log(port, "Ignoring unexpected VDM response 0x%08x", p[0]);
+ 	} else {
+ 		if (port->negotiated_rev >= PD_REV30)
+ 			tcpm_pd_handle_msg(port, PD_MSG_CTRL_NOT_SUPP, NONE_AMS);

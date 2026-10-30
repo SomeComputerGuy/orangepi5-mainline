@@ -1,0 +1,10 @@
+# Apply in this order on top of the parent topic (see topic.env):
+#   while read -r p sha; do git am "$p"; done < <(grep -v '^#' series)
+# Second column: the original commit in the workspace clone (for reference).
+ours/0001-phy-rockchip-usbdp-Re-enable-DP-lanes-after-a-re-ini.patch 73e95d973979777561e412d133b19bb885cc955b
+ours/0002-drm-bridge-synopsys-dw-dp-Treat-OOB-HPD-events-with-.patch 91e78f307faa0455d32ff62f010f0e5f926a8b27
+ours/0003-usb-typec-altmodes-displayport-Notify-HPD-after-reco.patch 08e91cfa202bb0ce89bbcc2cbdeccd4044422025
+ours/0004-usb-typec-tcpm-Use-the-right-SVID-when-resuming-Disc.patch aac4df7df4c5b97d28addb02c28de63cbb64a3dc
+ours/0005-usb-typec-tcpm-Take-Not_Supported-as-a-VDM-reply-onl.patch 801c35d130c595b9dc59318fc96293e6949a2791
+ours/0006-usb-typec-tcpm-Retry-discovery-after-a-VDM-response-.patch 9be2ac4b555aa6586884c03b2f3b629b0a987e99
+ours/0007-usb-typec-tcpm-Don-t-answer-unexpected-VDM-responses.patch c694fb4800814bb7f6b465dc635dcbbff528b7b0

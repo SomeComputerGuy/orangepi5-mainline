@@ -17,7 +17,7 @@ Assisted-by: Claude:claude-opus-5-5
  1 file changed, 1 insertion(+)
 
 diff --git a/Documentation/devicetree/bindings/display/panel/ilitek,ili9881c.yaml b/Documentation/devicetree/bindings/display/panel/ilitek,ili9881c.yaml
-index 42e35986f..30bcecbb3 100644
+index 42e35986fbf6..30bcecbb34a4 100644
 --- a/Documentation/devicetree/bindings/display/panel/ilitek,ili9881c.yaml
 +++ b/Documentation/devicetree/bindings/display/panel/ilitek,ili9881c.yaml
 @@ -20,6 +20,7 @@ properties:

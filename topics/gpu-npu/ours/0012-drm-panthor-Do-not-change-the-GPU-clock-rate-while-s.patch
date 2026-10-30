@@ -46,7 +46,7 @@ Assisted-by: Claude:claude-opus-5-5
  1 file changed, 39 insertions(+), 3 deletions(-)
 
 diff --git a/drivers/gpu/drm/panthor/panthor_devfreq.c b/drivers/gpu/drm/panthor/panthor_devfreq.c
-index 2249b41ca..cab86e9c9 100644
+index 2249b41ca4af..cab86e9c9d46 100644
 --- a/drivers/gpu/drm/panthor/panthor_devfreq.c
 +++ b/drivers/gpu/drm/panthor/panthor_devfreq.c
 @@ -60,20 +60,56 @@ static void panthor_devfreq_update_utilization(struct panthor_devfreq *pdevfreq)

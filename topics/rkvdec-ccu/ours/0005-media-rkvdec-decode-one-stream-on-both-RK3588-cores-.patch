@@ -49,14 +49,14 @@ Assisted-by: Claude:claude-opus-5-5
  .../rockchip/rkvdec/rkvdec-vdpu381-h264.c     |   8 +-
  .../rockchip/rkvdec/rkvdec-vdpu381-hevc.c     |   7 +
  .../rockchip/rkvdec/rkvdec-vdpu381-vp9.c      |   3 +
- .../media/platform/rockchip/rkvdec/rkvdec.c   | 232 +++++++++++++++++-
+ .../media/platform/rockchip/rkvdec/rkvdec.c   | 231 +++++++++++++++++-
  .../media/platform/rockchip/rkvdec/rkvdec.h   |  25 ++
- 8 files changed, 529 insertions(+), 4 deletions(-)
+ 8 files changed, 528 insertions(+), 4 deletions(-)
  create mode 100644 drivers/media/platform/rockchip/rkvdec/rkvdec-ccu.c
  create mode 100644 drivers/media/platform/rockchip/rkvdec/rkvdec-ccu.h
 
 diff --git a/drivers/media/platform/rockchip/rkvdec/Makefile b/drivers/media/platform/rockchip/rkvdec/Makefile
-index 5eae59e87..8588e8905 100644
+index 5eae59e87fce..8588e890535d 100644
 --- a/drivers/media/platform/rockchip/rkvdec/Makefile
 +++ b/drivers/media/platform/rockchip/rkvdec/Makefile
 @@ -3,6 +3,7 @@ obj-$(CONFIG_VIDEO_ROCKCHIP_VDEC) += rockchip-vdec.o
@@ -69,7 +69,7 @@ index 5eae59e87..8588e8905 100644
  		   rkvdec-hevc.o \
 diff --git a/drivers/media/platform/rockchip/rkvdec/rkvdec-ccu.c b/drivers/media/platform/rockchip/rkvdec/rkvdec-ccu.c
 new file mode 100644
-index 000000000..cb497a1a4
+index 000000000000..1049b3854809
 --- /dev/null
 +++ b/drivers/media/platform/rockchip/rkvdec/rkvdec-ccu.c
 @@ -0,0 +1,230 @@
@@ -104,7 +104,7 @@ index 000000000..cb497a1a4
 +#define RKVDEC_CCU_CORE_WORK		0x044
 +#define RKVDEC_CCU_CORE_STA		0x048
 +/* Sets the bit of a core in the CORE_* registers */
-+#define RKVDEC_CCU_CORE_SET(port)	(BIT((port) + 16) | BIT(port))
++#define RKVDEC_CCU_CORE_SET(port)	(0x10001U << (port))
 +
 +/* Register in the link block of each core */
 +#define VDPU381_LINK_CTRL		0x000
@@ -305,7 +305,7 @@ index 000000000..cb497a1a4
 +};
 diff --git a/drivers/media/platform/rockchip/rkvdec/rkvdec-ccu.h b/drivers/media/platform/rockchip/rkvdec/rkvdec-ccu.h
 new file mode 100644
-index 000000000..39806bbc1
+index 000000000000..39806bbc10c3
 --- /dev/null
 +++ b/drivers/media/platform/rockchip/rkvdec/rkvdec-ccu.h
 @@ -0,0 +1,27 @@
@@ -337,7 +337,7 @@ index 000000000..39806bbc1
 +
 +#endif /* RKVDEC_CCU_H_ */
 diff --git a/drivers/media/platform/rockchip/rkvdec/rkvdec-vdpu381-h264.c b/drivers/media/platform/rockchip/rkvdec/rkvdec-vdpu381-h264.c
-index e5d325999..dca2a6ba4 100644
+index e5d325999f15..dca2a6ba4d05 100644
 --- a/drivers/media/platform/rockchip/rkvdec/rkvdec-vdpu381-h264.c
 +++ b/drivers/media/platform/rockchip/rkvdec/rkvdec-vdpu381-h264.c
 @@ -11,6 +11,7 @@
@@ -377,7 +377,7 @@ index e5d325999..dca2a6ba4 100644
  
  	return 0;
 diff --git a/drivers/media/platform/rockchip/rkvdec/rkvdec-vdpu381-hevc.c b/drivers/media/platform/rockchip/rkvdec/rkvdec-vdpu381-hevc.c
-index 333dcb026..80646885a 100644
+index 333dcb0264e3..80646885a222 100644
 --- a/drivers/media/platform/rockchip/rkvdec/rkvdec-vdpu381-hevc.c
 +++ b/drivers/media/platform/rockchip/rkvdec/rkvdec-vdpu381-hevc.c
 @@ -10,6 +10,7 @@
@@ -416,7 +416,7 @@ index 333dcb026..80646885a 100644
  
  	return 0;
 diff --git a/drivers/media/platform/rockchip/rkvdec/rkvdec-vdpu381-vp9.c b/drivers/media/platform/rockchip/rkvdec/rkvdec-vdpu381-vp9.c
-index c22b48d7b..e06a915f3 100644
+index c22b48d7b0bc..e06a915f3731 100644
 --- a/drivers/media/platform/rockchip/rkvdec/rkvdec-vdpu381-vp9.c
 +++ b/drivers/media/platform/rockchip/rkvdec/rkvdec-vdpu381-vp9.c
 @@ -26,6 +26,7 @@
@@ -444,7 +444,7 @@ index c22b48d7b..e06a915f3 100644
  
  	return 0;
 diff --git a/drivers/media/platform/rockchip/rkvdec/rkvdec.c b/drivers/media/platform/rockchip/rkvdec/rkvdec.c
-index d9463d6db..f0ca0d5c6 100644
+index d9463d6dba22..f0112924acd9 100644
 --- a/drivers/media/platform/rockchip/rkvdec/rkvdec.c
 +++ b/drivers/media/platform/rockchip/rkvdec/rkvdec.c
 @@ -32,6 +32,7 @@
@@ -608,7 +608,7 @@ index d9463d6db..f0ca0d5c6 100644
  }
  
  void rkvdec_run_preamble(struct rkvdec_ctx *ctx, struct rkvdec_run *run)
-@@ -1466,9 +1570,22 @@ static void rkvdec_device_run(void *priv)
+@@ -1466,9 +1570,21 @@ static void rkvdec_device_run(void *priv)
  		goto out;
  	}
  
@@ -619,7 +619,6 @@ index d9463d6db..f0ca0d5c6 100644
 +			rkvdec_job_hw_done(core, VB2_BUF_STATE_ERROR, false);
 +			goto out;
 +		}
-+
 +	}
 +
  	if (WARN_ON(!desc))
@@ -631,7 +630,7 @@ index d9463d6db..f0ca0d5c6 100644
  	if (!rkvdec_rcb_buf_validate_size(ctx)) {
  		rkvdec_free_rcb(ctx->dev, core);
  
-@@ -1612,6 +1729,12 @@ static int rkvdec_open(struct file *filp)
+@@ -1612,6 +1728,12 @@ static int rkvdec_open(struct file *filp)
  	init_waitqueue_head(&ctx->jobs_wq);
  	mutex_init(&ctx->done_lock);
  	ctx->num_job_slots = 1;
@@ -644,7 +643,7 @@ index d9463d6db..f0ca0d5c6 100644
  	rkvdec_reset_coded_fmt(ctx);
  	rkvdec_reset_decoded_fmt(ctx);
  	v4l2_fh_init(&ctx->fh, video_devdata(filp));
-@@ -1620,7 +1743,7 @@ static int rkvdec_open(struct file *filp)
+@@ -1620,7 +1742,7 @@ static int rkvdec_open(struct file *filp)
  					    rkvdec_queue_init);
  	if (IS_ERR(ctx->fh.m2m_ctx)) {
  		ret = PTR_ERR(ctx->fh.m2m_ctx);
@@ -653,7 +652,7 @@ index d9463d6db..f0ca0d5c6 100644
  	}
  
  	ret = rkvdec_init_ctrls(ctx);
-@@ -1634,6 +1757,9 @@ static int rkvdec_open(struct file *filp)
+@@ -1634,6 +1756,9 @@ static int rkvdec_open(struct file *filp)
  err_cleanup_m2m_ctx:
  	v4l2_m2m_ctx_release(ctx->fh.m2m_ctx);
  
@@ -663,7 +662,7 @@ index d9463d6db..f0ca0d5c6 100644
  err_free_ctx:
  	kfree(ctx);
  	return ret;
-@@ -1647,6 +1773,7 @@ static int rkvdec_release(struct file *filp)
+@@ -1647,6 +1772,7 @@ static int rkvdec_release(struct file *filp)
  	v4l2_m2m_ctx_release(ctx->fh.m2m_ctx);
  	v4l2_ctrl_handler_free(&ctx->ctrl_hdl);
  	v4l2_fh_exit(&ctx->fh);
@@ -671,7 +670,7 @@ index d9463d6db..f0ca0d5c6 100644
  	mutex_destroy(&ctx->done_lock);
  	kfree(ctx);
  
-@@ -1997,6 +2124,7 @@ static const struct rkvdec_variant vdpu381_variant = {
+@@ -1997,6 +2123,7 @@ static const struct rkvdec_variant vdpu381_variant = {
  	.rcb_sizes = vdpu381_rcb_sizes,
  	.num_rcb_sizes = ARRAY_SIZE(vdpu381_rcb_sizes),
  	.ops = &vdpu381_variant_ops,
@@ -679,7 +678,7 @@ index d9463d6db..f0ca0d5c6 100644
  };
  
  static const struct rcb_size_info vdpu383_rcb_sizes[] = {
-@@ -2112,8 +2240,20 @@ static int rkvdec_core_probe(struct platform_device *pdev)
+@@ -2112,8 +2239,20 @@ static int rkvdec_core_probe(struct platform_device *pdev)
  		return -ENOMEM;
  
  	core->dev = &pdev->dev;
@@ -700,7 +699,7 @@ index d9463d6db..f0ca0d5c6 100644
  	ret = devm_clk_bulk_get_all_enabled(&pdev->dev, &core->clocks);
  	if (ret < 0)
  		return ret;
-@@ -2234,6 +2374,40 @@ static struct platform_driver rkvdec_core_pdrv = {
+@@ -2234,6 +2373,40 @@ static struct platform_driver rkvdec_core_pdrv = {
  	},
  };
  
@@ -741,7 +740,7 @@ index d9463d6db..f0ca0d5c6 100644
  static int rkvdec_bind(struct device *dev)
  {
  	struct rkvdec_dev *rkvdec = dev_get_drvdata(dev);
-@@ -2245,6 +2419,40 @@ static int rkvdec_bind(struct device *dev)
+@@ -2245,6 +2418,40 @@ static int rkvdec_bind(struct device *dev)
  		return ret;
  	}
  
@@ -782,7 +781,7 @@ index d9463d6db..f0ca0d5c6 100644
  	ret = rkvdec_v4l2_init(rkvdec);
  	if (ret)
  		goto err_unbind;
-@@ -2252,6 +2460,9 @@ static int rkvdec_bind(struct device *dev)
+@@ -2252,6 +2459,9 @@ static int rkvdec_bind(struct device *dev)
  	return 0;
  
  err_unbind:
@@ -792,7 +791,7 @@ index d9463d6db..f0ca0d5c6 100644
  	component_unbind_all(dev, NULL);
  	return ret;
  }
-@@ -2269,6 +2480,10 @@ static void rkvdec_unbind(struct device *dev)
+@@ -2269,6 +2479,10 @@ static void rkvdec_unbind(struct device *dev)
  	for (i = 0; i < rkvdec->core_count; i++)
  		rkvdec_free_rcb(rkvdec, rkvdec->cores[i]);
  
@@ -803,7 +802,7 @@ index d9463d6db..f0ca0d5c6 100644
  	component_unbind_all(dev, NULL);
  }
  
-@@ -2324,6 +2539,7 @@ static int rkvdec_probe(struct platform_device *pdev)
+@@ -2324,6 +2538,7 @@ static int rkvdec_probe(struct platform_device *pdev)
  
  	mutex_init(&rkvdec->vdev_lock);
  	spin_lock_init(&rkvdec->cores_lock);
@@ -811,7 +810,7 @@ index d9463d6db..f0ca0d5c6 100644
  
  	dev_set_drvdata(dev, rkvdec);
  
-@@ -2332,7 +2548,10 @@ static int rkvdec_probe(struct platform_device *pdev)
+@@ -2332,7 +2547,10 @@ static int rkvdec_probe(struct platform_device *pdev)
  
  static void rkvdec_remove(struct platform_device *pdev)
  {
@@ -822,7 +821,7 @@ index d9463d6db..f0ca0d5c6 100644
  }
  
  static struct platform_driver rkvdec_pdrv = {
-@@ -2401,10 +2620,14 @@ static int __init rkvdec_init(void)
+@@ -2401,10 +2619,14 @@ static int __init rkvdec_init(void)
  	if (ret)
  		return ret;
  
@@ -838,7 +837,7 @@ index d9463d6db..f0ca0d5c6 100644
  	for (i = 0; i < ARRAY_SIZE(master_pdevs); i++) {
  		if (!rkvdec_of_has_available_node(of_rkvdec_match[i].compatible))
  			continue;
-@@ -2425,6 +2648,8 @@ static int __init rkvdec_init(void)
+@@ -2425,6 +2647,8 @@ static int __init rkvdec_init(void)
  		}
  	}
  	platform_driver_unregister(&rkvdec_pdrv);
@@ -847,7 +846,7 @@ index d9463d6db..f0ca0d5c6 100644
  unregister_core_driver:
  	platform_driver_unregister(&rkvdec_core_pdrv);
  	return ret;
-@@ -2442,6 +2667,7 @@ static void __exit rkvdec_exit(void)
+@@ -2442,6 +2666,7 @@ static void __exit rkvdec_exit(void)
  		}
  	}
  	platform_driver_unregister(&rkvdec_pdrv);
@@ -856,7 +855,7 @@ index d9463d6db..f0ca0d5c6 100644
  }
  module_exit(rkvdec_exit);
 diff --git a/drivers/media/platform/rockchip/rkvdec/rkvdec.h b/drivers/media/platform/rockchip/rkvdec/rkvdec.h
-index f0c8a530a..fea8e2ba8 100644
+index f0c8a530a6f7..fea8e2ba8877 100644
 --- a/drivers/media/platform/rockchip/rkvdec/rkvdec.h
 +++ b/drivers/media/platform/rockchip/rkvdec/rkvdec.h
 @@ -35,6 +35,7 @@

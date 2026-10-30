@@ -22,7 +22,7 @@ Assisted-by: Claude:claude-opus-5-5
  1 file changed, 131 insertions(+), 1 deletion(-)
 
 diff --git a/include/media/v4l2-hevc.h b/include/media/v4l2-hevc.h
-index 973c96be1..cc649b212 100644
+index 973c96be16be..cc649b212a6d 100644
 --- a/include/media/v4l2-hevc.h
 +++ b/include/media/v4l2-hevc.h
 @@ -1,6 +1,7 @@

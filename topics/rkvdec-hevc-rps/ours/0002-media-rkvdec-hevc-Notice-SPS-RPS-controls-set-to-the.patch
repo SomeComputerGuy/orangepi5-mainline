@@ -31,7 +31,7 @@ Assisted-by: Claude:claude-opus-5-5
  1 file changed, 17 insertions(+), 1 deletion(-)
 
 diff --git a/drivers/media/platform/rockchip/rkvdec/rkvdec.c b/drivers/media/platform/rockchip/rkvdec/rkvdec.c
-index c7cc9eb4d..cd8d60e0a 100644
+index c7cc9eb4d25f..cd8d60e0a1a8 100644
 --- a/drivers/media/platform/rockchip/rkvdec/rkvdec.c
 +++ b/drivers/media/platform/rockchip/rkvdec/rkvdec.c
 @@ -163,6 +163,12 @@ static int rkvdec_s_ctrl(struct v4l2_ctrl *ctrl)

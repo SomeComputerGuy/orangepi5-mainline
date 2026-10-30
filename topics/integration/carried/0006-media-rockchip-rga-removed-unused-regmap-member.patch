@@ -15,7 +15,7 @@ Signed-off-by: Sven Püschel <s.pueschel@pengutronix.de>
  1 file changed, 1 deletion(-)
 
 diff --git a/drivers/media/platform/rockchip/rga/rga.h b/drivers/media/platform/rockchip/rga/rga.h
-index 57287c5b4..a7ca80b18 100644
+index 57287c5b4921..a7ca80b187f2 100644
 --- a/drivers/media/platform/rockchip/rga/rga.h
 +++ b/drivers/media/platform/rockchip/rga/rga.h
 @@ -71,7 +71,6 @@ struct rockchip_rga {

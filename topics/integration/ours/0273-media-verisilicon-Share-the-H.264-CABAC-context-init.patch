@@ -17,7 +17,7 @@ Assisted-by: Claude:claude-opus-5-5
  2 files changed, 12 insertions(+), 2 deletions(-)
 
 diff --git a/drivers/media/platform/verisilicon/hantro_h264.c b/drivers/media/platform/verisilicon/hantro_h264.c
-index 2414782f1..c569c4b28 100644
+index 2414782f1eb6..c569c4b283ea 100644
 --- a/drivers/media/platform/verisilicon/hantro_h264.c
 +++ b/drivers/media/platform/verisilicon/hantro_h264.c
 @@ -41,7 +41,7 @@ struct hantro_h264_dec_priv_tbl {
@@ -40,7 +40,7 @@ index 2414782f1..c569c4b28 100644
  	return 0;
  }
 diff --git a/drivers/media/platform/verisilicon/hantro_hw.h b/drivers/media/platform/verisilicon/hantro_hw.h
-index 920721726..cbc161593 100644
+index 920721726d5f..cbc161593fd8 100644
 --- a/drivers/media/platform/verisilicon/hantro_hw.h
 +++ b/drivers/media/platform/verisilicon/hantro_hw.h
 @@ -452,6 +452,15 @@ u16 hantro_h264_get_ref_nbr(struct hantro_ctx *ctx,

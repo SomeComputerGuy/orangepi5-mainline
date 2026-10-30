@@ -14,7 +14,7 @@ Signed-off-by: Venkata Atchuta Bheemeswara Sarma Darbha <vdarbha0473@gmail.com>
  1 file changed, 5 insertions(+), 5 deletions(-)
 
 diff --git a/drivers/media/platform/rockchip/rkvdec/rkvdec-vp9.c b/drivers/media/platform/rockchip/rkvdec/rkvdec-vp9.c
-index 0b7d6b29b..0d4ff0c0b 100644
+index 0b7d6b29bcfa..0d4ff0c0b5ce 100644
 --- a/drivers/media/platform/rockchip/rkvdec/rkvdec-vp9.c
 +++ b/drivers/media/platform/rockchip/rkvdec/rkvdec-vp9.c
 @@ -349,7 +349,7 @@ static void init_probs(struct rkvdec_ctx *ctx,

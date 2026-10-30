@@ -44,7 +44,7 @@ Signed-off-by: Igor Paunovic <royalnet026@gmail.com>
  2 files changed, 35 insertions(+), 1 deletion(-)
 
 diff --git a/drivers/accel/rocket/rocket_core.h b/drivers/accel/rocket/rocket_core.h
-index f6d738285..46ed8352a 100644
+index f6d7382854ca..46ed8352a79d 100644
 --- a/drivers/accel/rocket/rocket_core.h
 +++ b/drivers/accel/rocket/rocket_core.h
 @@ -30,6 +30,11 @@
@@ -60,7 +60,7 @@ index f6d738285..46ed8352a 100644
  
  	int irq;
 diff --git a/drivers/accel/rocket/rocket_drv.c b/drivers/accel/rocket/rocket_drv.c
-index 5d7805c41..4313d34dc 100644
+index 5d7805c41dc3..4313d34dc238 100644
 --- a/drivers/accel/rocket/rocket_drv.c
 +++ b/drivers/accel/rocket/rocket_drv.c
 @@ -157,10 +157,39 @@ static const struct drm_driver rocket_drm_driver = {

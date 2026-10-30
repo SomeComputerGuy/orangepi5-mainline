@@ -23,7 +23,7 @@ Link: https://patch.msgid.link/20261021-b4-rockchip-dwc3-rockchip-glue-v18-3-600
  create mode 100644 drivers/usb/dwc3/dwc3-rockchip.c
 
 diff --git a/drivers/usb/dwc3/Kconfig b/drivers/usb/dwc3/Kconfig
-index 18169727a..3c120ea97 100644
+index 18169727a413..3c120ea9746d 100644
 --- a/drivers/usb/dwc3/Kconfig
 +++ b/drivers/usb/dwc3/Kconfig
 @@ -190,6 +190,17 @@ config USB_DWC3_OCTEON
@@ -45,7 +45,7 @@ index 18169727a..3c120ea97 100644
  	tristate "Realtek DWC3 Platform Driver"
  	depends on OF && ARCH_REALTEK
 diff --git a/drivers/usb/dwc3/Makefile b/drivers/usb/dwc3/Makefile
-index f37971197..444e7e7f3 100644
+index f37971197203..444e7e7f34b2 100644
 --- a/drivers/usb/dwc3/Makefile
 +++ b/drivers/usb/dwc3/Makefile
 @@ -58,6 +58,7 @@ obj-$(CONFIG_USB_DWC3_IMX8MP)		+= dwc3-imx8mp.o
@@ -57,7 +57,7 @@ index f37971197..444e7e7f3 100644
  obj-$(CONFIG_USB_DWC3_GENERIC_PLAT)	+= dwc3-generic-plat.o
  obj-$(CONFIG_USB_DWC3_GOOGLE)		+= dwc3-google.o
 diff --git a/drivers/usb/dwc3/core.c b/drivers/usb/dwc3/core.c
-index fd5c2cd36..4b7132887 100644
+index fd5c2cd36c59..4b7132887a03 100644
 --- a/drivers/usb/dwc3/core.c
 +++ b/drivers/usb/dwc3/core.c
 @@ -2448,11 +2448,26 @@ int dwc3_core_probe(const struct dwc3_probe_data *data)
@@ -89,7 +89,7 @@ index fd5c2cd36..4b7132887 100644
  	if (!res) {
 diff --git a/drivers/usb/dwc3/dwc3-rockchip.c b/drivers/usb/dwc3/dwc3-rockchip.c
 new file mode 100644
-index 000000000..4129aefd6
+index 000000000000..4129aefd6a8b
 --- /dev/null
 +++ b/drivers/usb/dwc3/dwc3-rockchip.c
 @@ -0,0 +1,106 @@

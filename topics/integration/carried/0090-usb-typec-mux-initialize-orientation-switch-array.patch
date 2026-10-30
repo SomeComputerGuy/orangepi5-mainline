@@ -24,7 +24,7 @@ Signed-off-by: Sebastian Reichel <sebastian.reichel@collabora.com>
  1 file changed, 1 insertion(+), 1 deletion(-)
 
 diff --git a/drivers/usb/typec/mux.c b/drivers/usb/typec/mux.c
-index afa6fc181..57149f537 100644
+index afa6fc181397..57149f537692 100644
 --- a/drivers/usb/typec/mux.c
 +++ b/drivers/usb/typec/mux.c
 @@ -81,7 +81,7 @@ static void *typec_switch_match(const struct fwnode_handle *fwnode,

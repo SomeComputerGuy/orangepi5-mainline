@@ -1,0 +1,68 @@
+From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
+From: Cristian Ciocaltea <cristian.ciocaltea@collabora.com>
+Date: Thu, 16 Jul 2026 00:55:54 +0300
+Subject: [PATCH] drm/bridge: ite-it6263: Drop redundant .mode_valid hook
+
+Bridges using DRM_BRIDGE_OP_HDMI expect connectors to be created through
+drm_bridge_connector_init(), thereby relying on the bridge connector's
+.mode_valid hook to invoke drm_hdmi_connector_mode_valid().
+
+The generic helper computes the mode's TMDS character rate and forwards
+it to the bridge's .hdmi_tmds_char_rate_valid callback through the
+connector HDMI funcs.  This covers exactly what
+it6263_bridge_mode_valid() does for 8 bpc RGB444, but due to being
+output-format aware, it also handles the validation more thoroughly.
+
+Both the connector and bridge .mode_valid hooks are invoked during
+mode validation through drm_mode_validate_pipeline(), so the custom
+bridge hook is redundant.  Drop it.
+
+While at it, remove the now-unused drm_hdmi_helper.h include.
+
+Signed-off-by: Cristian Ciocaltea <cristian.ciocaltea@collabora.com>
+Link: https://gitlab.collabora.com/hardware-enablement/rockchip-3588/linux/-/commit/4dde4a64618c01c065ebbf73448b7cb47b9e6c57
+---
+ drivers/gpu/drm/bridge/ite-it6263.c | 16 ----------------
+ 1 file changed, 16 deletions(-)
+
+diff --git a/drivers/gpu/drm/bridge/ite-it6263.c b/drivers/gpu/drm/bridge/ite-it6263.c
+index 21ac8e58b9d2..550999491086 100644
+--- a/drivers/gpu/drm/bridge/ite-it6263.c
++++ b/drivers/gpu/drm/bridge/ite-it6263.c
+@@ -15,7 +15,6 @@
+ #include <linux/regmap.h>
+ #include <linux/regulator/consumer.h>
+ 
+-#include <drm/display/drm_hdmi_helper.h>
+ #include <drm/display/drm_hdmi_state_helper.h>
+ #include <drm/drm_atomic.h>
+ #include <drm/drm_atomic_helper.h>
+@@ -669,20 +668,6 @@ static void it6263_bridge_atomic_enable(struct drm_bridge *bridge,
+ 	regmap_write(regmap, HDMI_REG_PKT_GENERAL_CTRL, ENABLE_PKT | REPEAT_PKT);
+ }
+ 
+-static enum drm_mode_status
+-it6263_bridge_mode_valid(struct drm_bridge *bridge,
+-			 const struct drm_display_info *info,
+-			 const struct drm_display_mode *mode)
+-{
+-	unsigned long long rate;
+-
+-	rate = drm_hdmi_compute_mode_clock(mode, 8, DRM_OUTPUT_COLOR_FORMAT_RGB444);
+-	if (rate == 0)
+-		return MODE_NOCLOCK;
+-
+-	return bridge->funcs->hdmi_tmds_char_rate_valid(bridge, mode, rate);
+-}
+-
+ static int it6263_bridge_attach(struct drm_bridge *bridge,
+ 				struct drm_encoder *encoder,
+ 				enum drm_bridge_attach_flags flags)
+@@ -831,7 +816,6 @@ static const struct drm_bridge_funcs it6263_bridge_funcs = {
+ 	.atomic_destroy_state = drm_atomic_helper_bridge_destroy_state,
+ 	.atomic_create_state = drm_atomic_helper_bridge_create_state,
+ 	.attach = it6263_bridge_attach,
+-	.mode_valid = it6263_bridge_mode_valid,
+ 	.atomic_disable = it6263_bridge_atomic_disable,
+ 	.atomic_enable = it6263_bridge_atomic_enable,
+ 	.detect = it6263_bridge_detect,

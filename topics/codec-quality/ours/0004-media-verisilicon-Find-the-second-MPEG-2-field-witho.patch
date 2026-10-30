@@ -37,7 +37,7 @@ Assisted-by: Claude:claude-opus-5-5
  4 files changed, 47 insertions(+), 8 deletions(-)
 
 diff --git a/drivers/media/platform/verisilicon/hantro_g1_mpeg2_dec.c b/drivers/media/platform/verisilicon/hantro_g1_mpeg2_dec.c
-index e0d6bd0a6..bb2871ec4 100644
+index e0d6bd0a6e44..bb2871ec4b9b 100644
 --- a/drivers/media/platform/verisilicon/hantro_g1_mpeg2_dec.c
 +++ b/drivers/media/platform/verisilicon/hantro_g1_mpeg2_dec.c
 @@ -97,6 +97,9 @@ hantro_g1_mpeg2_dec_set_buffers(struct hantro_dev *vpu, struct hantro_ctx *ctx,
@@ -63,7 +63,7 @@ index e0d6bd0a6..bb2871ec4 100644
  		vdpu_write_relaxed(vpu, forward_addr, G1_REG_REFER1_BASE);
  	} else if (pic->picture_structure == V4L2_MPEG2_PIC_TOP_FIELD) {
 diff --git a/drivers/media/platform/verisilicon/hantro_hw.h b/drivers/media/platform/verisilicon/hantro_hw.h
-index 505ca6f06..58fc19e3c 100644
+index 505ca6f06a52..58fc19e3cd07 100644
 --- a/drivers/media/platform/verisilicon/hantro_hw.h
 +++ b/drivers/media/platform/verisilicon/hantro_hw.h
 @@ -191,9 +191,14 @@ struct hantro_hevc_dec_hw_ctx {
@@ -92,7 +92,7 @@ index 505ca6f06..58fc19e3c 100644
  void hantro_mpeg2_dec_exit(struct hantro_ctx *ctx);
  
 diff --git a/drivers/media/platform/verisilicon/hantro_mpeg2.c b/drivers/media/platform/verisilicon/hantro_mpeg2.c
-index 04e545eb0..e5d70c64d 100644
+index 04e545eb0a83..e5d70c64d7a7 100644
 --- a/drivers/media/platform/verisilicon/hantro_mpeg2.c
 +++ b/drivers/media/platform/verisilicon/hantro_mpeg2.c
 @@ -35,10 +35,41 @@ void hantro_mpeg2_dec_copy_qtable(u8 *qtable,
@@ -138,7 +138,7 @@ index 04e545eb0..e5d70c64d 100644
  	ctx->mpeg2_dec.qtable.cpu =
  		dma_alloc_coherent(vpu->dev,
 diff --git a/drivers/media/platform/verisilicon/rockchip_vpu2_hw_mpeg2_dec.c b/drivers/media/platform/verisilicon/rockchip_vpu2_hw_mpeg2_dec.c
-index 50a3a3eea..57907dd5e 100644
+index 50a3a3eeaa00..57907dd5ea9c 100644
 --- a/drivers/media/platform/verisilicon/rockchip_vpu2_hw_mpeg2_dec.c
 +++ b/drivers/media/platform/verisilicon/rockchip_vpu2_hw_mpeg2_dec.c
 @@ -100,6 +100,9 @@ rockchip_vpu2_mpeg2_dec_set_buffers(struct hantro_dev *vpu,

@@ -13,7 +13,7 @@ Link: https://patch.msgid.link/20261021-b4-rockchip-dwc3-rockchip-glue-v18-1-600
  1 file changed, 20 insertions(+), 2 deletions(-)
 
 diff --git a/drivers/phy/rockchip/phy-rockchip-usbdp.c b/drivers/phy/rockchip/phy-rockchip-usbdp.c
-index e748acdd2..cb1f455ac 100644
+index e748acdd2d31..cb1f455accf8 100644
 --- a/drivers/phy/rockchip/phy-rockchip-usbdp.c
 +++ b/drivers/phy/rockchip/phy-rockchip-usbdp.c
 @@ -175,6 +175,7 @@ struct rk_udphy {

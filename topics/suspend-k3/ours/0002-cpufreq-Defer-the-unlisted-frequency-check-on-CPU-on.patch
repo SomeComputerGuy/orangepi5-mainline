@@ -45,7 +45,7 @@ Assisted-by: Claude:claude-opus-5-5
  1 file changed, 57 insertions(+), 35 deletions(-)
 
 diff --git a/drivers/cpufreq/cpufreq.c b/drivers/cpufreq/cpufreq.c
-index 54dde8419..87dc59046 100644
+index 54dde8419bdc..87dc59046311 100644
 --- a/drivers/cpufreq/cpufreq.c
 +++ b/drivers/cpufreq/cpufreq.c
 @@ -1404,6 +1404,47 @@ static int cpufreq_policy_init_qos(struct cpufreq_policy *policy)

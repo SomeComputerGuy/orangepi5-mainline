@@ -30,7 +30,7 @@ Assisted-by: Claude:claude-opus-5-5
  1 file changed, 30 insertions(+)
 
 diff --git a/drivers/media/platform/verisilicon/rockchip_vpu_hw.c b/drivers/media/platform/verisilicon/rockchip_vpu_hw.c
-index 02673be98..0dced7515 100644
+index 02673be9878e..0dced7515833 100644
 --- a/drivers/media/platform/verisilicon/rockchip_vpu_hw.c
 +++ b/drivers/media/platform/verisilicon/rockchip_vpu_hw.c
 @@ -7,6 +7,7 @@

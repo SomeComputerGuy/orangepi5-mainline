@@ -21,7 +21,7 @@ Assisted-by: Claude:claude-opus-5-5
  1 file changed, 12 insertions(+)
 
 diff --git a/drivers/media/platform/rockchip/rkvdec/rkvdec.c b/drivers/media/platform/rockchip/rkvdec/rkvdec.c
-index 9d7b0d279..256bfe5b5 100644
+index 9d7b0d279bd5..256bfe5b5c95 100644
 --- a/drivers/media/platform/rockchip/rkvdec/rkvdec.c
 +++ b/drivers/media/platform/rockchip/rkvdec/rkvdec.c
 @@ -212,6 +212,16 @@ static const struct v4l2_ctrl_ops rkvdec_ctrl_ops = {

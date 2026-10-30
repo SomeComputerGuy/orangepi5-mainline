@@ -1,0 +1,154 @@
+From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
+From: Arun Iyengar <aiyengar1990@gmail.com>
+Date: Thu, 29 Oct 2026 12:26:22 +0000
+Subject: [PATCH] media: verisilicon: Reinitialize the IOMMU after a timeout
+
+A job that times out can leave the IOMMU of the VPU in a bad state: a
+core that faulted on an unmapped IOVA leaves the IOMMU with a page fault
+pending, and resetting the core can leave the IOMMU out of sync with
+what its driver expects. The IOMMU is only reinitialized when it runtime
+suspends and resumes, which doesn't happen between back-to-back jobs, so
+the next jobs run with a broken IOMMU and time out as well.
+
+Do like rkvdec: allocate an empty paging domain at probe, and after a
+timeout attach it and detach it again, which returns the device to its
+default DMA domain. The IOMMU driver disables the IOMMU and fully
+reinitializes it on each domain change (on Rockchip: stall, force reset,
+program the directory table and enable paging), and the default domain
+keeps all the existing mappings. This is done from the watchdog work,
+in process context, after the codec reset operation stopped the core
+and while the job still holds the runtime PM reference, so the IOMMU is
+powered.
+
+A secondary core of a multi-core device is attached to the IOMMU domain
+of the main core. Detach it from that domain first and attach it back
+at the end, which reinitializes its IOMMU with the shared mappings.
+
+Devices without an IOMMU, and IOMMUs that can't allocate a paging
+domain, are left alone.
+
+Assisted-by: Claude:claude-opus-5-5
+---
+ drivers/media/platform/verisilicon/hantro.h   |  3 +
+ .../media/platform/verisilicon/hantro_drv.c   | 66 +++++++++++++++++++
+ 2 files changed, 69 insertions(+)
+
+diff --git a/drivers/media/platform/verisilicon/hantro.h b/drivers/media/platform/verisilicon/hantro.h
+index 2a3a0fc3e355..80151d9afac1 100644
+--- a/drivers/media/platform/verisilicon/hantro.h
++++ b/drivers/media/platform/verisilicon/hantro.h
+@@ -222,6 +222,8 @@ enum hantro_core_role {
+  * @role:		Role of this instance in a multi-core device.
+  * @attached_domain:	IOMMU domain of the main core that this secondary
+  *			core is attached to, if any.
++ * @empty_domain:	Empty IOMMU domain, used to reinitialize the IOMMU after
++ *			a timeout. NULL if the VPU isn't behind an IOMMU.
+  */
+ struct hantro_dev {
+ 	struct v4l2_device v4l2_dev;
+@@ -249,6 +251,7 @@ struct hantro_dev {
+ 	spinlock_t cores_lock; /* protects the core list and curr_ctx */
+ 	enum hantro_core_role role;
+ 	struct iommu_domain *attached_domain;
++	struct iommu_domain *empty_domain;
+ };
+ 
+ /**
+diff --git a/drivers/media/platform/verisilicon/hantro_drv.c b/drivers/media/platform/verisilicon/hantro_drv.c
+index 2c1ce4010fa0..d47d85cfdacf 100644
+--- a/drivers/media/platform/verisilicon/hantro_drv.c
++++ b/drivers/media/platform/verisilicon/hantro_drv.c
+@@ -161,6 +161,41 @@ void hantro_irq_done(struct hantro_dev *vpu,
+ 	}
+ }
+ 
++/*
++ * A job that timed out can leave the IOMMU stalled, for instance on a page
++ * fault the core never recovered from, and a hardware reset of the core can
++ * leave the IOMMU state out of sync with its driver. Attach the empty domain
++ * and detach it again to return to the default DMA domain: the IOMMU driver
++ * then disables and fully reinitializes the IOMMU, which keeps all the
++ * mappings of the default domain. A secondary core attached to the domain of
++ * the main core is detached from it first, and attached to it again at the
++ * end.
++ */
++static void hantro_iommu_restore(struct hantro_dev *vpu)
++{
++	int ret;
++
++	if (!vpu->empty_domain)
++		return;
++
++	if (vpu->attached_domain)
++		iommu_detach_device(vpu->attached_domain, vpu->dev);
++
++	ret = iommu_attach_device(vpu->empty_domain, vpu->dev);
++	if (ret)
++		dev_warn(vpu->dev, "Failed to attach the empty IOMMU domain: %d\n",
++			 ret);
++	else
++		iommu_detach_device(vpu->empty_domain, vpu->dev);
++
++	if (vpu->attached_domain) {
++		ret = iommu_attach_device(vpu->attached_domain, vpu->dev);
++		if (ret)
++			dev_err(vpu->dev, "Failed to attach back to the IOMMU domain of the main core: %d\n",
++				ret);
++	}
++}
++
+ void hantro_watchdog(struct work_struct *work)
+ {
+ 	struct hantro_dev *vpu;
+@@ -173,6 +208,7 @@ void hantro_watchdog(struct work_struct *work)
+ 		vpu_err("frame processing timed out!\n");
+ 		if (ctx->codec_ops->reset)
+ 			ctx->codec_ops->reset(ctx);
++		hantro_iommu_restore(vpu);
+ 		hantro_job_finish(vpu, ctx, VB2_BUF_STATE_ERROR);
+ 	}
+ }
+@@ -1178,6 +1214,32 @@ static void hantro_reset_assert(struct hantro_dev *vpu)
+ 	reset_control_assert(vpu->resets);
+ }
+ 
++static void hantro_free_empty_domain(void *data)
++{
++	iommu_domain_free(data);
++}
++
++static int hantro_alloc_empty_domain(struct hantro_dev *vpu)
++{
++	struct iommu_domain *domain;
++
++	if (!iommu_get_domain_for_dev(vpu->dev))
++		return 0;
++
++	domain = iommu_paging_domain_alloc(vpu->dev);
++	if (IS_ERR(domain)) {
++		/* Not fatal, the IOMMU just won't be restored on timeouts. */
++		dev_warn(vpu->dev, "Failed to allocate an empty IOMMU domain: %pe\n",
++			 domain);
++		return 0;
++	}
++
++	vpu->empty_domain = domain;
++
++	return devm_add_action_or_reset(vpu->dev, hantro_free_empty_domain,
++					domain);
++}
++
+ /*
+  * Acquire and initialize the hardware resources of one VPU instance:
+  * clocks, resets, registers, interrupts and runtime PM.
+@@ -1217,6 +1279,10 @@ static int hantro_hw_init(struct hantro_dev *vpu)
+ 	if (IS_ERR(vpu->resets))
+ 		return PTR_ERR(vpu->resets);
+ 
++	ret = hantro_alloc_empty_domain(vpu);
++	if (ret)
++		return ret;
++
+ 	num_bases = vpu->variant->num_regs ?: 1;
+ 	vpu->reg_bases = devm_kcalloc(&pdev->dev, num_bases,
+ 				      sizeof(*vpu->reg_bases), GFP_KERNEL);

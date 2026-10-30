@@ -24,7 +24,7 @@ Link: https://patch.msgid.link/20260806-synopsys-dw-dp-improvements-v11-13-0d508
  1 file changed, 113 insertions(+), 5 deletions(-)
 
 diff --git a/drivers/gpu/drm/rockchip/dw_dp-rockchip.c b/drivers/gpu/drm/rockchip/dw_dp-rockchip.c
-index 38e8fe757..9e49e7dbf 100644
+index 38e8fe75718e..9e49e7dbf420 100644
 --- a/drivers/gpu/drm/rockchip/dw_dp-rockchip.c
 +++ b/drivers/gpu/drm/rockchip/dw_dp-rockchip.c
 @@ -7,9 +7,12 @@

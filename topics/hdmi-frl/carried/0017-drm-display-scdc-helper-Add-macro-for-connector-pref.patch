@@ -18,7 +18,7 @@ Link: https://gitlab.collabora.com/hardware-enablement/rockchip-3588/linux/-/com
  1 file changed, 9 insertions(+), 15 deletions(-)
 
 diff --git a/drivers/gpu/drm/display/drm_scdc_helper.c b/drivers/gpu/drm/display/drm_scdc_helper.c
-index d00da2086..1e7c41d4f 100644
+index d00da20862fc..1e7c41d4f926 100644
 --- a/drivers/gpu/drm/display/drm_scdc_helper.c
 +++ b/drivers/gpu/drm/display/drm_scdc_helper.c
 @@ -58,6 +58,10 @@

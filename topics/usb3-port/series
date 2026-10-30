@@ -1,0 +1,7 @@
+# Apply in this order on top of the parent topic (see topic.env):
+#   while read -r p sha; do git am "$p"; done < <(grep -v '^#' series)
+# Second column: the original commit in the workspace clone (for reference).
+ours/0001-dt-bindings-usb-generic-ehci-Allow-describing-the-ro.patch 7e4c517d32ac6917f6fafbeb5df6d794a7f09165
+ours/0002-usb-core-Pair-ports-of-different-hubs-through-their-.patch ac4a753210e52356bbf0a7f54ecd89f0eb596c4d
+ours/0003-usb-hub-Retry-SuperSpeed-for-a-device-stuck-on-its-U.patch 6b42d15d42065c8cbe27fb43b15e946f7ccdc1a4
+ours/0004-arm64-dts-rockchip-Describe-the-USB3-Type-A-connecto.patch 37974a5464835ca51c5fe345fdfe1b77af1c737b

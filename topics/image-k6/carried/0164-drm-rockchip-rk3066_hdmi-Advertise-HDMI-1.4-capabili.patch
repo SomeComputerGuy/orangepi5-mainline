@@ -1,0 +1,46 @@
+From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
+From: Cristian Ciocaltea <cristian.ciocaltea@collabora.com>
+Date: Thu, 16 Jul 2026 20:08:04 +0300
+Subject: [PATCH] drm/rockchip: rk3066_hdmi: Advertise HDMI 1.4 capabilities
+
+Bridges using DRM_BRIDGE_OP_HDMI are now expected to also provide a
+supported HDMI version.  This is not yet enforced, but will become
+mandatory once the migration to the new caps-based HDMI connector
+initialization API is completed.
+
+The RK3066 HDMI TX supports HDMI 1.4a, as described in commit
+f84d3d37b7fb ("drm: rockchip: introduce rk3066 hdmi").  However, the
+driver does not currently enforce a maximum TMDS character rate, it only
+filters non-CEA modes and excludes VIC 1 (640x480) via the .mode_valid
+callback.
+
+Advertise HDMI 1.4 support for now so that modes exceeding the 340 MHz
+TMDS limit are rejected by the core.
+
+Reviewed-by: Heiko Stuebner <heiko@sntech.de>
+Signed-off-by: Cristian Ciocaltea <cristian.ciocaltea@collabora.com>
+Link: https://gitlab.collabora.com/hardware-enablement/rockchip-3588/linux/-/commit/de5c3452f9c29e5ee51130f46a0eb90bebae5f48
+---
+ drivers/gpu/drm/rockchip/rk3066_hdmi.c | 2 ++
+ 1 file changed, 2 insertions(+)
+
+diff --git a/drivers/gpu/drm/rockchip/rk3066_hdmi.c b/drivers/gpu/drm/rockchip/rk3066_hdmi.c
+index f28d6a883e09..f748700b0ba6 100644
+--- a/drivers/gpu/drm/rockchip/rk3066_hdmi.c
++++ b/drivers/gpu/drm/rockchip/rk3066_hdmi.c
+@@ -14,6 +14,7 @@
+ #include <drm/drm_probe_helper.h>
+ 
+ #include <linux/clk.h>
++#include <linux/hdmi.h>
+ #include <linux/mfd/syscon.h>
+ #include <linux/platform_device.h>
+ #include <linux/regmap.h>
+@@ -712,6 +713,7 @@ rk3066_hdmi_register(struct drm_device *drm, struct rk3066_hdmi *hdmi)
+ 	hdmi->bridge.type = DRM_MODE_CONNECTOR_HDMIA;
+ 	hdmi->bridge.vendor = "Rockchip";
+ 	hdmi->bridge.product = "RK3066 HDMI";
++	hdmi->bridge.supported_hdmi_ver = HDMI_VERSION_1_4;
+ 
+ 	hdmi->bridge.ddc = rk3066_hdmi_i2c_adapter(hdmi);
+ 	if (IS_ERR(hdmi->bridge.ddc))

@@ -1,0 +1,35 @@
+From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
+From: Cristian Ciocaltea <cristian.ciocaltea@collabora.com>
+Date: Mon, 17 Aug 2026 15:33:18 +0300
+Subject: [PATCH] drm/bridge: dw-hdmi-qp: Advertise HDMI 2.1 support
+
+Now that HDMI 2.1 support has been wired in the Rockchip platform
+driver, bump the HDMI version in the bridge library from 2.0 to 2.1,
+conditionally advertising the new version only when the PHY supports FRL
+rate configuration (otherwise 2.0 is retained), to enable using FRL for
+modes exceeding the TMDS limit.
+
+Signed-off-by: Cristian Ciocaltea <cristian.ciocaltea@collabora.com>
+Link: https://gitlab.collabora.com/hardware-enablement/rockchip-3588/linux/-/commit/c196a9a0160cdd6315949104cb5da3bd4c5c61a0
+---
+ drivers/gpu/drm/bridge/synopsys/dw-hdmi-qp.c | 5 ++++-
+ 1 file changed, 4 insertions(+), 1 deletion(-)
+
+diff --git a/drivers/gpu/drm/bridge/synopsys/dw-hdmi-qp.c b/drivers/gpu/drm/bridge/synopsys/dw-hdmi-qp.c
+index d59bdfc7126c..94772b80f439 100644
+--- a/drivers/gpu/drm/bridge/synopsys/dw-hdmi-qp.c
++++ b/drivers/gpu/drm/bridge/synopsys/dw-hdmi-qp.c
+@@ -1287,9 +1287,12 @@ struct dw_hdmi_qp *dw_hdmi_qp_bind(struct platform_device *pdev,
+ 
+ 	if (hdmi->no_hpd) {
+ 		hdmi->bridge.supported_hdmi_ver = HDMI_VERSION_1_4;
+-	} else {
++	} else if (!plat_data->phy_ops->set_frl_rate) {
+ 		hdmi->bridge.supported_hdmi_ver = HDMI_VERSION_2_0;
+ 		hdmi->bridge.ops |= DRM_BRIDGE_OP_HPD;
++	} else {
++		hdmi->bridge.supported_hdmi_ver = HDMI_VERSION_2_1;
++		hdmi->bridge.ops |= DRM_BRIDGE_OP_HPD;
+ 		hdmi->bridge.min_frl_rate_per_lane = plat_data->min_frl_rate_per_lane;
+ 		hdmi->bridge.min_frl_lanes = plat_data->min_frl_lanes;
+ 		hdmi->bridge.max_frl_rate_per_lane = plat_data->max_frl_rate_per_lane;

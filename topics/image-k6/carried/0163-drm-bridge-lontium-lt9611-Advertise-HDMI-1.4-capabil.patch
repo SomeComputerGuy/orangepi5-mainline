@@ -1,0 +1,77 @@
+From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
+From: Cristian Ciocaltea <cristian.ciocaltea@collabora.com>
+Date: Thu, 16 Jul 2026 18:51:34 +0300
+Subject: [PATCH] drm/bridge: lontium-lt9611: Advertise HDMI 1.4 capabilities
+
+Bridges using DRM_BRIDGE_OP_HDMI are expected to provide the supported
+HDMI version.  This is not enforced yet, but will become mandatory once
+the migration to the caps-based HDMI connector initialization API is
+complete.
+
+As LT9611 supposedly cannot drive a TMDS character rate exceeding 297
+MHz, advertise HDMI 1.4 as the supported version.  HDMI 1.4 allows up to
+340 MHz, so set the bridge's max_tmds_char_rate to ensure the connector
+limit derived from supported_hdmi_ver remains within the hardware
+capabilities.
+
+drm_bridge_connector_atomic_check() calls
+drm_atomic_helper_connector_hdmi_check(), which rejects modes whose
+computed TMDS character rate exceeds the connector's max_tmds_char_rate
+before invoking the driver's .tmds_char_rate_valid hook.  Since
+max_tmds_char_rate now carries the existing effective limit,
+lt9611_hdmi_tmds_char_rate_valid() is redundant.  Drop it.
+
+Signed-off-by: Cristian Ciocaltea <cristian.ciocaltea@collabora.com>
+Link: https://gitlab.collabora.com/hardware-enablement/rockchip-3588/linux/-/commit/f25d223f99fb729bc3a1ff3410a3837f1cb384f3
+---
+ drivers/gpu/drm/bridge/lontium-lt9611.c | 16 +++-------------
+ 1 file changed, 3 insertions(+), 13 deletions(-)
+
+diff --git a/drivers/gpu/drm/bridge/lontium-lt9611.c b/drivers/gpu/drm/bridge/lontium-lt9611.c
+index fb34f661ee0a..f66e3d1b1b57 100644
+--- a/drivers/gpu/drm/bridge/lontium-lt9611.c
++++ b/drivers/gpu/drm/bridge/lontium-lt9611.c
+@@ -5,6 +5,7 @@
+  */
+ 
+ #include <linux/gpio/consumer.h>
++#include <linux/hdmi.h>
+ #include <linux/i2c.h>
+ #include <linux/interrupt.h>
+ #include <linux/media-bus-format.h>
+@@ -952,18 +953,6 @@ static int lt9611_hdmi_write_hdmi_infoframe(struct drm_bridge *bridge,
+ 	return 0;
+ }
+ 
+-static enum drm_mode_status
+-lt9611_hdmi_tmds_char_rate_valid(const struct drm_bridge *bridge,
+-				 const struct drm_display_mode *mode,
+-				 unsigned long long tmds_rate)
+-{
+-	/* 297 MHz for 4k@30 mode */
+-	if (tmds_rate > 297000000)
+-		return MODE_CLOCK_HIGH;
+-
+-	return MODE_OK;
+-}
+-
+ static int lt9611_hdmi_audio_startup(struct drm_bridge *bridge,
+ 				     struct drm_connector *connector)
+ {
+@@ -1029,7 +1018,6 @@ static const struct drm_bridge_funcs lt9611_bridge_funcs = {
+ 	.atomic_create_state = drm_atomic_helper_bridge_create_state,
+ 	.atomic_get_input_bus_fmts = lt9611_atomic_get_input_bus_fmts,
+ 
+-	.hdmi_tmds_char_rate_valid = lt9611_hdmi_tmds_char_rate_valid,
+ 	.hdmi_write_audio_infoframe = lt9611_hdmi_write_audio_infoframe,
+ 	.hdmi_clear_audio_infoframe = lt9611_hdmi_clear_audio_infoframe,
+ 	.hdmi_write_avi_infoframe = lt9611_hdmi_write_avi_infoframe,
+@@ -1177,6 +1165,8 @@ static int lt9611_probe(struct i2c_client *client)
+ 	lt9611->bridge.hdmi_audio_dev = dev;
+ 	lt9611->bridge.hdmi_audio_max_i2s_playback_channels = 8;
+ 	lt9611->bridge.hdmi_audio_dai_port = 2;
++	lt9611->bridge.supported_hdmi_ver = HDMI_VERSION_1_4;
++	lt9611->bridge.max_tmds_char_rate = 297000000; /* 297 MHz for 4k@30 mode */
+ 
+ 	drm_bridge_add(&lt9611->bridge);
+ 

@@ -170,3 +170,10 @@ Hardware-tested: HDMI audio audible through 4K60(FRL)→4K120(FRL)→4K60→1080
 listened); DP audio verified at signal level only (the Dell has no speakers). Overlay: ALSA UCM profiles
 (es8388 headphone defaults, HDMI/DP names), cloud-init default user groups audio/video/render; desktop
 WirePlumber priorities in overlay-desktop/. Packages: alsa-utils alsa-ucm-conf gstreamer1.0-alsa.
+
+Update 2026-10-30 05:25: 0270 (phy-rockchip-usbdp keep USB3 on DP entry) moved to patches/linux-hold/ — it fixes the USB3
+drop but breaks DP AUX at boot (AUX -110 timeouts, DP-1 down on every boot since it was installed). 0271-0274 (tcpm VDM
+discovery fixes) added, not yet board-tested.
+
+## 1501-1504 (USB3 Type-A boot race) — DROPPED 2026-10-30, moved to patches/linux-dropped/
+Tested on build 5: the port pairing works and the SuperSpeed retry fires, but the SanDisk stays at 480M after every software reset (usbreset, USB2 suspend/resume, EHCI and dwc3 rebind). The device only tries SuperSpeed when VBUS rises; the board's Type-A VBUS is always on (no GPIO), so it rises before combphy2/xHCI exist. Hot-plug gives 5000M every time. No kernel or DT fix; it would need a switchable VBUS. Details: work/_out/usb3-port/RESULTS.md.

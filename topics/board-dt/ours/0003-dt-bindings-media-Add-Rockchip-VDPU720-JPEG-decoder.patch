@@ -21,7 +21,7 @@ Assisted-by: Claude:claude-opus-5-5
 
 diff --git a/Documentation/devicetree/bindings/media/rockchip,rk3588-jpeg-decoder.yaml b/Documentation/devicetree/bindings/media/rockchip,rk3588-jpeg-decoder.yaml
 new file mode 100644
-index 000000000..9c42f85c1
+index 000000000000..9c42f85c1be5
 --- /dev/null
 +++ b/Documentation/devicetree/bindings/media/rockchip,rk3588-jpeg-decoder.yaml
 @@ -0,0 +1,86 @@
@@ -112,7 +112,7 @@ index 000000000..9c42f85c1
 +        };
 +    };
 diff --git a/MAINTAINERS b/MAINTAINERS
-index 782389bd5..6378c4aa7 100644
+index 782389bd5cd3..6378c4aa7f4f 100644
 --- a/MAINTAINERS
 +++ b/MAINTAINERS
 @@ -23732,6 +23732,13 @@ S:	Maintained

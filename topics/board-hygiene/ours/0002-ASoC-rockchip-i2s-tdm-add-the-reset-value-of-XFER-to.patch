@@ -25,7 +25,7 @@ Assisted-by: Claude:claude-opus-5-5
  1 file changed, 1 insertion(+)
 
 diff --git a/sound/soc/rockchip/rockchip_i2s_tdm.c b/sound/soc/rockchip/rockchip_i2s_tdm.c
-index 5ef7f1097..610bf65d0 100644
+index 5ef7f109706d..610bf65d017a 100644
 --- a/sound/soc/rockchip/rockchip_i2s_tdm.c
 +++ b/sound/soc/rockchip/rockchip_i2s_tdm.c
 @@ -913,6 +913,7 @@ static const struct reg_default rockchip_i2s_tdm_reg_defaults[] = {

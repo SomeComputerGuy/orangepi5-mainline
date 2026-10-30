@@ -33,7 +33,7 @@ Link: https://gitlab.collabora.com/hardware-enablement/rockchip-3588/linux/-/com
  2 files changed, 89 insertions(+)
 
 diff --git a/drivers/gpu/drm/drm_connector.c b/drivers/gpu/drm/drm_connector.c
-index 38cf853e8..d94c86bfe 100644
+index 38cf853e867e..d94c86bfed86 100644
 --- a/drivers/gpu/drm/drm_connector.c
 +++ b/drivers/gpu/drm/drm_connector.c
 @@ -602,6 +602,13 @@ int drmm_connector_hdmi_init(struct drm_device *dev,
@@ -61,7 +61,7 @@ index 38cf853e8..d94c86bfe 100644
  
  	if (connector->privacy_screen) {
 diff --git a/include/drm/drm_connector.h b/include/drm/drm_connector.h
-index a6de3e63b..6b2cce2fa 100644
+index a6de3e63b462..6b2cce2fa3af 100644
 --- a/include/drm/drm_connector.h
 +++ b/include/drm/drm_connector.h
 @@ -28,6 +28,7 @@

@@ -20,7 +20,7 @@ Link: https://gitlab.collabora.com/hardware-enablement/rockchip-3588/linux/-/com
  1 file changed, 60 insertions(+), 58 deletions(-)
 
 diff --git a/include/drm/display/drm_scdc.h b/include/drm/display/drm_scdc.h
-index 7f0b05b2f..2d3ad012b 100644
+index 7f0b05b2f280..2d3ad012b768 100644
 --- a/include/drm/display/drm_scdc.h
 +++ b/include/drm/display/drm_scdc.h
 @@ -24,84 +24,86 @@

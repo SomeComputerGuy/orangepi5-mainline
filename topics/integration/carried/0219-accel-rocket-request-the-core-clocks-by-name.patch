@@ -64,7 +64,7 @@ Reviewed-by: Jiaxing Hu <gahing@gahingwoo.com>
  1 file changed, 4 insertions(+)
 
 diff --git a/drivers/accel/rocket/rocket_core.c b/drivers/accel/rocket/rocket_core.c
-index b3b2fa9ba..5dd260bac 100644
+index b3b2fa9ba645..5dd260bacbff 100644
 --- a/drivers/accel/rocket/rocket_core.c
 +++ b/drivers/accel/rocket/rocket_core.c
 @@ -28,6 +28,10 @@ int rocket_core_init(struct rocket_core *core)

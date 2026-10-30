@@ -19,7 +19,7 @@ Link: https://patch.msgid.link/20260806-synopsys-dw-dp-improvements-v11-12-0d508
  2 files changed, 41 insertions(+)
 
 diff --git a/drivers/gpu/drm/bridge/synopsys/dw-dp.c b/drivers/gpu/drm/bridge/synopsys/dw-dp.c
-index a6099f7dd..3af5b1f64 100644
+index a6099f7ddc87..3af5b1f643c1 100644
 --- a/drivers/gpu/drm/bridge/synopsys/dw-dp.c
 +++ b/drivers/gpu/drm/bridge/synopsys/dw-dp.c
 @@ -1875,6 +1875,19 @@ static struct drm_bridge_state *dw_dp_bridge_atomic_duplicate_state(struct drm_b
@@ -96,7 +96,7 @@ index a6099f7dd..3af5b1f64 100644
  
  	INIT_WORK(&dp->hpd_work, dw_dp_hpd_work);
 diff --git a/include/drm/bridge/dw_dp.h b/include/drm/bridge/dw_dp.h
-index a82412a9e..79b2cdf0d 100644
+index a82412a9e769..79b2cdf0df99 100644
 --- a/include/drm/bridge/dw_dp.h
 +++ b/include/drm/bridge/dw_dp.h
 @@ -20,6 +20,9 @@ enum {

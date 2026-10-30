@@ -22,7 +22,7 @@ Link: https://gitlab.collabora.com/hardware-enablement/rockchip-3588/linux/-/com
  3 files changed, 2 insertions(+), 10 deletions(-)
 
 diff --git a/drivers/gpu/drm/display/drm_hdmi_state_helper.c b/drivers/gpu/drm/display/drm_hdmi_state_helper.c
-index 289dce6c6..687793c62 100644
+index 289dce6c6281..687793c62d55 100644
 --- a/drivers/gpu/drm/display/drm_hdmi_state_helper.c
 +++ b/drivers/gpu/drm/display/drm_hdmi_state_helper.c
 @@ -428,7 +428,8 @@ sink_supports_format_bpc(const struct drm_connector *connector,
@@ -36,7 +36,7 @@ index 289dce6c6..687793c62 100644
  			    drm_hdmi_connector_get_output_format_name(format));
  		return false;
 diff --git a/drivers/gpu/drm/drm_connector.c b/drivers/gpu/drm/drm_connector.c
-index 4d580aaec..db4d8daac 100644
+index 4d580aaec247..db4d8daacfa0 100644
 --- a/drivers/gpu/drm/drm_connector.c
 +++ b/drivers/gpu/drm/drm_connector.c
 @@ -617,9 +617,6 @@ int drmm_connector_hdmi_init(struct drm_device *dev,
@@ -50,7 +50,7 @@ index 4d580aaec..db4d8daac 100644
  	 * The supported HDMI version can be used to determinate the maximum
  	 * TMDS character rate allowed by the specification. Some controllers,
 diff --git a/include/drm/drm_connector.h b/include/drm/drm_connector.h
-index 0245eb873..836135376 100644
+index 0245eb873463..836135376a25 100644
 --- a/include/drm/drm_connector.h
 +++ b/include/drm/drm_connector.h
 @@ -2125,12 +2125,6 @@ struct drm_connector_hdmi_audio {

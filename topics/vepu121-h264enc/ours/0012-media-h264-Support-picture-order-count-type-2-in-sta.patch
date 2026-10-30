@@ -26,7 +26,7 @@ Assisted-by: Claude:claude-opus-5-5
  3 files changed, 52 insertions(+), 5 deletions(-)
 
 diff --git a/drivers/media/v4l2-core/v4l2-h264-enc-rbsp.c b/drivers/media/v4l2-core/v4l2-h264-enc-rbsp.c
-index a165f8114..2d7518551 100644
+index a165f8114ce9..2d751855195b 100644
 --- a/drivers/media/v4l2-core/v4l2-h264-enc-rbsp.c
 +++ b/drivers/media/v4l2-core/v4l2-h264-enc-rbsp.c
 @@ -758,7 +758,8 @@ int v4l2_h264_enc_rbsp_sps(struct v4l2_h264_enc_rbsp *rbsp,
@@ -40,7 +40,7 @@ index a165f8114..2d7518551 100644
  	}
  
 diff --git a/drivers/media/v4l2-core/v4l2-h264-enc.c b/drivers/media/v4l2-core/v4l2-h264-enc.c
-index af925b662..9745c0e85 100644
+index af925b6626cf..9745c0e85ee5 100644
 --- a/drivers/media/v4l2-core/v4l2-h264-enc.c
 +++ b/drivers/media/v4l2-core/v4l2-h264-enc.c
 @@ -200,10 +200,11 @@ static int state_prepare_params(struct v4l2_h264_enc *enc)
@@ -124,7 +124,7 @@ index af925b662..9745c0e85 100644
  		return 0;
  
 diff --git a/include/media/v4l2-h264-enc.h b/include/media/v4l2-h264-enc.h
-index 6debdc952..ff7166109 100644
+index 6debdc95232c..ff7166109551 100644
 --- a/include/media/v4l2-h264-enc.h
 +++ b/include/media/v4l2-h264-enc.h
 @@ -54,6 +54,9 @@ struct v4l2_h264_enc_ref {

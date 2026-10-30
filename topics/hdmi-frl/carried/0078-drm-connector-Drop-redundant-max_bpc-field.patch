@@ -21,7 +21,7 @@ Link: https://gitlab.collabora.com/hardware-enablement/rockchip-3588/linux/-/com
  3 files changed, 3 insertions(+), 10 deletions(-)
 
 diff --git a/drivers/gpu/drm/display/drm_hdmi_state_helper.c b/drivers/gpu/drm/display/drm_hdmi_state_helper.c
-index 687793c62..abe7e3061 100644
+index 687793c62d55..abe7e3061e4c 100644
 --- a/drivers/gpu/drm/display/drm_hdmi_state_helper.c
 +++ b/drivers/gpu/drm/display/drm_hdmi_state_helper.c
 @@ -321,7 +321,7 @@
@@ -52,7 +52,7 @@ index 687793c62..abe7e3061 100644
  
  	if (!conn_state->hdr_output_metadata)
 diff --git a/drivers/gpu/drm/drm_connector.c b/drivers/gpu/drm/drm_connector.c
-index db4d8daac..bb02e8626 100644
+index db4d8daacfa0..bb02e8626c0d 100644
 --- a/drivers/gpu/drm/drm_connector.c
 +++ b/drivers/gpu/drm/drm_connector.c
 @@ -662,8 +662,6 @@ int drmm_connector_hdmi_init(struct drm_device *dev,
@@ -65,7 +65,7 @@ index db4d8daac..bb02e8626 100644
  	if (hdmi_funcs->max_bpc > 8)
  		drm_connector_attach_hdr_output_metadata_property(connector);
 diff --git a/include/drm/drm_connector.h b/include/drm/drm_connector.h
-index 836135376..8a33d8244 100644
+index 836135376a25..8a33d824496f 100644
 --- a/include/drm/drm_connector.h
 +++ b/include/drm/drm_connector.h
 @@ -2391,11 +2391,6 @@ struct drm_connector {

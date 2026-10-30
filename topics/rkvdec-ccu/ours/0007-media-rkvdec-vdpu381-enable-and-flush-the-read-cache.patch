@@ -22,7 +22,7 @@ Assisted-by: Claude:claude-opus-5-5
  3 files changed, 39 insertions(+)
 
 diff --git a/drivers/media/platform/rockchip/rkvdec/rkvdec-vdpu381-regs.h b/drivers/media/platform/rockchip/rkvdec/rkvdec-vdpu381-regs.h
-index de59dcba3..6c0ccced2 100644
+index de59dcba3011..6c0ccced2454 100644
 --- a/drivers/media/platform/rockchip/rkvdec/rkvdec-vdpu381-regs.h
 +++ b/drivers/media/platform/rockchip/rkvdec/rkvdec-vdpu381-regs.h
 @@ -37,6 +37,15 @@
@@ -42,7 +42,7 @@ index de59dcba3..6c0ccced2 100644
  #define VDPU381_STA_INT_DEC_RDY_STA	BIT(2)
  #define VDPU381_STA_INT_ERROR		BIT(4)
 diff --git a/drivers/media/platform/rockchip/rkvdec/rkvdec.c b/drivers/media/platform/rockchip/rkvdec/rkvdec.c
-index f0ca0d5c6..d501f3576 100644
+index f0112924acd9..a94a2e90ed65 100644
 --- a/drivers/media/platform/rockchip/rkvdec/rkvdec.c
 +++ b/drivers/media/platform/rockchip/rkvdec/rkvdec.c
 @@ -1542,6 +1542,25 @@ void rkvdec_schedule_watchdog(struct rkvdec_core *core, u32 timeout_threshold)
@@ -71,7 +71,7 @@ index f0ca0d5c6..d501f3576 100644
  static void rkvdec_device_run(void *priv)
  {
  	struct rkvdec_ctx *ctx = priv;
-@@ -1586,6 +1605,8 @@ static void rkvdec_device_run(void *priv)
+@@ -1585,6 +1604,8 @@ static void rkvdec_device_run(void *priv)
  	if (ctx->dev->ccu)
  		rkvdec_ccu_prepare(ctx);
  
@@ -80,7 +80,7 @@ index f0ca0d5c6..d501f3576 100644
  	if (!rkvdec_rcb_buf_validate_size(ctx)) {
  		rkvdec_free_rcb(ctx->dev, core);
  
-@@ -2125,6 +2146,7 @@ static const struct rkvdec_variant vdpu381_variant = {
+@@ -2124,6 +2145,7 @@ static const struct rkvdec_variant vdpu381_variant = {
  	.num_rcb_sizes = ARRAY_SIZE(vdpu381_rcb_sizes),
  	.ops = &vdpu381_variant_ops,
  	.has_ccu = true,
@@ -88,7 +88,7 @@ index f0ca0d5c6..d501f3576 100644
  };
  
  static const struct rcb_size_info vdpu383_rcb_sizes[] = {
-@@ -2273,6 +2295,12 @@ static int rkvdec_core_probe(struct platform_device *pdev)
+@@ -2272,6 +2294,12 @@ static int rkvdec_core_probe(struct platform_device *pdev)
  		core->link = devm_platform_ioremap_resource_byname(pdev, "link");
  		if (IS_ERR(core->link))
  			return PTR_ERR(core->link);
@@ -102,7 +102,7 @@ index f0ca0d5c6..d501f3576 100644
  
  	if (iommu_get_domain_for_dev(&pdev->dev)) {
 diff --git a/drivers/media/platform/rockchip/rkvdec/rkvdec.h b/drivers/media/platform/rockchip/rkvdec/rkvdec.h
-index fea8e2ba8..1c27fcffe 100644
+index fea8e2ba8877..1c27fcffefca 100644
 --- a/drivers/media/platform/rockchip/rkvdec/rkvdec.h
 +++ b/drivers/media/platform/rockchip/rkvdec/rkvdec.h
 @@ -93,6 +93,7 @@ struct rkvdec_variant {

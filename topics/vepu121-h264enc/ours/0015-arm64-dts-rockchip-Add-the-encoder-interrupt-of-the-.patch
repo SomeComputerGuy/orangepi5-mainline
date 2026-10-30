@@ -22,7 +22,7 @@ Assisted-by: Claude:claude-opus-5-5
  1 file changed, 3 insertions(+), 2 deletions(-)
 
 diff --git a/arch/arm64/boot/dts/rockchip/rk3588-base.dtsi b/arch/arm64/boot/dts/rockchip/rk3588-base.dtsi
-index f8b763ad3..672b0f4f5 100644
+index f8b763ad3070..672b0f4f5c19 100644
 --- a/arch/arm64/boot/dts/rockchip/rk3588-base.dtsi
 +++ b/arch/arm64/boot/dts/rockchip/rk3588-base.dtsi
 @@ -1244,8 +1244,9 @@ rknn_mmu_2: iommu@fdada000 {

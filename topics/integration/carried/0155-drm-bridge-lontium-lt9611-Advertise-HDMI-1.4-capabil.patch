@@ -28,7 +28,7 @@ Link: https://gitlab.collabora.com/hardware-enablement/rockchip-3588/linux/-/com
  1 file changed, 3 insertions(+), 13 deletions(-)
 
 diff --git a/drivers/gpu/drm/bridge/lontium-lt9611.c b/drivers/gpu/drm/bridge/lontium-lt9611.c
-index fb34f661e..f66e3d1b1 100644
+index fb34f661ee0a..f66e3d1b1b57 100644
 --- a/drivers/gpu/drm/bridge/lontium-lt9611.c
 +++ b/drivers/gpu/drm/bridge/lontium-lt9611.c
 @@ -5,6 +5,7 @@

@@ -23,7 +23,7 @@ Assisted-by: Claude:claude-opus-5-5
  1 file changed, 2 insertions(+), 1 deletion(-)
 
 diff --git a/drivers/gpu/drm/rockchip/dw-mipi-dsi2-rockchip.c b/drivers/gpu/drm/rockchip/dw-mipi-dsi2-rockchip.c
-index 6db886650..dd7e5f9b3 100644
+index 6db88665060d..dd7e5f9b377c 100644
 --- a/drivers/gpu/drm/rockchip/dw-mipi-dsi2-rockchip.c
 +++ b/drivers/gpu/drm/rockchip/dw-mipi-dsi2-rockchip.c
 @@ -486,7 +486,8 @@ static const struct rockchip_dw_dsi2_chip_data rk3588_chip_data[] = {

@@ -52,7 +52,7 @@ Assisted-by: Claude:claude-opus-5-5
  4 files changed, 18 insertions(+), 15 deletions(-)
 
 diff --git a/drivers/media/platform/verisilicon/hantro_drv.c b/drivers/media/platform/verisilicon/hantro_drv.c
-index b39c6e453..6037ae6c3 100644
+index b39c6e453c15..6037ae6c3ee1 100644
 --- a/drivers/media/platform/verisilicon/hantro_drv.c
 +++ b/drivers/media/platform/verisilicon/hantro_drv.c
 @@ -187,13 +187,21 @@ static void device_run(void *priv)
@@ -79,7 +79,7 @@ index b39c6e453..6037ae6c3 100644
  }
  
 diff --git a/drivers/media/platform/verisilicon/hantro_g2_vp9_dec.c b/drivers/media/platform/verisilicon/hantro_g2_vp9_dec.c
-index 56c79e339..a023e7425 100644
+index 56c79e339030..a023e7425767 100644
 --- a/drivers/media/platform/verisilicon/hantro_g2_vp9_dec.c
 +++ b/drivers/media/platform/verisilicon/hantro_g2_vp9_dec.c
 @@ -894,10 +894,8 @@ int hantro_g2_vp9_dec_run(struct hantro_ctx *ctx)
@@ -95,7 +95,7 @@ index 56c79e339..a023e7425 100644
  	src = hantro_get_src_buf(ctx);
  	dst = hantro_get_dst_buf(ctx);
 diff --git a/drivers/media/platform/verisilicon/hantro_hw.h b/drivers/media/platform/verisilicon/hantro_hw.h
-index 13e573f1f..35a74b9ec 100644
+index 13e573f1f19d..35a74b9ec0b4 100644
 --- a/drivers/media/platform/verisilicon/hantro_hw.h
 +++ b/drivers/media/platform/verisilicon/hantro_hw.h
 @@ -375,7 +375,11 @@ struct hantro_postproc_ops {
@@ -112,7 +112,7 @@ index 13e573f1f..35a74b9ec 100644
   * @reset:	Reset the hardware in case of a timeout.
   */
 diff --git a/drivers/media/platform/verisilicon/rockchip_vpu981_hw_av1_dec.c b/drivers/media/platform/verisilicon/rockchip_vpu981_hw_av1_dec.c
-index 00aa566a4..070809eb8 100644
+index 00aa566a4ccd..070809eb899b 100644
 --- a/drivers/media/platform/verisilicon/rockchip_vpu981_hw_av1_dec.c
 +++ b/drivers/media/platform/verisilicon/rockchip_vpu981_hw_av1_dec.c
 @@ -2175,13 +2175,11 @@ int rockchip_vpu981_av1_dec_run(struct hantro_ctx *ctx)

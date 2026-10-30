@@ -1,0 +1,33 @@
+From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
+From: Arun Iyengar <aiyengar1990@gmail.com>
+Date: Thu, 29 Oct 2026 22:42:52 +0000
+Subject: [PATCH] media: rkvdec: vdpu381: Compress the co-located motion
+ vectors of HEVC
+
+Like for H.264, store the co-located motion vectors of HEVC frames
+compressed, which the vendor code (MPP, hal_h265d_vdpu34x.c) always
+does. The previous commit reserved space for the compressed layout.
+
+On RK3588, a 24 Mbit/s 3840x2160 HEVC stream (240 frames, x265
+ultrafast) decodes at 104.6 fps instead of 98.6-102.8 fps, and the
+decoded frames are identical.
+
+Assisted-by: Claude:claude-opus-5-5
+---
+ drivers/media/platform/rockchip/rkvdec/rkvdec-vdpu381-hevc.c | 3 +++
+ 1 file changed, 3 insertions(+)
+
+diff --git a/drivers/media/platform/rockchip/rkvdec/rkvdec-vdpu381-hevc.c b/drivers/media/platform/rockchip/rkvdec/rkvdec-vdpu381-hevc.c
+index ca52243650ec..8281bd3c52b8 100644
+--- a/drivers/media/platform/rockchip/rkvdec/rkvdec-vdpu381-hevc.c
++++ b/drivers/media/platform/rockchip/rkvdec/rkvdec-vdpu381-hevc.c
+@@ -404,6 +404,9 @@ static void config_registers(struct rkvdec_ctx *ctx,
+ 	/* Set HEVC mode */
+ 	regs->common.reg009_dec_mode.dec_mode = VDPU381_MODE_HEVC;
+ 
++	/* Store the co-located motion vectors compressed, as for H.264 */
++	regs->common.reg012_secondary_en.colmv_compress_en = 1;
++
+ 	/* Set config */
+ 	regs->common.reg011_important_en.buf_empty_en = 1;
+ 	regs->common.reg011_important_en.dec_clkgate_e = 1;

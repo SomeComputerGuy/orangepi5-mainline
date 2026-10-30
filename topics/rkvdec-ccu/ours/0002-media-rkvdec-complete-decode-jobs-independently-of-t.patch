@@ -36,7 +36,7 @@ Assisted-by: Claude:claude-opus-5-5
  2 files changed, 301 insertions(+), 68 deletions(-)
 
 diff --git a/drivers/media/platform/rockchip/rkvdec/rkvdec.c b/drivers/media/platform/rockchip/rkvdec/rkvdec.c
-index 256bfe5b5..d9463d6db 100644
+index 256bfe5b5c95..d9463d6dba22 100644
 --- a/drivers/media/platform/rockchip/rkvdec/rkvdec.c
 +++ b/drivers/media/platform/rockchip/rkvdec/rkvdec.c
 @@ -1070,6 +1070,11 @@ static void rkvdec_buf_request_complete(struct vb2_buffer *vb)
@@ -526,7 +526,7 @@ index 256bfe5b5..d9463d6db 100644
  
  err_unbind:
 diff --git a/drivers/media/platform/rockchip/rkvdec/rkvdec.h b/drivers/media/platform/rockchip/rkvdec/rkvdec.h
-index 338ce1efb..f0c8a530a 100644
+index 338ce1efb3cd..f0c8a530a6f7 100644
 --- a/drivers/media/platform/rockchip/rkvdec/rkvdec.h
 +++ b/drivers/media/platform/rockchip/rkvdec/rkvdec.h
 @@ -30,7 +30,11 @@

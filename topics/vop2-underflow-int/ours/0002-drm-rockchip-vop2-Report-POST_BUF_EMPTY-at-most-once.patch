@@ -26,7 +26,7 @@ Assisted-by: Claude:claude-opus-5-5
  2 files changed, 70 insertions(+), 3 deletions(-)
 
 diff --git a/drivers/gpu/drm/rockchip/rockchip_drm_vop2.c b/drivers/gpu/drm/rockchip/rockchip_drm_vop2.c
-index e5f3bbb34..d9d820494 100644
+index e5f3bbb345d4..d9d820494e93 100644
 --- a/drivers/gpu/drm/rockchip/rockchip_drm_vop2.c
 +++ b/drivers/gpu/drm/rockchip/rockchip_drm_vop2.c
 @@ -832,6 +832,48 @@ static void vop2_crtc_disable_irq(struct vop2_video_port *vp, u32 irq)
@@ -166,7 +166,7 @@ index e5f3bbb34..d9d820494 100644
  	ret = devm_request_irq(dev, vop2->irq, vop2_isr, IRQF_SHARED, dev_name(dev), vop2);
  	if (ret)
 diff --git a/drivers/gpu/drm/rockchip/rockchip_drm_vop2.h b/drivers/gpu/drm/rockchip/rockchip_drm_vop2.h
-index f8ba1cb58..16ef30c43 100644
+index f8ba1cb58a96..16ef30c438b6 100644
 --- a/drivers/gpu/drm/rockchip/rockchip_drm_vop2.h
 +++ b/drivers/gpu/drm/rockchip/rockchip_drm_vop2.h
 @@ -272,6 +272,16 @@ struct vop2_video_port {

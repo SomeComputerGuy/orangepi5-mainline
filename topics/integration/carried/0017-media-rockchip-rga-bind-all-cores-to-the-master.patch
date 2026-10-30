@@ -25,7 +25,7 @@ Signed-off-by: Sven Püschel <s.pueschel@pengutronix.de>
  2 files changed, 26 insertions(+), 11 deletions(-)
 
 diff --git a/drivers/media/platform/rockchip/rga/rga.c b/drivers/media/platform/rockchip/rga/rga.c
-index f4fd9fd82..9c0027913 100644
+index f4fd9fd82180..9c0027913a45 100644
 --- a/drivers/media/platform/rockchip/rga/rga.c
 +++ b/drivers/media/platform/rockchip/rga/rga.c
 @@ -746,23 +746,33 @@ static int rga_core_bind(struct device *dev, struct device *master, void *data)
@@ -100,7 +100,7 @@ index f4fd9fd82..9c0027913 100644
  
  	rga = devm_kzalloc(dev, sizeof(*rga) + num_cores * sizeof(*rga->cores), GFP_KERNEL);
 diff --git a/drivers/media/platform/rockchip/rga/rga.h b/drivers/media/platform/rockchip/rga/rga.h
-index 06808e62b..f8652ea46 100644
+index 06808e62b145..f8652ea46549 100644
 --- a/drivers/media/platform/rockchip/rga/rga.h
 +++ b/drivers/media/platform/rockchip/rga/rga.h
 @@ -90,6 +90,7 @@ struct rockchip_rga {

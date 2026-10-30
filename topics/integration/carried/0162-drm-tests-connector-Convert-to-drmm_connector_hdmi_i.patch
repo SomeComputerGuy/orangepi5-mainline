@@ -28,7 +28,7 @@ Link: https://gitlab.collabora.com/hardware-enablement/rockchip-3588/linux/-/com
  1 file changed, 119 insertions(+), 132 deletions(-)
 
 diff --git a/drivers/gpu/drm/tests/drm_connector_test.c b/drivers/gpu/drm/tests/drm_connector_test.c
-index 3368aedd4..c53ccce21 100644
+index 3368aedd4e66..c53ccce21a42 100644
 --- a/drivers/gpu/drm/tests/drm_connector_test.c
 +++ b/drivers/gpu/drm/tests/drm_connector_test.c
 @@ -23,6 +23,8 @@ struct drm_connector_init_priv {

@@ -1,0 +1,67 @@
+From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
+From: =?UTF-8?q?Sven=20P=C3=BCschel?= <s.pueschel@pengutronix.de>
+Date: Wed, 16 Sep 2026 17:09:57 +0200
+Subject: [PATCH] media: rockchip: rga: put all cores into first core iommu
+ domain
+MIME-Version: 1.0
+Content-Type: text/plain; charset=UTF-8
+Content-Transfer-Encoding: 8bit
+
+Put all cores into the iommu domain of the first core to allow them to
+be used by any core. All buffers accessed by the hardware are allocated
+on the first core, as the scheduling to a specific core is done after
+the allocation. Therefore put all cores into the same domain to have the
+same iommu mapping on all cores.
+
+Signed-off-by: Sven Püschel <s.pueschel@pengutronix.de>
+---
+ drivers/media/platform/rockchip/rga/rga.c | 22 ++++++++++++++++++++++
+ 1 file changed, 22 insertions(+)
+
+diff --git a/drivers/media/platform/rockchip/rga/rga.c b/drivers/media/platform/rockchip/rga/rga.c
+index 9c0027913a45..7094ac90c6b6 100644
+--- a/drivers/media/platform/rockchip/rga/rga.c
++++ b/drivers/media/platform/rockchip/rga/rga.c
+@@ -10,6 +10,7 @@
+ #include <linux/delay.h>
+ #include <linux/fs.h>
+ #include <linux/interrupt.h>
++#include <linux/iommu.h>
+ #include <linux/module.h>
+ #include <linux/of.h>
+ #include <linux/of_platform.h>
+@@ -761,6 +762,19 @@ static int rga_core_bind(struct device *dev, struct device *master, void *data)
+ 		  rga->version.major, rga->version.minor);
+ 
+ 	if (rga->num_cores) {
++		/* Attach to the first cores iommu */
++		struct iommu_domain *domain = iommu_get_domain_for_dev(rga->cores[0]->dev);
++
++		if (!domain) {
++			dev_err(core->dev, "Couldn't get domain of the first core\n");
++			return -ENODEV;
++		}
++		ret = iommu_attach_device(domain, core->dev);
++		if (ret) {
++			dev_err(core->dev, "Couldn't attach to the domain of the first core\n");
++			return ret;
++		}
++
+ 		/* we are not the first core, expect that we have the same version */
+ 		if (rga->version.major != version.major || rga->version.minor != version.minor) {
+ 			v4l2_err(&rga->v4l2_dev, "Detected multi-core setup with different core versions!\n");
+@@ -788,6 +802,14 @@ static void rga_core_unbind(struct device *dev, struct device *master,
+ 		if (rga->cores[i] != core)
+ 			continue;
+ 
++		if (i) {
++			/* Detach from the first core iommu */
++			struct iommu_domain *domain = iommu_get_domain_for_dev(rga->cores[0]->dev);
++
++			if (domain)
++				iommu_detach_device(domain, core->dev);
++		}
++
+ 		rga->cores[i] = rga->cores[rga->num_cores - 1];
+ 		rga->num_cores--;
+ 		break;

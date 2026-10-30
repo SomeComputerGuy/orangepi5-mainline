@@ -23,7 +23,7 @@ Link: https://patch.msgid.link/20260915-rockchip-usbdp-cleanup-v15-1-80e2c11d1ce
  1 file changed, 24 insertions(+)
 
 diff --git a/Documentation/devicetree/bindings/phy/phy-rockchip-usbdp.yaml b/Documentation/devicetree/bindings/phy/phy-rockchip-usbdp.yaml
-index 8b7059d5b..89efaf005 100644
+index 8b7059d5b182..89efaf005a7b 100644
 --- a/Documentation/devicetree/bindings/phy/phy-rockchip-usbdp.yaml
 +++ b/Documentation/devicetree/bindings/phy/phy-rockchip-usbdp.yaml
 @@ -110,10 +110,34 @@ properties:

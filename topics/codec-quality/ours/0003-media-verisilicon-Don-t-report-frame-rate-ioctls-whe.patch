@@ -27,7 +27,7 @@ Assisted-by: Claude:claude-opus-5-5
  2 files changed, 40 insertions(+)
 
 diff --git a/drivers/media/platform/verisilicon/hantro_drv.c b/drivers/media/platform/verisilicon/hantro_drv.c
-index bb40fed10..973ac1f05 100644
+index bb40fed10d63..973ac1f0539d 100644
 --- a/drivers/media/platform/verisilicon/hantro_drv.c
 +++ b/drivers/media/platform/verisilicon/hantro_drv.c
 @@ -1099,6 +1099,22 @@ static void hantro_detach_func(struct hantro_func *func)
@@ -66,7 +66,7 @@ index bb40fed10..973ac1f05 100644
  		vpu->decoder = func;
  		v4l2_disable_ioctl(vfd, VIDIOC_TRY_ENCODER_CMD);
 diff --git a/drivers/media/platform/verisilicon/hantro_v4l2.c b/drivers/media/platform/verisilicon/hantro_v4l2.c
-index 156170805..6b4a23bea 100644
+index 15617080589a..6b4a23bea4e1 100644
 --- a/drivers/media/platform/verisilicon/hantro_v4l2.c
 +++ b/drivers/media/platform/verisilicon/hantro_v4l2.c
 @@ -213,6 +213,16 @@ static int vidioc_enum_framesizes(struct file *file, void *priv,

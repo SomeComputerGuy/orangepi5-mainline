@@ -24,7 +24,7 @@ Link: https://gitlab.collabora.com/hardware-enablement/rockchip-3588/linux/-/com
  1 file changed, 9 insertions(+), 1 deletion(-)
 
 diff --git a/drivers/gpu/drm/bridge/synopsys/dw-hdmi-qp.c b/drivers/gpu/drm/bridge/synopsys/dw-hdmi-qp.c
-index e22894ad2..2c6a0fb12 100644
+index e22894ad25ce..2c6a0fb12a28 100644
 --- a/drivers/gpu/drm/bridge/synopsys/dw-hdmi-qp.c
 +++ b/drivers/gpu/drm/bridge/synopsys/dw-hdmi-qp.c
 @@ -546,6 +546,8 @@ static void dw_hdmi_qp_bridge_atomic_enable(struct drm_bridge *bridge,

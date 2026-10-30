@@ -18,7 +18,7 @@ Assisted-by: Claude:claude-opus-5-5
  1 file changed, 1 insertion(+), 1 deletion(-)
 
 diff --git a/drivers/media/platform/rockchip/rkisp2/rkisp2-stats.c b/drivers/media/platform/rockchip/rkisp2/rkisp2-stats.c
-index 7bbc1e25b..6900e6b80 100644
+index 7bbc1e25b2cd..6900e6b8065a 100644
 --- a/drivers/media/platform/rockchip/rkisp2/rkisp2-stats.c
 +++ b/drivers/media/platform/rockchip/rkisp2/rkisp2-stats.c
 @@ -28,7 +28,7 @@ rkisp2_stats_blocks_info[] = {

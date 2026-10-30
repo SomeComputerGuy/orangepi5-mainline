@@ -14,7 +14,7 @@ Signed-off-by: Venkata Atchuta Bheemeswara Sarma Darbha <vdarbha0473@gmail.com>
  1 file changed, 10 insertions(+), 2 deletions(-)
 
 diff --git a/drivers/media/platform/rockchip/rkvdec/rkvdec.c b/drivers/media/platform/rockchip/rkvdec/rkvdec.c
-index b7a564a68..0f571dd1b 100644
+index b7a564a68f6f..0f571dd1bf2c 100644
 --- a/drivers/media/platform/rockchip/rkvdec/rkvdec.c
 +++ b/drivers/media/platform/rockchip/rkvdec/rkvdec.c
 @@ -102,12 +102,20 @@ static void rkvdec_fill_decoded_pixfmt(struct rkvdec_ctx *ctx,

@@ -22,7 +22,7 @@ Link: https://gitlab.collabora.com/hardware-enablement/rockchip-3588/linux/-/com
  1 file changed, 4 insertions(+)
 
 diff --git a/drivers/gpu/drm/display/drm_hdmi_state_helper.c b/drivers/gpu/drm/display/drm_hdmi_state_helper.c
-index bccc5d7c8..3ef6de31d 100644
+index bccc5d7c8eed..3ef6de31dc02 100644
 --- a/drivers/gpu/drm/display/drm_hdmi_state_helper.c
 +++ b/drivers/gpu/drm/display/drm_hdmi_state_helper.c
 @@ -562,6 +562,10 @@ hdmi_clock_valid(const struct drm_connector *connector,

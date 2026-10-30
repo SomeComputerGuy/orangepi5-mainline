@@ -21,7 +21,7 @@ Signed-off-by: Venkata Atchuta Bheemeswara Sarma Darbha <vdarbha0473@gmail.com>
  create mode 100644 drivers/media/platform/rockchip/rkvdec/rkvdec-vdpu381-vp9.c
 
 diff --git a/drivers/media/platform/rockchip/rkvdec/Makefile b/drivers/media/platform/rockchip/rkvdec/Makefile
-index 2bbd67b2d..5eae59e87 100644
+index 2bbd67b2db11..5eae59e87fce 100644
 --- a/drivers/media/platform/rockchip/rkvdec/Makefile
 +++ b/drivers/media/platform/rockchip/rkvdec/Makefile
 @@ -10,6 +10,7 @@ rockchip-vdec-y += \
@@ -33,7 +33,7 @@ index 2bbd67b2d..5eae59e87 100644
  		   rkvdec-vdpu383-hevc.o \
  		   rkvdec-vp9-common.o \
 diff --git a/drivers/media/platform/rockchip/rkvdec/rkvdec-vdpu381-regs.h b/drivers/media/platform/rockchip/rkvdec/rkvdec-vdpu381-regs.h
-index 6da36031d..7b92ac386 100644
+index 6da36031df2d..7b92ac38681c 100644
 --- a/drivers/media/platform/rockchip/rkvdec/rkvdec-vdpu381-regs.h
 +++ b/drivers/media/platform/rockchip/rkvdec/rkvdec-vdpu381-regs.h
 @@ -4,6 +4,8 @@
@@ -298,7 +298,7 @@ index 6da36031d..7b92ac386 100644
  #endif /* __RKVDEC_REGS_H__ */
 diff --git a/drivers/media/platform/rockchip/rkvdec/rkvdec-vdpu381-vp9.c b/drivers/media/platform/rockchip/rkvdec/rkvdec-vdpu381-vp9.c
 new file mode 100644
-index 000000000..9aa75a522
+index 000000000000..9aa75a522440
 --- /dev/null
 +++ b/drivers/media/platform/rockchip/rkvdec/rkvdec-vdpu381-vp9.c
 @@ -0,0 +1,1067 @@
@@ -1370,7 +1370,7 @@ index 000000000..9aa75a522
 +	.get_image_fmt = rkvdec_vp9_get_image_fmt,
 +};
 diff --git a/drivers/media/platform/rockchip/rkvdec/rkvdec.c b/drivers/media/platform/rockchip/rkvdec/rkvdec.c
-index 5bc79d608..bf65daf6f 100644
+index 5bc79d6080e2..bf65daf6fb41 100644
 --- a/drivers/media/platform/rockchip/rkvdec/rkvdec.c
 +++ b/drivers/media/platform/rockchip/rkvdec/rkvdec.c
 @@ -445,6 +445,45 @@ static const struct rkvdec_decoded_fmt_desc rkvdec_vp9_decoded_fmts[] = {
@@ -1456,7 +1456,7 @@ index 5bc79d608..bf65daf6f 100644
  
  	/* Propagate colorspace information to capture. */
 diff --git a/drivers/media/platform/rockchip/rkvdec/rkvdec.h b/drivers/media/platform/rockchip/rkvdec/rkvdec.h
-index d5977cef6..338ce1efb 100644
+index d5977cef6df7..338ce1efb3cd 100644
 --- a/drivers/media/platform/rockchip/rkvdec/rkvdec.h
 +++ b/drivers/media/platform/rockchip/rkvdec/rkvdec.h
 @@ -204,6 +204,7 @@ extern const struct rkvdec_coded_fmt_ops rkvdec_vp9_fmt_ops;

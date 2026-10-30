@@ -53,7 +53,7 @@ Signed-off-by: Detlev Casanova <detlev.casanova@collabora.com>
  3 files changed, 107 insertions(+), 17 deletions(-)
 
 diff --git a/drivers/media/platform/rockchip/rkvdec/rkvdec-rcb.c b/drivers/media/platform/rockchip/rkvdec/rkvdec-rcb.c
-index 44df5b6df..977e37cf2 100644
+index 44df5b6df80c..977e37cf209b 100644
 --- a/drivers/media/platform/rockchip/rkvdec/rkvdec-rcb.c
 +++ b/drivers/media/platform/rockchip/rkvdec/rkvdec-rcb.c
 @@ -76,9 +76,8 @@ void rkvdec_free_rcb(struct rkvdec_dev *rkvdec, struct rkvdec_core *core)
@@ -93,7 +93,7 @@ index 44df5b6df..977e37cf2 100644
  			if (ret) {
  				gen_pool_free(core->sram_pool,
 diff --git a/drivers/media/platform/rockchip/rkvdec/rkvdec.c b/drivers/media/platform/rockchip/rkvdec/rkvdec.c
-index 5bafaf0fb..5bc79d608 100644
+index 5bafaf0fb229..5bc79d6080e2 100644
 --- a/drivers/media/platform/rockchip/rkvdec/rkvdec.c
 +++ b/drivers/media/platform/rockchip/rkvdec/rkvdec.c
 @@ -1058,6 +1058,37 @@ static const struct media_device_ops rkvdec_media_ops = {
@@ -291,7 +291,7 @@ index 5bafaf0fb..5bc79d608 100644
  	dev_set_drvdata(dev, rkvdec);
  
 diff --git a/drivers/media/platform/rockchip/rkvdec/rkvdec.h b/drivers/media/platform/rockchip/rkvdec/rkvdec.h
-index 36eadcfca..d5977cef6 100644
+index 36eadcfcabdb..d5977cef6df7 100644
 --- a/drivers/media/platform/rockchip/rkvdec/rkvdec.h
 +++ b/drivers/media/platform/rockchip/rkvdec/rkvdec.h
 @@ -15,6 +15,7 @@

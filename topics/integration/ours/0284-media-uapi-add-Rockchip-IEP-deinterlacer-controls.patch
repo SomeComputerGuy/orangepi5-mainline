@@ -23,7 +23,7 @@ Assisted-by: Claude:claude-opus-5-5
 
 diff --git a/include/uapi/linux/rockchip-iep.h b/include/uapi/linux/rockchip-iep.h
 new file mode 100644
-index 000000000..2be3fb3ea
+index 000000000000..2be3fb3ea0af
 --- /dev/null
 +++ b/include/uapi/linux/rockchip-iep.h
 @@ -0,0 +1,43 @@
@@ -71,7 +71,7 @@ index 000000000..2be3fb3ea
 +
 +#endif /* _UAPI_LINUX_ROCKCHIP_IEP_H */
 diff --git a/include/uapi/linux/v4l2-controls.h b/include/uapi/linux/v4l2-controls.h
-index a6bc3ca97..a8d4738b0 100644
+index a6bc3ca9742b..a8d4738b0a72 100644
 --- a/include/uapi/linux/v4l2-controls.h
 +++ b/include/uapi/linux/v4l2-controls.h
 @@ -234,6 +234,12 @@ enum v4l2_colorfx {

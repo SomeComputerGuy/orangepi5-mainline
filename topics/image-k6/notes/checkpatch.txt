@@ -1,0 +1,334 @@
+== linux/0001-arm64-dts-rockchip-add-Orange-Pi-5-M.2-SATA-variant.patch
+Traceback (most recent call last):
+  File "~/orangepi5/work/integration-7.3/scripts/spdxcheck.py", line 6, in <module>
+    from ply import lex, yacc
+ModuleNotFoundError: No module named 'ply'
+27: WARNING:FILE_PATH_CHANGES: added, moved or deleted file(s), does MAINTAINERS need updating?
+total: 0 errors, 1 warnings, 0 checks, 33 lines checked
+== linux/0101-media-rockchip-rga-rkvdec-sync-with-v7.4-merge-windo.patch
+
+== linux/0130-dt-bindings-iommu-arm-smmu-v3-allow-a-power-domain.patch
+
+== linux/0131-arm64-dts-rockchip-add-the-PCIe-power-domain-to-the-.patch
+23: WARNING:UNKNOWN_COMMIT_ID: Unknown commit id 'da92d3dfc871', maybe rebased or not pulled?
+total: 0 errors, 1 warnings, 0 checks, 7 lines checked
+== linux/0132-dt-bindings-iommu-arm-smmu-v3-allow-clocks.patch
+
+== linux/0133-iommu-arm-smmu-v3-enable-optional-clocks.patch
+
+== linux/0134-arm64-dts-rockchip-add-the-clock-of-the-RK3588-PCIe-.patch
+
+== linux/0400-net-stmmac-dwmac-rk-only-read-the-delays-the-MAC-app.patch
+
+== linux/0401-ASoC-rockchip-i2s-tdm-add-the-reset-value-of-XFER-to.patch
+13: WARNING:COMMIT_LOG_LONG_LINE: Prefer a maximum 75 chars per line (possible unwrapped commit description?)
+total: 0 errors, 1 warnings, 0 checks, 7 lines checked
+== linux/0512-drm-panthor-Do-not-change-the-GPU-clock-rate-while-s.patch
+
+== linux/0514-PM-devfreq-Resume-at-the-frequency-from-before-suspe.patch
+7: WARNING:UNKNOWN_COMMIT_ID: Unknown commit id '62453f1ba5d5', maybe rebased or not pulled?
+26: WARNING:UNKNOWN_COMMIT_ID: Unknown commit id '62453f1ba5d5', maybe rebased or not pulled?
+total: 0 errors, 2 warnings, 0 checks, 22 lines checked
+== linux/0605-media-rkvdec-vdpu381-vp9-adapt-to-the-multi-core-cor.patch
+
+== linux/0606-media-rkvdec-vdpu381-vp9-allow-frames-smaller-than-t.patch
+
+== linux/0607-media-rkvdec-vdpu381-vp9-reset-the-register-set-for-.patch
+
+== linux/0608-media-rkvdec-vdpu381-vp9-fix-segmentation-map-handli.patch
+
+== linux/0609-media-rkvdec-vdpu381-vp9-keep-the-count-table-cachea.patch
+
+== linux/0701-media-verisilicon-Split-probe-into-hardware-init-and.patch
+
+== linux/0702-media-verisilicon-Pick-the-hardware-core-for-each-jo.patch
+
+== linux/0703-media-verisilicon-Add-multi-core-support.patch
+
+== linux/0704-media-verisilicon-Don-t-hold-a-VPU-behind-an-IOMMU-i.patch
+
+== linux/0705-media-verisilicon-Drop-the-runtime-PM-reference-when.patch
+
+== linux/0706-media-verisilicon-Make-the-codec-run-error-handling-.patch
+
+== linux/0707-media-verisilicon-Reset-the-Rockchip-encoder-cores-o.patch
+
+== linux/0708-media-verisilicon-Reinitialize-the-IOMMU-after-a-tim.patch
+
+== linux/0709-dt-bindings-media-rockchip-rk3568-vepu-Add-the-reset.patch
+
+== linux/0710-arm64-dts-rockchip-Add-the-reset-lines-of-the-RK3588.patch
+
+== linux/0711-media-verisilicon-Enforce-a-minimum-CAPTURE-sizeimag.patch
+24: WARNING:BAD_SIGN_OFF: Non-standard signature: Co-Authored-By:
+24: WARNING:BAD_SIGN_OFF: 'Co-authored-by:' is the preferred signature form
+total: 0 errors, 2 warnings, 0 checks, 27 lines checked
+== linux/0712-media-verisilicon-Keep-the-encoder-coded-size-in-syn.patch
+37: WARNING:BAD_SIGN_OFF: Non-standard signature: Co-Authored-By:
+37: WARNING:BAD_SIGN_OFF: 'Co-authored-by:' is the preferred signature form
+total: 0 errors, 2 warnings, 0 checks, 48 lines checked
+== linux/0713-media-verisilicon-Refuse-JPEG-encode-jobs-with-incon.patch
+23: WARNING:BAD_SIGN_OFF: Non-standard signature: Co-Authored-By:
+23: WARNING:BAD_SIGN_OFF: 'Co-authored-by:' is the preferred signature form
+total: 0 errors, 2 warnings, 0 checks, 89 lines checked
+== linux/0714-media-verisilicon-Report-fixed-JPEG-colorimetry-on-t.patch
+15: WARNING:COMMIT_LOG_LONG_LINE: Prefer a maximum 75 chars per line (possible unwrapped commit description?)
+25: WARNING:BAD_SIGN_OFF: Non-standard signature: Co-Authored-By:
+25: WARNING:BAD_SIGN_OFF: 'Co-authored-by:' is the preferred signature form
+total: 0 errors, 3 warnings, 0 checks, 19 lines checked
+== linux/0808-media-h264-Only-write-the-SPS-and-PPS-of-a-stateless.patch
+
+== linux/0809-media-h264-Support-picture-order-count-type-2-in-sta.patch
+
+== linux/0811-media-hevc-Add-H.265-syntax-definitions.patch
+
+== linux/0812-media-uapi-Add-HEVC-stateless-encode-support.patch
+121: WARNING:LOGGING_CONTINUATION: Avoid logging continuation uses where feasible
+124: WARNING:LOGGING_CONTINUATION: Avoid logging continuation uses where feasible
+total: 0 errors, 2 warnings, 0 checks, 493 lines checked
+== linux/0813-media-hevc-Add-stateless-encode-RBSP-writer.patch
+Traceback (most recent call last):
+  File "~/orangepi5/work/integration-7.3/scripts/spdxcheck.py", line 6, in <module>
+    from ply import lex, yacc
+ModuleNotFoundError: No module named 'ply'
+Traceback (most recent call last):
+  File "~/orangepi5/work/integration-7.3/scripts/spdxcheck.py", line 6, in <module>
+    from ply import lex, yacc
+ModuleNotFoundError: No module named 'ply'
+71: WARNING:FILE_PATH_CHANGES: added, moved or deleted file(s), does MAINTAINERS need updating?
+total: 0 errors, 1 warnings, 0 checks, 1273 lines checked
+== linux/0814-media-hevc-Add-KUnit-tests-for-the-stateless-encode-.patch
+Traceback (most recent call last):
+  File "~/orangepi5/work/integration-7.3/scripts/spdxcheck.py", line 6, in <module>
+    from ply import lex, yacc
+ModuleNotFoundError: No module named 'ply'
+45: WARNING:FILE_PATH_CHANGES: added, moved or deleted file(s), does MAINTAINERS need updating?
+total: 0 errors, 1 warnings, 0 checks, 727 lines checked
+== linux/0815-media-hevc-Add-stateless-encode-core.patch
+Traceback (most recent call last):
+  File "~/orangepi5/work/integration-7.3/scripts/spdxcheck.py", line 6, in <module>
+    from ply import lex, yacc
+ModuleNotFoundError: No module named 'ply'
+Traceback (most recent call last):
+  File "~/orangepi5/work/integration-7.3/scripts/spdxcheck.py", line 6, in <module>
+    from ply import lex, yacc
+ModuleNotFoundError: No module named 'ply'
+84: WARNING:FILE_PATH_CHANGES: added, moved or deleted file(s), does MAINTAINERS need updating?
+total: 0 errors, 1 warnings, 0 checks, 1720 lines checked
+== linux/0816-media-hevc-Add-KUnit-tests-for-the-stateless-encode-.patch
+Traceback (most recent call last):
+  File "~/orangepi5/work/integration-7.3/scripts/spdxcheck.py", line 6, in <module>
+    from ply import lex, yacc
+ModuleNotFoundError: No module named 'ply'
+79: WARNING:FILE_PATH_CHANGES: added, moved or deleted file(s), does MAINTAINERS need updating?
+total: 0 errors, 1 warnings, 0 checks, 585 lines checked
+== linux/0817-media-docs-Document-the-HEVC-stateless-encode-uAPI.patch
+
+== linux/0824-media-verisilicon-Share-the-H.264-CABAC-context-init.patch
+
+== linux/0825-media-verisilicon-Add-H.264-encoding-to-the-Rockchip.patch
+Traceback (most recent call last):
+  File "~/orangepi5/work/integration-7.3/scripts/spdxcheck.py", line 6, in <module>
+    from ply import lex, yacc
+ModuleNotFoundError: No module named 'ply'
+385: WARNING:FILE_PATH_CHANGES: added, moved or deleted file(s), does MAINTAINERS need updating?
+total: 0 errors, 1 warnings, 0 checks, 1115 lines checked
+== linux/0826-arm64-dts-rockchip-Add-the-encoder-interrupt-of-the-.patch
+
+== linux/0831-dt-bindings-media-Add-the-Rockchip-VEPU580-video-enc.patch
+Traceback (most recent call last):
+  File "~/orangepi5/work/integration-7.3/scripts/spdxcheck.py", line 6, in <module>
+    from ply import lex, yacc
+ModuleNotFoundError: No module named 'ply'
+15: WARNING:BAD_SIGN_OFF: Non-standard signature: Co-Authored-By:
+15: WARNING:BAD_SIGN_OFF: 'Co-authored-by:' is the preferred signature form
+22: WARNING:FILE_PATH_CHANGES: added, moved or deleted file(s), does MAINTAINERS need updating?
+total: 0 errors, 3 warnings, 0 checks, 93 lines checked
+== linux/0832-media-rockchip-Add-a-VEPU580-stateless-video-encoder.patch
+Traceback (most recent call last):
+  File "~/orangepi5/work/integration-7.3/scripts/spdxcheck.py", line 6, in <module>
+    from ply import lex, yacc
+ModuleNotFoundError: No module named 'ply'
+Traceback (most recent call last):
+  File "~/orangepi5/work/integration-7.3/scripts/spdxcheck.py", line 6, in <module>
+    from ply import lex, yacc
+ModuleNotFoundError: No module named 'ply'
+Traceback (most recent call last):
+  File "~/orangepi5/work/integration-7.3/scripts/spdxcheck.py", line 6, in <module>
+    from ply import lex, yacc
+ModuleNotFoundError: No module named 'ply'
+Traceback (most recent call last):
+  File "~/orangepi5/work/integration-7.3/scripts/spdxcheck.py", line 6, in <module>
+    from ply import lex, yacc
+ModuleNotFoundError: No module named 'ply'
+Traceback (most recent call last):
+  File "~/orangepi5/work/integration-7.3/scripts/spdxcheck.py", line 6, in <module>
+    from ply import lex, yacc
+ModuleNotFoundError: No module named 'ply'
+Traceback (most recent call last):
+  File "~/orangepi5/work/integration-7.3/scripts/spdxcheck.py", line 6, in <module>
+    from ply import lex, yacc
+ModuleNotFoundError: No module named 'ply'
+Traceback (most recent call last):
+  File "~/orangepi5/work/integration-7.3/scripts/spdxcheck.py", line 6, in <module>
+    from ply import lex, yacc
+ModuleNotFoundError: No module named 'ply'
+53: WARNING:BAD_SIGN_OFF: Non-standard signature: Co-Authored-By:
+53: WARNING:BAD_SIGN_OFF: 'Co-authored-by:' is the preferred signature form
+92: WARNING:FILE_PATH_CHANGES: added, moved or deleted file(s), does MAINTAINERS need updating?
+total: 0 errors, 3 warnings, 0 checks, 3252 lines checked
+== linux/0833-arm64-dts-rockchip-Add-the-VEPU580-encoder-cores-to-.patch
+14: WARNING:BAD_SIGN_OFF: Non-standard signature: Co-Authored-By:
+14: WARNING:BAD_SIGN_OFF: 'Co-authored-by:' is the preferred signature form
+total: 0 errors, 2 warnings, 0 checks, 62 lines checked
+== linux/0834-media-rockchip-rkvenc-Prepare-the-VEPU580-helpers-fo.patch
+
+== linux/0835-media-rockchip-rkvenc-Add-HEVC-encoding.patch
+Traceback (most recent call last):
+  File "~/orangepi5/work/integration-7.3/scripts/spdxcheck.py", line 6, in <module>
+    from ply import lex, yacc
+ModuleNotFoundError: No module named 'ply'
+95: WARNING:FILE_PATH_CHANGES: added, moved or deleted file(s), does MAINTAINERS need updating?
+total: 0 errors, 1 warnings, 0 checks, 1463 lines checked
+== linux/0901-dt-bindings-media-Add-Rockchip-VDPU720-JPEG-decoder.patch
+Traceback (most recent call last):
+  File "~/orangepi5/work/integration-7.3/scripts/spdxcheck.py", line 6, in <module>
+    from ply import lex, yacc
+ModuleNotFoundError: No module named 'ply'
+15: WARNING:BAD_SIGN_OFF: Non-standard signature: Co-Authored-By:
+15: WARNING:BAD_SIGN_OFF: 'Co-authored-by:' is the preferred signature form
+total: 0 errors, 2 warnings, 0 checks, 99 lines checked
+== linux/0902-media-rockchip-Add-VDPU720-JPEG-decoder-driver.patch
+Traceback (most recent call last):
+  File "~/orangepi5/work/integration-7.3/scripts/spdxcheck.py", line 6, in <module>
+    from ply import lex, yacc
+ModuleNotFoundError: No module named 'ply'
+Traceback (most recent call last):
+  File "~/orangepi5/work/integration-7.3/scripts/spdxcheck.py", line 6, in <module>
+    from ply import lex, yacc
+ModuleNotFoundError: No module named 'ply'
+Traceback (most recent call last):
+  File "~/orangepi5/work/integration-7.3/scripts/spdxcheck.py", line 6, in <module>
+    from ply import lex, yacc
+ModuleNotFoundError: No module named 'ply'
+Traceback (most recent call last):
+  File "~/orangepi5/work/integration-7.3/scripts/spdxcheck.py", line 6, in <module>
+    from ply import lex, yacc
+ModuleNotFoundError: No module named 'ply'
+Traceback (most recent call last):
+  File "~/orangepi5/work/integration-7.3/scripts/spdxcheck.py", line 6, in <module>
+    from ply import lex, yacc
+ModuleNotFoundError: No module named 'ply'
+45: WARNING:BAD_SIGN_OFF: Non-standard signature: Co-Authored-By:
+45: WARNING:BAD_SIGN_OFF: 'Co-authored-by:' is the preferred signature form
+total: 0 errors, 2 warnings, 0 checks, 1817 lines checked
+== linux/0903-arm64-dts-rockchip-Add-the-JPEG-decoder-to-rk3588-ba.patch
+14: WARNING:BAD_SIGN_OFF: Non-standard signature: Co-Authored-By:
+14: WARNING:BAD_SIGN_OFF: 'Co-authored-by:' is the preferred signature form
+total: 0 errors, 2 warnings, 0 checks, 30 lines checked
+== linux/0911-media-uapi-add-Rockchip-IEP-deinterlacer-controls.patch
+Traceback (most recent call last):
+  File "~/orangepi5/work/integration-7.3/scripts/spdxcheck.py", line 6, in <module>
+    from ply import lex, yacc
+ModuleNotFoundError: No module named 'ply'
+17: WARNING:BAD_SIGN_OFF: Non-standard signature: Co-Authored-By:
+17: WARNING:BAD_SIGN_OFF: 'Co-authored-by:' is the preferred signature form
+25: WARNING:FILE_PATH_CHANGES: added, moved or deleted file(s), does MAINTAINERS need updating?
+total: 0 errors, 3 warnings, 0 checks, 55 lines checked
+== linux/0912-dt-bindings-media-add-Rockchip-IEP2-deinterlacer.patch
+Traceback (most recent call last):
+  File "~/orangepi5/work/integration-7.3/scripts/spdxcheck.py", line 6, in <module>
+    from ply import lex, yacc
+ModuleNotFoundError: No module named 'ply'
+13: WARNING:BAD_SIGN_OFF: Non-standard signature: Co-Authored-By:
+13: WARNING:BAD_SIGN_OFF: 'Co-authored-by:' is the preferred signature form
+20: WARNING:FILE_PATH_CHANGES: added, moved or deleted file(s), does MAINTAINERS need updating?
+total: 0 errors, 3 warnings, 0 checks, 98 lines checked
+== linux/0913-media-rockchip-add-IEP2-deinterlacer-driver.patch
+Traceback (most recent call last):
+  File "~/orangepi5/work/integration-7.3/scripts/spdxcheck.py", line 6, in <module>
+    from ply import lex, yacc
+ModuleNotFoundError: No module named 'ply'
+Traceback (most recent call last):
+  File "~/orangepi5/work/integration-7.3/scripts/spdxcheck.py", line 6, in <module>
+    from ply import lex, yacc
+ModuleNotFoundError: No module named 'ply'
+Traceback (most recent call last):
+  File "~/orangepi5/work/integration-7.3/scripts/spdxcheck.py", line 6, in <module>
+    from ply import lex, yacc
+ModuleNotFoundError: No module named 'ply'
+Traceback (most recent call last):
+  File "~/orangepi5/work/integration-7.3/scripts/spdxcheck.py", line 6, in <module>
+    from ply import lex, yacc
+ModuleNotFoundError: No module named 'ply'
+Traceback (most recent call last):
+  File "~/orangepi5/work/integration-7.3/scripts/spdxcheck.py", line 6, in <module>
+    from ply import lex, yacc
+ModuleNotFoundError: No module named 'ply'
+57: WARNING:BAD_SIGN_OFF: Non-standard signature: Co-Authored-By:
+57: WARNING:BAD_SIGN_OFF: 'Co-authored-by:' is the preferred signature form
+total: 0 errors, 2 warnings, 0 checks, 1704 lines checked
+== linux/0914-arm64-dts-rockchip-add-IEP2-deinterlacer-to-RK3588.patch
+12: WARNING:BAD_SIGN_OFF: Non-standard signature: Co-Authored-By:
+12: WARNING:BAD_SIGN_OFF: 'Co-authored-by:' is the preferred signature form
+total: 0 errors, 2 warnings, 0 checks, 28 lines checked
+== linux/1001-arm64-dts-rockchip-use-rgmii-id-for-the-Orange-Pi-5-.patch
+
+== linux/1002-arm64-dts-rockchip-add-the-SPI-NOR-flash-supply-on-O.patch
+
+== linux/1003-arm64-dts-rockchip-set-the-RK806-reset-mode-on-Orang.patch
+
+== linux/1004-arm64-dts-rockchip-build-the-Orange-Pi-5-and-5B-DTBs.patch
+17: WARNING:BAD_SIGN_OFF: Non-standard signature: Co-Authored-By:
+17: WARNING:BAD_SIGN_OFF: 'Co-authored-by:' is the preferred signature form
+total: 0 errors, 2 warnings, 0 checks, 11 lines checked
+== linux-extra/0001-arm64-dts-rockchip-Add-USB-C-DP-AltMode-for-Orange-P.patch
+
+== linux-extra/0101-dt-bindings-display-panel-ilitek-ili9881c-Add-Innolu.patch
+14: WARNING:BAD_SIGN_OFF: Non-standard signature: Co-Authored-By:
+14: WARNING:BAD_SIGN_OFF: 'Co-authored-by:' is the preferred signature form
+total: 0 errors, 2 warnings, 0 checks, 7 lines checked
+== linux-extra/0102-drm-panel-ilitek-ili9881c-Add-Innolux-AFJ101-BA2131-.patch
+24: WARNING:BAD_SIGN_OFF: Non-standard signature: Co-Authored-By:
+24: WARNING:BAD_SIGN_OFF: 'Co-authored-by:' is the preferred signature form
+275: WARNING:UNDOCUMENTED_DT_STRING: DT compatible string "innolux,afj101-ba2131" appears un-documented -- check ./Documentation/devicetree/bindings/
+total: 0 errors, 3 warnings, 0 checks, 243 lines checked
+== linux-extra/0103-drm-rockchip-dsi2-Add-missing-sentinel-to-the-RK3588.patch
+20: WARNING:BAD_SIGN_OFF: Non-standard signature: Co-Authored-By:
+20: WARNING:BAD_SIGN_OFF: 'Co-authored-by:' is the preferred signature form
+total: 0 errors, 2 warnings, 0 checks, 9 lines checked
+== linux-extra/0104-arm64-dts-rockchip-Add-Orange-Pi-5-MIPI-LCD-overlays.patch
+Traceback (most recent call last):
+  File "~/orangepi5/work/integration-7.3/scripts/spdxcheck.py", line 6, in <module>
+    from ply import lex, yacc
+ModuleNotFoundError: No module named 'ply'
+Traceback (most recent call last):
+  File "~/orangepi5/work/integration-7.3/scripts/spdxcheck.py", line 6, in <module>
+    from ply import lex, yacc
+ModuleNotFoundError: No module named 'ply'
+32: WARNING:BAD_SIGN_OFF: Non-standard signature: Co-Authored-By:
+32: WARNING:BAD_SIGN_OFF: 'Co-authored-by:' is the preferred signature form
+71: WARNING:FILE_PATH_CHANGES: added, moved or deleted file(s), does MAINTAINERS need updating?
+total: 0 errors, 3 warnings, 0 checks, 284 lines checked
+== linux-extra/0206-media-rkisp2-Fix-missing-HIST_BIG2-entry-in-stats-bl.patch
+
+== linux-extra/0207-arm64-dts-rockchip-rk3588-Drop-third-ISP0-interrupt.patch
+
+== linux-extra/0208-arm64-dts-rockchip-Add-IMX219-camera-overlay-for-Ora.patch
+Traceback (most recent call last):
+  File "~/orangepi5/work/integration-7.3/scripts/spdxcheck.py", line 6, in <module>
+    from ply import lex, yacc
+ModuleNotFoundError: No module named 'ply'
+56: WARNING:FILE_PATH_CHANGES: added, moved or deleted file(s), does MAINTAINERS need updating?
+total: 0 errors, 1 warnings, 0 checks, 165 lines checked
+== linux-extra/0209-arm64-dts-rockchip-Add-OV13850-OV13855-overlays-for-.patch
+Traceback (most recent call last):
+  File "~/orangepi5/work/integration-7.3/scripts/spdxcheck.py", line 6, in <module>
+    from ply import lex, yacc
+ModuleNotFoundError: No module named 'ply'
+Traceback (most recent call last):
+  File "~/orangepi5/work/integration-7.3/scripts/spdxcheck.py", line 6, in <module>
+    from ply import lex, yacc
+ModuleNotFoundError: No module named 'ply'
+65: WARNING:FILE_PATH_CHANGES: added, moved or deleted file(s), does MAINTAINERS need updating?
+total: 0 errors, 1 warnings, 0 checks, 236 lines checked

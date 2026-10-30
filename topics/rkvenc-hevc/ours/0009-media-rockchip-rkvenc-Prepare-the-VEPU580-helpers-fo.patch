@@ -29,7 +29,7 @@ Assisted-by: Claude:claude-opus-5-5
  5 files changed, 101 insertions(+), 30 deletions(-)
 
 diff --git a/drivers/media/platform/rockchip/rkvenc/rkvenc-h264.c b/drivers/media/platform/rockchip/rkvenc/rkvenc-h264.c
-index c669a6322..50e233cf1 100644
+index c669a6322f29..50e233cf1272 100644
 --- a/drivers/media/platform/rockchip/rkvenc/rkvenc-h264.c
 +++ b/drivers/media/platform/rockchip/rkvenc/rkvenc-h264.c
 @@ -12,20 +12,12 @@
@@ -81,7 +81,7 @@ index c669a6322..50e233cf1 100644
  		.min_width = 64,
  		/* The external line buffer for wider pictures is not handled. */
 diff --git a/drivers/media/platform/rockchip/rkvenc/rkvenc-regs.h b/drivers/media/platform/rockchip/rkvenc/rkvenc-regs.h
-index 6957cdf53..8103bfdf7 100644
+index 6957cdf53446..8103bfdf7151 100644
 --- a/drivers/media/platform/rockchip/rkvenc/rkvenc-regs.h
 +++ b/drivers/media/platform/rockchip/rkvenc/rkvenc-regs.h
 @@ -360,6 +360,11 @@
@@ -106,7 +106,7 @@ index 6957cdf53..8103bfdf7 100644
  /* Debug class */
  #define VEPU580_DBG_FRAME_CYC			0x5200
 diff --git a/drivers/media/platform/rockchip/rkvenc/rkvenc-vepu580.c b/drivers/media/platform/rockchip/rkvenc/rkvenc-vepu580.c
-index 33d5154ef..3a32caad2 100644
+index 33d5154ef8da..3a32caad2216 100644
 --- a/drivers/media/platform/rockchip/rkvenc/rkvenc-vepu580.c
 +++ b/drivers/media/platform/rockchip/rkvenc/rkvenc-vepu580.c
 @@ -12,10 +12,16 @@
@@ -205,7 +205,7 @@ index 33d5154ef..3a32caad2 100644
  		rkvenc_set(core, VEPU580_RC_DTHD(i), 0x7fffffff);
  
 diff --git a/drivers/media/platform/rockchip/rkvenc/rkvenc.c b/drivers/media/platform/rockchip/rkvenc/rkvenc.c
-index 0e5afaefc..623c50db2 100644
+index 0e5afaefc0dd..623c50db25a8 100644
 --- a/drivers/media/platform/rockchip/rkvenc/rkvenc.c
 +++ b/drivers/media/platform/rockchip/rkvenc/rkvenc.c
 @@ -720,6 +720,7 @@ static void rkvenc_read_feedback(struct rkvenc_core *core,
@@ -255,7 +255,7 @@ index 0e5afaefc..623c50db2 100644
  
  	ctx->avg_qp_ctrl = v4l2_ctrl_find(hdl, V4L2_CID_MPEG_VIDEO_AVERAGE_QP);
 diff --git a/drivers/media/platform/rockchip/rkvenc/rkvenc.h b/drivers/media/platform/rockchip/rkvenc/rkvenc.h
-index 4ecc601be..34d6c7495 100644
+index 4ecc601be147..34d6c74959a1 100644
 --- a/drivers/media/platform/rockchip/rkvenc/rkvenc.h
 +++ b/drivers/media/platform/rockchip/rkvenc/rkvenc.h
 @@ -53,8 +53,24 @@ struct rkvenc_rec_buf {

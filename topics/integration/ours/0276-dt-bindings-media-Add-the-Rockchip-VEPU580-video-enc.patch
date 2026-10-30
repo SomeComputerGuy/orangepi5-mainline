@@ -20,7 +20,7 @@ Assisted-by: Claude:claude-opus-5-5
 
 diff --git a/Documentation/devicetree/bindings/media/rockchip,rk3588-vepu580.yaml b/Documentation/devicetree/bindings/media/rockchip,rk3588-vepu580.yaml
 new file mode 100644
-index 000000000..2b52b17de
+index 000000000000..2b52b17de93d
 --- /dev/null
 +++ b/Documentation/devicetree/bindings/media/rockchip,rk3588-vepu580.yaml
 @@ -0,0 +1,93 @@

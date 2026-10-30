@@ -28,7 +28,7 @@ Link: https://gitlab.collabora.com/hardware-enablement/rockchip-3588/linux/-/com
  2 files changed, 79 insertions(+)
 
 diff --git a/drivers/gpu/drm/display/drm_hdmi_helper.c b/drivers/gpu/drm/display/drm_hdmi_helper.c
-index 015a79a42..6ec3a2569 100644
+index 015a79a42c45..6ec3a25698ae 100644
 --- a/drivers/gpu/drm/display/drm_hdmi_helper.c
 +++ b/drivers/gpu/drm/display/drm_hdmi_helper.c
 @@ -437,6 +437,79 @@ drm_hdmi_acr_get_n_cts(unsigned long long tmds_char_rate,
@@ -112,7 +112,7 @@ index 015a79a42..6ec3a2569 100644
   * drm_hdmi_mode_needs_scrambling() - Check if an HDMI mode requires scrambling
   * @mode: Display mode to check
 diff --git a/include/drm/display/drm_hdmi_helper.h b/include/drm/display/drm_hdmi_helper.h
-index 0b88e4dc0..183239ac8 100644
+index 0b88e4dc08c6..183239ac8433 100644
 --- a/include/drm/display/drm_hdmi_helper.h
 +++ b/include/drm/display/drm_hdmi_helper.h
 @@ -36,6 +36,12 @@ drm_hdmi_acr_get_n_cts(unsigned long long tmds_char_rate,

@@ -28,7 +28,7 @@ Assisted-by: Claude:claude-opus-5-5
  1 file changed, 3 insertions(+), 1 deletion(-)
 
 diff --git a/drivers/media/platform/verisilicon/hantro_drv.c b/drivers/media/platform/verisilicon/hantro_drv.c
-index ad71c0402..b39c6e453 100644
+index ad71c0402ef3..b39c6e453c15 100644
 --- a/drivers/media/platform/verisilicon/hantro_drv.c
 +++ b/drivers/media/platform/verisilicon/hantro_drv.c
 @@ -182,7 +182,7 @@ static void device_run(void *priv)

@@ -40,7 +40,7 @@ Link: https://gitlab.collabora.com/hardware-enablement/rockchip-3588/linux/-/com
  7 files changed, 29 insertions(+), 29 deletions(-)
 
 diff --git a/drivers/gpu/drm/display/drm_bridge_connector.c b/drivers/gpu/drm/display/drm_bridge_connector.c
-index 00feb73e6..d66423793 100644
+index 00feb73e63d7..d664237936ec 100644
 --- a/drivers/gpu/drm/display/drm_bridge_connector.c
 +++ b/drivers/gpu/drm/display/drm_bridge_connector.c
 @@ -1013,7 +1013,7 @@ struct drm_connector *drm_bridge_connector_init(struct drm_device *drm,
@@ -53,7 +53,7 @@ index 00feb73e6..d66423793 100644
  					       bridge_connector->bridge_hdmi->product,
  					       &drm_bridge_connector_funcs,
 diff --git a/drivers/gpu/drm/drm_connector.c b/drivers/gpu/drm/drm_connector.c
-index 0e39431e8..5e520cff6 100644
+index 0e39431e85b2..5e520cff6094 100644
 --- a/drivers/gpu/drm/drm_connector.c
 +++ b/drivers/gpu/drm/drm_connector.c
 @@ -543,7 +543,7 @@ int drmm_connector_init(struct drm_device *dev,
@@ -84,7 +84,7 @@ index 0e39431e8..5e520cff6 100644
  /**
   * drm_connector_attach_edid_property - attach edid property.
 diff --git a/drivers/gpu/drm/sun4i/sun4i_hdmi_enc.c b/drivers/gpu/drm/sun4i/sun4i_hdmi_enc.c
-index 91844a396..d98b6f12a 100644
+index 91844a396a2b..d98b6f12a7bc 100644
 --- a/drivers/gpu/drm/sun4i/sun4i_hdmi_enc.c
 +++ b/drivers/gpu/drm/sun4i/sun4i_hdmi_enc.c
 @@ -654,7 +654,7 @@ static int sun4i_hdmi_bind(struct device *dev, struct device *master,
@@ -97,7 +97,7 @@ index 91844a396..d98b6f12a 100644
  					* NOTE: Those are likely to be
  					* wrong, but I couldn't find the
 diff --git a/drivers/gpu/drm/tests/drm_connector_test.c b/drivers/gpu/drm/tests/drm_connector_test.c
-index beb1d50a6..3368aedd4 100644
+index beb1d50a6646..3368aedd4e66 100644
 --- a/drivers/gpu/drm/tests/drm_connector_test.c
 +++ b/drivers/gpu/drm/tests/drm_connector_test.c
 @@ -669,7 +669,7 @@ static void drm_test_connector_hdmi_init_valid(struct kunit *test)
@@ -290,7 +290,7 @@ index beb1d50a6..3368aedd4 100644
  				       &dummy_funcs,
  				       &dummy_hdmi_funcs,
 diff --git a/drivers/gpu/drm/tests/drm_hdmi_state_helper_test.c b/drivers/gpu/drm/tests/drm_hdmi_state_helper_test.c
-index 353a261d4..4c2a400bc 100644
+index 353a261d42da..4c2a400bc15a 100644
 --- a/drivers/gpu/drm/tests/drm_hdmi_state_helper_test.c
 +++ b/drivers/gpu/drm/tests/drm_hdmi_state_helper_test.c
 @@ -275,7 +275,7 @@ __connector_hdmi_init(struct kunit *test,
@@ -303,7 +303,7 @@ index 353a261d4..4c2a400bc 100644
  				       &dummy_connector_funcs,
  				       hdmi_funcs,
 diff --git a/drivers/gpu/drm/vc4/vc4_hdmi.c b/drivers/gpu/drm/vc4/vc4_hdmi.c
-index caaa096fe..990e3547d 100644
+index caaa096fe04d..990e3547dfa1 100644
 --- a/drivers/gpu/drm/vc4/vc4_hdmi.c
 +++ b/drivers/gpu/drm/vc4/vc4_hdmi.c
 @@ -542,7 +542,7 @@ static int vc4_hdmi_connector_init(struct drm_device *dev,
@@ -316,7 +316,7 @@ index caaa096fe..990e3547d 100644
  				       &vc4_hdmi_connector_funcs,
  				       &vc4_hdmi_hdmi_connector_funcs,
 diff --git a/include/drm/drm_connector.h b/include/drm/drm_connector.h
-index a0cf0268d..2e7d75cb0 100644
+index a0cf0268de48..2e7d75cb0adf 100644
 --- a/include/drm/drm_connector.h
 +++ b/include/drm/drm_connector.h
 @@ -2549,7 +2549,7 @@ int drmm_connector_init(struct drm_device *dev,

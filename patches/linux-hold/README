@@ -1,0 +1,1 @@
+0270 (usbdp keep USB3) moved out of patches/linux at 2026-10-30 05:22:04: breaks DP AUX (-110) on boot — see work/_out/workaround-removal; restore once fixed.

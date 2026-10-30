@@ -28,7 +28,7 @@ Link: https://gitlab.collabora.com/hardware-enablement/rockchip-3588/linux/-/com
  2 files changed, 49 insertions(+)
 
 diff --git a/drivers/gpu/drm/display/drm_bridge_connector.c b/drivers/gpu/drm/display/drm_bridge_connector.c
-index d920c8acf..2ab6f1df7 100644
+index d920c8acfa5e..2ab6f1df7833 100644
 --- a/drivers/gpu/drm/display/drm_bridge_connector.c
 +++ b/drivers/gpu/drm/display/drm_bridge_connector.c
 @@ -449,6 +449,28 @@ drm_bridge_connector_tmds_char_rate_valid(const struct drm_connector *connector,
@@ -69,7 +69,7 @@ index d920c8acf..2ab6f1df7 100644
  	.avi = {
  		.clear_infoframe = drm_bridge_connector_clear_avi_infoframe,
 diff --git a/include/drm/drm_bridge.h b/include/drm/drm_bridge.h
-index 432585e6d..1f4d5cf36 100644
+index 432585e6d238..1f4d5cf366fa 100644
 --- a/include/drm/drm_bridge.h
 +++ b/include/drm/drm_bridge.h
 @@ -669,6 +669,32 @@ struct drm_bridge_funcs {

@@ -42,7 +42,7 @@ Assisted-by: Claude:claude-opus-5-5
  2 files changed, 41 insertions(+), 14 deletions(-)
 
 diff --git a/drivers/media/platform/rockchip/rkvdec/rkvdec-vdpu381-regs.h b/drivers/media/platform/rockchip/rkvdec/rkvdec-vdpu381-regs.h
-index 7b92ac386..de59dcba3 100644
+index 7b92ac38681c..de59dcba3011 100644
 --- a/drivers/media/platform/rockchip/rkvdec/rkvdec-vdpu381-regs.h
 +++ b/drivers/media/platform/rockchip/rkvdec/rkvdec-vdpu381-regs.h
 @@ -410,7 +410,8 @@ struct rkvdec_vdpu381_regs_vp9_params {
@@ -56,7 +56,7 @@ index 7b92ac386..de59dcba3 100644
  		u32 vp9_last_showframe : 1;
  		u32 vp9_last_intra_only : 1;
 diff --git a/drivers/media/platform/rockchip/rkvdec/rkvdec-vdpu381-vp9.c b/drivers/media/platform/rockchip/rkvdec/rkvdec-vdpu381-vp9.c
-index aee9de9a1..0f797e701 100644
+index aee9de9a156e..0f797e7012aa 100644
 --- a/drivers/media/platform/rockchip/rkvdec/rkvdec-vdpu381-vp9.c
 +++ b/drivers/media/platform/rockchip/rkvdec/rkvdec-vdpu381-vp9.c
 @@ -88,12 +88,17 @@ struct rkvdec_vp9_intra_frame_symbol_counts {

@@ -19,7 +19,7 @@ Assisted-by: Claude:claude-opus-5-5
  1 file changed, 7 insertions(+)
 
 diff --git a/drivers/iommu/arm/arm-smmu-v3/arm-smmu-v3.c b/drivers/iommu/arm/arm-smmu-v3/arm-smmu-v3.c
-index 5732f3ba0..94b97be5a 100644
+index 5732f3ba0122..94b97be5a858 100644
 --- a/drivers/iommu/arm/arm-smmu-v3/arm-smmu-v3.c
 +++ b/drivers/iommu/arm/arm-smmu-v3/arm-smmu-v3.c
 @@ -12,6 +12,7 @@

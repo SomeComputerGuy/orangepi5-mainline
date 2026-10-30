@@ -1,0 +1,296 @@
+From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
+From: Arun Iyengar <aiyengar1990@gmail.com>
+Date: Fri, 30 Oct 2026 05:11:53 +0000
+Subject: [PATCH] media: rkvdec: vdpu381: reset the cores together once they
+ are idle
+
+The k4d board run showed every timeout right after a core reset: a core
+failed on a broken stream (errors that fail without the CCU too), was
+reset at once, and the frame the other core was decoding at that moment
+never finished (CCU core status still busy for both cores), costing the
+stream on the other core a frame -- two fluster vectors that pass on
+their own (HCBP1_HHI_A, HCHP3_HHI_A) failed next to failing ones.
+
+In CCU mode the cores wait for each other, so do what the BSP's soft-CCU
+worker does (rkvdec2_soft_ccu_worker(): reset only "if
+(!rkvdec2_core_working(queue))"): when a core fails or times out, start
+no new job, fail at once the later frames of the same stream that the
+other cores decode (they predict from the failed one and can't finish),
+let the other jobs finish, then reset all the cores and run the m2m job
+that was held back. Without a CCU a failed core is still reset at once.
+
+vdpu381 also acknowledges interrupts of a core whose job it already
+failed, instead of leaving a level interrupt asserted.
+
+Assisted-by: Claude:claude-opus-5-5
+---
+ .../media/platform/rockchip/rkvdec/rkvdec.c   | 144 +++++++++++++++---
+ .../media/platform/rockchip/rkvdec/rkvdec.h   |   6 +
+ 2 files changed, 133 insertions(+), 17 deletions(-)
+
+diff --git a/drivers/media/platform/rockchip/rkvdec/rkvdec.c b/drivers/media/platform/rockchip/rkvdec/rkvdec.c
+index 4cccc27d85e2..de5ee106cb68 100644
+--- a/drivers/media/platform/rockchip/rkvdec/rkvdec.c
++++ b/drivers/media/platform/rockchip/rkvdec/rkvdec.c
+@@ -1427,6 +1427,8 @@ static void rkvdec_job_hw_done(struct rkvdec_core *core,
+ 			held->busy = true;
+ 	}
+ 
++	wake_up(&rkvdec->reset_wq);
++
+ 	if (pm_put) {
+ 		if (rkvdec->ccu)
+ 			rkvdec_ccu_power_put(rkvdec);
+@@ -1681,6 +1683,17 @@ static void rkvdec_device_run(void *priv)
+ 	struct rkvdec_job *job;
+ 	int ret;
+ 
++	/*
++	 * No new job while the cores wait to be reset, see vdpu381_core_failed():
++	 * the reset work runs this m2m job once it is done.
++	 */
++	scoped_guard(spinlock_irqsave, &ctx->dev->cores_lock) {
++		if (ctx->dev->ccu_reset_pending) {
++			ctx->dev->deferred_ctx = ctx;
++			return;
++		}
++	}
++
+ 	scoped_guard(mutex, &ctx->done_lock)
+ 		job = rkvdec_job_start(ctx);
+ 	if (WARN_ON(!job)) {
+@@ -2023,12 +2036,12 @@ static void rkvdec_iommu_restore(struct rkvdec_core *core)
+ 		 * This is safely done in this interrupt handler to make sure no memory get mapped
+ 		 * through the IOMMU while the empty domain is attached.
+ 		 */
+-		iommu_detach_device(core->curr_ctx->dev->iommu_global_domain, core->dev);
++		iommu_detach_device(core->rkvdec->iommu_global_domain, core->dev);
+ 		ret = iommu_attach_device(core->empty_domain, core->dev);
+ 		if (ret)
+ 			dev_warn(core->dev, "Cannot attach empty domain: %d\n", ret);
+ 		iommu_detach_device(core->empty_domain, core->dev);
+-		ret = iommu_attach_device(core->curr_ctx->dev->iommu_global_domain, core->dev);
++		ret = iommu_attach_device(core->rkvdec->iommu_global_domain, core->dev);
+ 		if (ret)
+ 			dev_warn(core->dev, "Cannot attach global domain: %d\n", ret);
+ 	}
+@@ -2065,10 +2078,11 @@ static irqreturn_t rk3399_irq_handler(struct rkvdec_core *core)
+  */
+ static void vdpu381_core_reset(struct rkvdec_core *core)
+ {
+-	struct rkvdec_ccu *ccu = core->curr_ctx->dev->ccu;
++	struct rkvdec_ccu *ccu = core->rkvdec->ccu;
+ 	u32 status;
+ 	int ret;
+ 
++	dev_warn_ratelimited(core->dev, "resetting the core\n");
+ 	if (ccu)
+ 		rkvdec_ccu_disconnect(ccu, core);
+ 
+@@ -2093,6 +2107,99 @@ static void vdpu381_core_reset(struct rkvdec_core *core)
+ 		rkvdec_ccu_reconnect(ccu, core);
+ }
+ 
++static bool rkvdec_all_cores_idle(struct rkvdec_dev *rkvdec)
++{
++	guard(spinlock_irqsave)(&rkvdec->cores_lock);
++
++	return rkvdec->available_core_count == rkvdec->core_count;
++}
++
++/*
++ * In CCU mode, the cores wait for each other: resetting a core, or forcing it
++ * idle in the CCU, breaks the frame the other core is decoding. Like the BSP's
++ * soft-CCU worker, stop starting jobs when a core fails, and reset the cores
++ * once they are all idle.
++ */
++static void rkvdec_ccu_reset_work(struct work_struct *work)
++{
++	struct rkvdec_dev *rkvdec = container_of(work, struct rkvdec_dev,
++						 reset_work);
++	struct rkvdec_ctx *ctx;
++	int i;
++
++	wait_event(rkvdec->reset_wq, rkvdec_all_cores_idle(rkvdec));
++
++	if (rkvdec->ccu && !rkvdec_ccu_power_get(rkvdec)) {
++		for (i = 0; i < rkvdec->core_count; i++) {
++			struct rkvdec_core *core = rkvdec->cores[i];
++
++			disable_irq(core->irq);
++			vdpu381_core_reset(core);
++			enable_irq(core->irq);
++		}
++		rkvdec_ccu_power_put(rkvdec);
++	}
++
++	scoped_guard(spinlock_irqsave, &rkvdec->cores_lock) {
++		for (i = 0; i < rkvdec->core_count; i++)
++			rkvdec->cores[i]->needs_reset = false;
++		rkvdec->ccu_reset_pending = false;
++		ctx = rkvdec->deferred_ctx;
++		rkvdec->deferred_ctx = NULL;
++	}
++
++	if (ctx)
++		rkvdec_device_run(ctx);
++}
++
++/*
++ * Called when the job of @core failed or timed out, before it is completed.
++ * Without a CCU, reset the core right away. In CCU mode, the later frames of
++ * the same stream on the other cores predict from this one and won't finish:
++ * fail them too, and reset all the cores once they are idle.
++ */
++static void vdpu381_core_failed(struct rkvdec_core *core, bool from_watchdog)
++{
++	struct rkvdec_dev *rkvdec = core->rkvdec;
++	struct rkvdec_core *dependents[RKVDEC_MAX_JOBS];
++	unsigned int num_dependents = 0, i;
++	struct rkvdec_job *job, *later;
++
++	if (!rkvdec->ccu) {
++		if (from_watchdog)
++			disable_irq(core->irq);
++		vdpu381_core_reset(core);
++		if (from_watchdog)
++			enable_irq(core->irq);
++		return;
++	}
++
++	scoped_guard(spinlock_irqsave, &rkvdec->cores_lock) {
++		core->needs_reset = true;
++		rkvdec->ccu_reset_pending = true;
++
++		job = core->job;
++		later = job;
++		list_for_each_entry_continue(later, &job->ctx->jobs, node) {
++			if (later->core && num_dependents < ARRAY_SIZE(dependents))
++				dependents[num_dependents++] = later->core;
++		}
++	}
++
++	for (i = 0; i < num_dependents; i++) {
++		struct rkvdec_core *dep = dependents[i];
++
++		if (cancel_delayed_work(&dep->watchdog_work)) {
++			dev_dbg(dep->dev, "failing the frame that predicts from %s\n",
++				dev_name(core->dev));
++			dep->needs_reset = true;
++			rkvdec_job_hw_done(dep, VB2_BUF_STATE_ERROR, true);
++		}
++	}
++
++	schedule_work(&rkvdec->reset_work);
++}
++
+ static irqreturn_t vdpu381_irq_handler(struct rkvdec_core *core)
+ {
+ 	enum vb2_buffer_state state;
+@@ -2101,15 +2208,18 @@ static irqreturn_t vdpu381_irq_handler(struct rkvdec_core *core)
+ 	status = readl(core->regs + VDPU381_REG_STA_INT);
+ 	writel(0, core->regs + VDPU381_REG_STA_INT);
+ 
+-	if (status & VDPU381_STA_INT_DEC_RDY_STA) {
++	/* A core whose job was failed early can still report it. */
++	if (!core->curr_ctx)
++		return IRQ_HANDLED;
++
++	if (status & VDPU381_STA_INT_DEC_RDY_STA)
+ 		state = VB2_BUF_STATE_DONE;
+-	} else {
++	else
+ 		state = VB2_BUF_STATE_ERROR;
+-	}
+ 
+ 	if (cancel_delayed_work(&core->watchdog_work)) {
+ 		if (state == VB2_BUF_STATE_ERROR)
+-			vdpu381_core_reset(core);
++			vdpu381_core_failed(core, false);
+ 		rkvdec_job_hw_done(core, state, true);
+ 	}
+ 
+@@ -2144,13 +2254,12 @@ static irqreturn_t rkvdec_irq_handler(int irq, void *priv)
+ {
+ 	irqreturn_t ret;
+ 	struct rkvdec_core *core = priv;
+-	struct rkvdec_ctx *ctx = core->curr_ctx;
+-	const struct rkvdec_variant *variant;
++	const struct rkvdec_variant *variant = core->rkvdec->variant;
+ 
+-	if (!ctx)
++	/* vdpu381 acknowledges reports of jobs it failed early itself. */
++	if (!core->curr_ctx && variant->ops->irq_handler != vdpu381_irq_handler)
+ 		return IRQ_NONE;
+ 
+-	variant = ctx->dev->variant;
+ 	ret = variant->ops->irq_handler(core);
+ 
+ 	return ret;
+@@ -2238,13 +2347,10 @@ static void rkvdec_watchdog_func(struct work_struct *work)
+ 	ctx = core->curr_ctx;
+ 	if (ctx) {
+ 		dev_err_ratelimited(core->dev, "Frame processing timed out!\n");
+-		if (ctx->dev->variant->ops->irq_handler == vdpu381_irq_handler) {
+-			disable_irq(core->irq);
+-			vdpu381_core_reset(core);
+-			enable_irq(core->irq);
+-		} else {
++		if (ctx->dev->variant->ops->irq_handler == vdpu381_irq_handler)
++			vdpu381_core_failed(core, true);
++		else
+ 			writel(RKVDEC_IRQ_DIS, core->regs + RKVDEC_REG_INTERRUPT);
+-		}
+ 		rkvdec_job_hw_done(core, VB2_BUF_STATE_ERROR, true);
+ 	}
+ }
+@@ -2371,6 +2477,7 @@ static int rkvdec_core_bind(struct device *dev, struct device *master, void *dat
+ 	id = rkvdec->core_count;
+ 	core->id = id;
+ 	rkvdec->cores[id] = core;
++	core->rkvdec = rkvdec;
+ 
+ 	if (id == 0)
+ 		rkvdec->main_core = core;
+@@ -2668,6 +2775,7 @@ static void rkvdec_unbind(struct device *dev)
+ 
+ 	for (i = 0; i < rkvdec->core_count; i++)
+ 		cancel_delayed_work_sync(&rkvdec->cores[i]->watchdog_work);
++	cancel_work_sync(&rkvdec->reset_work);
+ 
+ 	rkvdec_v4l2_cleanup(rkvdec);
+ 
+@@ -2733,6 +2841,8 @@ static int rkvdec_probe(struct platform_device *pdev)
+ 
+ 	mutex_init(&rkvdec->vdev_lock);
+ 	spin_lock_init(&rkvdec->cores_lock);
++	init_waitqueue_head(&rkvdec->reset_wq);
++	INIT_WORK(&rkvdec->reset_work, rkvdec_ccu_reset_work);
+ 	ida_init(&rkvdec->film_ida);
+ 	rkvdec->next_film_idx = 1;
+ 
+diff --git a/drivers/media/platform/rockchip/rkvdec/rkvdec.h b/drivers/media/platform/rockchip/rkvdec/rkvdec.h
+index 9b46865ed3a4..6abad724e38b 100644
+--- a/drivers/media/platform/rockchip/rkvdec/rkvdec.h
++++ b/drivers/media/platform/rockchip/rkvdec/rkvdec.h
+@@ -205,7 +205,9 @@ struct rkvdec_core {
+ 	struct gen_pool *sram_pool;
+ 	struct iommu_domain *empty_domain;
+ 	struct reset_control *resets;
++	struct rkvdec_dev *rkvdec;
+ 	int irq;
++	bool needs_reset;
+ 	struct rkvdec_rcb_config *rcb_config;
+ 	struct rkvdec_ctx *curr_ctx;
+ 	struct rkvdec_job *job;
+@@ -232,6 +234,10 @@ struct rkvdec_dev {
+ 	struct rkvdec_ccu *ccu;
+ 	struct ida film_ida;
+ 	int next_film_idx;
++	bool ccu_reset_pending;
++	struct rkvdec_ctx *deferred_ctx;
++	wait_queue_head_t reset_wq;
++	struct work_struct reset_work;
+ };
+ 
+ struct rkvdec_ctx {

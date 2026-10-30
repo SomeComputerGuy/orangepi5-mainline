@@ -34,7 +34,7 @@ Link: https://gitlab.collabora.com/hardware-enablement/rockchip-3588/linux/-/com
  1 file changed, 6 insertions(+)
 
 diff --git a/include/linux/phy/phy-hdmi.h b/include/linux/phy/phy-hdmi.h
-index d4cf4430e..1d4b62475 100644
+index d4cf4430ee8f..1d4b62475079 100644
 --- a/include/linux/phy/phy-hdmi.h
 +++ b/include/linux/phy/phy-hdmi.h
 @@ -19,6 +19,10 @@ enum phy_hdmi_mode {

@@ -14,7 +14,7 @@ Link: https://patch.msgid.link/20260806-synopsys-dw-dp-improvements-v11-21-0d508
  1 file changed, 313 insertions(+), 1 deletion(-)
 
 diff --git a/drivers/gpu/drm/bridge/synopsys/dw-dp.c b/drivers/gpu/drm/bridge/synopsys/dw-dp.c
-index b610abf76..df149c52f 100644
+index b610abf76ef7..df149c52fce0 100644
 --- a/drivers/gpu/drm/bridge/synopsys/dw-dp.c
 +++ b/drivers/gpu/drm/bridge/synopsys/dw-dp.c
 @@ -23,17 +23,21 @@

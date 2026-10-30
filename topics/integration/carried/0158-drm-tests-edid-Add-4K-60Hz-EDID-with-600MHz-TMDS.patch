@@ -47,7 +47,7 @@ Link: https://gitlab.collabora.com/hardware-enablement/rockchip-3588/linux/-/com
  2 files changed, 130 insertions(+)
 
 diff --git a/drivers/gpu/drm/tests/drm_kunit_edid.c b/drivers/gpu/drm/tests/drm_kunit_edid.c
-index c807ae0d9..673a0ea8c 100644
+index c807ae0d9faa..673a0ea8c2ae 100644
 --- a/drivers/gpu/drm/tests/drm_kunit_edid.c
 +++ b/drivers/gpu/drm/tests/drm_kunit_edid.c
 @@ -990,6 +990,135 @@ const unsigned char test_edid_hdmi_4k_rgb_yuv420_dc_max_340mhz[] = {
@@ -187,7 +187,7 @@ index c807ae0d9..673a0ea8c 100644
  MODULE_DESCRIPTION("EDID Definitions for KUnit tests");
  MODULE_LICENSE("GPL");
 diff --git a/drivers/gpu/drm/tests/drm_kunit_edid.h b/drivers/gpu/drm/tests/drm_kunit_edid.h
-index 28b4df93a..fb5b0295e 100644
+index 28b4df93a555..fb5b0295e35e 100644
 --- a/drivers/gpu/drm/tests/drm_kunit_edid.h
 +++ b/drivers/gpu/drm/tests/drm_kunit_edid.h
 @@ -12,5 +12,6 @@ extern const unsigned char test_edid_hdmi_1080p_rgb_yuv_dc_max_200mhz[256];

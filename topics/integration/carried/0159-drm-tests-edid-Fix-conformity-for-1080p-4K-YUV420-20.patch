@@ -65,7 +65,7 @@ Link: https://gitlab.collabora.com/hardware-enablement/rockchip-3588/linux/-/com
  1 file changed, 41 insertions(+), 24 deletions(-)
 
 diff --git a/drivers/gpu/drm/tests/drm_kunit_edid.c b/drivers/gpu/drm/tests/drm_kunit_edid.c
-index 673a0ea8c..4dff28fff 100644
+index 673a0ea8c2ae..4dff28fff796 100644
 --- a/drivers/gpu/drm/tests/drm_kunit_edid.c
 +++ b/drivers/gpu/drm/tests/drm_kunit_edid.c
 @@ -766,22 +766,22 @@ EXPORT_SYMBOL(test_edid_hdmi_1080p_rgb_yuv_dc_max_340mhz);

@@ -1,0 +1,148 @@
+From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
+From: Arun Iyengar <aiyengar1990@gmail.com>
+Date: Fri, 30 Oct 2026 02:35:37 +0000
+Subject: [PATCH] media: rkvdec: vdpu381: program the H.264 POC high bits for
+ the CCU
+
+On the board, fluster JVT-AVC_V1 broke as soon as the first field-coded
+stream had run in CCU mode: the following streams decoded wrong, and in
+JVT-FR-EXT the cores eventually stopped finishing frames (timeouts, then
+IOMMU stall timeouts). The same vectors decode correctly afterwards on
+their own.
+
+The cores identify references in CCU mode by POC and the POC high bits
+of registers 200-204, which the driver never programmed. Program them as
+the Rockchip MPP does on RK3588 (hal_h264d_vdpu34x.c): the parity of a
+field picture and of its reference fields, and 3 for the DPB entries of a
+frame picture that have no reference, which point at the current buffer.
+
+Also don't give a new stream the film index of a stream that just ended,
+in case the CCU still tracks frames of the old one.
+
+Assisted-by: Claude:claude-opus-5-5
+---
+ .../media/platform/rockchip/rkvdec/rkvdec-ccu.c  |  2 +-
+ .../media/platform/rockchip/rkvdec/rkvdec-ccu.h  |  1 +
+ .../rockchip/rkvdec/rkvdec-vdpu381-h264.c        | 16 ++++++++++++++++
+ drivers/media/platform/rockchip/rkvdec/rkvdec.c  | 14 ++++++++++++--
+ drivers/media/platform/rockchip/rkvdec/rkvdec.h  |  1 +
+ 5 files changed, 31 insertions(+), 3 deletions(-)
+
+diff --git a/drivers/media/platform/rockchip/rkvdec/rkvdec-ccu.c b/drivers/media/platform/rockchip/rkvdec/rkvdec-ccu.c
+index 1049b3854809..604c05188a5b 100644
+--- a/drivers/media/platform/rockchip/rkvdec/rkvdec-ccu.c
++++ b/drivers/media/platform/rockchip/rkvdec/rkvdec-ccu.c
+@@ -60,7 +60,7 @@ void rkvdec_ccu_put(struct rkvdec_ccu *ccu)
+  * VP9 back-end doesn't program the POC, probability and segmentation-map
+  * references the cores synchronize VP9 on, and decodes garbage in CCU mode.
+  */
+-static bool rkvdec_ctx_uses_ccu(struct rkvdec_ctx *ctx)
++bool rkvdec_ctx_uses_ccu(struct rkvdec_ctx *ctx)
+ {
+ 	return ctx->dev->ccu &&
+ 	       (ctx->coded_fmt_desc->flags & RKVDEC_FMT_FLAG_PIPELINE);
+diff --git a/drivers/media/platform/rockchip/rkvdec/rkvdec-ccu.h b/drivers/media/platform/rockchip/rkvdec/rkvdec-ccu.h
+index 39806bbc10c3..2e6ae1cab1b9 100644
+--- a/drivers/media/platform/rockchip/rkvdec/rkvdec-ccu.h
++++ b/drivers/media/platform/rockchip/rkvdec/rkvdec-ccu.h
+@@ -19,6 +19,7 @@ void rkvdec_ccu_release(struct rkvdec_ccu *ccu);
+ 
+ int rkvdec_ccu_get(struct rkvdec_ccu *ccu);
+ void rkvdec_ccu_put(struct rkvdec_ccu *ccu);
++bool rkvdec_ctx_uses_ccu(struct rkvdec_ctx *ctx);
+ void rkvdec_ccu_prepare(struct rkvdec_ctx *ctx);
+ void rkvdec_ccu_start(struct rkvdec_ctx *ctx);
+ void rkvdec_vdpu381_set_ccu_regs(struct rkvdec_ctx *ctx,
+diff --git a/drivers/media/platform/rockchip/rkvdec/rkvdec-vdpu381-h264.c b/drivers/media/platform/rockchip/rkvdec/rkvdec-vdpu381-h264.c
+index dca2a6ba4d05..b5a412489a11 100644
+--- a/drivers/media/platform/rockchip/rkvdec/rkvdec-vdpu381-h264.c
++++ b/drivers/media/platform/rockchip/rkvdec/rkvdec-vdpu381-h264.c
+@@ -233,6 +233,8 @@ static void config_registers(struct rkvdec_ctx *ctx,
+ 	u32 y_virstride;
+ 	u32 offset;
+ 	u32 pixels;
++	bool field_pic;
++	u32 *highpoc;
+ 	u32 i;
+ 
+ 	memset(regs, 0, sizeof(*regs));
+@@ -314,11 +316,25 @@ static void config_registers(struct rkvdec_ctx *ctx,
+ 	regs->h264_param.reg065_cur_top_poc = dec_params->top_field_order_cnt;
+ 	regs->h264_param.reg066_cur_bot_poc = dec_params->bottom_field_order_cnt;
+ 
++	/*
++	 * POC high bits, which tell the cores what a reference is: the field
++	 * parity of field pictures, 3 for unused entries of frame pictures.
++	 */
++	field_pic = !!(dec_params->flags & V4L2_H264_DECODE_PARAM_FLAG_FIELD_PIC);
++	highpoc = (u32 *)&regs->h264_highpoc;
++	if (field_pic && (dec_params->flags & V4L2_H264_DECODE_PARAM_FLAG_BOTTOM_FIELD))
++		highpoc[4] = 1;
++
+ 	/* Set ref pic address & poc */
+ 	for (i = 0; i < ARRAY_SIZE(dec_params->dpb); i++) {
+ 		struct vb2_buffer *vb_buf = run->ref_buf[i];
+ 		dma_addr_t buf_dma;
+ 
++		if (field_pic)
++			highpoc[i / 4] |= 0x10 << ((i % 4) * 8);
++		else if (!vb_buf)
++			highpoc[i / 4] |= 0x33 << ((i % 4) * 8);
++
+ 		/*
+ 		 * If a DPB entry is unused or invalid, address of current destination
+ 		 * buffer is returned.
+diff --git a/drivers/media/platform/rockchip/rkvdec/rkvdec.c b/drivers/media/platform/rockchip/rkvdec/rkvdec.c
+index a94a2e90ed65..095e361649f6 100644
+--- a/drivers/media/platform/rockchip/rkvdec/rkvdec.c
++++ b/drivers/media/platform/rockchip/rkvdec/rkvdec.c
+@@ -1463,7 +1463,7 @@ static int rkvdec_job_ready(void *priv)
+ 		return 1;
+ 
+ 	/* Only formats with more than one job slot can be pipelined. */
+-	if (ctx->num_jobs >= ctx->num_job_slots)
++	if (ctx->num_jobs >= ctx->num_job_slots || !rkvdec_ctx_uses_ccu(ctx))
+ 		return 0;
+ 
+ 	/* A CAPTURE buffer shared by two jobs (two fields): one at a time. */
+@@ -1750,10 +1750,19 @@ static int rkvdec_open(struct file *filp)
+ 	mutex_init(&ctx->done_lock);
+ 	ctx->num_job_slots = 1;
+ 
+-	ret = ida_alloc_range(&rkvdec->film_ida, 1, RKVDEC_MAX_FILM_IDX, GFP_KERNEL);
++	/*
++	 * Don't hand the film index of a stream that just ended to the next
++	 * one: start after the last one given out.
++	 */
++	ret = ida_alloc_range(&rkvdec->film_ida, READ_ONCE(rkvdec->next_film_idx),
++			      RKVDEC_MAX_FILM_IDX, GFP_KERNEL);
++	if (ret < 0)
++		ret = ida_alloc_range(&rkvdec->film_ida, 1, RKVDEC_MAX_FILM_IDX,
++				      GFP_KERNEL);
+ 	if (ret < 0)
+ 		goto err_free_ctx;
+ 	ctx->film_idx = ret;
++	WRITE_ONCE(rkvdec->next_film_idx, ret < RKVDEC_MAX_FILM_IDX ? ret + 1 : 1);
+ 
+ 	rkvdec_reset_coded_fmt(ctx);
+ 	rkvdec_reset_decoded_fmt(ctx);
+@@ -2567,6 +2576,7 @@ static int rkvdec_probe(struct platform_device *pdev)
+ 	mutex_init(&rkvdec->vdev_lock);
+ 	spin_lock_init(&rkvdec->cores_lock);
+ 	ida_init(&rkvdec->film_ida);
++	rkvdec->next_film_idx = 1;
+ 
+ 	dev_set_drvdata(dev, rkvdec);
+ 
+diff --git a/drivers/media/platform/rockchip/rkvdec/rkvdec.h b/drivers/media/platform/rockchip/rkvdec/rkvdec.h
+index 1c27fcffefca..fb17bf644e5c 100644
+--- a/drivers/media/platform/rockchip/rkvdec/rkvdec.h
++++ b/drivers/media/platform/rockchip/rkvdec/rkvdec.h
+@@ -214,6 +214,7 @@ struct rkvdec_dev {
+ 	struct rkvdec_job *held_job;
+ 	struct rkvdec_ccu *ccu;
+ 	struct ida film_ida;
++	int next_film_idx;
+ };
+ 
+ struct rkvdec_ctx {

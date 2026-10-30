@@ -26,7 +26,7 @@ Assisted-by: Claude:claude-opus-5-5
  4 files changed, 41 insertions(+), 16 deletions(-)
 
 diff --git a/drivers/media/platform/rockchip/rkvdec/rkvdec-hevc-common.c b/drivers/media/platform/rockchip/rkvdec/rkvdec-hevc-common.c
-index 776fe14b8..117559b57 100644
+index 776fe14b8d07..117559b57d51 100644
 --- a/drivers/media/platform/rockchip/rkvdec/rkvdec-hevc-common.c
 +++ b/drivers/media/platform/rockchip/rkvdec/rkvdec-hevc-common.c
 @@ -327,19 +327,20 @@ static void st_ref_pic_set_calculate(struct rkvdec_hevc_run *run, int idx,
@@ -105,7 +105,7 @@ index 776fe14b8..117559b57 100644
  
  struct vb2_buffer *
 diff --git a/drivers/media/platform/rockchip/rkvdec/rkvdec-hevc-common.h b/drivers/media/platform/rockchip/rkvdec/rkvdec-hevc-common.h
-index aba341a5d..48fafa79e 100644
+index aba341a5d26a..48fafa79e95e 100644
 --- a/drivers/media/platform/rockchip/rkvdec/rkvdec-hevc-common.h
 +++ b/drivers/media/platform/rockchip/rkvdec/rkvdec-hevc-common.h
 @@ -75,8 +75,8 @@ void compute_tiles_uniform(struct rkvdec_hevc_run *run, u16 log2_min_cb_size,
@@ -120,7 +120,7 @@ index aba341a5d..48fafa79e 100644
  					  struct rkvdec_hevc_run *run,
  					  struct scaling_factor *scaling_factor,
 diff --git a/drivers/media/platform/rockchip/rkvdec/rkvdec-vdpu381-hevc.c b/drivers/media/platform/rockchip/rkvdec/rkvdec-vdpu381-hevc.c
-index e9bf1915c..5152ff948 100644
+index e9bf1915cd86..5152ff9484fa 100644
 --- a/drivers/media/platform/rockchip/rkvdec/rkvdec-vdpu381-hevc.c
 +++ b/drivers/media/platform/rockchip/rkvdec/rkvdec-vdpu381-hevc.c
 @@ -593,6 +593,7 @@ static int rkvdec_hevc_run(struct rkvdec_ctx *ctx)
@@ -145,7 +145,7 @@ index e9bf1915c..5152ff948 100644
  
  	config_registers(ctx, &run);
 diff --git a/drivers/media/platform/rockchip/rkvdec/rkvdec-vdpu383-hevc.c b/drivers/media/platform/rockchip/rkvdec/rkvdec-vdpu383-hevc.c
-index 75a152128..9f0e41d67 100644
+index 75a152128aff..9f0e41d67df2 100644
 --- a/drivers/media/platform/rockchip/rkvdec/rkvdec-vdpu383-hevc.c
 +++ b/drivers/media/platform/rockchip/rkvdec/rkvdec-vdpu383-hevc.c
 @@ -542,6 +542,7 @@ static int rkvdec_hevc_run(struct rkvdec_ctx *ctx)

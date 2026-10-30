@@ -17,7 +17,7 @@ Link: https://patch.msgid.link/20260827-rkisp2-v3-4-e91ff0a604d6@ideasonboard.co
 
 diff --git a/Documentation/devicetree/bindings/media/rockchip-isp2.yaml b/Documentation/devicetree/bindings/media/rockchip-isp2.yaml
 new file mode 100644
-index 000000000..b85c28e4d
+index 000000000000..b85c28e4d7aa
 --- /dev/null
 +++ b/Documentation/devicetree/bindings/media/rockchip-isp2.yaml
 @@ -0,0 +1,125 @@

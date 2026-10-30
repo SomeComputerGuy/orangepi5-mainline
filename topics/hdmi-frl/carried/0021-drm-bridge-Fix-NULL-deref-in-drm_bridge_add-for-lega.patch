@@ -29,7 +29,7 @@ Link: https://gitlab.collabora.com/hardware-enablement/rockchip-3588/linux/-/com
  1 file changed, 8 insertions(+), 1 deletion(-)
 
 diff --git a/drivers/gpu/drm/drm_bridge.c b/drivers/gpu/drm/drm_bridge.c
-index 98eaee791..10dde3600 100644
+index 98eaee7916dc..10dde3600c70 100644
 --- a/drivers/gpu/drm/drm_bridge.c
 +++ b/drivers/gpu/drm/drm_bridge.c
 @@ -453,9 +453,16 @@ void drm_bridge_add(struct drm_bridge *bridge)

@@ -36,7 +36,7 @@ Link: https://gitlab.collabora.com/hardware-enablement/rockchip-3588/linux/-/com
  2 files changed, 198 insertions(+), 1 deletion(-)
 
 diff --git a/drivers/gpu/drm/drm_connector.c b/drivers/gpu/drm/drm_connector.c
-index 5e520cff6..38cf853e8 100644
+index 5e520cff6094..38cf853e867e 100644
 --- a/drivers/gpu/drm/drm_connector.c
 +++ b/drivers/gpu/drm/drm_connector.c
 @@ -542,6 +542,143 @@ int drmm_connector_init(struct drm_device *dev,
@@ -184,7 +184,7 @@ index 5e520cff6..38cf853e8 100644
   * drmm_connector_hdmi_ini2 - Init a preallocated HDMI connector
   * @dev: DRM device
 diff --git a/include/drm/drm_connector.h b/include/drm/drm_connector.h
-index 2e7d75cb0..2a49c4d55 100644
+index 2e7d75cb0adf..2a49c4d55f77 100644
 --- a/include/drm/drm_connector.h
 +++ b/include/drm/drm_connector.h
 @@ -1403,8 +1403,50 @@ struct drm_connector_infoframe_funcs {

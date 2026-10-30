@@ -24,7 +24,7 @@ Link: https://gitlab.collabora.com/hardware-enablement/rockchip-3588/linux/-/com
  1 file changed, 1 insertion(+), 3 deletions(-)
 
 diff --git a/drivers/gpu/drm/display/drm_bridge_connector.c b/drivers/gpu/drm/display/drm_bridge_connector.c
-index 15767eab1..d27e9b37b 100644
+index 15767eab1c06..d27e9b37bd77 100644
 --- a/drivers/gpu/drm/display/drm_bridge_connector.c
 +++ b/drivers/gpu/drm/display/drm_bridge_connector.c
 @@ -334,12 +334,10 @@ static const struct drm_connector_funcs drm_bridge_connector_funcs = {

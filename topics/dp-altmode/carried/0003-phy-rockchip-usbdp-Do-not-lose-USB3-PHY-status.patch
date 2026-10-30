@@ -25,7 +25,7 @@ Link: https://patch.msgid.link/20260915-rockchip-usbdp-cleanup-v15-3-80e2c11d1ce
  1 file changed, 1 deletion(-)
 
 diff --git a/drivers/phy/rockchip/phy-rockchip-usbdp.c b/drivers/phy/rockchip/phy-rockchip-usbdp.c
-index 13649b52e..da0fa75fc 100644
+index 13649b52e99b..da0fa75fc9f0 100644
 --- a/drivers/phy/rockchip/phy-rockchip-usbdp.c
 +++ b/drivers/phy/rockchip/phy-rockchip-usbdp.c
 @@ -1007,7 +1007,6 @@ static int rk_udphy_power_on(struct rk_udphy *udphy, u8 mode)

@@ -21,7 +21,7 @@ Link: https://gitlab.collabora.com/hardware-enablement/rockchip-3588/linux/-/com
  1 file changed, 7 insertions(+), 16 deletions(-)
 
 diff --git a/drivers/gpu/drm/vc4/vc4_hdmi.c b/drivers/gpu/drm/vc4/vc4_hdmi.c
-index 249c4e556..6a27b2dec 100644
+index 249c4e556009..6a27b2dec8f7 100644
 --- a/drivers/gpu/drm/vc4/vc4_hdmi.c
 +++ b/drivers/gpu/drm/vc4/vc4_hdmi.c
 @@ -344,12 +344,11 @@ static int vc4_hdmi_reset_link(struct drm_connector *connector,

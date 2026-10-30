@@ -31,7 +31,7 @@ Link: https://gitlab.collabora.com/hardware-enablement/rockchip-3588/linux/-/com
  2 files changed, 183 insertions(+)
 
 diff --git a/drivers/gpu/drm/display/drm_scdc_helper.c b/drivers/gpu/drm/display/drm_scdc_helper.c
-index 74388481f..fd5b4f836 100644
+index 74388481fc55..fd5b4f836af2 100644
 --- a/drivers/gpu/drm/display/drm_scdc_helper.c
 +++ b/drivers/gpu/drm/display/drm_scdc_helper.c
 @@ -595,3 +595,180 @@ void drm_scdc_debugfs_init(struct drm_connector *connector, struct dentry *root)
@@ -216,7 +216,7 @@ index 74388481f..fd5b4f836 100644
 +}
 +EXPORT_SYMBOL(drm_scdc_get_frl_ltp_request);
 diff --git a/include/drm/display/drm_scdc_helper.h b/include/drm/display/drm_scdc_helper.h
-index 6a8be1f16..2944f812e 100644
+index 6a8be1f16ce0..2944f812e796 100644
 --- a/include/drm/display/drm_scdc_helper.h
 +++ b/include/drm/display/drm_scdc_helper.h
 @@ -174,4 +174,10 @@ int drm_scdc_read_state(struct drm_connector *connector,

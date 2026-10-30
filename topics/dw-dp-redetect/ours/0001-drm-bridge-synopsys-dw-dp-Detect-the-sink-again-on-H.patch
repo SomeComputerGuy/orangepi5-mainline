@@ -1,0 +1,112 @@
+From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
+From: Arun Iyengar <aiyengar1990@gmail.com>
+Date: Fri, 30 Oct 2026 05:20:03 +0000
+Subject: [PATCH] drm/bridge: synopsys: dw-dp: Detect the sink again on HPD
+ IRQs when it was not found
+
+With out-of-band HPD (USB-C DP Alt Mode), a DisplayPort sink that was
+hung or still powering up when HPD went high is never detected: the
+detect() call that follows the HPD rising edge cannot read the DPCD,
+reports the connector as disconnected and nothing tries again. HPD
+stays high (the dock keeps it asserted and sends Attention messages
+with IRQ_HPD), so there is no further plug edge, and the short pulse
+path in dw_dp_hpd_work() only checks the link status of an enabled
+link, which there isn't. Power cycling the hung monitor leaves DP-1
+disconnected until the cable is replugged.
+
+Remember whether the last detect() found a sink, and treat a short
+pulse as a hotplug event when it did not, so that the connector is
+probed again (DPCD, EDID) and userspace is notified once the sink
+answers. Do the same when a branch device reports a change of its
+downstream ports (DP_DOWNSTREAM_PORT_STATUS_CHANGED), which is how a
+DP-to-HDMI converter signals that its monitor was power cycled while
+HPD stays high. Also warn (rate limited) when HPD is high but the sink
+does not answer on AUX, which was silent so far.
+
+Reproducer (Orange Pi 5, USB-C dock, Dell P2415Q on DP pin
+assignment D): hang or power off the monitor, then power it on again.
+Before, DP-1 stays "disconnected" with DP Alt Mode active and hpd=1
+while the dock sends Attention/IRQ_HPD every ~2 s; after, the next
+IRQ_HPD re-runs detection and DP-1 comes back.
+
+Assisted-by: Claude:claude-opus-5-5
+---
+ drivers/gpu/drm/bridge/synopsys/dw-dp.c | 40 ++++++++++++++++++++++++-
+ 1 file changed, 39 insertions(+), 1 deletion(-)
+
+diff --git a/drivers/gpu/drm/bridge/synopsys/dw-dp.c b/drivers/gpu/drm/bridge/synopsys/dw-dp.c
+index 5b7490a2a01d..dfc17d4a87ad 100644
+--- a/drivers/gpu/drm/bridge/synopsys/dw-dp.c
++++ b/drivers/gpu/drm/bridge/synopsys/dw-dp.c
+@@ -364,6 +364,8 @@ struct dw_dp {
+ 	u8 pixel_mode;
+ 	bool usbc_mode;
+ 	bool usbc_hpd;
++	/* the last detect() found a sink answering on AUX */
++	bool sink_detected;
+ 	bool pm_active;
+ 
+ 	struct drm_bridge *next_bridge;
+@@ -2097,11 +2099,18 @@ static enum drm_connector_status dw_dp_bridge_detect(struct drm_bridge *bridge,
+ 	if (PM_RUNTIME_ACQUIRE_ERR(&pm))
+ 		return connector_status_disconnected;
+ 
++	WRITE_ONCE(dp->sink_detected, false);
++
+ 	if (!dw_dp_hpd_detect(dp))
+ 		return connector_status_disconnected;
+ 
+-	if (!dw_dp_hpd_detect_link(dp, connector))
++	if (!dw_dp_hpd_detect_link(dp, connector)) {
++		dev_warn_ratelimited(dp->dev,
++				     "HPD is high, but the sink does not respond on AUX\n");
+ 		return connector_status_disconnected;
++	}
++
++	WRITE_ONCE(dp->sink_detected, true);
+ 
+ 	return connector_status_connected;
+ }
+@@ -2387,6 +2396,21 @@ static int dw_dp_link_retrain(struct dw_dp *dp)
+ 	return ret;
+ }
+ 
++/* A branch device signals changes on its downstream ports with IRQ_HPD */
++static bool dw_dp_downstream_port_changed(struct dw_dp *dp)
++{
++	u8 status;
++	int ret;
++
++	/* AUX goes through the PHY, which is off while the link is disabled */
++	if (phy_power_on(dp->phy))
++		return false;
++	ret = drm_dp_dpcd_readb(&dp->aux, DP_LANE_ALIGN_STATUS_UPDATED, &status);
++	phy_power_off(dp->phy);
++
++	return ret == 1 && (status & DP_DOWNSTREAM_PORT_STATUS_CHANGED);
++}
++
+ static void dw_dp_hpd_work(struct work_struct *work)
+ {
+ 	struct dw_dp *dp = container_of(work, struct dw_dp, hpd_work);
+@@ -2404,6 +2428,20 @@ static void dw_dp_hpd_work(struct work_struct *work)
+ 
+ 	dev_dbg(dp->dev, "[drm] Get hpd irq - %s\n", long_hpd ? "long" : "short");
+ 
++	/*
++	 * A short pulse (IRQ_HPD, or a DP Alt Mode Attention with HPD still
++	 * high) is only a link status check if the sink was detected. If the
++	 * last detection failed while HPD was high, e.g. because the sink was
++	 * hung or still powering up and did not answer on AUX, nothing else
++	 * would ever detect it again, as HPD does not go low: treat the pulse
++	 * as a hotplug event. The same applies when a branch device reports a
++	 * change on its downstream port (a DP-to-HDMI converter whose monitor
++	 * was power cycled).
++	 */
++	if (!long_hpd && (!READ_ONCE(dp->sink_detected) ||
++			  dw_dp_downstream_port_changed(dp)))
++		long_hpd = true;
++
+ 	if (!long_hpd) {
+ 		if (dw_dp_needs_link_retrain(dp)) {
+ 			ret = dw_dp_link_retrain(dp);

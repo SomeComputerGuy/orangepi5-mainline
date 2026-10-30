@@ -19,7 +19,7 @@ Link: https://patch.msgid.link/20260522101653.2565125-7-paulk@sys-base.io
  2 files changed, 451 insertions(+)
 
 diff --git a/drivers/media/v4l2-core/v4l2-h264-enc.c b/drivers/media/v4l2-core/v4l2-h264-enc.c
-index 0b46922d1..3b7bca117 100644
+index 0b46922d1d7a..3b7bca117818 100644
 --- a/drivers/media/v4l2-core/v4l2-h264-enc.c
 +++ b/drivers/media/v4l2-core/v4l2-h264-enc.c
 @@ -12,9 +12,90 @@
@@ -486,7 +486,7 @@ index 0b46922d1..3b7bca117 100644
  }
  EXPORT_SYMBOL_GPL(v4l2_h264_enc_complete);
 diff --git a/include/media/v4l2-h264-enc.h b/include/media/v4l2-h264-enc.h
-index 3d6b97408..817a9ca2f 100644
+index 3d6b97408707..817a9ca2f169 100644
 --- a/include/media/v4l2-h264-enc.h
 +++ b/include/media/v4l2-h264-enc.h
 @@ -35,6 +35,33 @@

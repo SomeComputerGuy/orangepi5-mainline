@@ -36,7 +36,7 @@ Link: https://patch.msgid.link/20260915-rockchip-usbdp-cleanup-v15-16-80e2c11d1c
  2 files changed, 19 insertions(+)
 
 diff --git a/drivers/phy/rockchip/Kconfig b/drivers/phy/rockchip/Kconfig
-index 14698571b..39759bb2f 100644
+index 14698571b607..39759bb2fa1d 100644
 --- a/drivers/phy/rockchip/Kconfig
 +++ b/drivers/phy/rockchip/Kconfig
 @@ -136,8 +136,10 @@ config PHY_ROCKCHIP_USBDP
@@ -51,7 +51,7 @@ index 14698571b..39759bb2f 100644
  	  Enable this to support the Rockchip USB3.0/DP combo PHY with
  	  Samsung IP block. This is required for USB3 support on RK3588.
 diff --git a/drivers/phy/rockchip/phy-rockchip-usbdp.c b/drivers/phy/rockchip/phy-rockchip-usbdp.c
-index 8874f8429..fa8324879 100644
+index 8874f8429a67..fa8324879a97 100644
 --- a/drivers/phy/rockchip/phy-rockchip-usbdp.c
 +++ b/drivers/phy/rockchip/phy-rockchip-usbdp.c
 @@ -6,6 +6,7 @@

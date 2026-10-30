@@ -1,0 +1,80 @@
+From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
+From: Cristian Ciocaltea <cristian.ciocaltea@collabora.com>
+Date: Tue, 9 Jun 2026 21:36:08 +0000
+Subject: [PATCH] drm/bridge: dw-hdmi-qp: Add TxFFE level control support
+
+Extend the QP bridge configuration with a .hdmi_frl_set_ffe_level()
+callback that forwards to a new optional .set_ffe_level() PHY op,
+allowing drivers to adjust the source TxFFE level during FRL link
+training.
+
+Also add a max_ffe_level field so drivers can advertise the maximum
+supported TxFFE level, allowing the common FRL link training helper to
+incrementally increase the level on sink-requested LTP updates during
+LTS:3, instead of dropping straight back to legacy TMDS.
+
+Signed-off-by: Cristian Ciocaltea <cristian.ciocaltea@collabora.com>
+Link: https://gitlab.collabora.com/hardware-enablement/rockchip-3588/linux/-/commit/d11de34fd3693c12bfa7e792b8530f3487a511c6
+---
+ drivers/gpu/drm/bridge/synopsys/dw-hdmi-qp.c | 13 +++++++++++++
+ include/drm/bridge/dw_hdmi_qp.h              |  2 ++
+ 2 files changed, 15 insertions(+)
+
+diff --git a/drivers/gpu/drm/bridge/synopsys/dw-hdmi-qp.c b/drivers/gpu/drm/bridge/synopsys/dw-hdmi-qp.c
+index 94772b80f439..3a3f32bd17d7 100644
+--- a/drivers/gpu/drm/bridge/synopsys/dw-hdmi-qp.c
++++ b/drivers/gpu/drm/bridge/synopsys/dw-hdmi-qp.c
+@@ -757,6 +757,17 @@ static int dw_hdmi_qp_bridge_frl_fallback_tmds(struct drm_bridge *bridge)
+ 	return 0;
+ }
+ 
++static int dw_hdmi_qp_bridge_frl_set_ffe_level(struct drm_bridge *bridge,
++					       u8 ffe_level)
++{
++	struct dw_hdmi_qp *hdmi = bridge->driver_private;
++
++	if (!hdmi->phy.ops->set_ffe_level)
++		return -EOPNOTSUPP;
++
++	return hdmi->phy.ops->set_ffe_level(hdmi, hdmi->phy.data, ffe_level);
++}
++
+ static int dw_hdmi_qp_bridge_scrambler_enable(struct drm_bridge *bridge)
+ {
+ 	struct dw_hdmi_qp *hdmi = bridge->driver_private;
+@@ -1154,6 +1165,7 @@ static const struct drm_bridge_funcs dw_hdmi_qp_bridge_funcs = {
+ 	.hdmi_frl_tx_start = dw_hdmi_qp_bridge_frl_tx_start,
+ 	.hdmi_frl_tx_stop = dw_hdmi_qp_bridge_frl_tx_stop,
+ 	.hdmi_frl_fallback_tmds = dw_hdmi_qp_bridge_frl_fallback_tmds,
++	.hdmi_frl_set_ffe_level = dw_hdmi_qp_bridge_frl_set_ffe_level,
+ 	.hdmi_scrambler_enable = dw_hdmi_qp_bridge_scrambler_enable,
+ 	.hdmi_scrambler_disable = dw_hdmi_qp_bridge_scrambler_disable,
+ 	.hdmi_clear_avi_infoframe = dw_hdmi_qp_bridge_clear_avi_infoframe,
+@@ -1297,6 +1309,7 @@ struct dw_hdmi_qp *dw_hdmi_qp_bind(struct platform_device *pdev,
+ 		hdmi->bridge.min_frl_lanes = plat_data->min_frl_lanes;
+ 		hdmi->bridge.max_frl_rate_per_lane = plat_data->max_frl_rate_per_lane;
+ 		hdmi->bridge.max_frl_lanes = plat_data->max_frl_lanes;
++		hdmi->bridge.max_ffe_level = plat_data->max_ffe_level;
+ 	}
+ 
+ 	if (plat_data->supported_formats)
+diff --git a/include/drm/bridge/dw_hdmi_qp.h b/include/drm/bridge/dw_hdmi_qp.h
+index 1cd8ee27b4d0..ee37e5fc36c1 100644
+--- a/include/drm/bridge/dw_hdmi_qp.h
++++ b/include/drm/bridge/dw_hdmi_qp.h
+@@ -21,6 +21,7 @@ struct dw_hdmi_qp_phy_ops {
+ 	void (*enable_hpd)(struct dw_hdmi_qp *hdmi, void *data);
+ 	void (*disable_hpd)(struct dw_hdmi_qp *hdmi, void *data);
+ 	int (*set_frl_rate)(struct dw_hdmi_qp *hdmi, void *data, u8 rate_per_lane, u8 lanes);
++	int (*set_ffe_level)(struct dw_hdmi_qp *hdmi, void *data, u8 ffe_level);
+ };
+ 
+ struct dw_hdmi_qp_plat_data {
+@@ -38,6 +39,7 @@ struct dw_hdmi_qp_plat_data {
+ 	u8 min_frl_lanes;
+ 	u8 max_frl_rate_per_lane;
+ 	u8 max_frl_lanes;
++	u8 max_ffe_level;
+ };
+ 
+ struct dw_hdmi_qp *dw_hdmi_qp_bind(struct platform_device *pdev,

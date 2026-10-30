@@ -3,6 +3,7 @@
 #   ffmpeg              V4L2 Request API (stateless decoder) hwaccels
 #   mpv                 v4l2request hwdec + DRM PRIME interop; needs our ffmpeg
 #   gst-plugins-bad1.0  v4l2codecs and kmssink fixes (patches/gstreamer)
+#   gst-plugins-good1.0 v4l2transform colorimetry, souphttpsrc HEAD race (patches/gst-plugins-good)
 # Rootless: mmdebstrap --mode=unshare + qemu-user binfmt, no sudo.
 # Usage: build-media-debs.sh [source...]     (default: all of the above, in that order)
 # Output: out/debs-media/*.deb plus a Packages index (a flat apt repository that
@@ -69,14 +70,15 @@ declare -A VERSION=(
   [ffmpeg]=7:8.1.2-2ubuntu2
   [mpv]=0.41.0-2ubuntu5
   [gst-plugins-bad1.0]=1.28.6-1ubuntu1
+  [gst-plugins-good1.0]=1.28.7-1build1
 )
-declare -A REV=([ffmpeg]=2 [mpv]=1 [gst-plugins-bad1.0]=1)
-declare -A PDIR=([ffmpeg]=ffmpeg [mpv]=mpv [gst-plugins-bad1.0]=gstreamer)
+declare -A REV=([ffmpeg]=2 [mpv]=1 [gst-plugins-bad1.0]=3 [gst-plugins-good1.0]=1)
+declare -A PDIR=([ffmpeg]=ffmpeg [mpv]=mpv [gst-plugins-bad1.0]=gstreamer [gst-plugins-good1.0]=gst-plugins-good)
 
 if [ $# -gt 0 ]; then
   SOURCES=("$@")
 else
-  SOURCES=(ffmpeg mpv gst-plugins-bad1.0)
+  SOURCES=(ffmpeg mpv gst-plugins-bad1.0 gst-plugins-good1.0)
 fi
 
 mkdir -p "$REPO" "$WORK"

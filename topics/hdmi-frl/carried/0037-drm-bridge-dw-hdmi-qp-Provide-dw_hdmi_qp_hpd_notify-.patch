@@ -23,7 +23,7 @@ Link: https://gitlab.collabora.com/hardware-enablement/rockchip-3588/linux/-/com
  2 files changed, 38 insertions(+)
 
 diff --git a/drivers/gpu/drm/bridge/synopsys/dw-hdmi-qp.c b/drivers/gpu/drm/bridge/synopsys/dw-hdmi-qp.c
-index 6c8d25bc0..e0771878f 100644
+index 6c8d25bc00d5..e0771878f7be 100644
 --- a/drivers/gpu/drm/bridge/synopsys/dw-hdmi-qp.c
 +++ b/drivers/gpu/drm/bridge/synopsys/dw-hdmi-qp.c
 @@ -28,6 +28,7 @@
@@ -99,7 +99,7 @@ index 6c8d25bc0..e0771878f 100644
  {
  	disable_irq(hdmi->main_irq);
 diff --git a/include/drm/bridge/dw_hdmi_qp.h b/include/drm/bridge/dw_hdmi_qp.h
-index b80fceffc..b4fb1c578 100644
+index b80fceffc315..b4fb1c578a5b 100644
 --- a/include/drm/bridge/dw_hdmi_qp.h
 +++ b/include/drm/bridge/dw_hdmi_qp.h
 @@ -36,6 +36,7 @@ struct dw_hdmi_qp_plat_data {

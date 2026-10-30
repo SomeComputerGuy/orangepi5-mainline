@@ -28,7 +28,7 @@ Assisted-by: Claude:claude-opus-5-5
 
 diff --git a/Documentation/devicetree/bindings/media/rockchip,rk3588-vdec-ccu.yaml b/Documentation/devicetree/bindings/media/rockchip,rk3588-vdec-ccu.yaml
 new file mode 100644
-index 000000000..59cdff16e
+index 000000000000..59cdff16e7fe
 --- /dev/null
 +++ b/Documentation/devicetree/bindings/media/rockchip,rk3588-vdec-ccu.yaml
 @@ -0,0 +1,62 @@
@@ -95,7 +95,7 @@ index 000000000..59cdff16e
 +
 +...
 diff --git a/Documentation/devicetree/bindings/media/rockchip,vdec.yaml b/Documentation/devicetree/bindings/media/rockchip,vdec.yaml
-index 4f38a0ef2..893ecbc0e 100644
+index 4f38a0ef29d8..893ecbc0ea52 100644
 --- a/Documentation/devicetree/bindings/media/rockchip,vdec.yaml
 +++ b/Documentation/devicetree/bindings/media/rockchip,vdec.yaml
 @@ -96,6 +96,16 @@ properties:
@@ -132,7 +132,7 @@ index 4f38a0ef2..893ecbc0e 100644
  additionalProperties: false
  
 diff --git a/MAINTAINERS b/MAINTAINERS
-index e2db9d567..36c7e64e3 100644
+index e2db9d567140..36c7e64e3a64 100644
 --- a/MAINTAINERS
 +++ b/MAINTAINERS
 @@ -23755,6 +23755,7 @@ M:	Ezequiel Garcia <ezequiel@vanguardiasur.com.ar>

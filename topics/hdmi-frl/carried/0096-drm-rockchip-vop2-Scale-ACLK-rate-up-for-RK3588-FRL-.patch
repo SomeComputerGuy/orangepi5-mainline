@@ -28,7 +28,7 @@ Link: https://gitlab.collabora.com/hardware-enablement/rockchip-3588/linux/-/com
  3 files changed, 22 insertions(+)
 
 diff --git a/drivers/gpu/drm/rockchip/rockchip_drm_drv.h b/drivers/gpu/drm/rockchip/rockchip_drm_drv.h
-index 4705dc6b8..49fb5064c 100644
+index 4705dc6b8bd7..49fb5064cd5c 100644
 --- a/drivers/gpu/drm/rockchip/rockchip_drm_drv.h
 +++ b/drivers/gpu/drm/rockchip/rockchip_drm_drv.h
 @@ -57,6 +57,7 @@ struct rockchip_crtc_state {
@@ -40,7 +40,7 @@ index 4705dc6b8..49fb5064c 100644
  #define to_rockchip_crtc_state(s) \
  		container_of(s, struct rockchip_crtc_state, base)
 diff --git a/drivers/gpu/drm/rockchip/rockchip_drm_vop2.c b/drivers/gpu/drm/rockchip/rockchip_drm_vop2.c
-index 4cce3e336..2704c0b05 100644
+index 4cce3e336f5b..2704c0b05217 100644
 --- a/drivers/gpu/drm/rockchip/rockchip_drm_vop2.c
 +++ b/drivers/gpu/drm/rockchip/rockchip_drm_vop2.c
 @@ -103,6 +103,8 @@ enum vop2_afbc_format {
@@ -85,7 +85,7 @@ index 4cce3e336..2704c0b05 100644
  
  	vop2_crtc_enable_irq(vp, VP_INT_POST_BUF_EMPTY);
 diff --git a/drivers/gpu/drm/rockchip/rockchip_drm_vop2.h b/drivers/gpu/drm/rockchip/rockchip_drm_vop2.h
-index ffcb39c13..994609233 100644
+index ffcb39c130aa..994609233c77 100644
 --- a/drivers/gpu/drm/rockchip/rockchip_drm_vop2.h
 +++ b/drivers/gpu/drm/rockchip/rockchip_drm_vop2.h
 @@ -324,6 +324,7 @@ struct vop2 {

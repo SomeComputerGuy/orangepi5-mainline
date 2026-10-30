@@ -30,7 +30,7 @@ Link: https://gitlab.collabora.com/hardware-enablement/rockchip-3588/linux/-/com
  2 files changed, 8 insertions(+), 8 deletions(-)
 
 diff --git a/drivers/gpu/drm/display/drm_scdc_helper.c b/drivers/gpu/drm/display/drm_scdc_helper.c
-index df878aad4..8403f2390 100644
+index df878aad4a36..8403f2390ab6 100644
 --- a/drivers/gpu/drm/display/drm_scdc_helper.c
 +++ b/drivers/gpu/drm/display/drm_scdc_helper.c
 @@ -67,8 +67,8 @@
@@ -56,7 +56,7 @@ index df878aad4..8403f2390 100644
  	struct i2c_msg msg = {
  		.addr = SCDC_I2C_SLAVE_ADDRESS,
 diff --git a/include/drm/display/drm_scdc_helper.h b/include/drm/display/drm_scdc_helper.h
-index 34600476a..e9ccaeba5 100644
+index 34600476a1b9..e9ccaeba56dd 100644
 --- a/include/drm/display/drm_scdc_helper.h
 +++ b/include/drm/display/drm_scdc_helper.h
 @@ -31,10 +31,10 @@

@@ -29,7 +29,7 @@ Assisted-by: Claude:claude-opus-5-5
  4 files changed, 52 insertions(+)
 
 diff --git a/drivers/media/platform/verisilicon/hantro_h1_jpeg_enc.c b/drivers/media/platform/verisilicon/hantro_h1_jpeg_enc.c
-index 86cc1a070..d8c71676a 100644
+index 86cc1a07026f..d8c71676a3f2 100644
 --- a/drivers/media/platform/verisilicon/hantro_h1_jpeg_enc.c
 +++ b/drivers/media/platform/verisilicon/hantro_h1_jpeg_enc.c
 @@ -109,10 +109,15 @@ int hantro_h1_jpeg_enc_run(struct hantro_ctx *ctx)
@@ -49,7 +49,7 @@ index 86cc1a070..d8c71676a 100644
  
  	memset(&jpeg_ctx, 0, sizeof(jpeg_ctx));
 diff --git a/drivers/media/platform/verisilicon/hantro_jpeg.c b/drivers/media/platform/verisilicon/hantro_jpeg.c
-index 13a60638e..2f2afd632 100644
+index 13a60638e43f..2f2afd632c1b 100644
 --- a/drivers/media/platform/verisilicon/hantro_jpeg.c
 +++ b/drivers/media/platform/verisilicon/hantro_jpeg.c
 @@ -14,6 +14,7 @@
@@ -101,7 +101,7 @@ index 13a60638e..2f2afd632 100644
 +	return 0;
 +}
 diff --git a/drivers/media/platform/verisilicon/hantro_jpeg.h b/drivers/media/platform/verisilicon/hantro_jpeg.h
-index 0b49d0b82..296ad1e82 100644
+index 0b49d0b82caa..296ad1e821c7 100644
 --- a/drivers/media/platform/verisilicon/hantro_jpeg.h
 +++ b/drivers/media/platform/verisilicon/hantro_jpeg.h
 @@ -1,5 +1,8 @@
@@ -120,7 +120,7 @@ index 0b49d0b82..296ad1e82 100644
 +int hantro_jpeg_enc_check_job(struct hantro_ctx *ctx,
 +			      struct vb2_buffer *dst_buf);
 diff --git a/drivers/media/platform/verisilicon/rockchip_vpu2_hw_jpeg_enc.c b/drivers/media/platform/verisilicon/rockchip_vpu2_hw_jpeg_enc.c
-index f7550470b..9df0f4446 100644
+index f7550470b43d..9df0f4446f00 100644
 --- a/drivers/media/platform/verisilicon/rockchip_vpu2_hw_jpeg_enc.c
 +++ b/drivers/media/platform/verisilicon/rockchip_vpu2_hw_jpeg_enc.c
 @@ -135,10 +135,15 @@ int rockchip_vpu2_jpeg_enc_run(struct hantro_ctx *ctx)

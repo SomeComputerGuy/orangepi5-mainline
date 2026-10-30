@@ -32,7 +32,7 @@ Assisted-by: Claude:claude-opus-5-5
  create mode 100644 drivers/media/v4l2-core/v4l2-hevc-enc-kunit.c
 
 diff --git a/drivers/media/v4l2-core/.kunitconfig b/drivers/media/v4l2-core/.kunitconfig
-index 4ef422b5e..65aa43070 100644
+index 4ef422b5e0a8..65aa43070053 100644
 --- a/drivers/media/v4l2-core/.kunitconfig
 +++ b/drivers/media/v4l2-core/.kunitconfig
 @@ -3,3 +3,4 @@ CONFIG_MEDIA_SUPPORT=y
@@ -41,7 +41,7 @@ index 4ef422b5e..65aa43070 100644
  CONFIG_V4L2_HEVC_ENC_RBSP_KUNIT_TEST=y
 +CONFIG_V4L2_HEVC_ENC_KUNIT_TEST=y
 diff --git a/drivers/media/v4l2-core/Kconfig b/drivers/media/v4l2-core/Kconfig
-index 344f914a8..e405af87b 100644
+index 344f914a85f3..e405af87baba 100644
 --- a/drivers/media/v4l2-core/Kconfig
 +++ b/drivers/media/v4l2-core/Kconfig
 @@ -70,6 +70,20 @@ config V4L2_HEVC_ENC_RBSP_KUNIT_TEST
@@ -66,7 +66,7 @@ index 344f914a8..e405af87b 100644
  config V4L2_VP9
  	tristate
 diff --git a/drivers/media/v4l2-core/Makefile b/drivers/media/v4l2-core/Makefile
-index ff783a2e7..9081ba115 100644
+index ff783a2e786b..9081ba1157c8 100644
 --- a/drivers/media/v4l2-core/Makefile
 +++ b/drivers/media/v4l2-core/Makefile
 @@ -34,6 +34,7 @@ obj-$(CONFIG_V4L2_H264_ENC) += v4l2-h264-enc.o v4l2-h264-enc-rbsp.o \
@@ -79,7 +79,7 @@ index ff783a2e7..9081ba115 100644
  obj-$(CONFIG_V4L2_MEM2MEM_DEV) += v4l2-mem2mem.o
 diff --git a/drivers/media/v4l2-core/v4l2-hevc-enc-kunit.c b/drivers/media/v4l2-core/v4l2-hevc-enc-kunit.c
 new file mode 100644
-index 000000000..15c65663d
+index 000000000000..15c65663d46c
 --- /dev/null
 +++ b/drivers/media/v4l2-core/v4l2-hevc-enc-kunit.c
 @@ -0,0 +1,554 @@

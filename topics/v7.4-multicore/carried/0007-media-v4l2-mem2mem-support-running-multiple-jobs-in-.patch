@@ -33,7 +33,7 @@ Signed-off-by: Sven Püschel <s.pueschel@pengutronix.de>
  2 files changed, 58 insertions(+), 11 deletions(-)
 
 diff --git a/drivers/media/v4l2-core/v4l2-mem2mem.c b/drivers/media/v4l2-core/v4l2-mem2mem.c
-index 60cca9419..f1b625598 100644
+index 60cca9419516..f1b625598408 100644
 --- a/drivers/media/v4l2-core/v4l2-mem2mem.c
 +++ b/drivers/media/v4l2-core/v4l2-mem2mem.c
 @@ -88,6 +88,7 @@ static const char * const m2m_entity_name[] = {
@@ -144,7 +144,7 @@ index 60cca9419..f1b625598 100644
  	return m2m_dev;
  }
 diff --git a/include/media/v4l2-mem2mem.h b/include/media/v4l2-mem2mem.h
-index 31de25d79..37ffd33b6 100644
+index 31de25d792b9..37ffd33b653f 100644
 --- a/include/media/v4l2-mem2mem.h
 +++ b/include/media/v4l2-mem2mem.h
 @@ -144,6 +144,10 @@ struct v4l2_m2m_buffer {

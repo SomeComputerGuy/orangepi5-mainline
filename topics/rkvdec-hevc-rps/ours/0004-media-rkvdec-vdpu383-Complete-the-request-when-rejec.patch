@@ -19,7 +19,7 @@ Assisted-by: Claude:claude-opus-5-5
  1 file changed, 2 insertions(+)
 
 diff --git a/drivers/media/platform/rockchip/rkvdec/rkvdec-vdpu383-hevc.c b/drivers/media/platform/rockchip/rkvdec/rkvdec-vdpu383-hevc.c
-index a672fa894..ef4ce05f1 100644
+index a672fa8940f4..ef4ce05f1c3c 100644
 --- a/drivers/media/platform/rockchip/rkvdec/rkvdec-vdpu383-hevc.c
 +++ b/drivers/media/platform/rockchip/rkvdec/rkvdec-vdpu383-hevc.c
 @@ -553,6 +553,8 @@ static int rkvdec_hevc_run(struct rkvdec_ctx *ctx)

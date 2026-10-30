@@ -22,7 +22,7 @@ Assisted-by: Claude:claude-opus-5-5
  2 files changed, 91 insertions(+), 39 deletions(-)
 
 diff --git a/drivers/media/platform/rockchip/rkvdec/rkvdec-vdpu381-h264.c b/drivers/media/platform/rockchip/rkvdec/rkvdec-vdpu381-h264.c
-index 7bc67c32a..e5d325999 100644
+index 7bc67c32a5f0..e5d325999f15 100644
 --- a/drivers/media/platform/rockchip/rkvdec/rkvdec-vdpu381-h264.c
 +++ b/drivers/media/platform/rockchip/rkvdec/rkvdec-vdpu381-h264.c
 @@ -78,20 +78,28 @@ struct rkvdec_h264_priv_tbl {
@@ -153,7 +153,7 @@ index 7bc67c32a..e5d325999 100644
  
  	rkvdec_h264_run_preamble(ctx, &run);
 diff --git a/drivers/media/platform/rockchip/rkvdec/rkvdec-vdpu381-hevc.c b/drivers/media/platform/rockchip/rkvdec/rkvdec-vdpu381-hevc.c
-index 8281bd3c5..333dcb026 100644
+index 8281bd3c52b8..333dcb0264e3 100644
 --- a/drivers/media/platform/rockchip/rkvdec/rkvdec-vdpu381-hevc.c
 +++ b/drivers/media/platform/rockchip/rkvdec/rkvdec-vdpu381-hevc.c
 @@ -114,20 +114,31 @@ struct rkvdec_hevc_priv_tbl {

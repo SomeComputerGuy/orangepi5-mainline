@@ -34,7 +34,7 @@ Assisted-by: Claude:claude-opus-5-5
  1 file changed, 78 insertions(+), 11 deletions(-)
 
 diff --git a/arch/arm64/boot/dts/rockchip/rk3588s-orangepi-5-5b.dtsi b/arch/arm64/boot/dts/rockchip/rk3588s-orangepi-5-5b.dtsi
-index 6e081bc06..007e0818c 100644
+index 6e081bc06cfe..007e0818c760 100644
 --- a/arch/arm64/boot/dts/rockchip/rk3588s-orangepi-5-5b.dtsi
 +++ b/arch/arm64/boot/dts/rockchip/rk3588s-orangepi-5-5b.dtsi
 @@ -69,6 +69,22 @@ vbus_typec: regulator-vbus-typec {

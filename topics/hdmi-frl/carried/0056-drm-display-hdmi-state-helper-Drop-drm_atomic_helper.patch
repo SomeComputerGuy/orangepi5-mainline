@@ -16,7 +16,7 @@ Link: https://gitlab.collabora.com/hardware-enablement/rockchip-3588/linux/-/com
  2 files changed, 16 deletions(-)
 
 diff --git a/drivers/gpu/drm/display/drm_hdmi_state_helper.c b/drivers/gpu/drm/display/drm_hdmi_state_helper.c
-index 7cdb7ca3d..d661385c3 100644
+index 7cdb7ca3dc12..d661385c3e64 100644
 --- a/drivers/gpu/drm/display/drm_hdmi_state_helper.c
 +++ b/drivers/gpu/drm/display/drm_hdmi_state_helper.c
 @@ -1441,21 +1441,6 @@ int drm_atomic_helper_connector_hdmi_hotplug(struct drm_connector *connector,
@@ -42,7 +42,7 @@ index 7cdb7ca3d..d661385c3 100644
   * drm_atomic_helper_connector_hdmi_force_ctx - HDMI Connector implementation
   * of the force_ctx callback
 diff --git a/include/drm/display/drm_hdmi_state_helper.h b/include/drm/display/drm_hdmi_state_helper.h
-index 965342f6b..5c827409d 100644
+index 965342f6bbc9..5c827409db45 100644
 --- a/include/drm/display/drm_hdmi_state_helper.h
 +++ b/include/drm/display/drm_hdmi_state_helper.h
 @@ -27,7 +27,6 @@ int drm_atomic_helper_connector_hdmi_update_infoframes(struct drm_connector *con

@@ -72,7 +72,7 @@ Assisted-by: Claude:claude-opus-5-5
  create mode 100644 drivers/media/platform/rockchip/iep/iep.h
 
 diff --git a/MAINTAINERS b/MAINTAINERS
-index 5f4ecc6cc..e2db9d567 100644
+index 5f4ecc6cc6d0..e2db9d567140 100644
 --- a/MAINTAINERS
 +++ b/MAINTAINERS
 @@ -23702,6 +23702,15 @@ S:	Maintained
@@ -92,7 +92,7 @@ index 5f4ecc6cc..e2db9d567 100644
  M:	Dafna Hirschfeld <dafna@fastmail.com>
  M:	Laurent Pinchart <laurent.pinchart@ideasonboard.com>
 diff --git a/drivers/media/platform/rockchip/Kconfig b/drivers/media/platform/rockchip/Kconfig
-index c04a33efb..3d96eaafc 100644
+index c04a33efb61d..3d96eaafc0bc 100644
 --- a/drivers/media/platform/rockchip/Kconfig
 +++ b/drivers/media/platform/rockchip/Kconfig
 @@ -2,6 +2,7 @@
@@ -104,7 +104,7 @@ index c04a33efb..3d96eaafc 100644
  source "drivers/media/platform/rockchip/rkcif/Kconfig"
  source "drivers/media/platform/rockchip/rkisp1/Kconfig"
 diff --git a/drivers/media/platform/rockchip/Makefile b/drivers/media/platform/rockchip/Makefile
-index 1d169926f..756661374 100644
+index 1d169926f72b..7566613743f6 100644
 --- a/drivers/media/platform/rockchip/Makefile
 +++ b/drivers/media/platform/rockchip/Makefile
 @@ -1,4 +1,5 @@
@@ -115,7 +115,7 @@ index 1d169926f..756661374 100644
  obj-y += rkisp1/
 diff --git a/drivers/media/platform/rockchip/iep/Kconfig b/drivers/media/platform/rockchip/iep/Kconfig
 new file mode 100644
-index 000000000..6508f7478
+index 000000000000..6508f7478232
 --- /dev/null
 +++ b/drivers/media/platform/rockchip/iep/Kconfig
 @@ -0,0 +1,16 @@
@@ -137,7 +137,7 @@ index 000000000..6508f7478
 +	  will be called rockchip-iep.
 diff --git a/drivers/media/platform/rockchip/iep/Makefile b/drivers/media/platform/rockchip/iep/Makefile
 new file mode 100644
-index 000000000..7620d7c31
+index 000000000000..7620d7c31588
 --- /dev/null
 +++ b/drivers/media/platform/rockchip/iep/Makefile
 @@ -0,0 +1,3 @@
@@ -146,7 +146,7 @@ index 000000000..7620d7c31
 +rockchip-iep-y := iep.o
 diff --git a/drivers/media/platform/rockchip/iep/iep-regs.h b/drivers/media/platform/rockchip/iep/iep-regs.h
 new file mode 100644
-index 000000000..66b4cc282
+index 000000000000..66b4cc2829be
 --- /dev/null
 +++ b/drivers/media/platform/rockchip/iep/iep-regs.h
 @@ -0,0 +1,197 @@
@@ -349,7 +349,7 @@ index 000000000..66b4cc282
 +#endif /* __ROCKCHIP_IEP_REGS_H__ */
 diff --git a/drivers/media/platform/rockchip/iep/iep.c b/drivers/media/platform/rockchip/iep/iep.c
 new file mode 100644
-index 000000000..447562893
+index 000000000000..4475628938c6
 --- /dev/null
 +++ b/drivers/media/platform/rockchip/iep/iep.c
 @@ -0,0 +1,1348 @@
@@ -1703,7 +1703,7 @@ index 000000000..447562893
 +MODULE_LICENSE("GPL");
 diff --git a/drivers/media/platform/rockchip/iep/iep.h b/drivers/media/platform/rockchip/iep/iep.h
 new file mode 100644
-index 000000000..b788a9837
+index 000000000000..b788a98370cb
 --- /dev/null
 +++ b/drivers/media/platform/rockchip/iep/iep.h
 @@ -0,0 +1,113 @@

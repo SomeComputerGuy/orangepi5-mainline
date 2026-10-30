@@ -34,7 +34,7 @@ Signed-off-by: Detlev Casanova <detlev.casanova@collabora.com>
  11 files changed, 473 insertions(+), 281 deletions(-)
 
 diff --git a/drivers/media/platform/rockchip/rkvdec/rkvdec-h264.c b/drivers/media/platform/rockchip/rkvdec/rkvdec-h264.c
-index ffa606038..d3841dc84 100644
+index ffa606038192..d3841dc84d35 100644
 --- a/drivers/media/platform/rockchip/rkvdec/rkvdec-h264.c
 +++ b/drivers/media/platform/rockchip/rkvdec/rkvdec-h264.c
 @@ -227,6 +227,7 @@ static void set_poc_reg(struct rkvdec_regs *regs, uint32_t poc, int id, bool bot
@@ -102,7 +102,7 @@ index ffa606038..d3841dc84 100644
  	return 0;
  }
 diff --git a/drivers/media/platform/rockchip/rkvdec/rkvdec-hevc.c b/drivers/media/platform/rockchip/rkvdec/rkvdec-hevc.c
-index 88e90c438..da29582d3 100644
+index 88e90c438eb9..da29582d35d2 100644
 --- a/drivers/media/platform/rockchip/rkvdec/rkvdec-hevc.c
 +++ b/drivers/media/platform/rockchip/rkvdec/rkvdec-hevc.c
 @@ -384,6 +384,7 @@ static void assemble_sw_rps(struct rkvdec_ctx *ctx,
@@ -171,7 +171,7 @@ index 88e90c438..da29582d3 100644
  	return 0;
  }
 diff --git a/drivers/media/platform/rockchip/rkvdec/rkvdec-rcb.c b/drivers/media/platform/rockchip/rkvdec/rkvdec-rcb.c
-index 191f78278..44df5b6df 100644
+index 191f78278c01..44df5b6df80c 100644
 --- a/drivers/media/platform/rockchip/rkvdec/rkvdec-rcb.c
 +++ b/drivers/media/platform/rockchip/rkvdec/rkvdec-rcb.c
 @@ -29,38 +29,37 @@ static size_t rkvdec_rcb_size(const struct rcb_size_info *size_info,
@@ -334,7 +334,7 @@ index 191f78278..44df5b6df 100644
  	return ret;
  }
 diff --git a/drivers/media/platform/rockchip/rkvdec/rkvdec-rcb.h b/drivers/media/platform/rockchip/rkvdec/rkvdec-rcb.h
-index 0662a4359..d1149afe7 100644
+index 0662a4359bdf..d1149afe7fda 100644
 --- a/drivers/media/platform/rockchip/rkvdec/rkvdec-rcb.h
 +++ b/drivers/media/platform/rockchip/rkvdec/rkvdec-rcb.h
 @@ -8,7 +8,9 @@
@@ -363,7 +363,7 @@ index 0662a4359..d1149afe7 100644
 -void rkvdec_free_rcb(struct rkvdec_ctx *ctx);
 +void rkvdec_free_rcb(struct rkvdec_dev *rkvdec, struct rkvdec_core *core);
 diff --git a/drivers/media/platform/rockchip/rkvdec/rkvdec-vdpu381-h264.c b/drivers/media/platform/rockchip/rkvdec/rkvdec-vdpu381-h264.c
-index b961fddc8..667c5d36f 100644
+index b961fddc8583..667c5d36f3ea 100644
 --- a/drivers/media/platform/rockchip/rkvdec/rkvdec-vdpu381-h264.c
 +++ b/drivers/media/platform/rockchip/rkvdec/rkvdec-vdpu381-h264.c
 @@ -185,22 +185,22 @@ static void assemble_hw_pps(struct rkvdec_ctx *ctx,
@@ -446,7 +446,7 @@ index b961fddc8..667c5d36f 100644
  	return 0;
  }
 diff --git a/drivers/media/platform/rockchip/rkvdec/rkvdec-vdpu381-hevc.c b/drivers/media/platform/rockchip/rkvdec/rkvdec-vdpu381-hevc.c
-index e1936e87f..ca5224365 100644
+index e1936e87f45b..ca52243650ec 100644
 --- a/drivers/media/platform/rockchip/rkvdec/rkvdec-vdpu381-hevc.c
 +++ b/drivers/media/platform/rockchip/rkvdec/rkvdec-vdpu381-hevc.c
 @@ -358,22 +358,22 @@ static void set_ref_valid(struct rkvdec_vdpu381_regs_hevc *regs, int id, u32 val
@@ -527,7 +527,7 @@ index e1936e87f..ca5224365 100644
  	return 0;
  }
 diff --git a/drivers/media/platform/rockchip/rkvdec/rkvdec-vdpu383-h264.c b/drivers/media/platform/rockchip/rkvdec/rkvdec-vdpu383-h264.c
-index 5ec755733..a737a7799 100644
+index 5ec755733916..a737a7799b71 100644
 --- a/drivers/media/platform/rockchip/rkvdec/rkvdec-vdpu383-h264.c
 +++ b/drivers/media/platform/rockchip/rkvdec/rkvdec-vdpu383-h264.c
 @@ -216,19 +216,19 @@ static void assemble_hw_pps(struct rkvdec_ctx *ctx,
@@ -600,7 +600,7 @@ index 5ec755733..a737a7799 100644
  	return 0;
  }
 diff --git a/drivers/media/platform/rockchip/rkvdec/rkvdec-vdpu383-hevc.c b/drivers/media/platform/rockchip/rkvdec/rkvdec-vdpu383-hevc.c
-index 3462d995d..d29de4e6c 100644
+index 3462d995d4cf..d29de4e6c5d7 100644
 --- a/drivers/media/platform/rockchip/rkvdec/rkvdec-vdpu383-hevc.c
 +++ b/drivers/media/platform/rockchip/rkvdec/rkvdec-vdpu383-hevc.c
 @@ -323,19 +323,19 @@ static void assemble_hw_pps(struct rkvdec_ctx *ctx,
@@ -681,7 +681,7 @@ index 3462d995d..d29de4e6c 100644
  	return 0;
  }
 diff --git a/drivers/media/platform/rockchip/rkvdec/rkvdec-vp9.c b/drivers/media/platform/rockchip/rkvdec/rkvdec-vp9.c
-index 2751f5396..0b7d6b29b 100644
+index 2751f5396ee8..0b7d6b29bcfa 100644
 --- a/drivers/media/platform/rockchip/rkvdec/rkvdec-vp9.c
 +++ b/drivers/media/platform/rockchip/rkvdec/rkvdec-vp9.c
 @@ -482,6 +482,7 @@ static void config_registers(struct rkvdec_ctx *ctx,
@@ -794,7 +794,7 @@ index 2751f5396..0b7d6b29b 100644
  	kfree(vp9_ctx);
  }
 diff --git a/drivers/media/platform/rockchip/rkvdec/rkvdec.c b/drivers/media/platform/rockchip/rkvdec/rkvdec.c
-index 9e9a000b6..5bafaf0fb 100644
+index 9e9a000b605e..5bafaf0fb229 100644
 --- a/drivers/media/platform/rockchip/rkvdec/rkvdec.c
 +++ b/drivers/media/platform/rockchip/rkvdec/rkvdec.c
 @@ -11,12 +11,14 @@
@@ -1579,7 +1579,7 @@ index 9e9a000b6..5bafaf0fb 100644
  MODULE_AUTHOR("Boris Brezillon <boris.brezillon@collabora.com>");
  MODULE_DESCRIPTION("Rockchip Video Decoder driver");
 diff --git a/drivers/media/platform/rockchip/rkvdec/rkvdec.h b/drivers/media/platform/rockchip/rkvdec/rkvdec.h
-index a24be6638..36eadcfca 100644
+index a24be6638b6b..36eadcfcabdb 100644
 --- a/drivers/media/platform/rockchip/rkvdec/rkvdec.h
 +++ b/drivers/media/platform/rockchip/rkvdec/rkvdec.h
 @@ -125,23 +125,28 @@ struct rkvdec_coded_fmt_desc {

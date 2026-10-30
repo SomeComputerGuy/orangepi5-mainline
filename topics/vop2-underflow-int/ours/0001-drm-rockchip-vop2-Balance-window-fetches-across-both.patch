@@ -55,7 +55,7 @@ Assisted-by: Claude:claude-opus-5-5
  3 files changed, 114 insertions(+), 2 deletions(-)
 
 diff --git a/drivers/gpu/drm/rockchip/rockchip_drm_vop2.c b/drivers/gpu/drm/rockchip/rockchip_drm_vop2.c
-index 17d33e396..e5f3bbb34 100644
+index 17d33e3964f3..e5f3bbb345d4 100644
 --- a/drivers/gpu/drm/rockchip/rockchip_drm_vop2.c
 +++ b/drivers/gpu/drm/rockchip/rockchip_drm_vop2.c
 @@ -1233,6 +1233,98 @@ static int vop2_plane_atomic_check(struct drm_plane *plane,
@@ -186,7 +186,7 @@ index 17d33e396..e5f3bbb34 100644
  	ret = devm_request_irq(dev, vop2->irq, vop2_isr, IRQF_SHARED, dev_name(dev), vop2);
  	if (ret)
 diff --git a/drivers/gpu/drm/rockchip/rockchip_drm_vop2.h b/drivers/gpu/drm/rockchip/rockchip_drm_vop2.h
-index cc06904b4..f8ba1cb58 100644
+index cc06904b4053..f8ba1cb58a96 100644
 --- a/drivers/gpu/drm/rockchip/rockchip_drm_vop2.h
 +++ b/drivers/gpu/drm/rockchip/rockchip_drm_vop2.h
 @@ -29,6 +29,7 @@
@@ -225,7 +225,7 @@ index cc06904b4..f8ba1cb58 100644
  	struct vop2_win win[];
  };
 diff --git a/drivers/gpu/drm/rockchip/rockchip_vop2_reg.c b/drivers/gpu/drm/rockchip/rockchip_vop2_reg.c
-index c44648e1b..c329250df 100644
+index c44648e1bc0d..c329250df0a1 100644
 --- a/drivers/gpu/drm/rockchip/rockchip_vop2_reg.c
 +++ b/drivers/gpu/drm/rockchip/rockchip_vop2_reg.c
 @@ -2561,7 +2561,8 @@ static const struct vop2_data rk3576_vop = {

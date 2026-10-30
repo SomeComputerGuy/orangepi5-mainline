@@ -17,7 +17,7 @@ Link: https://gitlab.collabora.com/hardware-enablement/rockchip-3588/linux/-/com
  1 file changed, 151 insertions(+)
 
 diff --git a/drivers/gpu/drm/tests/drm_hdmi_state_helper_test.c b/drivers/gpu/drm/tests/drm_hdmi_state_helper_test.c
-index 6d648332a..68b442c32 100644
+index 6d648332aa15..68b442c32a2a 100644
 --- a/drivers/gpu/drm/tests/drm_hdmi_state_helper_test.c
 +++ b/drivers/gpu/drm/tests/drm_hdmi_state_helper_test.c
 @@ -216,6 +216,34 @@ static const struct drm_connector_hdmi_funcs reject_over_165mhz_connector_hdmi_f

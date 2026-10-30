@@ -1,0 +1,205 @@
+Log of Meson test suite run on 2026-10-30T03:49:15.809132
+
+Inherited environment: SHELL=/bin/bash COREPACK_ENABLE_AUTO_PIN=0 COLORTERM=truecolor CLAUDE_CODE_CHILD_SESSION=1 PKG_CONFIG_PATH=~/orangepi5/work/_downloads/weston/sysroot/usr/lib/x86_64-linux-gnu/pkgconfig:~/orangepi5/work/_downloads/weston/sysroot/usr/share/pkgconfig:/usr/lib/x86_64-linux-gnu/pkgconfig:/usr/share/pkgconfig AI_AGENT=claude-code_2-1-312_agent CLAUDE_CODE_SESSION_ID=35761d63-7a85-411c-bac4-24199b2a421c CLAUDE_PID=1500260 CLAUDE_EFFORT=medium PWD=~/orangepi5/work/_downloads/weston/build-16 LOGNAME=aruni XDG_SESSION_TYPE=tty CLAUDE_CODE_MESSAGING_SOCKET=/run/user/1000/cc-socks/1500260.sock NoDefaultCurrentDirectoryInExePath=1 CLAUDECODE=1 HOME=~ LANG=en_US.UTF-8 LS_COLORS='rs=0:di=01;34:ln=01;36:mh=00:pi=40;33:so=01;35:do=01;35:bd=40;33;01:cd=40;33;01:or=40;31;01:mi=00:su=37;41:sg=30;43:ca=00:tw=30;42:ow=34;42:st=37;44:ex=01;32:*.tar=01;31:*.tgz=01;31:*.arc=01;31:*.arj=01;31:*.taz=01;31:*.lha=01;31:*.lz4=01;31:*.lzh=01;31:*.lzma=01;31:*.tlz=01;31:*.txz=01;31:*.tzo=01;31:*.t7z=01;31:*.zip=01;31:*.z=01;31:*.dz=01;31:*.gz=01;31:*.lrz=01;31:*.lz=01;31:*.lzo=01;31:*.xz=01;31:*.zst=01;31:*.tzst=01;31:*.bz2=01;31:*.bz=01;31:*.tbz=01;31:*.tbz2=01;31:*.tz=01;31:*.deb=01;31:*.rpm=01;31:*.jar=01;31:*.war=01;31:*.ear=01;31:*.sar=01;31:*.rar=01;31:*.alz=01;31:*.ace=01;31:*.zoo=01;31:*.cpio=01;31:*.7z=01;31:*.rz=01;31:*.cab=01;31:*.wim=01;31:*.swm=01;31:*.dwm=01;31:*.esd=01;31:*.avif=01;35:*.jpg=01;35:*.jpeg=01;35:*.mjpg=01;35:*.mjpeg=01;35:*.gif=01;35:*.bmp=01;35:*.pbm=01;35:*.pgm=01;35:*.ppm=01;35:*.tga=01;35:*.xbm=01;35:*.xpm=01;35:*.tif=01;35:*.tiff=01;35:*.png=01;35:*.svg=01;35:*.svgz=01;35:*.mng=01;35:*.pcx=01;35:*.mov=01;35:*.mpg=01;35:*.mpeg=01;35:*.m2v=01;35:*.mkv=01;35:*.webm=01;35:*.webp=01;35:*.ogm=01;35:*.mp4=01;35:*.m4v=01;35:*.mp4v=01;35:*.vob=01;35:*.qt=01;35:*.nuv=01;35:*.wmv=01;35:*.asf=01;35:*.rm=01;35:*.rmvb=01;35:*.flc=01;35:*.avi=01;35:*.fli=01;35:*.flv=01;35:*.gl=01;35:*.dl=01;35:*.xcf=01;35:*.xwd=01;35:*.yuv=01;35:*.cgm=01;35:*.emf=01;35:*.ogv=01;35:*.ogx=01;35:*.aac=00;36:*.au=00;36:*.flac=00;36:*.m4a=00;36:*.mid=00;36:*.midi=00;36:*.mka=00;36:*.mp3=00;36:*.mpc=00;36:*.ogg=00;36:*.ra=00;36:*.wav=00;36:*.oga=00;36:*.opus=00;36:*.spx=00;36:*.xspf=00;36:*~=00;90:*#=00;90:*.bak=00;90:*.old=00;90:*.orig=00;90:*.part=00;90:*.rej=00;90:*.swp=00;90:*.tmp=00;90:*.dpkg-dist=00;90:*.dpkg-old=00;90:*.ucf-dist=00;90:*.ucf-new=00;90:*.ucf-old=00;90:*.rpmnew=00;90:*.rpmorig=00;90:*.rpmsave=00;90:' CLAUDE_CODE_SESSION_ATTENDED=0 INVOCATION_ID='' CLAUDE_CODE_AGENT=claude LESSCLOSE='/usr/bin/lesspipe %s %s' XDG_SESSION_CLASS=user PYTHONPATH=~/orangepi5/work/_downloads/weston/sysroot/usr/lib/python3/dist-packages TERM=xterm-256color LESSOPEN='| /usr/bin/lesspipe %s' USER=aruni SHLVL=2 GIT_EDITOR=true XDG_SESSION_ID=1 LD_LIBRARY_PATH=~/orangepi5/work/_downloads/weston/sysroot/usr/lib/x86_64-linux-gnu XDG_RUNTIME_DIR=/run/user/1000 CLAUDE_CODE_ENTRYPOINT=cli CLAUDE_JOB_DIR=~/.claude/jobs/35761d63 DEBUGINFOD_URLS='https://debuginfod.ubuntu.com ' XDG_DATA_DIRS=/usr/local/share:/usr/share:/var/lib/snapd/desktop CLAUDE_CODE_EXECPATH=~/.local/share/claude/versions/2.1.312 PATH=~/orangepi5/work/_downloads/weston/sysroot/usr/bin:~/.local/bin:~/.local/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin:/usr/games:/usr/local/games:/snap/bin DBUS_SESSION_BUS_ADDRESS=unix:path=/run/user/1000/bus XKB_CONFIG_ROOT=~/orangepi5/work/_downloads/weston/sysroot/usr/share/X11/xkb OLDPWD=~/orangepi5/work/_downloads/weston/weston-16.0.0 PKG_CONFIG=~/orangepi5/work/_downloads/weston/sysroot/usr/bin/pkgconf CLAUDE_CODE_MESSAGING_TOKEN=052806b9b75f311c6ab246bde59781f3 _=~/orangepi5/work/_downloads/weston/sysroot/usr/bin/meson 
+
+==================================== 1/2 =====================================
+test:         weston:kiosk-shell
+start time:   03:49:15
+duration:     0.02s
+result:       exit status 0
+command:      UBSAN_OPTIONS=halt_on_error=1:abort_on_error=1:print_summary=1:print_stacktrace=1 ASAN_OPTIONS=halt_on_error=1:abort_on_error=1:print_summary=1 LD_LIBRARY_PATH=~/orangepi5/work/_downloads/weston/build-16/frontend:~/orangepi5/work/_downloads/weston/build-16/libweston:~/orangepi5/work/_downloads/weston/sysroot/usr/lib/x86_64-linux-gnu MESON_TEST_ITERATION=1 MSAN_OPTIONS=halt_on_error=1:abort_on_error=1:print_summary=1:print_stacktrace=1 MALLOC_PERTURB_=255 ~/orangepi5/work/_downloads/weston/build-16/tests/test-kiosk-shell
+----------------------------------- stdout -----------------------------------
+TAP version 13
+1..3
+ok 1  two_surface_switching/1
+ok 2  top_surface_present_in_output_repaint/1
+ok 3  test_surface_unmaps_on_null/1
+----------------------------------- stderr -----------------------------------
+Iterating through 1 fixtures.
+--- Fixture 1 ()...
+Date: 2026-10-30 UTC
+[03:49:15.818] weston 16.0.0
+               https://wayland.freedesktop.org
+               Bug reports to: https://gitlab.freedesktop.org/wayland/weston/issues/
+               Build: 16.0.0-2-g1198fe6+
+[03:49:15.818] Command line: weston-test-kiosk-shell --backend=headless --debug --socket=test-kiosk-shell --modules=~/orangepi5/work/_downloads/weston/build-16/tests/harness/test-plugin.so --width=320 --height=240 --refresh-rate=1000000 --no-config --renderer=pixman --shell=kiosk --logger-scopes=log,test-harness-plugin
+[03:49:15.818] OS: Linux, 7.3.0-10-generic, #10-Ubuntu SMP PREEMPT_DYNAMIC Thu Oct 22 07:35:54 UTC 2026, x86_64
+[03:49:15.818] Flight recorder: enabled, scopes subscribed: log
+[03:49:15.818] Starting with no config file.
+WARNING: debug protocol has been enabled. This is a potential denial-of-service attack vector and information leak.
+[03:49:15.818] Output repaint window is 7 ms maximum.
+[03:49:15.818] Loading module '~/orangepi5/work/_downloads/weston/build-16/libweston/backend-headless/headless-backend.so'
+[03:49:15.818] Using Pixman renderer
+[03:49:15.818] Registered plugin API 'weston_windowed_output_api_headless_v2' of size 16
+[03:49:15.818] Color manager: no-op
+                 protocol support: no
+[03:49:15.818] Color representation not supported by renderer
+[03:49:15.818] Output 'headless' attempts EOTF mode SDR and colorimetry mode default.
+[03:49:15.818] Output 'headless' using color profile: stock sRGB color profile
+[03:49:15.819] Output 'headless' enabled with head(s) headless
+[03:49:15.819] Compositor capabilities:
+               arbitrary surface rotation: yes
+               screen capture uses y-flip: no
+               cursor planes: no
+               arbitrary resolutions: no
+               view mask clipping: yes
+               explicit sync: no
+               color operations: no
+               color representation: no
+               in-shader blending: no
+               presentation clock: CLOCK_MONOTONIC_RAW, id 4
+               presentation clock resolution: 0.000000001 s
+[03:49:15.819] Loading module '~/orangepi5/work/_downloads/weston/build-16/kiosk-shell/kiosk-shell.so'
+[03:49:15.819] Loading module '~/orangepi5/work/_downloads/weston/build-16/tests/harness/test-plugin.so'
+[03:49:15.821] Currently advertised debug scopes:
+               'log' - Weston and Wayland log
+               'scene-graph' - Scene graph details
+               'timeline' - Timeline event points
+               'libseat-debug' - libseat debug messages
+               'proto' - Wayland protocol dump for all clients.
+               'test-harness-plugin' - weston-test plugin's own actions
+Creating a thread for running tests...
+*** Run  two_surface_switching/1
+test-client: got global pointer 100 100
+test-client: got seat 0x749fdc007710 name: 'test-seat'
+test-client: got seat 0x749fdc007710 capabilities: 7
+test-client: got keyboard repeat_info 40 400
+test-client: got keyboard keymap
+test-client: got global pointer 2 30
+test-client: got surface enter output 0x749fdc006aa0
+test-client: got keyboard enter, surface 0x749fdc006b80
+test-client: got keyboard modifiers 0 0 0 0
+test-client: got pointer enter 2 30, surface 0x749fdc006b80
+test-client: got pointer frame
+test-client: got surface enter output 0x749fdc006aa0
+test-client: got keyboard leave, surface 0x749fdc006b80
+test-client: got keyboard enter, surface 0x749fdc008d40
+test-client: got keyboard modifiers 0 0 0 0
+test-client: got pointer leave, surface 0x749fdc006b80
+test-client: got pointer frame
+test-client: got pointer enter 2 30, surface 0x749fdc008d40
+test-client: got pointer frame
+test-client: got keyboard leave, surface (nil)
+test-client: got pointer leave, surface (nil)
+test-client: got pointer frame
+test-client: got keyboard enter, surface 0x749fdc006b80
+test-client: got keyboard modifiers 0 0 0 0
+test-client: got pointer enter 2 30, surface 0x749fdc006b80
+test-client: got pointer frame
+*** Result  two_surface_switching/1: ok
+*** Run  top_surface_present_in_output_repaint/1
+test-client: got global pointer 2 30
+test-client: got seat 0x749fdc007710 name: 'test-seat'
+test-client: got seat 0x749fdc007710 capabilities: 7
+test-client: got keyboard repeat_info 40 400
+test-client: got keyboard keymap
+test-client: got global pointer 2 30
+*** Result  top_surface_present_in_output_repaint/1: ok
+*** Run  test_surface_unmaps_on_null/1
+test-client: got global pointer 2 30
+test-client: got seat 0x749fdc007710 name: 'test-seat'
+test-client: got seat 0x749fdc007710 capabilities: 7
+test-client: got keyboard repeat_info 40 400
+test-client: got keyboard keymap
+test-client: got global pointer 2 30
+*** Result  test_surface_unmaps_on_null/1: ok
+Received thread event mask 0x4
+Test thread reaped.
+--- Fixture 1 () ok: passed 3, skipped 0, failed 0, total 3
+==============================================================================
+
+==================================== 2/2 =====================================
+test:         weston:kiosk-shell-multi-output
+start time:   03:49:15
+duration:     0.02s
+result:       exit status 1
+command:      UBSAN_OPTIONS=halt_on_error=1:abort_on_error=1:print_summary=1:print_stacktrace=1 ASAN_OPTIONS=halt_on_error=1:abort_on_error=1:print_summary=1 LD_LIBRARY_PATH=~/orangepi5/work/_downloads/weston/build-16/frontend:~/orangepi5/work/_downloads/weston/build-16/libweston:~/orangepi5/work/_downloads/weston/sysroot/usr/lib/x86_64-linux-gnu MESON_TEST_ITERATION=1 MSAN_OPTIONS=halt_on_error=1:abort_on_error=1:print_summary=1:print_stacktrace=1 MALLOC_PERTURB_=224 ~/orangepi5/work/_downloads/weston/build-16/tests/test-kiosk-shell-multi-output
+----------------------------------- stdout -----------------------------------
+TAP version 13
+1..1
+not ok 1  fullscreen_on_requested_output/1
+----------------------------------- stderr -----------------------------------
+Iterating through 1 fixtures.
+--- Fixture 1 ()...
+Date: 2026-10-30 UTC
+[03:49:15.821] weston 16.0.0
+               https://wayland.freedesktop.org
+               Bug reports to: https://gitlab.freedesktop.org/wayland/weston/issues/
+               Build: 16.0.0-2-g1198fe6+
+[03:49:15.821] Command line: weston-test-kiosk-shell-multi-output --backend=headless --debug --socket=test-kiosk-shell-multi-output --modules=~/orangepi5/work/_downloads/weston/build-16/tests/harness/test-plugin.so --width=320 --height=240 --refresh-rate=1000000 --output-count=2 --no-config --renderer=pixman --shell=kiosk --logger-scopes=log,test-harness-plugin
+[03:49:15.821] OS: Linux, 7.3.0-10-generic, #10-Ubuntu SMP PREEMPT_DYNAMIC Thu Oct 22 07:35:54 UTC 2026, x86_64
+[03:49:15.821] Flight recorder: enabled, scopes subscribed: log
+[03:49:15.821] Starting with no config file.
+WARNING: debug protocol has been enabled. This is a potential denial-of-service attack vector and information leak.
+[03:49:15.822] Output repaint window is 7 ms maximum.
+[03:49:15.822] Loading module '~/orangepi5/work/_downloads/weston/build-16/libweston/backend-headless/headless-backend.so'
+[03:49:15.822] Using Pixman renderer
+[03:49:15.822] Registered plugin API 'weston_windowed_output_api_headless_v2' of size 16
+[03:49:15.822] Color manager: no-op
+                 protocol support: no
+[03:49:15.822] Color representation not supported by renderer
+[03:49:15.822] Output 'headless' attempts EOTF mode SDR and colorimetry mode default.
+[03:49:15.822] Output 'headless' using color profile: stock sRGB color profile
+[03:49:15.822] Output 'headless' enabled with head(s) headless
+[03:49:15.822] Output 'headless-1' attempts EOTF mode SDR and colorimetry mode default.
+[03:49:15.822] Output 'headless-1' using color profile: stock sRGB color profile
+[03:49:15.823] Output 'headless-1' enabled with head(s) headless-1
+[03:49:15.823] Compositor capabilities:
+               arbitrary surface rotation: yes
+               screen capture uses y-flip: no
+               cursor planes: no
+               arbitrary resolutions: no
+               view mask clipping: yes
+               explicit sync: no
+               color operations: no
+               color representation: no
+               in-shader blending: no
+               presentation clock: CLOCK_MONOTONIC_RAW, id 4
+               presentation clock resolution: 0.000000001 s
+[03:49:15.823] Loading module '~/orangepi5/work/_downloads/weston/build-16/kiosk-shell/kiosk-shell.so'
+[03:49:15.823] Loading module '~/orangepi5/work/_downloads/weston/build-16/tests/harness/test-plugin.so'
+[03:49:15.826] Currently advertised debug scopes:
+               'log' - Weston and Wayland log
+               'scene-graph' - Scene graph details
+               'timeline' - Timeline event points
+               'libseat-debug' - libseat debug messages
+               'proto' - Wayland protocol dump for all clients.
+               'test-harness-plugin' - weston-test plugin's own actions
+Creating a thread for running tests...
+*** Run  fullscreen_on_requested_output/1
+test-client: got global pointer 100 100
+test-client: got seat 0x748c84007920 name: 'test-seat'
+test-client: got seat 0x748c84007920 capabilities: 7
+test-client: got keyboard repeat_info 40 400
+test-client: got keyboard keymap
+test-client: got surface enter output 0x748c84006ba0
+test-client: got keyboard enter, surface 0x748c84006c80
+test-client: got keyboard modifiers 0 0 0 0
+test-client: got pointer enter 100 100, surface 0x748c84006c80
+test-client: got pointer frame
+surface "headless-1" requested output headless-1, entered headless
+../weston-16.0.0/tests/kiosk-shell-multi-output-test.c:111: Assertion xdg_surface[i]->surface->output == target (0x748c84006ba0 == 0x748c840076e0) failed!
+test-client: got surface enter output 0x748c84006ba0
+test-client: got keyboard leave, surface 0x748c84006c80
+test-client: got keyboard enter, surface 0x748c84008c20
+test-client: got keyboard modifiers 0 0 0 0
+test-client: got pointer leave, surface 0x748c84006c80
+test-client: got pointer frame
+test-client: got pointer enter 100 100, surface 0x748c84008c20
+test-client: got pointer frame
+surface "headless" requested output headless, entered headless
+*** Result  fullscreen_on_requested_output/1: fail
+Received thread event mask 0x4
+Test thread reaped.
+--- Fixture 1 () ok: passed 0, skipped 0, failed 1, total 1
+
+(test program exited with status code 1)
+==============================================================================
+
+
+Summary of Failures:
+
+2/2 weston:kiosk-shell-multi-output ERROR            0.02s   exit status 1
+
+Ok:                1   
+Fail:              1   

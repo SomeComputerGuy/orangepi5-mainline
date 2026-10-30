@@ -55,7 +55,7 @@ Assisted-by: Claude:claude-opus-5-5
  create mode 100644 include/media/v4l2-hevc-enc.h
 
 diff --git a/drivers/media/v4l2-core/Kconfig b/drivers/media/v4l2-core/Kconfig
-index c841f4557..344f914a8 100644
+index c841f45573a9..344f914a85f3 100644
 --- a/drivers/media/v4l2-core/Kconfig
 +++ b/drivers/media/v4l2-core/Kconfig
 @@ -52,6 +52,11 @@ config V4L2_H264_ENC
@@ -71,7 +71,7 @@ index c841f4557..344f914a8 100644
  	tristate "KUnit tests for the V4L2 HEVC encode RBSP writer" if !KUNIT_ALL_TESTS
  	depends on KUNIT
 diff --git a/drivers/media/v4l2-core/Makefile b/drivers/media/v4l2-core/Makefile
-index b8bc40c68..ff783a2e7 100644
+index b8bc40c6849c..ff783a2e786b 100644
 --- a/drivers/media/v4l2-core/Makefile
 +++ b/drivers/media/v4l2-core/Makefile
 @@ -31,6 +31,7 @@ obj-$(CONFIG_V4L2_FWNODE) += v4l2-fwnode.o
@@ -84,7 +84,7 @@ index b8bc40c68..ff783a2e7 100644
  obj-$(CONFIG_V4L2_ISP) += v4l2-isp.o
 diff --git a/drivers/media/v4l2-core/v4l2-hevc-enc.c b/drivers/media/v4l2-core/v4l2-hevc-enc.c
 new file mode 100644
-index 000000000..e2aa7d2da
+index 000000000000..e2aa7d2da96c
 --- /dev/null
 +++ b/drivers/media/v4l2-core/v4l2-hevc-enc.c
 @@ -0,0 +1,1418 @@
@@ -1508,7 +1508,7 @@ index 000000000..e2aa7d2da
 +MODULE_LICENSE("GPL");
 diff --git a/include/media/v4l2-hevc-enc.h b/include/media/v4l2-hevc-enc.h
 new file mode 100644
-index 000000000..4797102e3
+index 000000000000..4797102e34b3
 --- /dev/null
 +++ b/include/media/v4l2-hevc-enc.h
 @@ -0,0 +1,284 @@

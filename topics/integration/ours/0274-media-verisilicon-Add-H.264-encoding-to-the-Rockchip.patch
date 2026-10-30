@@ -77,7 +77,7 @@ Assisted-by: Claude:claude-opus-5-5
  create mode 100644 drivers/media/platform/verisilicon/rockchip_vpu2_hw_h264_enc.c
 
 diff --git a/drivers/media/platform/verisilicon/Kconfig b/drivers/media/platform/verisilicon/Kconfig
-index 3272a24db..ae186a848 100644
+index 3272a24db71d..ae186a848e24 100644
 --- a/drivers/media/platform/verisilicon/Kconfig
 +++ b/drivers/media/platform/verisilicon/Kconfig
 @@ -12,6 +12,7 @@ config VIDEO_HANTRO
@@ -89,7 +89,7 @@ index 3272a24db..ae186a848 100644
  	select V4L2_VP9
  	help
 diff --git a/drivers/media/platform/verisilicon/Makefile b/drivers/media/platform/verisilicon/Makefile
-index f6f019d04..194b2d568 100644
+index f6f019d04ff0..194b2d568719 100644
 --- a/drivers/media/platform/verisilicon/Makefile
 +++ b/drivers/media/platform/verisilicon/Makefile
 @@ -29,6 +29,7 @@ hantro-vpu-$(CONFIG_VIDEO_HANTRO_SAMA5D4) += \
@@ -101,7 +101,7 @@ index f6f019d04..194b2d568 100644
  		rockchip_vpu2_hw_mpeg2_dec.o \
  		rockchip_vpu2_hw_vp8_dec.o \
 diff --git a/drivers/media/platform/verisilicon/hantro.h b/drivers/media/platform/verisilicon/hantro.h
-index 2d5b3d374..bb758a228 100644
+index 2d5b3d374489..bb758a22880b 100644
 --- a/drivers/media/platform/verisilicon/hantro.h
 +++ b/drivers/media/platform/verisilicon/hantro.h
 @@ -32,6 +32,7 @@ struct hantro_codec_ops;
@@ -168,7 +168,7 @@ index 2d5b3d374..bb758a228 100644
  		struct hantro_vp8_dec_hw_ctx vp8_dec;
  		struct hantro_hevc_dec_hw_ctx hevc_dec;
 diff --git a/drivers/media/platform/verisilicon/hantro_drv.c b/drivers/media/platform/verisilicon/hantro_drv.c
-index a3dde312c..bb40fed10 100644
+index a3dde312cb9c..bb40fed10d63 100644
 --- a/drivers/media/platform/verisilicon/hantro_drv.c
 +++ b/drivers/media/platform/verisilicon/hantro_drv.c
 @@ -539,6 +539,118 @@ static const struct hantro_ctrl controls[] = {
@@ -326,7 +326,7 @@ index a3dde312c..bb40fed10 100644
  			irq = platform_get_irq_byname(vpu->pdev, irq_name);
  		} else {
 diff --git a/drivers/media/platform/verisilicon/hantro_hw.h b/drivers/media/platform/verisilicon/hantro_hw.h
-index cbc161593..505ca6f06 100644
+index cbc161593fd8..505ca6f06a52 100644
 --- a/drivers/media/platform/verisilicon/hantro_hw.h
 +++ b/drivers/media/platform/verisilicon/hantro_hw.h
 @@ -12,6 +12,7 @@
@@ -385,7 +385,7 @@ index cbc161593..505ca6f06 100644
  u16 hantro_h264_get_ref_nbr(struct hantro_ctx *ctx,
 diff --git a/drivers/media/platform/verisilicon/rockchip_vpu2_hw_h264_enc.c b/drivers/media/platform/verisilicon/rockchip_vpu2_hw_h264_enc.c
 new file mode 100644
-index 000000000..853ddd9ab
+index 000000000000..853ddd9abb50
 --- /dev/null
 +++ b/drivers/media/platform/verisilicon/rockchip_vpu2_hw_h264_enc.c
 @@ -0,0 +1,725 @@
@@ -1115,7 +1115,7 @@ index 000000000..853ddd9ab
 +	v4l2_h264_enc_complete(enc, dst_buf);
 +}
 diff --git a/drivers/media/platform/verisilicon/rockchip_vpu_hw.c b/drivers/media/platform/verisilicon/rockchip_vpu_hw.c
-index 621619d4f..9d9baa8eb 100644
+index 621619d4f700..9d9baa8eb543 100644
 --- a/drivers/media/platform/verisilicon/rockchip_vpu_hw.c
 +++ b/drivers/media/platform/verisilicon/rockchip_vpu_hw.c
 @@ -62,6 +62,46 @@ static const struct hantro_fmt rockchip_vpu_enc_fmts[] = {

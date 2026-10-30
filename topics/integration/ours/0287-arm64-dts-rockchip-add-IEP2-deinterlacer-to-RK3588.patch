@@ -15,7 +15,7 @@ Assisted-by: Claude:claude-opus-5-5
  1 file changed, 22 insertions(+)
 
 diff --git a/arch/arm64/boot/dts/rockchip/rk3588-base.dtsi b/arch/arm64/boot/dts/rockchip/rk3588-base.dtsi
-index 28fcebeee..3d944f9b0 100644
+index 28fcebeee00f..3d944f9b0b29 100644
 --- a/arch/arm64/boot/dts/rockchip/rk3588-base.dtsi
 +++ b/arch/arm64/boot/dts/rockchip/rk3588-base.dtsi
 @@ -1433,6 +1433,28 @@ vepu121_3_mmu: iommu@fdbac800 {

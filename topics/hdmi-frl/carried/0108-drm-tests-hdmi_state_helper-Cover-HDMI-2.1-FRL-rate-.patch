@@ -40,7 +40,7 @@ Link: https://gitlab.collabora.com/hardware-enablement/rockchip-3588/linux/-/com
  1 file changed, 414 insertions(+), 3 deletions(-)
 
 diff --git a/drivers/gpu/drm/tests/drm_hdmi_state_helper_test.c b/drivers/gpu/drm/tests/drm_hdmi_state_helper_test.c
-index 4f3fd45cd..36a84321e 100644
+index 4f3fd45cde29..36a84321ed56 100644
 --- a/drivers/gpu/drm/tests/drm_hdmi_state_helper_test.c
 +++ b/drivers/gpu/drm/tests/drm_hdmi_state_helper_test.c
 @@ -281,7 +281,42 @@ accept_48gbps_connector_frl_rate_valid(const struct drm_connector *connector,

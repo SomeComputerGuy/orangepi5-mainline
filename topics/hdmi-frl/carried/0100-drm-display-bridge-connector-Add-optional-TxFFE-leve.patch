@@ -22,7 +22,7 @@ Link: https://gitlab.collabora.com/hardware-enablement/rockchip-3588/linux/-/com
  4 files changed, 79 insertions(+)
 
 diff --git a/drivers/gpu/drm/display/drm_bridge_connector.c b/drivers/gpu/drm/display/drm_bridge_connector.c
-index 2ab6f1df7..cfb9f0c5e 100644
+index 2ab6f1df7833..cfb9f0c5ea18 100644
 --- a/drivers/gpu/drm/display/drm_bridge_connector.c
 +++ b/drivers/gpu/drm/display/drm_bridge_connector.c
 @@ -699,6 +699,20 @@ static int drm_bridge_connector_frl_fallback_tmds(struct drm_connector *connecto
@@ -68,7 +68,7 @@ index 2ab6f1df7..cfb9f0c5e 100644
  
  		ret = drmm_connector_hdmi_init(drm, connector,
 diff --git a/drivers/gpu/drm/drm_connector.c b/drivers/gpu/drm/drm_connector.c
-index 40477e4bb..6031265e2 100644
+index 40477e4bb1ab..6031265e26f0 100644
 --- a/drivers/gpu/drm/drm_connector.c
 +++ b/drivers/gpu/drm/drm_connector.c
 @@ -652,6 +652,16 @@ int drmm_connector_hdmi_init(struct drm_device *dev,
@@ -89,7 +89,7 @@ index 40477e4bb..6031265e2 100644
  
  	/*
 diff --git a/include/drm/drm_bridge.h b/include/drm/drm_bridge.h
-index 1f4d5cf36..90e220256 100644
+index 1f4d5cf366fa..90e220256f7a 100644
 --- a/include/drm/drm_bridge.h
 +++ b/include/drm/drm_bridge.h
 @@ -669,6 +669,20 @@ struct drm_bridge_funcs {
@@ -128,7 +128,7 @@ index 1f4d5cf36..90e220256 100644
  	 * @hdmi_cec_dev: device to be used as a containing device for CEC
  	 * functions.
 diff --git a/include/drm/drm_connector.h b/include/drm/drm_connector.h
-index 6cd8eda4f..9b43559e9 100644
+index 6cd8eda4f391..9b43559e94e2 100644
 --- a/include/drm/drm_connector.h
 +++ b/include/drm/drm_connector.h
 @@ -1645,6 +1645,24 @@ struct drm_connector_hdmi_funcs {

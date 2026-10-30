@@ -19,7 +19,7 @@ Assisted-by: Claude:claude-opus-5-5
  1 file changed, 1 insertion(+)
 
 diff --git a/drivers/media/platform/rockchip/rkisp2/rkisp2-isp.c b/drivers/media/platform/rockchip/rkisp2/rkisp2-isp.c
-index 0833ffe57..a0c4bc963 100644
+index 0833ffe57f39..a0c4bc963b04 100644
 --- a/drivers/media/platform/rockchip/rkisp2/rkisp2-isp.c
 +++ b/drivers/media/platform/rockchip/rkisp2/rkisp2-isp.c
 @@ -579,6 +579,7 @@ static void rkisp2_isp_set_sink_fmt(struct rkisp2_isp *isp,

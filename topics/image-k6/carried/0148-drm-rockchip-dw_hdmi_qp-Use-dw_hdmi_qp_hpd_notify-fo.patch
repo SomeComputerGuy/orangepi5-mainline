@@ -1,0 +1,55 @@
+From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
+From: Cristian Ciocaltea <cristian.ciocaltea@collabora.com>
+Date: Mon, 20 Apr 2026 22:42:12 +0300
+Subject: [PATCH] drm/rockchip: dw_hdmi_qp: Use dw_hdmi_qp_hpd_notify() for HPD
+ reports
+
+Notify only the affected connector instead of polling all of them, and
+ensure .detect_ctx() runs on reconnect to recover SCDC state.
+
+Tested-by: Maud Spierings <maud_spierings@hotmail.com>
+Tested-by: Diederik de Haas <diederik@cknow-tech.com>  # NanoPC-T6 LTS, Rock 5B
+Signed-off-by: Cristian Ciocaltea <cristian.ciocaltea@collabora.com>
+Link: https://gitlab.collabora.com/hardware-enablement/rockchip-3588/linux/-/commit/7ebb0ef866dc2ef9d8ab3d3a0dd1a742509b375b
+---
+ drivers/gpu/drm/rockchip/dw_hdmi_qp-rockchip.c | 12 ++----------
+ 1 file changed, 2 insertions(+), 10 deletions(-)
+
+diff --git a/drivers/gpu/drm/rockchip/dw_hdmi_qp-rockchip.c b/drivers/gpu/drm/rockchip/dw_hdmi_qp-rockchip.c
+index 1c547016ee00..f2a1ea8dfefa 100644
+--- a/drivers/gpu/drm/rockchip/dw_hdmi_qp-rockchip.c
++++ b/drivers/gpu/drm/rockchip/dw_hdmi_qp-rockchip.c
+@@ -24,7 +24,6 @@
+ #include <drm/drm_bridge_connector.h>
+ #include <drm/drm_managed.h>
+ #include <drm/drm_of.h>
+-#include <drm/drm_probe_helper.h>
+ 
+ #include "rockchip_drm_drv.h"
+ 
+@@ -398,14 +397,8 @@ static void dw_hdmi_qp_rk3588_hpd_work(struct work_struct *work)
+ 	struct rockchip_hdmi_qp *hdmi = container_of(work,
+ 						     struct rockchip_hdmi_qp,
+ 						     hpd_work.work);
+-	struct drm_device *drm = hdmi->encoder.encoder.dev;
+-	bool changed;
+ 
+-	if (drm) {
+-		changed = drm_helper_hpd_irq_event(drm);
+-		if (changed)
+-			dev_dbg(hdmi->dev, "connector status changed\n");
+-	}
++	dw_hdmi_qp_hpd_notify(hdmi->hdmi);
+ }
+ 
+ static irqreturn_t dw_hdmi_qp_rk3576_hardirq(int irq, void *dev_id)
+@@ -792,8 +785,7 @@ static int __maybe_unused dw_hdmi_qp_rockchip_resume(struct device *dev)
+ 
+ 	dw_hdmi_qp_resume(dev, hdmi->hdmi);
+ 
+-	if (hdmi->encoder.encoder.dev)
+-		drm_helper_hpd_irq_event(hdmi->encoder.encoder.dev);
++	dw_hdmi_qp_hpd_notify(hdmi->hdmi);
+ 
+ 	return 0;
+ }

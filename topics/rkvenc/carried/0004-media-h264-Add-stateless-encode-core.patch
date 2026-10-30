@@ -31,7 +31,7 @@ Link: https://patch.msgid.link/20260522101653.2565125-5-paulk@sys-base.io
  create mode 100644 include/media/v4l2-h264-enc.h
 
 diff --git a/drivers/media/v4l2-core/Kconfig b/drivers/media/v4l2-core/Kconfig
-index d50ccac97..a88eaf8af 100644
+index d50ccac9733c..a88eaf8af48c 100644
 --- a/drivers/media/v4l2-core/Kconfig
 +++ b/drivers/media/v4l2-core/Kconfig
 @@ -44,6 +44,10 @@ config V4L2_JPEG_HELPER
@@ -46,7 +46,7 @@ index d50ccac97..a88eaf8af 100644
  config V4L2_VP9
  	tristate
 diff --git a/drivers/media/v4l2-core/Makefile b/drivers/media/v4l2-core/Makefile
-index 329f0eadc..4dba1a4b4 100644
+index 329f0eadce99..4dba1a4b4983 100644
 --- a/drivers/media/v4l2-core/Makefile
 +++ b/drivers/media/v4l2-core/Makefile
 @@ -29,6 +29,7 @@ obj-$(CONFIG_V4L2_CCI) += v4l2-cci.o
@@ -59,7 +59,7 @@ index 329f0eadc..4dba1a4b4 100644
  obj-$(CONFIG_V4L2_MEM2MEM_DEV) += v4l2-mem2mem.o
 diff --git a/drivers/media/v4l2-core/v4l2-h264-enc.c b/drivers/media/v4l2-core/v4l2-h264-enc.c
 new file mode 100644
-index 000000000..d4e145069
+index 000000000000..d4e1450691fb
 --- /dev/null
 +++ b/drivers/media/v4l2-core/v4l2-h264-enc.c
 @@ -0,0 +1,555 @@
@@ -620,7 +620,7 @@ index 000000000..d4e145069
 +MODULE_LICENSE("GPL");
 diff --git a/include/media/v4l2-h264-enc.h b/include/media/v4l2-h264-enc.h
 new file mode 100644
-index 000000000..2978a73ba
+index 000000000000..2978a73baacd
 --- /dev/null
 +++ b/include/media/v4l2-h264-enc.h
 @@ -0,0 +1,79 @@

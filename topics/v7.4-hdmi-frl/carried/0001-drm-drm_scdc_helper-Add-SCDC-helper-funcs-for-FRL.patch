@@ -18,7 +18,7 @@ Link: https://lore.kernel.org/r/20261012035806.3361439-5-ankit.k.nautiyal@intel.
  3 files changed, 135 insertions(+)
 
 diff --git a/drivers/gpu/drm/display/drm_scdc_helper.c b/drivers/gpu/drm/display/drm_scdc_helper.c
-index 74388481f..968a65875 100644
+index 74388481fc55..968a6587585f 100644
 --- a/drivers/gpu/drm/display/drm_scdc_helper.c
 +++ b/drivers/gpu/drm/display/drm_scdc_helper.c
 @@ -350,6 +350,115 @@ int drm_scdc_set_source_version(struct drm_connector *connector, u8 ver)
@@ -138,7 +138,7 @@ index 74388481f..968a65875 100644
  drm_scdc_parse_status0_flags(u8 val, struct drm_scdc_status_flags *flags)
  {
 diff --git a/include/drm/display/drm_scdc.h b/include/drm/display/drm_scdc.h
-index 7f0b05b2f..694f10b81 100644
+index 7f0b05b2f280..694f10b81dd6 100644
 --- a/include/drm/display/drm_scdc.h
 +++ b/include/drm/display/drm_scdc.h
 @@ -29,8 +29,11 @@
@@ -154,7 +154,7 @@ index 7f0b05b2f..694f10b81 100644
  #define  SCDC_CED_UPDATE (1 << 1)
  #define  SCDC_STATUS_UPDATE (1 << 0)
 diff --git a/include/drm/display/drm_scdc_helper.h b/include/drm/display/drm_scdc_helper.h
-index 6a8be1f16..616afd0cf 100644
+index 6a8be1f16ce0..616afd0cf8b2 100644
 --- a/include/drm/display/drm_scdc_helper.h
 +++ b/include/drm/display/drm_scdc_helper.h
 @@ -33,6 +33,20 @@ struct drm_connector;

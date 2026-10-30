@@ -25,7 +25,7 @@ Link: https://gitlab.collabora.com/hardware-enablement/rockchip-3588/linux/-/com
  2 files changed, 218 insertions(+)
 
 diff --git a/drivers/gpu/drm/display/drm_scdc_helper.c b/drivers/gpu/drm/display/drm_scdc_helper.c
-index 8403f2390..129a2b855 100644
+index 8403f2390ab6..129a2b85527b 100644
 --- a/drivers/gpu/drm/display/drm_scdc_helper.c
 +++ b/drivers/gpu/drm/display/drm_scdc_helper.c
 @@ -24,7 +24,9 @@
@@ -227,7 +227,7 @@ index 8403f2390..129a2b855 100644
 +}
 +EXPORT_SYMBOL(drm_scdc_debugfs_init);
 diff --git a/include/drm/display/drm_scdc_helper.h b/include/drm/display/drm_scdc_helper.h
-index e9ccaeba5..e0b79d79e 100644
+index e9ccaeba56dd..e0b79d79e1ff 100644
 --- a/include/drm/display/drm_scdc_helper.h
 +++ b/include/drm/display/drm_scdc_helper.h
 @@ -30,6 +30,34 @@

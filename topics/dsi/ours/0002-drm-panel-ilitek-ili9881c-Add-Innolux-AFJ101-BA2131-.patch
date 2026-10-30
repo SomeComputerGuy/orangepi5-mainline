@@ -27,7 +27,7 @@ Assisted-by: Claude:claude-opus-5-5
  1 file changed, 221 insertions(+)
 
 diff --git a/drivers/gpu/drm/panel/panel-ilitek-ili9881c.c b/drivers/gpu/drm/panel/panel-ilitek-ili9881c.c
-index c3d5ab671..de0cb9f86 100644
+index c3d5ab67121d..de0cb9f86f76 100644
 --- a/drivers/gpu/drm/panel/panel-ilitek-ili9881c.c
 +++ b/drivers/gpu/drm/panel/panel-ilitek-ili9881c.c
 @@ -2198,6 +2198,200 @@ static const struct ili9881c_instr waveshare_7inch_a_init[] = {

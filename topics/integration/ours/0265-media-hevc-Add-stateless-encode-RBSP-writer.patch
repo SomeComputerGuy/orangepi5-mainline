@@ -43,7 +43,7 @@ Assisted-by: Claude:claude-opus-5-5
  create mode 100644 include/media/v4l2-hevc-enc-rbsp.h
 
 diff --git a/drivers/media/v4l2-core/Kconfig b/drivers/media/v4l2-core/Kconfig
-index a88eaf8af..ac680d53f 100644
+index a88eaf8af48c..ac680d53fda1 100644
 --- a/drivers/media/v4l2-core/Kconfig
 +++ b/drivers/media/v4l2-core/Kconfig
 @@ -48,6 +48,10 @@ config V4L2_H264
@@ -58,7 +58,7 @@ index a88eaf8af..ac680d53f 100644
  config V4L2_VP9
  	tristate
 diff --git a/drivers/media/v4l2-core/Makefile b/drivers/media/v4l2-core/Makefile
-index 81c5582d6..76eab22f1 100644
+index 81c5582d6a34..76eab22f1416 100644
 --- a/drivers/media/v4l2-core/Makefile
 +++ b/drivers/media/v4l2-core/Makefile
 @@ -31,6 +31,7 @@ obj-$(CONFIG_V4L2_FWNODE) += v4l2-fwnode.o
@@ -71,7 +71,7 @@ index 81c5582d6..76eab22f1 100644
  obj-$(CONFIG_V4L2_MEM2MEM_DEV) += v4l2-mem2mem.o
 diff --git a/drivers/media/v4l2-core/v4l2-hevc-enc-rbsp.c b/drivers/media/v4l2-core/v4l2-hevc-enc-rbsp.c
 new file mode 100644
-index 000000000..ee9242f92
+index 000000000000..ee9242f92950
 --- /dev/null
 +++ b/drivers/media/v4l2-core/v4l2-hevc-enc-rbsp.c
 @@ -0,0 +1,977 @@
@@ -1054,7 +1054,7 @@ index 000000000..ee9242f92
 +MODULE_LICENSE("GPL");
 diff --git a/include/media/v4l2-hevc-enc-rbsp.h b/include/media/v4l2-hevc-enc-rbsp.h
 new file mode 100644
-index 000000000..b593fd6c0
+index 000000000000..b593fd6c0d96
 --- /dev/null
 +++ b/include/media/v4l2-hevc-enc-rbsp.h
 @@ -0,0 +1,279 @@

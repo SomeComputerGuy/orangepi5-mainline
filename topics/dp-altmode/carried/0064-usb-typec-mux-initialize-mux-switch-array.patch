@@ -22,7 +22,7 @@ Link: https://gitlab.collabora.com/hardware-enablement/rockchip-3588/linux/-/com
  1 file changed, 1 insertion(+), 1 deletion(-)
 
 diff --git a/drivers/usb/typec/mux.c b/drivers/usb/typec/mux.c
-index 57149f537..88e7826f4 100644
+index 57149f537692..88e7826f4723 100644
 --- a/drivers/usb/typec/mux.c
 +++ b/drivers/usb/typec/mux.c
 @@ -319,7 +319,7 @@ static void *typec_mux_match(const struct fwnode_handle *fwnode,

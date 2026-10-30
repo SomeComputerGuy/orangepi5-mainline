@@ -18,5 +18,6 @@ Apply with `git am` in the order listed in [`series`](series), on top of the par
 - [notes/tools/resume-delay/resume_delay.c](notes/tools/resume-delay/resume_delay.c)
 - [notes/tools/resume-wd/resume_wd.c](notes/tools/resume-wd/resume_wd.c)
 - [notes/tools/rtc-set.py](notes/tools/rtc-set.py)
+- [notes/tools/s2idle-cycles.sh](notes/tools/s2idle-cycles.sh)
 - [notes/tools/susp-check.sh](notes/tools/susp-check.sh)
 - [notes/tools/susp-run.sh](notes/tools/susp-run.sh)

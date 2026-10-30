@@ -35,7 +35,7 @@ Link: https://patch.msgid.link/20260827-rkisp2-v3-3-e91ff0a604d6@ideasonboard.co
  create mode 100644 drivers/media/platform/rockchip/rkisp2/rkisp2-stats.c
 
 diff --git a/Documentation/userspace-api/media/v4l/metafmt-rkisp2.rst b/Documentation/userspace-api/media/v4l/metafmt-rkisp2.rst
-index f80286dd5..fcd009446 100644
+index f80286dd5301..fcd009446389 100644
 --- a/Documentation/userspace-api/media/v4l/metafmt-rkisp2.rst
 +++ b/Documentation/userspace-api/media/v4l/metafmt-rkisp2.rst
 @@ -1,10 +1,11 @@
@@ -102,7 +102,7 @@ index f80286dd5..fcd009446 100644
  ======================
  
 diff --git a/drivers/media/platform/rockchip/rkisp2/Makefile b/drivers/media/platform/rockchip/rkisp2/Makefile
-index 2d41b4ab8..1f92a8d45 100644
+index 2d41b4ab8f7c..1f92a8d45cfe 100644
 --- a/drivers/media/platform/rockchip/rkisp2/Makefile
 +++ b/drivers/media/platform/rockchip/rkisp2/Makefile
 @@ -6,7 +6,8 @@ rockchip-isp2-y := rkisp2-capture.o \
@@ -116,7 +116,7 @@ index 2d41b4ab8..1f92a8d45 100644
  rockchip-isp2-$(CONFIG_DEBUG_FS) += rkisp2-debug.o
  
 diff --git a/drivers/media/platform/rockchip/rkisp2/rkisp2-common.h b/drivers/media/platform/rockchip/rkisp2/rkisp2-common.h
-index 7911e81fc..7fcf99179 100644
+index 7911e81fc77f..7fcf99179116 100644
 --- a/drivers/media/platform/rockchip/rkisp2/rkisp2-common.h
 +++ b/drivers/media/platform/rockchip/rkisp2/rkisp2-common.h
 @@ -105,6 +105,7 @@ enum rkisp2_isp_pad {
@@ -228,7 +228,7 @@ index 7911e81fc..7fcf99179 100644
  void rkisp2_debug_init(struct rkisp2_device *rkisp2);
  void rkisp2_debug_cleanup(struct rkisp2_device *rkisp2);
 diff --git a/drivers/media/platform/rockchip/rkisp2/rkisp2-debug.c b/drivers/media/platform/rockchip/rkisp2/rkisp2-debug.c
-index 4f439bd91..0788fc122 100644
+index 4f439bd9156b..0788fc12269b 100644
 --- a/drivers/media/platform/rockchip/rkisp2/rkisp2-debug.c
 +++ b/drivers/media/platform/rockchip/rkisp2/rkisp2-debug.c
 @@ -191,6 +191,8 @@ void rkisp2_debug_init(struct rkisp2_device *rkisp2)
@@ -260,7 +260,7 @@ index 4f439bd91..0788fc122 100644
  			    &rkisp2_debug_input_status_fops);
  
 diff --git a/drivers/media/platform/rockchip/rkisp2/rkisp2-dev.c b/drivers/media/platform/rockchip/rkisp2/rkisp2-dev.c
-index a01e405c0..b369b361f 100644
+index a01e405c080e..b369b361f655 100644
 --- a/drivers/media/platform/rockchip/rkisp2/rkisp2-dev.c
 +++ b/drivers/media/platform/rockchip/rkisp2/rkisp2-dev.c
 @@ -132,12 +132,21 @@ static int rkisp2_create_links(struct rkisp2_device *rkisp2)
@@ -297,7 +297,7 @@ index a01e405c0..b369b361f 100644
  	if (ret)
  		goto error;
 diff --git a/drivers/media/platform/rockchip/rkisp2/rkisp2-isp.c b/drivers/media/platform/rockchip/rkisp2/rkisp2-isp.c
-index 00336c5e9..0833ffe57 100644
+index 00336c5e99f3..0833ffe57f39 100644
 --- a/drivers/media/platform/rockchip/rkisp2/rkisp2-isp.c
 +++ b/drivers/media/platform/rockchip/rkisp2/rkisp2-isp.c
 @@ -738,6 +738,7 @@ int rkisp2_isp_register(struct rkisp2_device *rkisp2)
@@ -317,7 +317,7 @@ index 00336c5e9..0833ffe57 100644
  
  	rkisp2_write(rkisp2, RKISP2_CIF_ISP_ICR, status);
 diff --git a/drivers/media/platform/rockchip/rkisp2/rkisp2-params.c b/drivers/media/platform/rockchip/rkisp2/rkisp2-params.c
-index 07f57f26c..1c04da421 100644
+index 07f57f26c7b0..1c04da421a55 100644
 --- a/drivers/media/platform/rockchip/rkisp2/rkisp2-params.c
 +++ b/drivers/media/platform/rockchip/rkisp2/rkisp2-params.c
 @@ -34,6 +34,10 @@
@@ -601,7 +601,7 @@ index 07f57f26c..1c04da421 100644
  				    struct rkisp2_params_buffer *buf,
  				    enum rkisp2_params_configure_priority prio)
 diff --git a/drivers/media/platform/rockchip/rkisp2/rkisp2-regs-v2x.h b/drivers/media/platform/rockchip/rkisp2/rkisp2-regs-v2x.h
-index 883bdb7c2..4a0d342d1 100644
+index 883bdb7c2a61..4a0d342d15ea 100644
 --- a/drivers/media/platform/rockchip/rkisp2/rkisp2-regs-v2x.h
 +++ b/drivers/media/platform/rockchip/rkisp2/rkisp2-regs-v2x.h
 @@ -1429,7 +1429,7 @@
@@ -656,7 +656,7 @@ index 883bdb7c2..4a0d342d1 100644
 +
  #endif /* _RKISP_REGS_V2X_H */
 diff --git a/drivers/media/platform/rockchip/rkisp2/rkisp2-regs-v3x.h b/drivers/media/platform/rockchip/rkisp2/rkisp2-regs-v3x.h
-index d27d9a488..5a478d7b3 100644
+index d27d9a48887e..5a478d7b3565 100644
 --- a/drivers/media/platform/rockchip/rkisp2/rkisp2-regs-v3x.h
 +++ b/drivers/media/platform/rockchip/rkisp2/rkisp2-regs-v3x.h
 @@ -3359,6 +3359,7 @@
@@ -696,7 +696,7 @@ index d27d9a488..5a478d7b3 100644
  #define ISP32_RAWAWB_2DDR_PATH_ERR	BIT(29)
 diff --git a/drivers/media/platform/rockchip/rkisp2/rkisp2-stats.c b/drivers/media/platform/rockchip/rkisp2/rkisp2-stats.c
 new file mode 100644
-index 000000000..7bbc1e25b
+index 000000000000..7bbc1e25b2cd
 --- /dev/null
 +++ b/drivers/media/platform/rockchip/rkisp2/rkisp2-stats.c
 @@ -0,0 +1,509 @@
@@ -1210,7 +1210,7 @@ index 000000000..7bbc1e25b
 +	mutex_destroy(&node->vlock);
 +}
 diff --git a/drivers/media/v4l2-core/v4l2-ioctl.c b/drivers/media/v4l2-core/v4l2-ioctl.c
-index 2f2e8bf76..08ae575e9 100644
+index 2f2e8bf76168..08ae575e90b0 100644
 --- a/drivers/media/v4l2-core/v4l2-ioctl.c
 +++ b/drivers/media/v4l2-core/v4l2-ioctl.c
 @@ -1468,6 +1468,7 @@ static void v4l_fill_fmtdesc(struct v4l2_fmtdesc *fmt)
@@ -1222,7 +1222,7 @@ index 2f2e8bf76..08ae575e9 100644
  	case V4L2_META_FMT_C3ISP_STATS:		descr = "Amlogic C3 ISP Statistics"; break;
  	case V4L2_META_FMT_MALI_C55_PARAMS:	descr = "ARM Mali-C55 ISP Parameters"; break;
 diff --git a/include/uapi/linux/media/rockchip/rkisp2-config.h b/include/uapi/linux/media/rockchip/rkisp2-config.h
-index c43053797..cccd6278e 100644
+index c43053797b5c..cccd6278eb0e 100644
 --- a/include/uapi/linux/media/rockchip/rkisp2-config.h
 +++ b/include/uapi/linux/media/rockchip/rkisp2-config.h
 @@ -20,6 +20,17 @@
@@ -1538,7 +1538,7 @@ index c43053797..cccd6278e 100644
  
  #endif /* _UAPI_RKISP2_CONFIG_H */
 diff --git a/include/uapi/linux/videodev2.h b/include/uapi/linux/videodev2.h
-index b25842228..e0f378203 100644
+index b258422288b0..e0f37820387f 100644
 --- a/include/uapi/linux/videodev2.h
 +++ b/include/uapi/linux/videodev2.h
 @@ -878,6 +878,7 @@ struct v4l2_pix_format {

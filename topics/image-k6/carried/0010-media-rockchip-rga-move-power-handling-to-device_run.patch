@@ -1,0 +1,95 @@
+From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
+From: =?UTF-8?q?Sven=20P=C3=BCschel?= <s.pueschel@pengutronix.de>
+Date: Wed, 16 Sep 2026 17:09:49 +0200
+Subject: [PATCH] media: rockchip: rga: move power handling to device_run
+MIME-Version: 1.0
+Content-Type: text/plain; charset=UTF-8
+Content-Transfer-Encoding: 8bit
+
+Move the power handling to the device_run function in preparation for
+enabling multiple cores. This allows to power the only the necessary cores
+instead of powering all available cores.
+
+As the decision on which core the given job is executed will be done in
+device_run, we can only power to correct core there.
+
+To avoid unpowering the core in a streaming state switch to autosuspend.
+This avoids powering down the core when the next frame is scheduled in
+the next 50ms. The timeout maps to a framerate of 20fps, which should be
+pretty uncommon in a normal video stream.
+
+Signed-off-by: Sven Püschel <s.pueschel@pengutronix.de>
+---
+ drivers/media/platform/rockchip/rga/rga-buf.c | 12 ------------
+ drivers/media/platform/rockchip/rga/rga.c     | 13 +++++++++++++
+ 2 files changed, 13 insertions(+), 12 deletions(-)
+
+diff --git a/drivers/media/platform/rockchip/rga/rga-buf.c b/drivers/media/platform/rockchip/rga/rga-buf.c
+index c0ea6003336b..3f7c3c68e0cb 100644
+--- a/drivers/media/platform/rockchip/rga/rga-buf.c
++++ b/drivers/media/platform/rockchip/rga/rga-buf.c
+@@ -242,14 +242,6 @@ static int rga_buf_prepare_streaming(struct vb2_queue *q)
+ static int rga_buf_start_streaming(struct vb2_queue *q, unsigned int count)
+ {
+ 	struct rga_ctx *ctx = vb2_get_drv_priv(q);
+-	struct rockchip_rga *rga = ctx->rga;
+-	int ret;
+-
+-	ret = pm_runtime_resume_and_get(rga->dev);
+-	if (ret < 0) {
+-		rga_buf_return_buffers(q, VB2_BUF_STATE_QUEUED);
+-		return ret;
+-	}
+ 
+ 	if (V4L2_TYPE_IS_OUTPUT(q->type))
+ 		ctx->osequence = 0;
+@@ -261,11 +253,7 @@ static int rga_buf_start_streaming(struct vb2_queue *q, unsigned int count)
+ 
+ static void rga_buf_stop_streaming(struct vb2_queue *q)
+ {
+-	struct rga_ctx *ctx = vb2_get_drv_priv(q);
+-	struct rockchip_rga *rga = ctx->rga;
+-
+ 	rga_buf_return_buffers(q, VB2_BUF_STATE_ERROR);
+-	pm_runtime_put(rga->dev);
+ }
+ 
+ const struct vb2_ops rga_qops = {
+diff --git a/drivers/media/platform/rockchip/rga/rga.c b/drivers/media/platform/rockchip/rga/rga.c
+index 36e9c474a2f0..6c60bb7f499d 100644
+--- a/drivers/media/platform/rockchip/rga/rga.c
++++ b/drivers/media/platform/rockchip/rga/rga.c
+@@ -37,6 +37,14 @@ static void device_run(void *prv)
+ 	struct rockchip_rga *rga = ctx->rga;
+ 	struct vb2_v4l2_buffer *src, *dst;
+ 	unsigned long flags;
++	int ret;
++
++	ret = pm_runtime_resume_and_get(rga->dev);
++	if (ret < 0) {
++		v4l2_m2m_buf_done_and_job_finish(rga->m2m_dev, ctx->fh.m2m_ctx,
++						 VB2_BUF_STATE_ERROR);
++		return;
++	}
+ 
+ 	spin_lock_irqsave(&rga->ctrl_lock, flags);
+ 	if (ctx->cmdbuf_dirty) {
+@@ -81,6 +89,8 @@ static irqreturn_t rga_isr(int irq, void *prv)
+ 		v4l2_m2m_buf_done(src, VB2_BUF_STATE_DONE);
+ 		v4l2_m2m_buf_done(dst, VB2_BUF_STATE_DONE);
+ 		v4l2_m2m_job_finish(rga->m2m_dev, ctx->fh.m2m_ctx);
++
++		pm_runtime_put_autosuspend(rga->dev);
+ 	}
+ 
+ 	return IRQ_HANDLED;
+@@ -801,6 +811,9 @@ static int rga_probe(struct platform_device *pdev)
+ 	if (ret)
+ 		return ret;
+ 
++	pm_runtime_set_autosuspend_delay(rga->dev, 50);
++	pm_runtime_use_autosuspend(rga->dev);
++
+ 	rga->regs = devm_platform_ioremap_resource(pdev, 0);
+ 	if (IS_ERR(rga->regs))
+ 		return PTR_ERR(rga->regs);

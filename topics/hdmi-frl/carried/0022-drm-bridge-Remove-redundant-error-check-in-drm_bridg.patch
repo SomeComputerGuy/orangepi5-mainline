@@ -18,7 +18,7 @@ Link: https://gitlab.collabora.com/hardware-enablement/rockchip-3588/linux/-/com
  1 file changed, 2 deletions(-)
 
 diff --git a/drivers/gpu/drm/drm_bridge_helper.c b/drivers/gpu/drm/drm_bridge_helper.c
-index 420f29cf3..0a3c8fee6 100644
+index 420f29cf3e54..0a3c8fee66b3 100644
 --- a/drivers/gpu/drm/drm_bridge_helper.c
 +++ b/drivers/gpu/drm/drm_bridge_helper.c
 @@ -50,8 +50,6 @@ int drm_bridge_helper_reset_crtc(struct drm_bridge *bridge,

@@ -1,0 +1,47 @@
+From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
+From: Arun Iyengar <aiyengar1990@gmail.com>
+Date: Fri, 30 Oct 2026 05:09:28 +0000
+Subject: [PATCH] usb: typec: tcpm: Use the right SVID when resuming Discover
+ Modes
+
+When tcpm_vdm_discovery_work() resumes the discovery process after an
+interruption, it picks the next SVID to send Discover Modes for from the
+wrong place: in both VDM_DISCOVERY_PARTNER_MODES and
+VDM_DISCOVERY_CABLE_MODES it indexes the cable's SVIDs with the
+partner's SVID index.
+
+Resuming in either state then sends Discover Modes for an SVID that the
+port partner or cable never reported (usually 0x0000, as the array is
+zeroed), so the mode of the SVID being discovered is never found.
+
+Index the partner's SVIDs with the partner's index and the cable's SVIDs
+with the cable's index.
+
+Fixes: 205dc9cb39f5 ("usb: typec: tcpm: implement retry mechanism for Discover Identity VDMs")
+Assisted-by: Claude:claude-opus-5-5
+---
+ drivers/usb/typec/tcpm/tcpm.c | 4 ++--
+ 1 file changed, 2 insertions(+), 2 deletions(-)
+
+diff --git a/drivers/usb/typec/tcpm/tcpm.c b/drivers/usb/typec/tcpm/tcpm.c
+index 06692feb6d46..06c4ea34f466 100644
+--- a/drivers/usb/typec/tcpm/tcpm.c
++++ b/drivers/usb/typec/tcpm/tcpm.c
+@@ -7376,7 +7376,7 @@ static void tcpm_vdm_discovery_work(struct kthread_work *work)
+ 	case VDM_DISCOVERY_PARTNER_MODES:
+ 		/* Not all modes have been discovered yet */
+ 		if (modep->svid_index < modep->nsvids) {
+-			msg[0] = VDO(modep_prime->svids[modep->svid_index], 1, svdm_version,
++			msg[0] = VDO(modep->svids[modep->svid_index], 1, svdm_version,
+ 				     CMD_DISCOVER_MODES);
+ 		} else if (tcpm_can_communicate_sop_prime(port) && tcpm_cable_vdm_supported(port)) {
+ 			tx_sop_type = TCPC_TX_SOP_PRIME;
+@@ -7411,7 +7411,7 @@ static void tcpm_vdm_discovery_work(struct kthread_work *work)
+ 		if (modep_prime->svid_index < modep_prime->nsvids) {
+ 			tx_sop_type = TCPC_TX_SOP_PRIME;
+ 			svdm_version = typec_get_cable_svdm_version(typec);
+-			msg[0] = VDO(modep_prime->svids[modep->svid_index], 1, svdm_version,
++			msg[0] = VDO(modep_prime->svids[modep_prime->svid_index], 1, svdm_version,
+ 				     CMD_DISCOVER_MODES);
+ 		} else {
+ 			goto unlock;

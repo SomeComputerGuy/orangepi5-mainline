@@ -1,0 +1,157 @@
+From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
+From: Arun Iyengar <aiyengar1990@gmail.com>
+Date: Fri, 30 Oct 2026 06:12:47 +0000
+Subject: [PATCH] usb: hub: Retry SuperSpeed for a device stuck on its USB 2.0
+ peer
+
+A SuperSpeed device looks for a SuperSpeed link first when it sees
+VBUS, and connects at high speed when the link doesn't come up. It
+looks again only when VBUS is cycled or after a USB 2.0 bus reset.
+
+When a connector's two halves belong to different host controllers,
+the USB 2.0 host can start first. On the Orange Pi 5 (RK3588S), whose
+USB 3 Type-A port has VBUS on from power-up, a USB 3 flash drive
+plugged in at boot was reset by the EHCI about 10 ms before the
+SuperSpeed-only xHCI registered, so it came up at 480 Mb/s on the EHCI
+in every one of 6 boots, while plugging it in after boot gave
+5 Gb/s. It stays at high speed until it is unplugged.
+
+When a SuperSpeed hub with ports paired through a connector starts, or
+comes back from a reset or reset-resume, check those ports' USB 2.0
+peers. If a SuperSpeed-capable device is connected at high speed there,
+reset it once, so that it can connect at SuperSpeed now that the link
+can train. Lock the peer hub first, so an enumeration that is under way
+completes before the check. A device that still can't train its
+SuperSpeed link stays connected at high speed after that one reset.
+
+Assisted-by: Claude:claude-opus-5-5
+---
+ drivers/usb/core/hub.c | 88 ++++++++++++++++++++++++++++++++++++++++++
+ drivers/usb/core/hub.h |  1 +
+ 2 files changed, 89 insertions(+)
+
+diff --git a/drivers/usb/core/hub.c b/drivers/usb/core/hub.c
+index b446905b48be..80ecabde2866 100644
+--- a/drivers/usb/core/hub.c
++++ b/drivers/usb/core/hub.c
+@@ -1076,6 +1076,89 @@ int usb_remove_device(struct usb_device *udev)
+ 	return 0;
+ }
+ 
++/*
++ * A SuperSpeed port paired through a connector with a port of another host
++ * controller can start after a SuperSpeed-capable device has connected at
++ * high speed on that peer: with VBUS always on, the device looks for a
++ * SuperSpeed link while the SuperSpeed host is still down, gives up, and
++ * connects at high speed. It only tries SuperSpeed again after VBUS is cycled
++ * or after a USB 2.0 bus reset, so reset it now that the link can train.
++ */
++static void hub_reset_peer_child(struct usb_device *peer_hdev, int peer_port1)
++{
++	struct usb_hub *peer_hub;
++	struct usb_device *udev;
++
++	/* Wait for an enumeration in progress on the peer port to finish */
++	usb_lock_device(peer_hdev);
++	peer_hub = usb_hub_to_struct_hub(peer_hdev);
++	if (!peer_hub || peer_port1 > peer_hdev->maxchild)
++		goto out;
++
++	udev = peer_hub->ports[peer_port1 - 1]->child;
++	if (!udev || udev->speed != USB_SPEED_HIGH)
++		goto out;
++
++	usb_lock_device(udev);
++	if (udev->state != USB_STATE_NOTATTACHED &&
++	    udev->bos && udev->bos->ss_cap) {
++		dev_info(&udev->dev,
++			 "SuperSpeed peer port available, resetting\n");
++		usb_reset_device(udev);
++	}
++	usb_unlock_device(udev);
++out:
++	usb_unlock_device(peer_hdev);
++}
++
++static void hub_peer_reset_work(struct work_struct *ws)
++{
++	struct usb_hub *hub = container_of(ws, struct usb_hub, peer_reset_work);
++	struct usb_device *hdev = hub->hdev;
++	int port1;
++
++	for (port1 = 1; ; port1++) {
++		struct usb_device *peer_hdev = NULL;
++		struct usb_port *port_dev;
++		int peer_port1 = 0;
++
++		mutex_lock(&usb_port_peer_mutex);
++		if (port1 > hdev->maxchild) {
++			mutex_unlock(&usb_port_peer_mutex);
++			break;
++		}
++		port_dev = hub->ports[port1 - 1];
++		if (port_dev->connector_peer && port_dev->peer) {
++			peer_hdev = to_usb_device(port_dev->peer->dev.parent->parent);
++			peer_port1 = port_dev->peer->portnum;
++			usb_get_dev(peer_hdev);
++		}
++		mutex_unlock(&usb_port_peer_mutex);
++
++		if (peer_hdev) {
++			hub_reset_peer_child(peer_hdev, peer_port1);
++			usb_put_dev(peer_hdev);
++		}
++	}
++
++	hub_put(hub);
++}
++
++static void hub_queue_peer_reset(struct usb_hub *hub)
++{
++	int port1;
++
++	for (port1 = 1; port1 <= hub->hdev->maxchild; port1++) {
++		if (hub->ports[port1 - 1]->connector_peer) {
++			hub_get(hub);
++			if (!queue_work(system_power_efficient_wq,
++					&hub->peer_reset_work))
++				hub_put(hub);
++			return;
++		}
++	}
++}
++
+ enum hub_activation_type {
+ 	HUB_INIT, HUB_INIT2, HUB_INIT3,		/* INITs must come first */
+ 	HUB_POST_RESET, HUB_RESUME, HUB_RESET_RESUME,
+@@ -1346,6 +1429,10 @@ static void hub_activate(struct usb_hub *hub, enum hub_activation_type type)
+ 
+ 	/* Scan all ports that need attention */
+ 	kick_hub_wq(hub);
++
++	/* Let devices stuck at high speed on a connector peer move over */
++	if (hub_is_superspeed(hdev) && type != HUB_RESUME)
++		hub_queue_peer_reset(hub);
+  abort:
+ 	if (type == HUB_INIT2 || type == HUB_INIT3) {
+ 		/* Allow autosuspend if it was suppressed */
+@@ -1978,6 +2065,7 @@ static int hub_probe(struct usb_interface *intf, const struct usb_device_id *id)
+ 	INIT_DELAYED_WORK(&hub->leds, led_work);
+ 	INIT_DELAYED_WORK(&hub->init_work, NULL);
+ 	INIT_DELAYED_WORK(&hub->post_resume_work, hub_post_resume);
++	INIT_WORK(&hub->peer_reset_work, hub_peer_reset_work);
+ 	INIT_WORK(&hub->events, hub_event);
+ 	INIT_LIST_HEAD(&hub->onboard_devs);
+ 	spin_lock_init(&hub->irq_urb_lock);
+diff --git a/drivers/usb/core/hub.h b/drivers/usb/core/hub.h
+index 78382839be48..edce19d7bf13 100644
+--- a/drivers/usb/core/hub.h
++++ b/drivers/usb/core/hub.h
+@@ -71,6 +71,7 @@ struct usb_hub {
+ 	struct delayed_work	leds;
+ 	struct delayed_work	init_work;
+ 	struct delayed_work	post_resume_work;
++	struct work_struct	peer_reset_work;
+ 	struct work_struct      events;
+ 	spinlock_t		irq_urb_lock;
+ 	struct timer_list	irq_urb_retry;

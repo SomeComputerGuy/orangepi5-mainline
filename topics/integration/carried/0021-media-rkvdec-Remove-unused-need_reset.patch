@@ -15,7 +15,7 @@ Signed-off-by: Detlev Casanova <detlev.casanova@collabora.com>
  1 file changed, 8 deletions(-)
 
 diff --git a/drivers/media/platform/rockchip/rkvdec/rkvdec.c b/drivers/media/platform/rockchip/rkvdec/rkvdec.c
-index aa883c272..9e9a000b6 100644
+index aa883c27229b..9e9a000b605e 100644
 --- a/drivers/media/platform/rockchip/rkvdec/rkvdec.c
 +++ b/drivers/media/platform/rockchip/rkvdec/rkvdec.c
 @@ -1462,7 +1462,6 @@ static irqreturn_t vdpu381_irq_handler(struct rkvdec_ctx *ctx)

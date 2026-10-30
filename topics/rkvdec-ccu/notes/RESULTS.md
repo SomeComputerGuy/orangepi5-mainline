@@ -192,3 +192,52 @@ branch (0009 should be squashed into 0005 after the board run).
   adaptation (reg103 refresh_en/prob_save_en, reg162 last_prob_base, reg172 update_prob_wr_base, reg028
   vp9_rd/wr_prob_idx, reg099 prob_ref_poc) plus the POC registers 65/95-98/100 (cur/last/golden/altref/col/segid
   ref POC from a per-stream frame counter), which the CCU synchronizes. Not implemented yet (VP9 back-end rework).
+
+## Update 2026-10-30 (4): k4b wedge fixes + field pairs + VP9 hardware adaptation (combined build k4c)
+k4b board run: ccu-verify passed; fluster HEVC 146/147; JVT-AVC_V1 wedged core 1 with HCBP2_HHI_A + HCMP1_HHI_A
+at once (timeouts every ~39 ms, IOMMU stall timeouts, PD rkvdec1 idle failure; evidence `~/ccu/fluster-k4b-wedge/`).
+New commits on `opi5/rkvdec-ccu-k4` (patches 0010-0014):
+- 0010: a failed or timed-out core is forced idle in the CCU, soft reset (reset lines pulsed if that fails),
+  its IOMMU reinitialized and reconnected (BSP soft-CCU reset sequence); the job fails back to userspace. POC
+  aliases (IDR/MMCO5/CRA reuse POCs; the cores match references by POC) could make an in-flight frame wait for the
+  next frame that waits for it: a frame starts in CCU mode only once no earlier in-flight frame has a reference
+  with its POC (`stat_poc_alias` counter). Root cause of the HHI hang is this hypothesis + reset; unverified.
+- 0011-0012 (field-pair agent, `_out/rkvdec-ccu/fieldpair/NOTES.md`): m2m lets detached jobs hold the CAPTURE
+  buffer (`TRANS_HELD_DETACHED`, `v4l2_m2m_detached_buf_done()`); rkvdec lets the second field start while the
+  first one runs. Evidence: MPP fast mode and the BSP soft-CCU worker already run both fields at once.
+- 0013-0014 (VP9 agent, `_out/rkvdec-ccu/vp9hw/NOTES.md`): hardware backward adaptation (MPP HW_PROB layouts,
+  byte-identical to MPP's writers on 10000 random headers in a host harness), CPU adaptation removed; POC
+  registers from a per-stream counter; VP9 pipelined in CCU mode.
+Modules (k4c, `_out/rkvdec-ccu/k4c/`, also `~/ccu/k4c/` on the board): rockchip-vdec 385f40fa, v4l2-mem2mem
+d3ee1f68 (58 existing CRCs identical; new exports detach_and_job_finish, detached_buf_done). Every commit builds
+with W=1; checkpatch clean except the known MAINTAINERS note on 0005.
+
+## Update 2026-10-30 (5): k4c regressions and timeouts
+k4c fluster: HEVC 146/147, AVC_V1 128/135 (new fail HCBP1_HHI_A), FR-EXT 64/69 (new fail HCHP3_HHI_A), VP9 230/305;
+9 timeouts: 04:49:04 during AVC_V1 (04:48:51-04:49:11, the HHI vectors), 8 at 04:50:14-17 during VP9 (started
+04:50:08); all recovered. HCBP1: hierarchical P (all P slices, POC lsb 0,32,16,8,24,...; 15 refs, MMCO1);
+HCHP3: field-coded hierarchical B (PAFF, 8 refs). Not root-caused yet: k4c logged nothing about the jobs.
+k4d (`_out/rkvdec-ccu/k4d/`, board `~/ccu/k4d/`, rockchip-vdec dbbca28c): POC-alias wait moved before the watchdog
+is armed (a waiting frame could time out), "resetting the core" logged, and DEBUG timeout dumps (film, POCs, refs,
+status/debug regs, CCU regs) + `fieldpair` A/B switch. `~/ccu/hhi-ab.sh` A/Bs the HHI vectors (5 runs each, alone
+and two at a time) across fieldpair/pipeline/ccu_hw.
+
+## Update 2026-10-30 (6): cause of the k4c/k4d regressions and timeouts
+k4d dumps (`~/ccu/dmesg-k4d.txt`): every timeout follows a core reset within ms; the timed-out core was mid-frame
+in CCU mode (CCU CORE_STA = 3, both busy). The resets come from vectors that fail without the CCU too (decode
+errors). In the fluster order the regressions ran next to such vectors: HCBP1_HHI_A with FM2_SVA_C (Error) and
+FM1_FT_E, HCHP3_HHI_A next to the Hi422 failures, VP9 sharpness-7 next to size-08x08. Alone they pass (hhi-ab 5/5).
+Cause: resetting (and forcing idle in the CCU) one core breaks the frame the other core is decoding. Fix (commit
+`reset the cores together once they are idle`, k4e 8e65bae6): as the BSP soft-CCU worker, on a failure start no
+new job (the held m2m job is run by the reset work afterwards), fail the later frames of the failed stream at once,
+wait for all cores to be idle, reset them all. `~/ccu/ccu-repro.sh` = the minimal pairs (expected: fail with k4d,
+pass with k4e).
+
+## Update 2026-10-30 (7): kernel 5 builds, clean 16xx series
+- k5e (board test build, with the DEBUG A/B parameters): branch `opi5/rkvdec-ccu-k5` = v7.3 + patches/linux (318)
+  + 0001-0017; modules in `k5e/` and `~/ccu/k5e/` (`install.sh` applies the CCU overlay to the k5 DTB).
+- Clean series for patches/linux: branch `opi5/rkvdec-ccu-k5-clean`, `_out/rkvdec-ccu/patches-16xx/1601-1614`:
+  same code without the DEBUG commits (fixups squashed), every commit builds with W=1, checkpatch --strict clean
+  (only the MAINTAINERS note on 1605, which is covered by the existing rkvdec F: entry), one Assisted-by each,
+  no SoB/Co-Authored-By. VP9 and field/MBAFF H.264 run dual-core through the CCU (1611-1613); no serial fallback
+  remains. To go into patches/linux once k5e passes on the board.

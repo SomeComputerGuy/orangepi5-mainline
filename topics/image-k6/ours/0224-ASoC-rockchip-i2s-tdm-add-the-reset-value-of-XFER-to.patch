@@ -1,0 +1,38 @@
+From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
+From: Arun Iyengar <aiyengar1990@gmail.com>
+Date: Thu, 29 Oct 2026 16:45:38 +0000
+Subject: [PATCH] ASoC: rockchip: i2s-tdm: add the reset value of XFER to the
+ regmap defaults
+
+I2S_XFER (0x1c) is writeable and not volatile, so it is cached, but it
+has no entry in rockchip_i2s_tdm_reg_defaults[]. The flat cache then
+treats it as uninitialised, and the first cached access of it -- the
+regmap_update_bits() in the trigger and stop paths, or regcache_sync()
+after a runtime suspend -- warns
+
+  rockchip-i2s-tdm fddf0000.i2s: using zero-initialized flat cache, this may cause unexpected behavior
+
+It is the only cached register without a default: TXFIFOLR, INTSR, CLR,
+TXDR, RXDR and RXFIFOLR are volatile and all other registers have one.
+
+Add XFER with its reset value of 0 (TX and RX stopped), which is also
+what the zero-initialised cache assumed so far, so no register value
+written to the hardware changes.
+
+Assisted-by: Claude:claude-opus-5-5
+---
+ sound/soc/rockchip/rockchip_i2s_tdm.c | 1 +
+ 1 file changed, 1 insertion(+)
+
+diff --git a/sound/soc/rockchip/rockchip_i2s_tdm.c b/sound/soc/rockchip/rockchip_i2s_tdm.c
+index 5ef7f109706d..610bf65d017a 100644
+--- a/sound/soc/rockchip/rockchip_i2s_tdm.c
++++ b/sound/soc/rockchip/rockchip_i2s_tdm.c
+@@ -913,6 +913,7 @@ static const struct reg_default rockchip_i2s_tdm_reg_defaults[] = {
+ 	{0x08, 0x00001f1f},
+ 	{0x10, 0x001f0000},
+ 	{0x14, 0x01f00000},
++	{0x1c, 0x00000000},
+ 	{0x30, 0x00003eff},
+ 	{0x34, 0x00003eff},
+ 	{0x38, 0x00000707},

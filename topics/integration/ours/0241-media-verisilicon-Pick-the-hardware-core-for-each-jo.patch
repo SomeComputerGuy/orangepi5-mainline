@@ -27,7 +27,7 @@ Assisted-by: Claude:claude-opus-5-5
  4 files changed, 83 insertions(+), 9 deletions(-)
 
 diff --git a/drivers/media/platform/verisilicon/hantro.h b/drivers/media/platform/verisilicon/hantro.h
-index 0353de154..eceaa74a6 100644
+index 0353de154a1e..eceaa74a634b 100644
 --- a/drivers/media/platform/verisilicon/hantro.h
 +++ b/drivers/media/platform/verisilicon/hantro.h
 @@ -193,6 +193,14 @@ hantro_vdev_to_func(struct video_device *vdev)
@@ -76,7 +76,7 @@ index 0353de154..eceaa74a6 100644
  	bool is_encoder;
  
 diff --git a/drivers/media/platform/verisilicon/hantro_drv.c b/drivers/media/platform/verisilicon/hantro_drv.c
-index ea9f3847a..7d4df8894 100644
+index ea9f3847a486..7d4df8894274 100644
 --- a/drivers/media/platform/verisilicon/hantro_drv.c
 +++ b/drivers/media/platform/verisilicon/hantro_drv.c
 @@ -59,12 +59,52 @@ static const struct v4l2_event hantro_eos_event = {
@@ -221,7 +221,7 @@ index ea9f3847a..7d4df8894 100644
  	if (ret)
  		return ret;
 diff --git a/drivers/media/platform/verisilicon/rockchip_vpu2_hw_jpeg_enc.c b/drivers/media/platform/verisilicon/rockchip_vpu2_hw_jpeg_enc.c
-index 61621b1be..f7550470b 100644
+index 61621b1be8a2..f7550470b43d 100644
 --- a/drivers/media/platform/verisilicon/rockchip_vpu2_hw_jpeg_enc.c
 +++ b/drivers/media/platform/verisilicon/rockchip_vpu2_hw_jpeg_enc.c
 @@ -131,7 +131,7 @@ rockchip_vpu2_jpeg_enc_set_qtable(struct hantro_dev *vpu,
@@ -243,7 +243,7 @@ index 61621b1be..f7550470b 100644
  	struct vb2_v4l2_buffer *dst_buf = hantro_get_dst_buf(ctx);
  
 diff --git a/drivers/media/platform/verisilicon/rockchip_vpu_hw.c b/drivers/media/platform/verisilicon/rockchip_vpu_hw.c
-index 02673be98..f1f7f95b2 100644
+index 02673be9878e..f1f7f95b2652 100644
 --- a/drivers/media/platform/verisilicon/rockchip_vpu_hw.c
 +++ b/drivers/media/platform/verisilicon/rockchip_vpu_hw.c
 @@ -488,7 +488,7 @@ static void rockchip_vpu2_dec_reset(struct hantro_ctx *ctx)

@@ -71,7 +71,7 @@ Assisted-by: Claude:claude-opus-5-5
  create mode 100644 drivers/media/platform/rockchip/rkvenc/rkvenc.h
 
 diff --git a/drivers/media/platform/rockchip/Kconfig b/drivers/media/platform/rockchip/Kconfig
-index ba401d32f..e6afa6092 100644
+index ba401d32f01b..e6afa60923f1 100644
 --- a/drivers/media/platform/rockchip/Kconfig
 +++ b/drivers/media/platform/rockchip/Kconfig
 @@ -6,3 +6,4 @@ source "drivers/media/platform/rockchip/rga/Kconfig"
@@ -80,7 +80,7 @@ index ba401d32f..e6afa6092 100644
  source "drivers/media/platform/rockchip/rkvdec/Kconfig"
 +source "drivers/media/platform/rockchip/rkvenc/Kconfig"
 diff --git a/drivers/media/platform/rockchip/Makefile b/drivers/media/platform/rockchip/Makefile
-index 0e0b2cbbd..6a1d847a1 100644
+index 0e0b2cbbd4bd..6a1d847a10a4 100644
 --- a/drivers/media/platform/rockchip/Makefile
 +++ b/drivers/media/platform/rockchip/Makefile
 @@ -3,3 +3,4 @@ obj-y += rga/
@@ -90,7 +90,7 @@ index 0e0b2cbbd..6a1d847a1 100644
 +obj-y += rkvenc/
 diff --git a/drivers/media/platform/rockchip/rkvenc/Kconfig b/drivers/media/platform/rockchip/rkvenc/Kconfig
 new file mode 100644
-index 000000000..62bb1c7d5
+index 000000000000..62bb1c7d5cc0
 --- /dev/null
 +++ b/drivers/media/platform/rockchip/rkvenc/Kconfig
 @@ -0,0 +1,17 @@
@@ -113,7 +113,7 @@ index 000000000..62bb1c7d5
 +	  will be called rockchip-venc.
 diff --git a/drivers/media/platform/rockchip/rkvenc/Makefile b/drivers/media/platform/rockchip/rkvenc/Makefile
 new file mode 100644
-index 000000000..f41e2d2af
+index 000000000000..f41e2d2afdeb
 --- /dev/null
 +++ b/drivers/media/platform/rockchip/rkvenc/Makefile
 @@ -0,0 +1,7 @@
@@ -126,7 +126,7 @@ index 000000000..f41e2d2af
 +		rkvenc-vepu580.o
 diff --git a/drivers/media/platform/rockchip/rkvenc/rkvenc-h264.c b/drivers/media/platform/rockchip/rkvenc/rkvenc-h264.c
 new file mode 100644
-index 000000000..c669a6322
+index 000000000000..c669a6322f29
 --- /dev/null
 +++ b/drivers/media/platform/rockchip/rkvenc/rkvenc-h264.c
 @@ -0,0 +1,520 @@
@@ -652,7 +652,7 @@ index 000000000..c669a6322
 +};
 diff --git a/drivers/media/platform/rockchip/rkvenc/rkvenc-regs.h b/drivers/media/platform/rockchip/rkvenc/rkvenc-regs.h
 new file mode 100644
-index 000000000..6957cdf53
+index 000000000000..6957cdf53446
 --- /dev/null
 +++ b/drivers/media/platform/rockchip/rkvenc/rkvenc-regs.h
 @@ -0,0 +1,379 @@
@@ -1037,7 +1037,7 @@ index 000000000..6957cdf53
 +#endif /* RKVENC_REGS_H_ */
 diff --git a/drivers/media/platform/rockchip/rkvenc/rkvenc-vepu580.c b/drivers/media/platform/rockchip/rkvenc/rkvenc-vepu580.c
 new file mode 100644
-index 000000000..33d5154ef
+index 000000000000..33d5154ef8da
 --- /dev/null
 +++ b/drivers/media/platform/rockchip/rkvenc/rkvenc-vepu580.c
 @@ -0,0 +1,585 @@
@@ -1628,7 +1628,7 @@ index 000000000..33d5154ef
 +}
 diff --git a/drivers/media/platform/rockchip/rkvenc/rkvenc.c b/drivers/media/platform/rockchip/rkvenc/rkvenc.c
 new file mode 100644
-index 000000000..0e5afaefc
+index 000000000000..0e5afaefc0dd
 --- /dev/null
 +++ b/drivers/media/platform/rockchip/rkvenc/rkvenc.c
 @@ -0,0 +1,1502 @@
@@ -3136,7 +3136,7 @@ index 000000000..0e5afaefc
 +MODULE_LICENSE("GPL");
 diff --git a/drivers/media/platform/rockchip/rkvenc/rkvenc.h b/drivers/media/platform/rockchip/rkvenc/rkvenc.h
 new file mode 100644
-index 000000000..4ecc601be
+index 000000000000..4ecc601be147
 --- /dev/null
 +++ b/drivers/media/platform/rockchip/rkvenc/rkvenc.h
 @@ -0,0 +1,234 @@

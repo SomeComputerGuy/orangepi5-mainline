@@ -22,7 +22,7 @@ Assisted-by: Claude:claude-opus-5-5
  1 file changed, 13 insertions(+)
 
 diff --git a/drivers/phy/rockchip/phy-rockchip-usbdp.c b/drivers/phy/rockchip/phy-rockchip-usbdp.c
-index b0b777cca..4c90ddccd 100644
+index b0b777ccae04..4c90ddccdc63 100644
 --- a/drivers/phy/rockchip/phy-rockchip-usbdp.c
 +++ b/drivers/phy/rockchip/phy-rockchip-usbdp.c
 @@ -1106,6 +1106,19 @@ static int rk_udphy_update_power_state(struct rk_udphy *udphy)

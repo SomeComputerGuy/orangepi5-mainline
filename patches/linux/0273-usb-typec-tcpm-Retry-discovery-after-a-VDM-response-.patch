@@ -1,0 +1,119 @@
+From 9be2ac4b555aa6586884c03b2f3b629b0a987e99 Mon Sep 17 00:00:00 2001
+From: Arun Iyengar <aiyengar1990@gmail.com>
+Date: Fri, 30 Oct 2026 05:11:06 +0000
+Subject: [PATCH 273/274] usb: typec: tcpm: Retry discovery after a VDM
+ response timeout
+
+When a Discover SVIDs or Discover Modes request gets no response before
+VDMResponseTimer (tVDMSenderResponse, 30 ms) expires, the VDM state
+machine ends the AMS in VDM_STATE_ERR_TMOUT and nothing else happens:
+the discovery work is not queued again, discovery stays at its current
+step, and no alternate mode is registered. The port partner has answered
+Discover Identity at that point, so it supports Structured VDMs and the
+missing response was most likely only late. With a TCPC behind I2C, as
+the FUSB302 is, tcpm sees both the GoodCRC that starts the timer and the
+response later than they happened on the wire, and at boot that delay
+can be several milliseconds. A USB-C DP/USB3 dongle on an Orange Pi 5
+then loses DisplayPort Alt Mode on some boots:
+
+  AMS DISCOVER_SVIDS start
+  PD TX, header: 0x19af
+  PD TX complete, status: 0
+  AMS DISCOVER_SVIDS finished     <- 30 ms later, timeout
+  PD RX, header: 0x248f [1]       <- the Discover SVIDs ACK, 6.5 ms late
+
+Treat the timeout of a discovery request as a transient failure: queue
+the discovery work again, which resends the request for the current
+discovery step, up to VDM_DISCOVERY_MAX_RETRIES times without progress.
+After that, stop discovery and register the alternate modes found so
+far, as is done when the request cannot be sent. Only Discover SVIDs and
+Discover Modes to the port partner are retried: a partner that never
+answered Discover Identity may not support Structured VDMs at all, and
+SOP' discovery is left as it is.
+
+Assisted-by: Claude:claude-opus-5-5
+---
+ drivers/usb/typec/tcpm/tcpm.c | 36 ++++++++++++++++++++++++++++++++++-
+ 1 file changed, 35 insertions(+), 1 deletion(-)
+
+diff --git a/drivers/usb/typec/tcpm/tcpm.c b/drivers/usb/typec/tcpm/tcpm.c
+index b8eebcb7c..3253355b1 100644
+--- a/drivers/usb/typec/tcpm/tcpm.c
++++ b/drivers/usb/typec/tcpm/tcpm.c
+@@ -296,6 +296,7 @@ enum frs_typec_current {
+ 
+ #define GET_SINK_CAP_RETRY_MS	100
+ #define SEND_DISCOVERY_VDM_RETRY_MS	100
++#define VDM_DISCOVERY_MAX_RETRIES	3
+ 
+ struct pd_mode_data {
+ 	int svid_index;		/* current SVID index		*/
+@@ -607,6 +608,8 @@ struct tcpm_port {
+ 
+ 	/* VDM Discovery State to determine message sent */
+ 	enum vdm_discovery_states vdm_discovery_state;
++	/* Discovery requests resent without progress after a response timeout */
++	unsigned int vdm_discovery_retries;
+ 
+ 	/* PD state for Vendor Defined Messages */
+ 	enum vdm_states vdm_state;
+@@ -2355,10 +2358,12 @@ static void tcpm_update_vdm_discovery_state(struct tcpm_port *port,
+ {
+ 	enum vdm_discovery_states old_state = port->vdm_discovery_state;
+ 
+-	if (old_state != new_state)
++	if (old_state != new_state) {
+ 		tcpm_log_force(port, "vdm discovery state changed: %s -> %s",
+ 			       vdm_discovery_state_strings[old_state],
+ 			       vdm_discovery_state_strings[new_state]);
++		port->vdm_discovery_retries = 0;
++	}
+ 
+ 	port->vdm_discovery_state = new_state;
+ }
+@@ -2916,6 +2921,33 @@ static void tcpm_handle_vdm_request(struct tcpm_port *port,
+ 		port->vdm_sm_running = false;
+ }
+ 
++/*
++ * A Discover SVIDs or Discover Modes request to the port partner got no
++ * response before VDMResponseTimer expired. Once the port partner has answered
++ * Discover Identity it supports Structured VDMs, and the response may only
++ * have been late: resend the request a few times before giving up, and then
++ * register the alternate modes discovered so far.
++ */
++static void tcpm_vdm_discovery_timeout(struct tcpm_port *port)
++{
++	if (port->tx_sop_type != TCPC_TX_SOP ||
++	    port->vdm_discovery_state == VDM_DISCOVERY_UNKNOWN ||
++	    port->vdm_discovery_state == VDM_DISCOVERY_COMPLETE)
++		return;
++
++	if (port->vdm_discovery_retries < VDM_DISCOVERY_MAX_RETRIES) {
++		port->vdm_discovery_retries++;
++		tcpm_log(port, "VDM response timeout, retry discovery (%u)",
++			 port->vdm_discovery_retries);
++		mod_vdm_discovery_delayed_work(port, SEND_DISCOVERY_VDM_RETRY_MS);
++		return;
++	}
++
++	tcpm_log(port, "VDM response timeout, discovery stopped");
++	tcpm_register_partner_altmodes(port);
++	tcpm_update_vdm_discovery_state(port, VDM_DISCOVERY_COMPLETE);
++}
++
+ static unsigned int vdm_ready_timeout(u32 vdm_hdr)
+ {
+ 	unsigned int timeout;
+@@ -3021,6 +3053,8 @@ static void vdm_run_state_machine(struct tcpm_port *port)
+ 		break;
+ 	case VDM_STATE_BUSY:
+ 		port->vdm_state = VDM_STATE_ERR_TMOUT;
++		if (port->ams == DISCOVER_SVIDS || port->ams == DISCOVER_MODES)
++			tcpm_vdm_discovery_timeout(port);
+ 		if (port->ams != NONE_AMS)
+ 			tcpm_ams_finish(port);
+ 		break;
+-- 
+2.55.0
+

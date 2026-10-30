@@ -29,7 +29,7 @@ Assisted-by: Claude:claude-opus-5-5
  4 files changed, 6 insertions(+), 10 deletions(-)
 
 diff --git a/drivers/media/v4l2-core/v4l2-hevc-enc-kunit.c b/drivers/media/v4l2-core/v4l2-hevc-enc-kunit.c
-index 15c65663d..bb252c2ad 100644
+index 15c65663d46c..bb252c2ad827 100644
 --- a/drivers/media/v4l2-core/v4l2-hevc-enc-kunit.c
 +++ b/drivers/media/v4l2-core/v4l2-hevc-enc-kunit.c
 @@ -175,7 +175,7 @@ static const struct v4l2_ctrl_hevc_encode_feedback *
@@ -51,7 +51,7 @@ index 15c65663d..bb252c2ad 100644
  		.nal_unit_type = V4L2_HEVC_NAL_TRAIL_R,
  		.nuh_temporal_id_plus1 = 1,
 diff --git a/drivers/media/v4l2-core/v4l2-hevc-enc.c b/drivers/media/v4l2-core/v4l2-hevc-enc.c
-index e2aa7d2da..b722eaa68 100644
+index e2aa7d2da96c..b722eaa689a8 100644
 --- a/drivers/media/v4l2-core/v4l2-hevc-enc.c
 +++ b/drivers/media/v4l2-core/v4l2-hevc-enc.c
 @@ -579,7 +579,7 @@ static int prepare_encode(struct v4l2_hevc_enc *enc,
@@ -64,7 +64,7 @@ index e2aa7d2da..b722eaa68 100644
  	/* The bitstream starts with an IRAP picture. */
  	if (!enc->state_serial && !v4l2_hevc_nal_is_irap(encode->nal_unit_type))
 diff --git a/include/media/v4l2-ctrls.h b/include/media/v4l2-ctrls.h
-index e817d1674..327976b14 100644
+index e817d1674094..327976b14d50 100644
 --- a/include/media/v4l2-ctrls.h
 +++ b/include/media/v4l2-ctrls.h
 @@ -49,8 +49,6 @@ struct video_device;
@@ -86,7 +86,7 @@ index e817d1674..327976b14 100644
  	struct v4l2_ctrl_vp9_frame *p_vp9_frame;
  	struct v4l2_ctrl_hdr10_cll_info *p_hdr10_cll;
 diff --git a/include/uapi/linux/videodev2.h b/include/uapi/linux/videodev2.h
-index 74a8959f0..06d8e37e4 100644
+index 74a8959f010b..06d8e37e4655 100644
 --- a/include/uapi/linux/videodev2.h
 +++ b/include/uapi/linux/videodev2.h
 @@ -1992,8 +1992,6 @@ enum v4l2_ctrl_type {

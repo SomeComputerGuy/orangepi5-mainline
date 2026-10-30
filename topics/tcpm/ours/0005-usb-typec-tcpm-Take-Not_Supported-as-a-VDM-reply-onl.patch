@@ -1,0 +1,66 @@
+From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
+From: Arun Iyengar <aiyengar1990@gmail.com>
+Date: Fri, 30 Oct 2026 05:10:21 +0000
+Subject: [PATCH] usb: typec: tcpm: Take Not_Supported as a VDM reply only once
+ the VDM is sent
+
+A Not_Supported Message received in SRC_READY or SNK_READY while the VDM
+state machine is active ends the VDM AMS, on the assumption that it is
+the port partner's reply to our VDM. That is only true once the VDM has
+been transmitted and tcpm waits for the response (VDM_STATE_BUSY). As a
+PD 3.x Source, tcpm first sets SinkTxNG and holds the VDM for tSinkTx in
+VDM_STATE_SEND_MESSAGE; after a BUSY response it waits in
+VDM_STATE_WAIT_RSP_BUSY. A Not_Supported that arrives in those states
+answers some earlier Message of ours, and taking it as the reply drops a
+VDM that was never sent.
+
+When the dropped VDM is part of discovery, discovery stops for good:
+nothing queues the next discovery step, so no alternate mode is ever
+registered. This is seen with a USB-C DP/USB3 dongle, which answers
+a Not_Supported from tcpm with a Not_Supported of its own just after
+tcpm resumed discovery with Discover SVIDs:
+
+  AMS DISCOVER_SVIDS start
+  PD RX, header: 0x690 [1]        <- Not_Supported, during tSinkTx
+  AMS DISCOVER_SVIDS finished     <- Discover SVIDs never sent
+  (end of discovery)
+
+Only take the Message as the reply in VDM_STATE_BUSY. If the VDM is still
+to be sent, ignore the Message and let the VDM go out.
+
+Fixes: f1fbd950b59b ("usb: typec: tcpm: Fix wrong handling for Not_Supported in VDM AMS")
+Assisted-by: Claude:claude-opus-5-5
+---
+ drivers/usb/typec/tcpm/tcpm.c | 13 ++++++++++++-
+ 1 file changed, 12 insertions(+), 1 deletion(-)
+
+diff --git a/drivers/usb/typec/tcpm/tcpm.c b/drivers/usb/typec/tcpm/tcpm.c
+index 06c4ea34f466..b8eebcb7cc1e 100644
+--- a/drivers/usb/typec/tcpm/tcpm.c
++++ b/drivers/usb/typec/tcpm/tcpm.c
+@@ -3891,13 +3891,24 @@ static void tcpm_pd_ctrl_request(struct tcpm_port *port,
+ 			break;
+ 		case SRC_READY:
+ 		case SNK_READY:
+-			if (port->vdm_state > VDM_STATE_READY) {
++			/* The reply to the VDM that is waiting for a response */
++			if (port->vdm_state == VDM_STATE_BUSY) {
+ 				port->vdm_state = VDM_STATE_DONE;
+ 				if (tcpm_vdm_ams(port))
+ 					tcpm_ams_finish(port);
+ 				mod_vdm_delayed_work(port, 0);
+ 				break;
+ 			}
++			/*
++			 * The VDM is still to be sent, after tSinkTx or after
++			 * the partner answered BUSY, so this Message is not a
++			 * reply to it. Send the VDM as planned.
++			 */
++			if (port->vdm_state > VDM_STATE_READY) {
++				tcpm_log(port, "Ignoring ctrl msg %d, VDM not sent yet",
++					 type);
++				break;
++			}
+ 			fallthrough;
+ 		default:
+ 			tcpm_pd_handle_state(port,

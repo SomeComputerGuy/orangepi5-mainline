@@ -14,7 +14,7 @@ Assisted-by: Claude:claude-opus-5-5
  create mode 100644 arch/arm64/boot/dts/rockchip/rk3588s-orangepi-5-sata.dts
 
 diff --git a/arch/arm64/boot/dts/rockchip/Makefile b/arch/arm64/boot/dts/rockchip/Makefile
-index e7936a21c..96bcfde1c 100644
+index e7936a21c118..96bcfde1cef1 100644
 --- a/arch/arm64/boot/dts/rockchip/Makefile
 +++ b/arch/arm64/boot/dts/rockchip/Makefile
 @@ -233,6 +233,7 @@ dtb-$(CONFIG_ARCH_ROCKCHIP) += rk3588s-nanopi-r6s.dtb
@@ -27,7 +27,7 @@ index e7936a21c..96bcfde1c 100644
  dtb-$(CONFIG_ARCH_ROCKCHIP) += rk3588s-orangepi-cm5-base.dtb
 diff --git a/arch/arm64/boot/dts/rockchip/rk3588s-orangepi-5-sata.dts b/arch/arm64/boot/dts/rockchip/rk3588s-orangepi-5-sata.dts
 new file mode 100644
-index 000000000..770bfe640
+index 000000000000..770bfe640f3b
 --- /dev/null
 +++ b/arch/arm64/boot/dts/rockchip/rk3588s-orangepi-5-sata.dts
 @@ -0,0 +1,26 @@

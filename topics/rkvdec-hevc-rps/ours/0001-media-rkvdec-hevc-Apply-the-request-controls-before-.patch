@@ -35,7 +35,7 @@ Assisted-by: Claude:claude-opus-5-5
  1 file changed, 7 insertions(+), 2 deletions(-)
 
 diff --git a/drivers/media/platform/rockchip/rkvdec/rkvdec-hevc-common.c b/drivers/media/platform/rockchip/rkvdec/rkvdec-hevc-common.c
-index 2b8e04dd1..f581212fc 100644
+index 2b8e04dd1572..f581212fc6f5 100644
 --- a/drivers/media/platform/rockchip/rkvdec/rkvdec-hevc-common.c
 +++ b/drivers/media/platform/rockchip/rkvdec/rkvdec-hevc-common.c
 @@ -429,6 +429,13 @@ void rkvdec_hevc_run_preamble(struct rkvdec_ctx *ctx,

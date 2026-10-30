@@ -23,7 +23,7 @@ Assisted-by: Claude:claude-opus-5-5
  1 file changed, 15 insertions(+)
 
 diff --git a/drivers/usb/typec/altmodes/displayport.c b/drivers/usb/typec/altmodes/displayport.c
-index 51c92dd88..dc2673834 100644
+index 51c92dd887ab..dc26738340a0 100644
 --- a/drivers/usb/typec/altmodes/displayport.c
 +++ b/drivers/usb/typec/altmodes/displayport.c
 @@ -220,6 +220,21 @@ static int dp_altmode_configured(struct dp_altmode *dp)

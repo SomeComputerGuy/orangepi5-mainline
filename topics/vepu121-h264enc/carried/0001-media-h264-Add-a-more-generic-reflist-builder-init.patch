@@ -13,7 +13,7 @@ Link: https://patch.msgid.link/20260522101653.2565125-2-paulk@sys-base.io
  2 files changed, 76 insertions(+)
 
 diff --git a/drivers/media/v4l2-core/v4l2-h264.c b/drivers/media/v4l2-core/v4l2-h264.c
-index 2323f559c..a3e180444 100644
+index 2323f559c6a3..a3e180444725 100644
 --- a/drivers/media/v4l2-core/v4l2-h264.c
 +++ b/drivers/media/v4l2-core/v4l2-h264.c
 @@ -105,6 +105,75 @@ v4l2_h264_init_reflist_builder(struct v4l2_h264_reflist_builder *b,
@@ -93,7 +93,7 @@ index 2323f559c..a3e180444 100644
  			     const struct v4l2_h264_reference *ref)
  {
 diff --git a/include/media/v4l2-h264.h b/include/media/v4l2-h264.h
-index 0d9eaa956..1833c0556 100644
+index 0d9eaa956123..1833c0556963 100644
 --- a/include/media/v4l2-h264.h
 +++ b/include/media/v4l2-h264.h
 @@ -42,6 +42,7 @@ struct v4l2_h264_reflist_builder {

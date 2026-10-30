@@ -31,7 +31,7 @@ Link: https://patch.msgid.link/20260522101653.2565125-6-paulk@sys-base.io
  create mode 100644 include/media/v4l2-h264-enc-rbsp.h
 
 diff --git a/drivers/media/v4l2-core/Makefile b/drivers/media/v4l2-core/Makefile
-index 4dba1a4b4..2b45b0e45 100644
+index 4dba1a4b4983..2b45b0e451ca 100644
 --- a/drivers/media/v4l2-core/Makefile
 +++ b/drivers/media/v4l2-core/Makefile
 @@ -29,7 +29,7 @@ obj-$(CONFIG_V4L2_CCI) += v4l2-cci.o
@@ -45,7 +45,7 @@ index 4dba1a4b4..2b45b0e45 100644
  obj-$(CONFIG_V4L2_MEM2MEM_DEV) += v4l2-mem2mem.o
 diff --git a/drivers/media/v4l2-core/v4l2-h264-enc-rbsp.c b/drivers/media/v4l2-core/v4l2-h264-enc-rbsp.c
 new file mode 100644
-index 000000000..a165f8114
+index 000000000000..a165f8114ce9
 --- /dev/null
 +++ b/drivers/media/v4l2-core/v4l2-h264-enc-rbsp.c
 @@ -0,0 +1,1173 @@
@@ -1223,7 +1223,7 @@ index 000000000..a165f8114
 +MODULE_AUTHOR("Paul Kocialkowski <paulk@sys-base.io>");
 +MODULE_LICENSE("GPL");
 diff --git a/drivers/media/v4l2-core/v4l2-h264-enc.c b/drivers/media/v4l2-core/v4l2-h264-enc.c
-index d4e145069..0b46922d1 100644
+index d4e1450691fb..0b46922d1d7a 100644
 --- a/drivers/media/v4l2-core/v4l2-h264-enc.c
 +++ b/drivers/media/v4l2-core/v4l2-h264-enc.c
 @@ -9,10 +9,12 @@
@@ -1417,7 +1417,7 @@ index d4e145069..0b46922d1 100644
  EXPORT_SYMBOL_GPL(v4l2_h264_enc_step);
 diff --git a/include/media/v4l2-h264-enc-rbsp.h b/include/media/v4l2-h264-enc-rbsp.h
 new file mode 100644
-index 000000000..2ce9b4051
+index 000000000000..2ce9b4051436
 --- /dev/null
 +++ b/include/media/v4l2-h264-enc-rbsp.h
 @@ -0,0 +1,72 @@
@@ -1494,7 +1494,7 @@ index 000000000..2ce9b4051
 +
 +#endif
 diff --git a/include/media/v4l2-h264-enc.h b/include/media/v4l2-h264-enc.h
-index 2978a73ba..3d6b97408 100644
+index 2978a73baacd..3d6b97408707 100644
 --- a/include/media/v4l2-h264-enc.h
 +++ b/include/media/v4l2-h264-enc.h
 @@ -10,6 +10,7 @@

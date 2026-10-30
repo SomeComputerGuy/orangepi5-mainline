@@ -19,7 +19,7 @@ Assisted-by: Claude:claude-opus-5-5
  1 file changed, 3 insertions(+)
 
 diff --git a/Documentation/devicetree/bindings/iommu/arm,smmu-v3.yaml b/Documentation/devicetree/bindings/iommu/arm,smmu-v3.yaml
-index 82957334b..d5609eb5c 100644
+index 82957334bea2..d5609eb5ceb0 100644
 --- a/Documentation/devicetree/bindings/iommu/arm,smmu-v3.yaml
 +++ b/Documentation/devicetree/bindings/iommu/arm,smmu-v3.yaml
 @@ -63,6 +63,9 @@ properties:

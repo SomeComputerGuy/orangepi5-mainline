@@ -1,0 +1,146 @@
+From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
+From: Arun Iyengar <aiyengar1990@gmail.com>
+Date: Thu, 29 Oct 2026 12:16:39 +0000
+Subject: [PATCH] media: verisilicon: Make the codec run error handling
+ consistent
+
+When a codec .run() operation fails, device_run() finishes the job with
+hantro_job_finish_no_pm(), but the codec implementations don't agree on
+what they have done before returning the error:
+
+- Most of them (G1 H.264/MPEG-2/VP8, VDPU2 H.264/MPEG-2/VP8, G2 HEVC,
+  H1 and VEPU2 JPEG) just return. The clocks and the runtime PM
+  reference taken by device_run() are then leaked, and the controls of
+  the request are never completed, so the request never completes.
+- G2 VP9 calls hantro_end_prepare_run(), which completes the request
+  controls but also arms the watchdog. Clocks and PM are leaked as
+  above, and two seconds later the watchdog fires on whatever job is
+  running at that time, reports a bogus timeout, resets the hardware
+  under it and finishes it with an error.
+- VPU981 AV1 calls hantro_end_prepare_run() and hantro_irq_done(),
+  which finishes the job and releases clocks and PM. device_run() then
+  finishes the job a second time, returning the next queued buffers
+  with an error (or warning when there are none) and calling
+  v4l2_m2m_job_finish() for a job that isn't running anymore.
+
+Make the contract explicit and uniform: a .run() that fails must not
+have started the hardware, called hantro_end_prepare_run() or
+hantro_irq_done(). device_run() then completes the request controls,
+disables the clocks, drops the runtime PM reference and finishes the
+job with an error, each exactly once. Fix VP9 and AV1 to follow it.
+
+Reference counts on a failing .run(), before and after:
+
+                        clocks  PM usage  request ctrls  job finished
+  before, most codecs     +1       +1       pending          once
+  before, VP9             +1       +1       completed        once, plus a
+                                                             stray watchdog
+  before, AV1              0        0       completed        twice
+  after, all codecs        0        0       completed        once
+
+v4l2_ctrl_request_complete() is also called on the existing
+pm_runtime_resume_and_get() and clk_bulk_enable() failure paths, which
+had the same request completion problem. It does nothing for buffers
+that aren't part of a request.
+
+Assisted-by: Claude:claude-opus-5-5
+---
+ drivers/media/platform/verisilicon/hantro_drv.c     | 10 +++++++++-
+ .../media/platform/verisilicon/hantro_g2_vp9_dec.c  |  4 +---
+ drivers/media/platform/verisilicon/hantro_hw.h      |  6 +++++-
+ .../verisilicon/rockchip_vpu981_hw_av1_dec.c        | 13 +++----------
+ 4 files changed, 18 insertions(+), 15 deletions(-)
+
+diff --git a/drivers/media/platform/verisilicon/hantro_drv.c b/drivers/media/platform/verisilicon/hantro_drv.c
+index 4806821e6ea3..2c1ce4010fa0 100644
+--- a/drivers/media/platform/verisilicon/hantro_drv.c
++++ b/drivers/media/platform/verisilicon/hantro_drv.c
+@@ -238,13 +238,21 @@ static void device_run(void *priv)
+ 	v4l2_m2m_buf_copy_metadata(src, dst);
+ 
+ 	if (ctx->codec_ops->run(ctx))
+-		goto err_cancel_job;
++		goto err_clk_disable;
+ 
+ 	return;
+ 
++err_clk_disable:
++	clk_bulk_disable(core->variant->num_clocks, core->clocks);
+ err_pm_put:
+ 	pm_runtime_put_autosuspend(core->dev);
+ err_cancel_job:
++	/*
++	 * The job is cancelled before the controls of its request were
++	 * completed. Complete them now, or the request would never complete.
++	 */
++	v4l2_ctrl_request_complete(src->vb2_buf.req_obj.req,
++				   &ctx->ctrl_handler);
+ 	hantro_job_finish_no_pm(ctx->dev, ctx, VB2_BUF_STATE_ERROR);
+ }
+ 
+diff --git a/drivers/media/platform/verisilicon/hantro_g2_vp9_dec.c b/drivers/media/platform/verisilicon/hantro_g2_vp9_dec.c
+index 56c79e339030..a023e7425767 100644
+--- a/drivers/media/platform/verisilicon/hantro_g2_vp9_dec.c
++++ b/drivers/media/platform/verisilicon/hantro_g2_vp9_dec.c
+@@ -894,10 +894,8 @@ int hantro_g2_vp9_dec_run(struct hantro_ctx *ctx)
+ 	int ret;
+ 
+ 	ret = start_prepare_run(ctx, &decode_params);
+-	if (ret) {
+-		hantro_end_prepare_run(ctx);
++	if (ret)
+ 		return ret;
+-	}
+ 
+ 	src = hantro_get_src_buf(ctx);
+ 	dst = hantro_get_dst_buf(ctx);
+diff --git a/drivers/media/platform/verisilicon/hantro_hw.h b/drivers/media/platform/verisilicon/hantro_hw.h
+index 9470f75fb926..920721726d5f 100644
+--- a/drivers/media/platform/verisilicon/hantro_hw.h
++++ b/drivers/media/platform/verisilicon/hantro_hw.h
+@@ -375,7 +375,11 @@ struct hantro_postproc_ops {
+  * @run:	Start single {en,de)coding job. Called from atomic context
+  *		to indicate that a pair of buffers is ready and the hardware
+  *		should be programmed and started. Returns zero if OK, a
+- *		negative value in error cases.
++ *		negative value in error cases. On error, the hardware must
++ *		not have been started, and neither hantro_end_prepare_run()
++ *		nor hantro_irq_done() must have been called: the core then
++ *		completes the request controls, releases the clocks and the
++ *		runtime PM reference, and finishes the job with an error.
+  * @done:	Read back processing results and additional data from hardware.
+  * @reset:	Reset the hardware in case of a timeout.
+  */
+diff --git a/drivers/media/platform/verisilicon/rockchip_vpu981_hw_av1_dec.c b/drivers/media/platform/verisilicon/rockchip_vpu981_hw_av1_dec.c
+index 00aa566a4ccd..070809eb899b 100644
+--- a/drivers/media/platform/verisilicon/rockchip_vpu981_hw_av1_dec.c
++++ b/drivers/media/platform/verisilicon/rockchip_vpu981_hw_av1_dec.c
+@@ -2175,13 +2175,11 @@ int rockchip_vpu981_av1_dec_run(struct hantro_ctx *ctx)
+ 
+ 	ret = rockchip_vpu981_av1_dec_prepare_run(ctx);
+ 	if (ret)
+-		goto prepare_error;
++		return ret;
+ 
+ 	vb2_src = hantro_get_src_buf(ctx);
+-	if (!vb2_src) {
+-		ret = -EINVAL;
+-		goto prepare_error;
+-	}
++	if (!vb2_src)
++		return -EINVAL;
+ 
+ 	rockchip_vpu981_av1_dec_clean_refs(ctx);
+ 	rockchip_vpu981_av1_dec_frame_ref(ctx, vb2_src->vb2_buf.timestamp);
+@@ -2229,11 +2227,6 @@ int rockchip_vpu981_av1_dec_run(struct hantro_ctx *ctx)
+ 	hantro_reg_write(vpu, &av1_dec_e, 1);
+ 
+ 	return 0;
+-
+-prepare_error:
+-	hantro_end_prepare_run(ctx);
+-	hantro_irq_done(vpu, VB2_BUF_STATE_ERROR);
+-	return ret;
+ }
+ 
+ static void rockchip_vpu981_postproc_enable(struct hantro_ctx *ctx)

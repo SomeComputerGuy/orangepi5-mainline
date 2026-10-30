@@ -18,7 +18,7 @@ Assisted-by: Claude:claude-opus-5-5
 
 diff --git a/Documentation/devicetree/bindings/media/rockchip,rk3568-iep.yaml b/Documentation/devicetree/bindings/media/rockchip,rk3568-iep.yaml
 new file mode 100644
-index 000000000..c38925f42
+index 000000000000..c38925f42c9e
 --- /dev/null
 +++ b/Documentation/devicetree/bindings/media/rockchip,rk3568-iep.yaml
 @@ -0,0 +1,98 @@

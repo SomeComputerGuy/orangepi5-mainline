@@ -21,7 +21,7 @@ Link: https://gitlab.collabora.com/hardware-enablement/rockchip-3588/linux/-/com
  2 files changed, 15 insertions(+)
 
 diff --git a/drivers/gpu/drm/bridge/synopsys/dw-hdmi-qp.c b/drivers/gpu/drm/bridge/synopsys/dw-hdmi-qp.c
-index 94772b80f..3a3f32bd1 100644
+index 94772b80f439..3a3f32bd17d7 100644
 --- a/drivers/gpu/drm/bridge/synopsys/dw-hdmi-qp.c
 +++ b/drivers/gpu/drm/bridge/synopsys/dw-hdmi-qp.c
 @@ -757,6 +757,17 @@ static int dw_hdmi_qp_bridge_frl_fallback_tmds(struct drm_bridge *bridge)
@@ -59,7 +59,7 @@ index 94772b80f..3a3f32bd1 100644
  
  	if (plat_data->supported_formats)
 diff --git a/include/drm/bridge/dw_hdmi_qp.h b/include/drm/bridge/dw_hdmi_qp.h
-index 1cd8ee27b..ee37e5fc3 100644
+index 1cd8ee27b4d0..ee37e5fc36c1 100644
 --- a/include/drm/bridge/dw_hdmi_qp.h
 +++ b/include/drm/bridge/dw_hdmi_qp.h
 @@ -21,6 +21,7 @@ struct dw_hdmi_qp_phy_ops {

@@ -24,7 +24,7 @@ Assisted-by: Claude:claude-opus-5-5
  1 file changed, 34 insertions(+), 1 deletion(-)
 
 diff --git a/drivers/gpu/drm/bridge/synopsys/dw-hdmi-qp.c b/drivers/gpu/drm/bridge/synopsys/dw-hdmi-qp.c
-index 364a29daa..e05c62b38 100644
+index 364a29daa000..e05c62b38af2 100644
 --- a/drivers/gpu/drm/bridge/synopsys/dw-hdmi-qp.c
 +++ b/drivers/gpu/drm/bridge/synopsys/dw-hdmi-qp.c
 @@ -89,6 +89,11 @@ struct dw_hdmi_qp {

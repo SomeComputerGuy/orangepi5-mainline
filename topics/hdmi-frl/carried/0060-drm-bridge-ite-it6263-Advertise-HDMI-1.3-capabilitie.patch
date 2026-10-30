@@ -34,7 +34,7 @@ Link: https://gitlab.collabora.com/hardware-enablement/rockchip-3588/linux/-/com
  1 file changed, 2 insertions(+), 15 deletions(-)
 
 diff --git a/drivers/gpu/drm/bridge/ite-it6263.c b/drivers/gpu/drm/bridge/ite-it6263.c
-index 550999491..e8e019717 100644
+index 550999491086..e8e0197171e1 100644
 --- a/drivers/gpu/drm/bridge/ite-it6263.c
 +++ b/drivers/gpu/drm/bridge/ite-it6263.c
 @@ -738,20 +738,6 @@ it6263_bridge_atomic_get_input_bus_fmts(struct drm_bridge *bridge,

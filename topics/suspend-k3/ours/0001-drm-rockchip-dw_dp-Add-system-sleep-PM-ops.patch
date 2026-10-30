@@ -41,7 +41,7 @@ Assisted-by: Claude:claude-opus-5-5
  1 file changed, 1 insertion(+)
 
 diff --git a/drivers/gpu/drm/rockchip/dw_dp-rockchip.c b/drivers/gpu/drm/rockchip/dw_dp-rockchip.c
-index 770ab042a..59c66b657 100644
+index 770ab042a187..59c66b657031 100644
 --- a/drivers/gpu/drm/rockchip/dw_dp-rockchip.c
 +++ b/drivers/gpu/drm/rockchip/dw_dp-rockchip.c
 @@ -271,6 +271,7 @@ static int dw_dp_rockchip_runtime_resume(struct device *dev)

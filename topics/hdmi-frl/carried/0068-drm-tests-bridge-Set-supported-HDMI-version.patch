@@ -20,7 +20,7 @@ Link: https://gitlab.collabora.com/hardware-enablement/rockchip-3588/linux/-/com
  1 file changed, 2 insertions(+)
 
 diff --git a/drivers/gpu/drm/tests/drm_bridge_test.c b/drivers/gpu/drm/tests/drm_bridge_test.c
-index 15583ade8..a445f71c3 100644
+index 15583ade8494..a445f71c31b8 100644
 --- a/drivers/gpu/drm/tests/drm_bridge_test.c
 +++ b/drivers/gpu/drm/tests/drm_bridge_test.c
 @@ -497,6 +497,7 @@ drm_test_bridge_chain_init(struct kunit *test, unsigned int num_bridges,

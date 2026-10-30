@@ -119,7 +119,7 @@ Signed-off-by: Igor Paunovic <royalnet026@gmail.com>
  create mode 100644 drivers/accel/rocket/rocket_devfreq.h
 
 diff --git a/drivers/accel/rocket/Kconfig b/drivers/accel/rocket/Kconfig
-index 16465abe0..00ee845c8 100644
+index 16465abe0660..00ee845c871f 100644
 --- a/drivers/accel/rocket/Kconfig
 +++ b/drivers/accel/rocket/Kconfig
 @@ -8,6 +8,8 @@ config DRM_ACCEL_ROCKET
@@ -132,7 +132,7 @@ index 16465abe0..00ee845c8 100644
  	  Choose this option if you have a Rockchip SoC that contains a
  	  compatible Neural Processing Unit (NPU), such as the RK3588. Called by
 diff --git a/drivers/accel/rocket/Makefile b/drivers/accel/rocket/Makefile
-index 3713dfe22..e0944b3e6 100644
+index 3713dfe223d6..e0944b3e6812 100644
 --- a/drivers/accel/rocket/Makefile
 +++ b/drivers/accel/rocket/Makefile
 @@ -5,6 +5,7 @@ obj-$(CONFIG_DRM_ACCEL_ROCKET) := rocket.o
@@ -144,7 +144,7 @@ index 3713dfe22..e0944b3e6 100644
  	rocket_gem.o \
  	rocket_job.o
 diff --git a/drivers/accel/rocket/rocket_core.h b/drivers/accel/rocket/rocket_core.h
-index 46ed8352a..c9995bd9e 100644
+index 46ed8352a79d..c9995bd9e055 100644
 --- a/drivers/accel/rocket/rocket_core.h
 +++ b/drivers/accel/rocket/rocket_core.h
 @@ -7,6 +7,7 @@
@@ -174,7 +174,7 @@ index 46ed8352a..c9995bd9e 100644
  int rocket_core_init(struct rocket_core *core);
 diff --git a/drivers/accel/rocket/rocket_devfreq.c b/drivers/accel/rocket/rocket_devfreq.c
 new file mode 100644
-index 000000000..871fa370e
+index 000000000000..871fa370eb43
 --- /dev/null
 +++ b/drivers/accel/rocket/rocket_devfreq.c
 @@ -0,0 +1,500 @@
@@ -680,7 +680,7 @@ index 000000000..871fa370e
 +}
 diff --git a/drivers/accel/rocket/rocket_devfreq.h b/drivers/accel/rocket/rocket_devfreq.h
 new file mode 100644
-index 000000000..65a9de6d3
+index 000000000000..65a9de6d3738
 --- /dev/null
 +++ b/drivers/accel/rocket/rocket_devfreq.h
 @@ -0,0 +1,65 @@
@@ -750,7 +750,7 @@ index 000000000..65a9de6d3
 +
 +#endif /* __ROCKET_DEVFREQ_H__ */
 diff --git a/drivers/accel/rocket/rocket_device.h b/drivers/accel/rocket/rocket_device.h
-index ba7c977cd..a91d5a9b0 100644
+index ba7c977cd695..a91d5a9b09ed 100644
 --- a/drivers/accel/rocket/rocket_device.h
 +++ b/drivers/accel/rocket/rocket_device.h
 @@ -11,6 +11,7 @@
@@ -771,7 +771,7 @@ index ba7c977cd..a91d5a9b0 100644
  
  struct rocket_device *rocket_device_init(struct platform_device *pdev,
 diff --git a/drivers/accel/rocket/rocket_drv.c b/drivers/accel/rocket/rocket_drv.c
-index d5f0aef49..c1d6dd36c 100644
+index d5f0aef49845..c1d6dd36c02a 100644
 --- a/drivers/accel/rocket/rocket_drv.c
 +++ b/drivers/accel/rocket/rocket_drv.c
 @@ -14,6 +14,7 @@
@@ -883,7 +883,7 @@ index d5f0aef49..c1d6dd36c 100644
  	if (core >= 0)
  		rocket_npu_restore_boot_rate(&rdev->cores[core]);
 diff --git a/drivers/accel/rocket/rocket_job.c b/drivers/accel/rocket/rocket_job.c
-index 25ee4ab17..7846b627b 100644
+index 25ee4ab172a8..7846b627b00f 100644
 --- a/drivers/accel/rocket/rocket_job.c
 +++ b/drivers/accel/rocket/rocket_job.c
 @@ -15,6 +15,7 @@

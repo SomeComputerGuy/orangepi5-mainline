@@ -29,7 +29,7 @@ Assisted-by: Claude:claude-opus-5-5
  1 file changed, 23 insertions(+), 1 deletion(-)
 
 diff --git a/drivers/gpu/drm/bridge/synopsys/dw-dp.c b/drivers/gpu/drm/bridge/synopsys/dw-dp.c
-index df149c52f..5b7490a2a 100644
+index df149c52fce0..5b7490a2a01d 100644
 --- a/drivers/gpu/drm/bridge/synopsys/dw-dp.c
 +++ b/drivers/gpu/drm/bridge/synopsys/dw-dp.c
 @@ -1670,7 +1670,12 @@ static bool dw_dp_needs_link_retrain(struct dw_dp *dp)

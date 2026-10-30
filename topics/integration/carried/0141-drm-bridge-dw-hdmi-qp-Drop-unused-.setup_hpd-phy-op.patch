@@ -17,7 +17,7 @@ Link: https://gitlab.collabora.com/hardware-enablement/rockchip-3588/linux/-/com
  2 files changed, 4 deletions(-)
 
 diff --git a/drivers/gpu/drm/bridge/synopsys/dw-hdmi-qp.c b/drivers/gpu/drm/bridge/synopsys/dw-hdmi-qp.c
-index e0771878f..e22894ad2 100644
+index e0771878f7be..e22894ad25ce 100644
 --- a/drivers/gpu/drm/bridge/synopsys/dw-hdmi-qp.c
 +++ b/drivers/gpu/drm/bridge/synopsys/dw-hdmi-qp.c
 @@ -1088,9 +1088,6 @@ static void dw_hdmi_qp_init_hw(struct dw_hdmi_qp *hdmi)
@@ -31,7 +31,7 @@ index e0771878f..e22894ad2 100644
  
  struct dw_hdmi_qp *dw_hdmi_qp_bind(struct platform_device *pdev,
 diff --git a/include/drm/bridge/dw_hdmi_qp.h b/include/drm/bridge/dw_hdmi_qp.h
-index b4fb1c578..ad33f9caf 100644
+index b4fb1c578a5b..ad33f9cafdeb 100644
 --- a/include/drm/bridge/dw_hdmi_qp.h
 +++ b/include/drm/bridge/dw_hdmi_qp.h
 @@ -16,7 +16,6 @@ struct dw_hdmi_qp_phy_ops {

@@ -21,7 +21,7 @@ Link: https://github.com/armbian/linux-rockchip/pull/380
  2 files changed, 21 insertions(+), 1 deletion(-)
 
 diff --git a/drivers/gpu/drm/panthor/panthor_device.c b/drivers/gpu/drm/panthor/panthor_device.c
-index 9687c59de..39ab4f8eb 100644
+index 9687c59de350..39ab4f8eb5b7 100644
 --- a/drivers/gpu/drm/panthor/panthor_device.c
 +++ b/drivers/gpu/drm/panthor/panthor_device.c
 @@ -47,6 +47,12 @@ static int panthor_clk_init(struct panthor_device *ptdev)
@@ -72,7 +72,7 @@ index 9687c59de..39ab4f8eb 100644
  	return 0;
  }
 diff --git a/drivers/gpu/drm/panthor/panthor_device.h b/drivers/gpu/drm/panthor/panthor_device.h
-index 0fda64fbe..cd417926b 100644
+index 0fda64fbe5f2..cd417926b715 100644
 --- a/drivers/gpu/drm/panthor/panthor_device.h
 +++ b/drivers/gpu/drm/panthor/panthor_device.h
 @@ -142,6 +142,12 @@ struct panthor_device {

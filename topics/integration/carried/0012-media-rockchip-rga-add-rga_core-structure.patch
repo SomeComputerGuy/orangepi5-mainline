@@ -29,7 +29,7 @@ Signed-off-by: Sven Püschel <s.pueschel@pengutronix.de>
  5 files changed, 113 insertions(+), 96 deletions(-)
 
 diff --git a/drivers/media/platform/rockchip/rga/rga-buf.c b/drivers/media/platform/rockchip/rga/rga-buf.c
-index 3f7c3c68e..47a8d5a45 100644
+index 3f7c3c68e0cb..47a8d5a4500a 100644
 --- a/drivers/media/platform/rockchip/rga/rga-buf.c
 +++ b/drivers/media/platform/rockchip/rga/rga-buf.c
 @@ -93,7 +93,7 @@ static int rga_buf_init(struct vb2_buffer *vb)
@@ -51,7 +51,7 @@ index 3f7c3c68e..47a8d5a45 100644
  }
  
 diff --git a/drivers/media/platform/rockchip/rga/rga-hw.c b/drivers/media/platform/rockchip/rga/rga-hw.c
-index 691e605b0..bbd3c7e3c 100644
+index 691e605b04a5..bbd3c7e3c481 100644
 --- a/drivers/media/platform/rockchip/rga/rga-hw.c
 +++ b/drivers/media/platform/rockchip/rga/rga-hw.c
 @@ -409,10 +409,10 @@ static void rga_cmd_set_mode(struct rga_ctx *ctx)
@@ -129,7 +129,7 @@ index 691e605b0..bbd3c7e3c 100644
  	return (struct rockchip_rga_version) {
  		.major = (version >> 24) & 0xFF,
 diff --git a/drivers/media/platform/rockchip/rga/rga.c b/drivers/media/platform/rockchip/rga/rga.c
-index 581b03a1e..52e899a7a 100644
+index 581b03a1e24a..52e899a7ae65 100644
 --- a/drivers/media/platform/rockchip/rga/rga.c
 +++ b/drivers/media/platform/rockchip/rga/rga.c
 @@ -11,6 +11,7 @@
@@ -440,7 +440,7 @@ index 581b03a1e..52e899a7a 100644
  
  static const struct dev_pm_ops rga_pm = {
 diff --git a/drivers/media/platform/rockchip/rga/rga.h b/drivers/media/platform/rockchip/rga/rga.h
-index adde4d071..06808e62b 100644
+index adde4d071782..06808e62b145 100644
 --- a/drivers/media/platform/rockchip/rga/rga.h
 +++ b/drivers/media/platform/rockchip/rga/rga.h
 @@ -36,6 +36,17 @@ struct rockchip_rga_version {
@@ -530,7 +530,7 @@ index adde4d071..06808e62b 100644
  				       struct v4l2_pix_format_mplane *format,
  				       bool is_output);
 diff --git a/drivers/media/platform/rockchip/rga/rga3-hw.c b/drivers/media/platform/rockchip/rga/rga3-hw.c
-index a80dd7609..745760d83 100644
+index a80dd7609ccf..745760d830a6 100644
 --- a/drivers/media/platform/rockchip/rga/rga3-hw.c
 +++ b/drivers/media/platform/rockchip/rga/rga3-hw.c
 @@ -266,42 +266,42 @@ static void rga3_hw_setup_cmdbuf(struct rga_ctx *ctx)

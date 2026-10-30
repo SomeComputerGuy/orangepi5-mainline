@@ -29,7 +29,7 @@ Assisted-by: Claude:claude-opus-5-5
  1 file changed, 29 insertions(+), 18 deletions(-)
 
 diff --git a/drivers/net/ethernet/stmicro/stmmac/dwmac-rk.c b/drivers/net/ethernet/stmicro/stmmac/dwmac-rk.c
-index 72bdbcb5e..c3c33a8bc 100644
+index 72bdbcb5e863..c3c33a8bcfe8 100644
 --- a/drivers/net/ethernet/stmicro/stmmac/dwmac-rk.c
 +++ b/drivers/net/ethernet/stmicro/stmmac/dwmac-rk.c
 @@ -1265,26 +1265,37 @@ static struct rk_priv_data *rk_gmac_setup(struct platform_device *pdev,

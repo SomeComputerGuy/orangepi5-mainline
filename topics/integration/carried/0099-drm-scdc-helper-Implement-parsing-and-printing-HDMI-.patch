@@ -26,7 +26,7 @@ Link: https://gitlab.collabora.com/hardware-enablement/rockchip-3588/linux/-/com
  3 files changed, 185 insertions(+), 8 deletions(-)
 
 diff --git a/drivers/gpu/drm/display/drm_scdc_helper.c b/drivers/gpu/drm/display/drm_scdc_helper.c
-index 129a2b855..d00da2086 100644
+index 129a2b85527b..d00da20862fc 100644
 --- a/drivers/gpu/drm/display/drm_scdc_helper.c
 +++ b/drivers/gpu/drm/display/drm_scdc_helper.c
 @@ -21,6 +21,7 @@
@@ -212,7 +212,7 @@ index 129a2b855..d00da2086 100644
  	kfree(st);
  
 diff --git a/include/drm/display/drm_scdc.h b/include/drm/display/drm_scdc.h
-index 3d58f37e8..7f0b05b2f 100644
+index 3d58f37e8ed8..7f0b05b2f280 100644
 --- a/include/drm/display/drm_scdc.h
 +++ b/include/drm/display/drm_scdc.h
 @@ -29,6 +29,8 @@
@@ -265,7 +265,7 @@ index 3d58f37e8..7f0b05b2f 100644
  #define  SCDC_TEST_READ_REQUEST (1 << 7)
  #define  SCDC_TEST_READ_REQUEST_DELAY(x) ((x) & 0x7f)
 diff --git a/include/drm/display/drm_scdc_helper.h b/include/drm/display/drm_scdc_helper.h
-index e0b79d79e..a3b20adaa 100644
+index e0b79d79e1ff..a3b20adaac7e 100644
 --- a/include/drm/display/drm_scdc_helper.h
 +++ b/include/drm/display/drm_scdc_helper.h
 @@ -24,6 +24,7 @@

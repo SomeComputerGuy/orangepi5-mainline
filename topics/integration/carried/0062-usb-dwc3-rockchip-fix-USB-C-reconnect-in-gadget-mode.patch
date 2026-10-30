@@ -19,7 +19,7 @@ Link: https://patch.msgid.link/20261021-b4-rockchip-dwc3-rockchip-glue-v18-7-600
  2 files changed, 28 insertions(+)
 
 diff --git a/drivers/usb/dwc3/Kconfig b/drivers/usb/dwc3/Kconfig
-index c86c1ac29..4cbc949c6 100644
+index c86c1ac293bf..4cbc949c6abd 100644
 --- a/drivers/usb/dwc3/Kconfig
 +++ b/drivers/usb/dwc3/Kconfig
 @@ -194,6 +194,7 @@ config USB_DWC3_ROCKCHIP
@@ -31,7 +31,7 @@ index c86c1ac29..4cbc949c6 100644
  	default USB_DWC3
  	help
 diff --git a/drivers/usb/dwc3/dwc3-rockchip.c b/drivers/usb/dwc3/dwc3-rockchip.c
-index 75e647e04..65d17536a 100644
+index 75e647e04cc5..65d17536af14 100644
 --- a/drivers/usb/dwc3/dwc3-rockchip.c
 +++ b/drivers/usb/dwc3/dwc3-rockchip.c
 @@ -10,8 +10,19 @@

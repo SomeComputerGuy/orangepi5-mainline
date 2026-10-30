@@ -1,0 +1,132 @@
+From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
+From: =?UTF-8?q?Sven=20P=C3=BCschel?= <s.pueschel@pengutronix.de>
+Date: Wed, 16 Sep 2026 17:09:58 +0200
+Subject: [PATCH] media: rockchip: rga: schedule jobs to multiple cores
+MIME-Version: 1.0
+Content-Type: text/plain; charset=UTF-8
+Content-Transfer-Encoding: 8bit
+
+Schedule jobs to multiple cores to utilize all RGA cores. To avoid race
+conditions when selecting the next free core a dedicated spinlock is added.
+
+Note that this doesn't increase the max frame rate of a single
+stream, as a context will wait for the job to finish before starting
+the next device_run call.
+
+Signed-off-by: Sven Püschel <s.pueschel@pengutronix.de>
+---
+ drivers/media/platform/rockchip/rga/rga.c | 30 ++++++++++++++++++++---
+ drivers/media/platform/rockchip/rga/rga.h |  1 +
+ 2 files changed, 28 insertions(+), 3 deletions(-)
+
+diff --git a/drivers/media/platform/rockchip/rga/rga.c b/drivers/media/platform/rockchip/rga/rga.c
+index 7094ac90c6b6..26eeee58dbf4 100644
+--- a/drivers/media/platform/rockchip/rga/rga.c
++++ b/drivers/media/platform/rockchip/rga/rga.c
+@@ -38,13 +38,29 @@ static void device_run(void *prv)
+ {
+ 	struct rga_ctx *ctx = prv;
+ 	struct rockchip_rga *rga = ctx->rga;
+-	struct rga_core *core = rga->cores[0];
++	struct rga_core *core = NULL;
+ 	struct vb2_v4l2_buffer *src, *dst;
+ 	unsigned long flags;
+ 	int ret;
++	unsigned int i;
++
++	spin_lock_irqsave(&rga->cores_lock, flags);
++	for (i = 0; i < rga->num_cores; i++) {
++		if (!rga->cores[i]->curr) {
++			core = rga->cores[i];
++			core->curr = ctx;
++			break;
++		}
++	}
++	spin_unlock_irqrestore(&rga->cores_lock, flags);
++
++	WARN_ONCE(!core, "No free core although max parallel jobs matches the core count!\n");
++	if (!core)
++		return;
+ 
+ 	ret = pm_runtime_resume_and_get(core->dev);
+ 	if (ret < 0) {
++		core->curr = NULL;
+ 		v4l2_m2m_buf_done_and_job_finish(rga->m2m_dev, ctx->fh.m2m_ctx,
+ 						 VB2_BUF_STATE_ERROR);
+ 		return;
+@@ -58,8 +74,6 @@ static void device_run(void *prv)
+ 	}
+ 	spin_unlock_irqrestore(&rga->ctrl_lock, flags);
+ 
+-	core->curr = ctx;
+-
+ 	src = v4l2_m2m_next_src_buf(ctx->fh.m2m_ctx);
+ 	src->sequence = ctx->osequence++;
+ 
+@@ -748,6 +762,7 @@ static int rga_core_bind(struct device *dev, struct device *master, void *data)
+ 	struct rockchip_rga *rga = data;
+ 	struct rga_core *core = dev_get_drvdata(dev);
+ 	struct rockchip_rga_version version;
++	unsigned long flags;
+ 	int ret = 0;
+ 
+ 	core->rga = rga;
+@@ -785,7 +800,9 @@ static int rga_core_bind(struct device *dev, struct device *master, void *data)
+ 
+ 	pm_runtime_put(core->dev);
+ 
++	spin_lock_irqsave(&rga->cores_lock, flags);
+ 	rga->cores[rga->num_cores++] = core;
++	spin_unlock_irqrestore(&rga->cores_lock, flags);
+ 
+ 	return 0;
+ }
+@@ -796,6 +813,7 @@ static void rga_core_unbind(struct device *dev, struct device *master,
+ 	struct rga_core *core = dev_get_drvdata(dev);
+ 	struct rockchip_rga *rga = core->rga;
+ 	u8 i;
++	unsigned long flags;
+ 
+ 	/* Remove our core from the list */
+ 	for (i = 0; i < rga->num_cores; i++) {
+@@ -810,8 +828,10 @@ static void rga_core_unbind(struct device *dev, struct device *master,
+ 				iommu_detach_device(domain, core->dev);
+ 		}
+ 
++		spin_lock_irqsave(&rga->cores_lock, flags);
+ 		rga->cores[i] = rga->cores[rga->num_cores - 1];
+ 		rga->num_cores--;
++		spin_unlock_irqrestore(&rga->cores_lock, flags);
+ 		break;
+ 	}
+ 
+@@ -979,6 +999,9 @@ static int rga_bind(struct device *dev)
+ 		goto rel_m2m;
+ 	}
+ 
++	/* after binding all cores num_cores has the proper number of cores */
++	v4l2_m2m_set_max_parallel_jobs(rga->m2m_dev, rga->num_cores);
++
+ 	v4l2_info(&rga->v4l2_dev, "Registered %s as /dev/%s\n",
+ 		  vfd->name, video_device_node_name(vfd));
+ 
+@@ -1048,6 +1071,7 @@ static int rga_probe(struct platform_device *pdev)
+ 		return dev_err_probe(dev, -ENODEV, "failed to get match data\n");
+ 
+ 	spin_lock_init(&rga->ctrl_lock);
++	spin_lock_init(&rga->cores_lock);
+ 	mutex_init(&rga->mutex);
+ 
+ 	dev_set_drvdata(dev, rga);
+diff --git a/drivers/media/platform/rockchip/rga/rga.h b/drivers/media/platform/rockchip/rga/rga.h
+index f8652ea46549..f241e3c7b2ac 100644
+--- a/drivers/media/platform/rockchip/rga/rga.h
++++ b/drivers/media/platform/rockchip/rga/rga.h
+@@ -87,6 +87,7 @@ struct rockchip_rga {
+ 	struct mutex mutex;
+ 	/* ctrl parm lock */
+ 	spinlock_t ctrl_lock;
++	spinlock_t cores_lock;
+ 
+ 	const struct rga_hw *hw;
+ 

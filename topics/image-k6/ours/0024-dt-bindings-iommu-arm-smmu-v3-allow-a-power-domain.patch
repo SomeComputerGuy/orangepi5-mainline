@@ -1,0 +1,34 @@
+From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
+From: Arun Iyengar <aiyengar1990@gmail.com>
+Date: Thu, 29 Oct 2026 13:10:29 +0000
+Subject: [PATCH] dt-bindings: iommu: arm,smmu-v3: allow a power domain
+
+An SMMUv3 instance can sit in a switchable power domain of the SoC, for
+example the MMU-600 in front of the PCIe controllers on the Rockchip
+RK3588, which is part of the PCIe power domain. If the domain is not
+described, nothing keeps it powered while the SMMU is bound, and any
+register access after it has been turned off as unused stalls the
+interconnect.
+
+Allow a single power-domains entry, as arm,smmu.yaml already does for
+the earlier SMMU architectures.
+
+Assisted-by: Claude:claude-opus-5-5
+---
+ Documentation/devicetree/bindings/iommu/arm,smmu-v3.yaml | 3 +++
+ 1 file changed, 3 insertions(+)
+
+diff --git a/Documentation/devicetree/bindings/iommu/arm,smmu-v3.yaml b/Documentation/devicetree/bindings/iommu/arm,smmu-v3.yaml
+index 82957334bea2..d5609eb5ceb0 100644
+--- a/Documentation/devicetree/bindings/iommu/arm,smmu-v3.yaml
++++ b/Documentation/devicetree/bindings/iommu/arm,smmu-v3.yaml
+@@ -63,6 +63,9 @@ properties:
+ 
+   msi-parent: true
+ 
++  power-domains:
++    maxItems: 1
++
+   nvidia,cmdqv:
+     description: |
+       A phandle to its pairing CMDQV extension for an implementation on NVIDIA

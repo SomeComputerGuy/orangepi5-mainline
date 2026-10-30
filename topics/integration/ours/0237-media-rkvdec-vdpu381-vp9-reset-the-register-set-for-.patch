@@ -27,7 +27,7 @@ Assisted-by: Claude:claude-opus-5-5
  1 file changed, 7 insertions(+)
 
 diff --git a/drivers/media/platform/rockchip/rkvdec/rkvdec-vdpu381-vp9.c b/drivers/media/platform/rockchip/rkvdec/rkvdec-vdpu381-vp9.c
-index 9b08e32fb..aee9de9a1 100644
+index 9b08e32fbdc9..aee9de9a156e 100644
 --- a/drivers/media/platform/rockchip/rkvdec/rkvdec-vdpu381-vp9.c
 +++ b/drivers/media/platform/rockchip/rkvdec/rkvdec-vdpu381-vp9.c
 @@ -467,6 +467,13 @@ static void config_registers(struct rkvdec_ctx *ctx,

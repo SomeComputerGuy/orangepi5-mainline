@@ -21,7 +21,7 @@ Link: https://gitlab.collabora.com/hardware-enablement/rockchip-3588/linux/-/com
  1 file changed, 105 insertions(+), 1 deletion(-)
 
 diff --git a/drivers/gpu/drm/display/drm_bridge_connector.c b/drivers/gpu/drm/display/drm_bridge_connector.c
-index b98bb47f7..efbb59520 100644
+index b98bb47f748f..efbb59520be8 100644
 --- a/drivers/gpu/drm/display/drm_bridge_connector.c
 +++ b/drivers/gpu/drm/display/drm_bridge_connector.c
 @@ -616,6 +616,73 @@ static int drm_bridge_connector_scrambler_disable(struct drm_connector *connecto

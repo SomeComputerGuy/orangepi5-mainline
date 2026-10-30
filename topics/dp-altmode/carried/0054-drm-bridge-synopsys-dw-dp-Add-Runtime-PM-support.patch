@@ -24,7 +24,7 @@ Link: https://patch.msgid.link/20260806-synopsys-dw-dp-improvements-v11-14-0d508
  3 files changed, 185 insertions(+), 35 deletions(-)
 
 diff --git a/drivers/gpu/drm/bridge/synopsys/dw-dp.c b/drivers/gpu/drm/bridge/synopsys/dw-dp.c
-index 3af5b1f64..31f944e14 100644
+index 3af5b1f643c1..31f944e143ea 100644
 --- a/drivers/gpu/drm/bridge/synopsys/dw-dp.c
 +++ b/drivers/gpu/drm/bridge/synopsys/dw-dp.c
 @@ -329,6 +329,9 @@ struct dw_dp {
@@ -424,7 +424,7 @@ index 3af5b1f64..31f944e14 100644
  MODULE_AUTHOR("Andy Yan <andyshrk@163.com>");
  MODULE_DESCRIPTION("DW DP Core Library");
 diff --git a/drivers/gpu/drm/rockchip/dw_dp-rockchip.c b/drivers/gpu/drm/rockchip/dw_dp-rockchip.c
-index 9e49e7dbf..ffcfb887d 100644
+index 9e49e7dbf420..ffcfb887d0d2 100644
 --- a/drivers/gpu/drm/rockchip/dw_dp-rockchip.c
 +++ b/drivers/gpu/drm/rockchip/dw_dp-rockchip.c
 @@ -194,7 +194,7 @@ static int dw_dp_rockchip_probe(struct platform_device *pdev)
@@ -453,7 +453,7 @@ index 9e49e7dbf..ffcfb887d 100644
  }
  
 diff --git a/include/drm/bridge/dw_dp.h b/include/drm/bridge/dw_dp.h
-index 79b2cdf0d..1e23180b5 100644
+index 79b2cdf0df99..1e23180b565e 100644
 --- a/include/drm/bridge/dw_dp.h
 +++ b/include/drm/bridge/dw_dp.h
 @@ -18,6 +18,7 @@ enum {

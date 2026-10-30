@@ -21,7 +21,7 @@ Link: https://patch.msgid.link/20260522101653.2565125-3-paulk@sys-base.io
  5 files changed, 102 insertions(+)
 
 diff --git a/drivers/media/v4l2-core/v4l2-ctrls-core.c b/drivers/media/v4l2-core/v4l2-ctrls-core.c
-index 648b88c86..9f27cd51b 100644
+index 648b88c868bc..9f27cd51bfc6 100644
 --- a/drivers/media/v4l2-core/v4l2-ctrls-core.c
 +++ b/drivers/media/v4l2-core/v4l2-ctrls-core.c
 @@ -391,6 +391,9 @@ void v4l2_ctrl_type_op_log(const struct v4l2_ctrl *ctrl)
@@ -115,7 +115,7 @@ index 648b88c86..9f27cd51b 100644
  		elem_size = sizeof(struct v4l2_ctrl_vp8_frame);
  		break;
 diff --git a/drivers/media/v4l2-core/v4l2-ctrls-defs.c b/drivers/media/v4l2-core/v4l2-ctrls-defs.c
-index e062f2088..a0ac85896 100644
+index e062f2088490..a0ac858968b6 100644
 --- a/drivers/media/v4l2-core/v4l2-ctrls-defs.c
 +++ b/drivers/media/v4l2-core/v4l2-ctrls-defs.c
 @@ -1219,6 +1219,7 @@ const char *v4l2_ctrl_get_name(u32 id)
@@ -137,7 +137,7 @@ index e062f2088..a0ac85896 100644
  		*type = V4L2_CTRL_TYPE_VP8_FRAME;
  		break;
 diff --git a/include/media/v4l2-ctrls.h b/include/media/v4l2-ctrls.h
-index 327976b14..9aa79b798 100644
+index 327976b14d50..9aa79b798a69 100644
 --- a/include/media/v4l2-ctrls.h
 +++ b/include/media/v4l2-ctrls.h
 @@ -42,6 +42,7 @@ struct video_device;
@@ -157,7 +157,7 @@ index 327976b14..9aa79b798 100644
  	struct v4l2_ctrl_vp8_frame *p_vp8_frame;
  	struct v4l2_ctrl_hevc_sps *p_hevc_sps;
 diff --git a/include/uapi/linux/v4l2-controls.h b/include/uapi/linux/v4l2-controls.h
-index affec0ab4..e2c005fde 100644
+index affec0ab4781..e2c005fde6f1 100644
 --- a/include/uapi/linux/v4l2-controls.h
 +++ b/include/uapi/linux/v4l2-controls.h
 @@ -1578,6 +1578,7 @@ struct v4l2_h264_reference {
@@ -208,7 +208,7 @@ index affec0ab4..e2c005fde 100644
  
  /* Current FWHT version */
 diff --git a/include/uapi/linux/videodev2.h b/include/uapi/linux/videodev2.h
-index 5373dba64..e19628c52 100644
+index 5373dba640fa..e19628c520e6 100644
 --- a/include/uapi/linux/videodev2.h
 +++ b/include/uapi/linux/videodev2.h
 @@ -1973,6 +1973,7 @@ enum v4l2_ctrl_type {

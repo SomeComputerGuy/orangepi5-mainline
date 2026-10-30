@@ -18,7 +18,7 @@ Link: https://gitlab.collabora.com/hardware-enablement/rockchip-3588/linux/-/com
  1 file changed, 43 insertions(+), 1 deletion(-)
 
 diff --git a/Documentation/devicetree/bindings/display/rockchip/rockchip-vop2.yaml b/Documentation/devicetree/bindings/display/rockchip/rockchip-vop2.yaml
-index 93da1fb9a..f993cef03 100644
+index 93da1fb9adc4..f993cef0323b 100644
 --- a/Documentation/devicetree/bindings/display/rockchip/rockchip-vop2.yaml
 +++ b/Documentation/devicetree/bindings/display/rockchip/rockchip-vop2.yaml
 @@ -82,6 +82,20 @@ properties:

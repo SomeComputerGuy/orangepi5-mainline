@@ -19,7 +19,7 @@ Link: https://patch.msgid.link/20260522101653.2565125-9-paulk@sys-base.io
  1 file changed, 14 insertions(+), 4 deletions(-)
 
 diff --git a/drivers/media/platform/verisilicon/hantro_v4l2.c b/drivers/media/platform/verisilicon/hantro_v4l2.c
-index 83af9fa1c..0910a7bcf 100644
+index 83af9fa1ce94..0910a7bcfd62 100644
 --- a/drivers/media/platform/verisilicon/hantro_v4l2.c
 +++ b/drivers/media/platform/verisilicon/hantro_v4l2.c
 @@ -419,10 +419,20 @@ hantro_reset_fmt(struct v4l2_pix_format_mplane *fmt,

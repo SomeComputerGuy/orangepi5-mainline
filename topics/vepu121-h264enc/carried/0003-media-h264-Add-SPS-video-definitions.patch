@@ -14,7 +14,7 @@ Link: https://patch.msgid.link/20260522101653.2565125-4-paulk@sys-base.io
  1 file changed, 115 insertions(+)
 
 diff --git a/include/media/v4l2-h264.h b/include/media/v4l2-h264.h
-index 1833c0556..3b00a1b67 100644
+index 1833c0556963..3b00a1b67fe5 100644
 --- a/include/media/v4l2-h264.h
 +++ b/include/media/v4l2-h264.h
 @@ -12,6 +12,121 @@

@@ -34,7 +34,7 @@ Link: https://gitlab.collabora.com/hardware-enablement/rockchip-3588/linux/-/com
  3 files changed, 152 insertions(+), 15 deletions(-)
 
 diff --git a/drivers/gpu/drm/bridge/synopsys/dw-hdmi-qp.c b/drivers/gpu/drm/bridge/synopsys/dw-hdmi-qp.c
-index 2c6a0fb12..d59bdfc71 100644
+index 2c6a0fb12a28..d59bdfc7126c 100644
 --- a/drivers/gpu/drm/bridge/synopsys/dw-hdmi-qp.c
 +++ b/drivers/gpu/drm/bridge/synopsys/dw-hdmi-qp.c
 @@ -84,7 +84,11 @@ struct dw_hdmi_qp {
@@ -294,7 +294,7 @@ index 2c6a0fb12..d59bdfc71 100644
  
  	if (plat_data->supported_formats)
 diff --git a/drivers/gpu/drm/bridge/synopsys/dw-hdmi-qp.h b/drivers/gpu/drm/bridge/synopsys/dw-hdmi-qp.h
-index c07847e8d..dfb8cb661 100644
+index c07847e8d7dd..dfb8cb6614ad 100644
 --- a/drivers/gpu/drm/bridge/synopsys/dw-hdmi-qp.h
 +++ b/drivers/gpu/drm/bridge/synopsys/dw-hdmi-qp.h
 @@ -23,6 +23,7 @@
@@ -315,7 +315,7 @@ index c07847e8d..dfb8cb661 100644
  #define PKTSCHED_PKT_STATUS0				0xab4
  #define PKTSCHED_PKT_STATUS1				0xab8
 diff --git a/include/drm/bridge/dw_hdmi_qp.h b/include/drm/bridge/dw_hdmi_qp.h
-index ad33f9caf..1cd8ee27b 100644
+index ad33f9cafdeb..1cd8ee27b4d0 100644
 --- a/include/drm/bridge/dw_hdmi_qp.h
 +++ b/include/drm/bridge/dw_hdmi_qp.h
 @@ -1,12 +1,14 @@

@@ -29,7 +29,7 @@ Link: https://patch.msgid.link/20261021-b4-rockchip-dwc3-rockchip-glue-v18-5-600
  3 files changed, 99 insertions(+), 1 deletion(-)
 
 diff --git a/drivers/usb/dwc3/Kconfig b/drivers/usb/dwc3/Kconfig
-index 3c120ea97..c86c1ac29 100644
+index 3c120ea9746d..c86c1ac293bf 100644
 --- a/drivers/usb/dwc3/Kconfig
 +++ b/drivers/usb/dwc3/Kconfig
 @@ -193,6 +193,7 @@ config USB_DWC3_OCTEON
@@ -41,7 +41,7 @@ index 3c120ea97..c86c1ac29 100644
  	default USB_DWC3
  	help
 diff --git a/drivers/usb/dwc3/dwc3-rockchip.c b/drivers/usb/dwc3/dwc3-rockchip.c
-index 4129aefd6..75e647e04 100644
+index 4129aefd6a8b..75e647e04cc5 100644
 --- a/drivers/usb/dwc3/dwc3-rockchip.c
 +++ b/drivers/usb/dwc3/dwc3-rockchip.c
 @@ -2,11 +2,105 @@
@@ -160,7 +160,7 @@ index 4129aefd6..75e647e04 100644
  	probe_data.dwc = &dwc_rk->dwc;
  	probe_data.res = res;
 diff --git a/drivers/usb/dwc3/trace.c b/drivers/usb/dwc3/trace.c
-index 088995885..8c4e2a7b1 100644
+index 088995885678..8c4e2a7b142e 100644
 --- a/drivers/usb/dwc3/trace.c
 +++ b/drivers/usb/dwc3/trace.c
 @@ -9,3 +9,6 @@

@@ -17,7 +17,7 @@ Link: https://patch.msgid.link/20260915-rockchip-usbdp-cleanup-v15-13-80e2c11d1c
  1 file changed, 5 insertions(+), 5 deletions(-)
 
 diff --git a/drivers/phy/rockchip/phy-rockchip-usbdp.c b/drivers/phy/rockchip/phy-rockchip-usbdp.c
-index 2af7c3878..9dae41239 100644
+index 2af7c3878714..9dae41239e48 100644
 --- a/drivers/phy/rockchip/phy-rockchip-usbdp.c
 +++ b/drivers/phy/rockchip/phy-rockchip-usbdp.c
 @@ -544,7 +544,7 @@ static void rk_udphy_usb_bvalid_enable(struct rk_udphy *udphy, u8 enable)

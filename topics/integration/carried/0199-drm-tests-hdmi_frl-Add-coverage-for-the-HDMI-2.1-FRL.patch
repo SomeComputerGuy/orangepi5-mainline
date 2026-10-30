@@ -36,7 +36,7 @@ Link: https://gitlab.collabora.com/hardware-enablement/rockchip-3588/linux/-/com
  create mode 100644 drivers/gpu/drm/tests/drm_hdmi_frl_test.c
 
 diff --git a/drivers/gpu/drm/tests/Makefile b/drivers/gpu/drm/tests/Makefile
-index e7193b49c..54d1c7f26 100644
+index e7193b49cf91..54d1c7f26f6b 100644
 --- a/drivers/gpu/drm/tests/Makefile
 +++ b/drivers/gpu/drm/tests/Makefile
 @@ -16,6 +16,7 @@ obj-$(CONFIG_DRM_KUNIT_TEST) += \
@@ -49,7 +49,7 @@ index e7193b49c..54d1c7f26 100644
  	drm_mm_test.o \
 diff --git a/drivers/gpu/drm/tests/drm_hdmi_frl_test.c b/drivers/gpu/drm/tests/drm_hdmi_frl_test.c
 new file mode 100644
-index 000000000..40113985e
+index 000000000000..40113985e367
 --- /dev/null
 +++ b/drivers/gpu/drm/tests/drm_hdmi_frl_test.c
 @@ -0,0 +1,218 @@

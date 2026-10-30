@@ -27,7 +27,7 @@ Assisted-by: Claude:claude-opus-5-5
  2 files changed, 67 insertions(+)
 
 diff --git a/drivers/media/v4l2-core/v4l2-mem2mem.c b/drivers/media/v4l2-core/v4l2-mem2mem.c
-index f1b625598..01f3bba40 100644
+index f1b625598408..01f3bba409f1 100644
 --- a/drivers/media/v4l2-core/v4l2-mem2mem.c
 +++ b/drivers/media/v4l2-core/v4l2-mem2mem.c
 @@ -569,6 +569,44 @@ void v4l2_m2m_buf_done_and_job_finish(struct v4l2_m2m_dev *m2m_dev,
@@ -76,7 +76,7 @@ index f1b625598..01f3bba40 100644
  {
  	unsigned long flags;
 diff --git a/include/media/v4l2-mem2mem.h b/include/media/v4l2-mem2mem.h
-index 37ffd33b6..2e1dd1108 100644
+index 37ffd33b653f..2e1dd110834a 100644
 --- a/include/media/v4l2-mem2mem.h
 +++ b/include/media/v4l2-mem2mem.h
 @@ -231,6 +231,35 @@ void v4l2_m2m_buf_done_and_job_finish(struct v4l2_m2m_dev *m2m_dev,

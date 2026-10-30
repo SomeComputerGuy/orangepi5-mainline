@@ -27,7 +27,7 @@ Link: https://gitlab.collabora.com/hardware-enablement/rockchip-3588/linux/-/com
  1 file changed, 27 insertions(+), 12 deletions(-)
 
 diff --git a/drivers/gpu/drm/rockchip/rockchip_drm_vop2.c b/drivers/gpu/drm/rockchip/rockchip_drm_vop2.c
-index 2704c0b05..338d8d8ad 100644
+index 2704c0b05217..338d8d8ad208 100644
 --- a/drivers/gpu/drm/rockchip/rockchip_drm_vop2.c
 +++ b/drivers/gpu/drm/rockchip/rockchip_drm_vop2.c
 @@ -862,6 +862,13 @@ static int vop2_core_clks_prepare_enable(struct vop2 *vop2)

@@ -27,7 +27,7 @@ Link: https://patch.msgid.link/20261021-b4-rockchip-dwc3-rockchip-glue-v18-2-600
  create mode 100644 include/linux/phy/rockchip-usbdp.h
 
 diff --git a/drivers/phy/rockchip/phy-rockchip-usbdp.c b/drivers/phy/rockchip/phy-rockchip-usbdp.c
-index cb1f455ac..6fb6b0c08 100644
+index cb1f455accf8..6fb6b0c0860b 100644
 --- a/drivers/phy/rockchip/phy-rockchip-usbdp.c
 +++ b/drivers/phy/rockchip/phy-rockchip-usbdp.c
 @@ -19,6 +19,7 @@
@@ -136,7 +136,7 @@ index cb1f455ac..6fb6b0c08 100644
  	udphy->status |= mode;
 diff --git a/include/linux/phy/rockchip-usbdp.h b/include/linux/phy/rockchip-usbdp.h
 new file mode 100644
-index 000000000..44e0bc7d1
+index 000000000000..44e0bc7d1d40
 --- /dev/null
 +++ b/include/linux/phy/rockchip-usbdp.h
 @@ -0,0 +1,31 @@

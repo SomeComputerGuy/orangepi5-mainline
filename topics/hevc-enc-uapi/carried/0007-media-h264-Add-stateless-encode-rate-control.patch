@@ -36,7 +36,7 @@ Link: https://patch.msgid.link/20260522101653.2565125-8-paulk@sys-base.io
  create mode 100644 include/media/v4l2-h264-enc-rc.h
 
 diff --git a/drivers/media/v4l2-core/Makefile b/drivers/media/v4l2-core/Makefile
-index 2b45b0e45..81c5582d6 100644
+index 2b45b0e451ca..81c5582d6a34 100644
 --- a/drivers/media/v4l2-core/Makefile
 +++ b/drivers/media/v4l2-core/Makefile
 @@ -29,7 +29,8 @@ obj-$(CONFIG_V4L2_CCI) += v4l2-cci.o
@@ -51,7 +51,7 @@ index 2b45b0e45..81c5582d6 100644
  obj-$(CONFIG_V4L2_MEM2MEM_DEV) += v4l2-mem2mem.o
 diff --git a/drivers/media/v4l2-core/v4l2-h264-enc-rc.c b/drivers/media/v4l2-core/v4l2-h264-enc-rc.c
 new file mode 100644
-index 000000000..8f9622395
+index 000000000000..8f9622395eb6
 --- /dev/null
 +++ b/drivers/media/v4l2-core/v4l2-h264-enc-rc.c
 @@ -0,0 +1,558 @@
@@ -614,7 +614,7 @@ index 000000000..8f9622395
 +MODULE_AUTHOR("Paul Kocialkowski <paulk@sys-base.io>");
 +MODULE_LICENSE("GPL");
 diff --git a/drivers/media/v4l2-core/v4l2-h264-enc.c b/drivers/media/v4l2-core/v4l2-h264-enc.c
-index 3b7bca117..67ea82ceb 100644
+index 3b7bca117818..67ea82cebe7f 100644
 --- a/drivers/media/v4l2-core/v4l2-h264-enc.c
 +++ b/drivers/media/v4l2-core/v4l2-h264-enc.c
 @@ -10,6 +10,7 @@
@@ -887,7 +887,7 @@ index 3b7bca117..67ea82ceb 100644
  EXPORT_SYMBOL_GPL(v4l2_h264_enc_complete);
 diff --git a/include/media/v4l2-h264-enc-rc.h b/include/media/v4l2-h264-enc-rc.h
 new file mode 100644
-index 000000000..8b453c3a2
+index 000000000000..8b453c3a212e
 --- /dev/null
 +++ b/include/media/v4l2-h264-enc-rc.h
 @@ -0,0 +1,108 @@
@@ -1000,7 +1000,7 @@ index 000000000..8b453c3a2
 +
 +#endif
 diff --git a/include/media/v4l2-h264-enc.h b/include/media/v4l2-h264-enc.h
-index 817a9ca2f..6debdc952 100644
+index 817a9ca2f169..6debdc95232c 100644
 --- a/include/media/v4l2-h264-enc.h
 +++ b/include/media/v4l2-h264-enc.h
 @@ -11,6 +11,7 @@
@@ -1050,7 +1050,7 @@ index 817a9ca2f..6debdc952 100644
  	struct v4l2_h264_enc_rbsp rbsp;
  	unsigned int rbsp_update;
 diff --git a/include/media/v4l2-h264.h b/include/media/v4l2-h264.h
-index 3b00a1b67..5e77f6909 100644
+index 3b00a1b67fe5..5e77f690902b 100644
 --- a/include/media/v4l2-h264.h
 +++ b/include/media/v4l2-h264.h
 @@ -161,6 +161,30 @@ struct v4l2_h264_reflist_builder {

@@ -27,7 +27,7 @@ Link: https://gitlab.collabora.com/hardware-enablement/rockchip-3588/linux/-/com
  2 files changed, 18 insertions(+), 12 deletions(-)
 
 diff --git a/drivers/video/hdmi.c b/drivers/video/hdmi.c
-index 45b42f14a..e729c26d6 100644
+index 45b42f14a750..e729c26d61c4 100644
 --- a/drivers/video/hdmi.c
 +++ b/drivers/video/hdmi.c
 @@ -217,23 +217,22 @@ EXPORT_SYMBOL(hdmi_avi_infoframe_pack);
@@ -90,7 +90,7 @@ index 45b42f14a..e729c26d6 100644
  	return 0;
  }
 diff --git a/include/linux/hdmi.h b/include/linux/hdmi.h
-index b80a5ee63..d73ad7b3f 100644
+index b80a5ee63bb2..d73ad7b3fa94 100644
 --- a/include/linux/hdmi.h
 +++ b/include/linux/hdmi.h
 @@ -267,12 +267,15 @@ enum hdmi_spd_sdi {

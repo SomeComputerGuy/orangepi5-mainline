@@ -60,7 +60,7 @@ Assisted-by: Claude:claude-opus-5-5
  create mode 100644 drivers/media/platform/rockchip/rkjpegd/rkjpegd.h
 
 diff --git a/MAINTAINERS b/MAINTAINERS
-index 6378c4aa7..5f4ecc6cc 100644
+index 6378c4aa7f4f..5f4ecc6cc6d0 100644
 --- a/MAINTAINERS
 +++ b/MAINTAINERS
 @@ -23738,6 +23738,7 @@ L:	linux-media@vger.kernel.org
@@ -72,7 +72,7 @@ index 6378c4aa7..5f4ecc6cc 100644
  ROCKCHIP RKVDEC VIDEO DECODER DRIVER
  M:	Detlev Casanova <detlev.casanova@collabora.com>
 diff --git a/drivers/media/platform/rockchip/Kconfig b/drivers/media/platform/rockchip/Kconfig
-index e6afa6092..c04a33efb 100644
+index e6afa60923f1..c04a33efb61d 100644
 --- a/drivers/media/platform/rockchip/Kconfig
 +++ b/drivers/media/platform/rockchip/Kconfig
 @@ -5,5 +5,6 @@ comment "Rockchip media platform drivers"
@@ -83,7 +83,7 @@ index e6afa6092..c04a33efb 100644
  source "drivers/media/platform/rockchip/rkvdec/Kconfig"
  source "drivers/media/platform/rockchip/rkvenc/Kconfig"
 diff --git a/drivers/media/platform/rockchip/Makefile b/drivers/media/platform/rockchip/Makefile
-index 6a1d847a1..1d169926f 100644
+index 6a1d847a10a4..1d169926f72b 100644
 --- a/drivers/media/platform/rockchip/Makefile
 +++ b/drivers/media/platform/rockchip/Makefile
 @@ -2,5 +2,6 @@
@@ -95,7 +95,7 @@ index 6a1d847a1..1d169926f 100644
  obj-y += rkvenc/
 diff --git a/drivers/media/platform/rockchip/rkjpegd/Kconfig b/drivers/media/platform/rockchip/rkjpegd/Kconfig
 new file mode 100644
-index 000000000..17e5b8255
+index 000000000000..17e5b8255d93
 --- /dev/null
 +++ b/drivers/media/platform/rockchip/rkjpegd/Kconfig
 @@ -0,0 +1,15 @@
@@ -116,7 +116,7 @@ index 000000000..17e5b8255
 +	  will be called rockchip-jpegd.
 diff --git a/drivers/media/platform/rockchip/rkjpegd/Makefile b/drivers/media/platform/rockchip/rkjpegd/Makefile
 new file mode 100644
-index 000000000..06e26f5fb
+index 000000000000..06e26f5fb690
 --- /dev/null
 +++ b/drivers/media/platform/rockchip/rkjpegd/Makefile
 @@ -0,0 +1,4 @@
@@ -126,7 +126,7 @@ index 000000000..06e26f5fb
 +rockchip-jpegd-y := rkjpegd.o rkjpegd-hw.o
 diff --git a/drivers/media/platform/rockchip/rkjpegd/rkjpegd-hw.c b/drivers/media/platform/rockchip/rkjpegd/rkjpegd-hw.c
 new file mode 100644
-index 000000000..1c30bb692
+index 000000000000..1c30bb6921dc
 --- /dev/null
 +++ b/drivers/media/platform/rockchip/rkjpegd/rkjpegd-hw.c
 @@ -0,0 +1,439 @@
@@ -571,7 +571,7 @@ index 000000000..1c30bb692
 +}
 diff --git a/drivers/media/platform/rockchip/rkjpegd/rkjpegd.c b/drivers/media/platform/rockchip/rkjpegd/rkjpegd.c
 new file mode 100644
-index 000000000..5206b461c
+index 000000000000..5206b461c97b
 --- /dev/null
 +++ b/drivers/media/platform/rockchip/rkjpegd/rkjpegd.c
 @@ -0,0 +1,1064 @@
@@ -1641,7 +1641,7 @@ index 000000000..5206b461c
 +MODULE_LICENSE("GPL");
 diff --git a/drivers/media/platform/rockchip/rkjpegd/rkjpegd.h b/drivers/media/platform/rockchip/rkjpegd/rkjpegd.h
 new file mode 100644
-index 000000000..1b2716333
+index 000000000000..1b27163336e4
 --- /dev/null
 +++ b/drivers/media/platform/rockchip/rkjpegd/rkjpegd.h
 @@ -0,0 +1,276 @@

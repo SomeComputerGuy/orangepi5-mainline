@@ -17,7 +17,7 @@ Signed-off-by: Venkata Atchuta Bheemeswara Sarma Darbha <vdarbha0473@gmail.com>
  create mode 100644 drivers/media/platform/rockchip/rkvdec/rkvdec-vp9-common.h
 
 diff --git a/drivers/media/platform/rockchip/rkvdec/Makefile b/drivers/media/platform/rockchip/rkvdec/Makefile
-index e629d571e..2bbd67b2d 100644
+index e629d571e4d8..2bbd67b2db11 100644
 --- a/drivers/media/platform/rockchip/rkvdec/Makefile
 +++ b/drivers/media/platform/rockchip/rkvdec/Makefile
 @@ -12,4 +12,5 @@ rockchip-vdec-y += \
@@ -28,7 +28,7 @@ index e629d571e..2bbd67b2d 100644
  		   rkvdec-vp9.o
 diff --git a/drivers/media/platform/rockchip/rkvdec/rkvdec-vp9-common.c b/drivers/media/platform/rockchip/rkvdec/rkvdec-vp9-common.c
 new file mode 100644
-index 000000000..a802f0acd
+index 000000000000..a802f0acd27b
 --- /dev/null
 +++ b/drivers/media/platform/rockchip/rkvdec/rkvdec-vp9-common.c
 @@ -0,0 +1,65 @@
@@ -99,7 +99,7 @@ index 000000000..a802f0acd
 +}
 diff --git a/drivers/media/platform/rockchip/rkvdec/rkvdec-vp9-common.h b/drivers/media/platform/rockchip/rkvdec/rkvdec-vp9-common.h
 new file mode 100644
-index 000000000..0d042215f
+index 000000000000..0d042215fad2
 --- /dev/null
 +++ b/drivers/media/platform/rockchip/rkvdec/rkvdec-vp9-common.h
 @@ -0,0 +1,92 @@
@@ -196,7 +196,7 @@ index 000000000..0d042215f
 +void update_dec_buf_info(struct rkvdec_decoded_buffer *buf,
 +			 const struct v4l2_ctrl_vp9_frame *dec_params);
 diff --git a/drivers/media/platform/rockchip/rkvdec/rkvdec-vp9.c b/drivers/media/platform/rockchip/rkvdec/rkvdec-vp9.c
-index d4243ce23..495738762 100644
+index d4243ce230c7..495738762713 100644
 --- a/drivers/media/platform/rockchip/rkvdec/rkvdec-vp9.c
 +++ b/drivers/media/platform/rockchip/rkvdec/rkvdec-vp9.c
 @@ -23,71 +23,12 @@
