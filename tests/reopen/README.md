@@ -94,7 +94,7 @@ The steady context is the one with the most jobs. For every gap of the steady co
 completions above 2x its median, it prints the breakdown and what the other contexts did then.
 ```
 
-### [`gst-null-leak.py`](gst-null-leak.py)
+### [`tools/gst-null-leak.py`](tools/gst-null-leak.py)
 
 ```
 Stop a decoder mid-stream N times in one process and count the dma-buf fds left open.
@@ -104,7 +104,7 @@ Before the codecs fix (patches/gstreamer/0009) every stop with a frame still wai
 leaked the decoder's 10 CAPTURE dma-bufs and, after ~12, starting failed with ENOMEM.
 ```
 
-### [`venc-cycle.c`](venc-cycle.c)
+### [`tools/venc-cycle.c`](tools/venc-cycle.c)
 
 ```
 

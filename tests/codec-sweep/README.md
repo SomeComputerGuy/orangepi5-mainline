@@ -36,20 +36,20 @@ vqcmp.sh align <test> <ref> <WxH> [frames] [maxshift]       best frame offset by
 decode; raw H.264/HEVC elementary streams (.es/.264/.h264/.265/.hevc) are probed by content.
 ```
 
-### [`after-reboot.sh`](after-reboot.sh)
+### [`scripts/after-reboot.sh`](scripts/after-reboot.sh)
 
 ```
 Verification after booting with updates/opi5-codec-quality (run on the board from ~/cq, idle board).
 ```
 
-### [`elem.sh`](elem.sh)
+### [`scripts/elem.sh`](scripts/elem.sh)
 
 ```
 elem.sh <codec> <device-name-substring>: the GStreamer v4l2codecs decoder element for a codec on
 a given device (element names depend on /dev/video numbering, which changes between boots).
 ```
 
-### [`mpeg2-conf.sh`](mpeg2-conf.sh)
+### [`scripts/mpeg2-conf.sh`](scripts/mpeg2-conf.sh)
 
 ```
 MPEG-2 conformance (ISO/IEC 13818-4 vectors from fluster MPEG2_VIDEO-MAIN, which ships no
@@ -59,7 +59,7 @@ FFmpeg runs with -fps_mode passthrough: its default CFR output duplicates frames
 (repeat_first_field), which GStreamer signals with buffer flags instead.
 ```
 
-### [`run-fluster.sh`](run-fluster.sh)
+### [`scripts/run-fluster.sh`](scripts/run-fluster.sh)
 
 ```
 Fluster on every OPi5 stateless decoder, per device. Stock fluster's GStreamer-H.264-V4L2SL runs
@@ -68,19 +68,19 @@ so rkvdec's H.264 decoder was never tested. This uses a private copy of fluster 
 extra GStreamer-<codec>-V4L2SL-RKVDEC/-HANTRO decoders whose element names are looked up per boot.
 ```
 
-### [`trace-dec.sh`](trace-dec.sh)
+### [`scripts/trace-dec.sh`](scripts/trace-dec.sh)
 
 ```
 usage: sudo trace-dec.sh clip out [nstreams] [sink] [parser] [decoder]  (from vp9-perf trace.sh)
 ```
 
-### [`verify2.sh`](verify2.sh)
+### [`scripts/verify2.sh`](scripts/verify2.sh)
 
 ```
 Verification of the final opi5-codec-quality modules (run on the board from ~/cq, detached).
 ```
 
-### [`parse.py`](parse.py)
+### [`scripts/parse.py`](scripts/parse.py)
 
 ```
 Per-frame timeline from trace.sh output (function_graph + irq events).

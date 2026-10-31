@@ -55,7 +55,7 @@ struct rtc_time: sec, min, hour, mday, mon (0-11), year-1900, wday (0=Sunday), y
 The weekday matters: the hym8563 alarm matches minute, hour, day AND weekday.
 ```
 
-### [`resume_wd.c`](resume_wd.c)
+### [`resume-wd/resume_wd.c`](resume-wd/resume_wd.c)
 
 ```
 
@@ -77,7 +77,7 @@ include <linux/kmsg_dump.h>
 include <linux/slab.h>
 ```
 
-### [`resume_delay.c`](resume_delay.c)
+### [`resume-delay/resume_delay.c`](resume-delay/resume_delay.c)
 
 ```
 

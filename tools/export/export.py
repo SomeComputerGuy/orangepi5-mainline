@@ -408,14 +408,17 @@ def export_tests(ws, repo):
                 files.append(p)
         d = td / name
         rows = []
+        # keep the layout the scripts were run with (e.g. lib/, tools/, scripts/ next to the wrapper)
+        base = Path(os.path.commonpath([str(p.parent) for p in files])) if files else None
         for p in files:
+            rel = p.relative_to(base).as_posix()
             text = p.read_text(errors="replace")
             for rx, rep in TEST_SUBS:
                 text = rx.sub(rep, text)
-            write(d / p.name, text)
+            write(d / rel, text)
             if os.access(p, os.X_OK) or p.suffix in (".sh", ".py") or text.startswith("#!"):
-                (d / p.name).chmod(0o755)
-            rows.append((p.name, script_header(redact(text))))
+                (d / rel).chmod(0o755)
+            rows.append((rel, script_header(redact(text))))
         L = [f"# {name}: {title}", "",
              f"- Runs on: **{where}**" + (" (copy this directory to the board, e.g. with `scp -r`)" if where != "host" else ""),
              f"- How it was run: `{runline}`"]

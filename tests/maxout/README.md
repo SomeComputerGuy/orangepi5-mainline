@@ -28,7 +28,7 @@ monitor every 5 s; abort if any thermal zone > 100 C (ABORT_MC; trips: passive 8
 ### [`stream.py`](stream.py)
 
 
-### [`rkvenc-enc.c`](rkvenc-enc.c)
+### [`tools/rkvenc-enc.c`](tools/rkvenc-enc.c)
 
 ```
 

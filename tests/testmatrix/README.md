@@ -60,16 +60,16 @@ CAM_CONN + --calib (webcam check of decoded SMPTE bars on that output), PSNR_MIN
 Output: DIR/results.tsv (id, verdict, detail), DIR/summary.txt, DIR/work (streams, logs).
 ```
 
-### [`camcheck.py`](camcheck.py)
+### [`lib/camcheck.py`](lib/camcheck.py)
 
 
-### [`dmatrix.py`](dmatrix.py)
+### [`lib/dmatrix.py`](lib/dmatrix.py)
 
 
-### [`gnomecheck.py`](gnomecheck.py)
+### [`lib/gnomecheck.py`](lib/gnomecheck.py)
 
 
-### [`kmsctl.py`](kmsctl.py)
+### [`lib/kmsctl.py`](lib/kmsctl.py)
 
 
 ### [`README.md`](README.md)

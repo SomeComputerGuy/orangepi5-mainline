@@ -8,16 +8,16 @@ These are the scripts exactly as they were run on the test board, except that th
 
 ## Files
 
-### [`hdmi-batch.sh`](hdmi-batch.sh)
+### [`tools/hdmi-batch.sh`](tools/hdmi-batch.sh)
 
 ```
 HDMI 10 bpc FRL diagnosis batch: run as root on the board; camera aimed at the TV.
 ```
 
-### [`caseA.sh`](caseA.sh)
+### [`tools/caseA.sh`](tools/caseA.sh)
 
 
-### [`ab.sh`](ab.sh)
+### [`tools/ab.sh`](tools/ab.sh)
 
 ```
 1203 A/B: $1 = off|on. off: move the rockchipdrm drop-in aside; on: put it back. Rebuild initramfs, reboot.

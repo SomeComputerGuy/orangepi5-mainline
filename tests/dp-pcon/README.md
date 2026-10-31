@@ -8,33 +8,33 @@ These are the scripts exactly as they were run on the test board, except that th
 
 ## Files
 
-### [`crc.sh`](crc.sh)
+### [`tools/crc.sh`](tools/crc.sh)
 
 ```
 Read DP sink CRCs (DPCD 0x240-0x245) N times while TEST_SINK_START is set.
 ```
 
-### [`modeset.sh`](modeset.sh)
+### [`tools/modeset.sh`](tools/modeset.sh)
 
 ```
 usage: modeset.sh <mode> <secs> [crc]: show modetest pattern on DP-1 and sample sink CRC
 ```
 
-### [`edid-add-rb.py`](edid-add-rb.py)
+### [`tools/edid-add-rb.py`](tools/edid-add-rb.py)
 
 ```
 Replace the first (preferred) DTD of an EDID base block with
 3840x2160@30 CVT-RB (262.75 MHz, h 3840/3888/3920/4000 v 2160/2163/2168/2191 +h -v).
 ```
 
-### [`zerlon-batch.sh`](zerlon-batch.sh)
+### [`tools/zerlon-batch.sh`](tools/zerlon-batch.sh)
 
 ```
 Zerlon on the dock, camera aimed at it. Copy crc.sh and zerlon-rb4k30.edid to /tmp on the board,
 then run: echo <pw> | sudo -S bash /tmp/zerlon-batch.sh   (about 75 s with gdm stopped)
 ```
 
-### [`zerlon-scramble.sh`](zerlon-scramble.sh)
+### [`tools/zerlon-scramble.sh`](tools/zerlon-scramble.sh)
 
 
 ### [`RESULTS.md`](RESULTS.md)
