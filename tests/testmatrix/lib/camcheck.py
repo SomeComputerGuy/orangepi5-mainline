@@ -3,7 +3,7 @@
 """Webcam picture check (pure Python; GStreamer only for capture and JPEG decode).
 
   camcheck.py find                         print the webcam's /dev/videoN (name match, capture node)
-  camcheck.py capture <prefix>             grab frames -> <prefix>.jpg (1080p, for people) + <prefix>.rgb (small RGB)
+  camcheck.py capture <prefix>             (env CAM_REC_DIR=<run>/video: take it from the running recorder, see camrec.py) grab frames -> <prefix>.jpg (1080p, for people) + <prefix>.rgb (small RGB)
   camcheck.py calib <white> <black> <out.json>   screen quadrilateral + levels from full-white / full-black frames
   camcheck.py classify <calib.json> <img> <pattern> [code]   -> JSON {verdict: GOOD|BLACK|FLAT|SCRAMBLED|WRONGCASE}
   camcheck.py rescore <run dir>            re-classify every saved frame of a display-matrix run (see README)
@@ -17,7 +17,7 @@ rescales the bar means between the darkest and the brightest bar (auto exposure 
 the black 8th bar is measured inside the screen, so it cannot blend into the bezel.
 Patterns: "bars" (kmsctl.py: 8 bars, 16 stripes, 16-bit case code), "smpte" (modetest / videotestsrc).
 """
-import json, os, re, shutil, subprocess, sys, tempfile
+import json, os, re, shutil, subprocess, sys, tempfile, time
 
 SIZES = [(192, 108), (384, 216), (320, 180), (640, 360)]
 CAP_W, CAP_H = 384, 216                      # size of new captures
@@ -41,7 +41,49 @@ def find():
     return ""
 
 
+def jpg_to_rgb(jpg, rgb):
+    r = subprocess.run(["gst-launch-1.0", "-q", "filesrc", f"location={jpg}", "!", "jpegdec", "!", "videoconvert", "!",
+                        "videoscale", "!", f"video/x-raw,format=RGB,width={CAP_W},height={CAP_H},pixel-aspect-ratio=1/1",
+                        "!", "filesink", f"location={rgb}"], capture_output=True, text=True, timeout=60)
+    if r.returncode or not os.path.exists(rgb):
+        raise RuntimeError(f"jpeg decode failed: {r.stderr.strip()[-300:]}")
+
+
+def capture_recorded(prefix, rec):
+    """picture from the running recorder (camrec.py): newest complete frame after now; None when the recording
+    is stale (the caller then captures directly, after pausing the recorder so the camera is free)"""
+    import camrec
+    if not camrec.fresh(rec):
+        return None
+    f = camrec.pick_frame(rec, time.time())
+    if not f:
+        return None
+    shutil.copyfile(f, prefix + ".jpg")
+    jpg_to_rgb(prefix + ".jpg", prefix + ".rgb")
+    return prefix + ".rgb"
+
+
 def capture(prefix, dev=None, frames=None):
+    rec = os.environ.get("CAM_REC_DIR")
+    if rec:
+        sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+        try:
+            got = capture_recorded(prefix, rec)
+            if got:
+                return got
+        except (RuntimeError, OSError, subprocess.SubprocessError) as e:
+            print(f"camcheck: recorded frame unusable ({e}), capturing directly", file=sys.stderr, flush=True)
+        import camrec
+        print("camcheck: recording is stale: pausing the recorder for a direct capture", file=sys.stderr, flush=True)
+        camrec.pause(rec, True)
+        try:
+            return capture_direct(prefix, dev, frames)
+        finally:
+            camrec.pause(rec, False)
+    return capture_direct(prefix, dev, frames)
+
+
+def capture_direct(prefix, dev=None, frames=None):
     dev = dev or os.environ.get("CAM_DEV") or find()
     if not dev:
         raise RuntimeError(f"no webcam matching {CAM_NAME!r}")
@@ -295,11 +337,64 @@ def screen_stats(img, cal):
     return (lvl - cal["black_lum"]) / rng, texture(g) / rng
 
 
-def classify(cal, img, pattern, code=None):
-    th = cal.get("thresholds", TH)
+def mode_crop(mode, panel=16 / 9):
+    """expected active picture (width, height) as fractions of the screen for a mode (w, h) that the TV
+    scales preserving aspect: narrower than the panel -> pillarbox, wider -> letterbox"""
+    a = mode[0] / mode[1]
+    return (a / panel, 1.0) if a < panel else (1.0, panel / a)
+
+
+def detect_crop(g, gw=GW, gh=GH):
+    """(width, height) fractions of the active picture inside the canonical grid, or None when nothing bright.
+    Picture is assumed centred (TV bars are symmetric). The pattern has a black bar at one end, so the true
+    edge is the farther bright edge from the centre; vertically only the top edge counts (top band is bright)."""
+    L = [p[0] * .299 + p[1] * .587 + p[2] * .114 for p in g]
+    s = sorted(L)
+    lo, hi = s[len(s) // 50], s[-len(s) // 100 - 1]
+    if hi - lo < 30:
+        return None
+    thr = lo + .3 * (hi - lo)
+    cols = [x for x in range(gw) if any(L[y * gw + x] > thr for y in range(gh // 2))]
+    rows = [y for y in range(gh) if any(L[y * gw + x] > thr for x in range(gw))]
+    if not cols or not rows:
+        return None
+    hx = max(.5 - cols[0] / gw, (cols[-1] + 1) / gw - .5)
+    hy = .5 - rows[0] / gh
+    return min(2 * hx, 1.0), min(2 * hy, 1.0)
+
+
+def picture_grid(img, cal, mode=None):
+    """canonical grid of the active picture; -> (grid, note). mode (w, h) is the video mode shown; the computed
+    pillar/letterbox is checked against the detected one, a disagreement (>5 %) means the TV did not preserve
+    aspect (stretched, or zoomed): the detected box wins"""
     g = warp(img, cal["quad"])
+    if not mode:
+        return g, ""
+    cw, ch = mode_crop(mode, cal.get("panel_aspect", 16 / 9))
+    det = detect_crop(g)
+    note = ""
+    if det is None:
+        dw, dh = 1.0, 1.0           # nothing to see: judge the whole screen (BLACK/FLAT stay as they were)
+    else:
+        dw, dh = det
+        if abs(dw - cw) > .05 or abs(dh - ch) > .05:
+            note = "aspect: TV did not preserve aspect"
+            cw, ch = dw, dh
+    if cw > .97 and ch > .97:
+        return g, note
+    H = homography(cal["quad"])
+    x0, x1, y0, y1 = .5 - cw / 2, .5 + cw / 2, .5 - ch / 2, .5 + ch / 2
+    sub = [list(apply_h(H, u, v)) for u, v in ((x0, y0), (x1, y0), (x1, y1), (x0, y1))]
+    return warp(img, sub), note
+
+
+def classify(cal, img, pattern, code=None, mode=None):
+    th = cal.get("thresholds", TH)
+    g, note = picture_grid(img, cal, mode)
     rng = max(cal["white_lum"] - cal["black_lum"], 1)
     best = max((score(g, cal, pattern, f) for f in (False, True)), key=lambda r: r["bars"] + r.get("stripes", 0))
+    if note:
+        best["aspect"] = note
     best["level"] = round((sum(sum(p) / 3 for p in g) / len(g) - cal["black_lum"]) / rng, 3)
     best["texture"] = round(texture(g) / rng, 3)
     if best["contrast"] < th["min_contrast"]:
@@ -320,7 +415,8 @@ def classify(cal, img, pattern, code=None):
 
 
 def cam_summary(r):
-    return f"{r['verdict']}:bars={r['bars']:.2f},st={r.get('stripes', 1):.2f},c={r['contrast']:.2f}"
+    return f"{r['verdict']}:bars={r['bars']:.2f},st={r.get('stripes', 1):.2f},c={r['contrast']:.2f}" + \
+        (",aspect=stretched" if r.get("aspect") else "")
 
 
 # ---------------------------------------------------------------- offline re-score of a display-matrix run
@@ -329,6 +425,12 @@ def frame(d):
         if os.path.exists(f"{d}/{n}") and (n == "cam.rgb" or shutil.which("gst-launch-1.0")):
             return f"{d}/{n}"
     return f"{d}/cam.rgb" if os.path.exists(f"{d}/cam.rgb") else None
+
+
+def mode_of(s):
+    """'WxH@R/clock' (results.tsv) -> (w, h) or None"""
+    m = re.match(r"(\d+)x(\d+)", s or "")
+    return (int(m.group(1)), int(m.group(2))) if m else None
 
 
 def rescore(run):
@@ -357,7 +459,8 @@ def rescore(run):
         c = byidx.get(int(r["idx"])) if r["idx"].isdigit() else None
         f = frame(f"{run}/case/{int(r['idx']):04d}") if c else None
         if c and f and c["pattern"] not in ("white", "black") and r.get("cam") not in ("", "-"):
-            res = classify(cal, load(f), c["pattern"], c["idx"] if c["pattern"] == "bars" else None)
+            res = classify(cal, load(f), c["pattern"], c["idx"] if c["pattern"] == "bars" else None,
+                           mode_of(r.get("mode", "")))
             new = cam_summary(res)
             rs = [x for x in r["reasons"].split("; ") if x and not x.startswith("webcam:")]
             if "expect" in c:
@@ -445,6 +548,17 @@ def selftest():
             r = classify(cal, img, "bars", 1234)
             print(f"{qname:8s} {name:10s} want {want:9s} got {r['verdict']:9s} {cam_summary(r)}")
             bad += r["verdict"] != want
+        def boxed(cw, ch, shift=0):   # TV shows the pattern in a centred cw x ch box, black elsewhere
+            return synth(lambda fx, fy: bars(((fx - .5) / cw + .5 + shift) % 1, (fy - .5) / ch + .5)
+                         if abs(fx - .5) < cw / 2 and abs(fy - .5) < ch / 2 else (30, 30, 32), quad)
+        for name, img, mode, want, asp in (
+                ("pillar43", boxed(.75, 1), (640, 480), "GOOD", False),
+                ("letter", boxed(1, .9375), (4096, 2160), "GOOD", False),
+                ("stretch43", cases["good"][0], (640, 480), "GOOD", True),
+                ("pillar-bad", boxed(.75, 1, .3), (640, 480), "SCRAMBLED", False)):
+            r = classify(cal, img, "bars", 1234, mode)
+            print(f"{qname:8s} {name:10s} want {want:9s} got {r['verdict']:9s} {cam_summary(r)}")
+            bad += r["verdict"] != want or bool(r.get("aspect")) != asp
         r = classify(cal, cases["good"][0], "bars", 1235)
         print(f"{qname:8s} {'wrongcase':10s} want WRONGCASE got {r['verdict']}")
         bad += r["verdict"] != "WRONGCASE"

@@ -387,7 +387,7 @@ def parse_spec(s):
 class Shower:
     def __init__(self):
         self.fd, self.card = open_card()
-        self.info = enumerate_all(self.fd, probe=False)
+        self.info = enumerate_all(self.fd, probe=os.environ.get("KMSCTL_PROBE") == "1")
         self.gpu = None
         self.keep = []
         self.leave_others = False

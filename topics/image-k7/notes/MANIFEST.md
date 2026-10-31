@@ -216,3 +216,25 @@ the PCON's 444->420 conversion.
 WITHOUT 1203 as well (hdmi-10bpc/batch1/off-19.jpg vs A-19.jpg). The "black HDMI" reports were the gdm greeter's dark
 background on the non-primary output and the idle blank. 1203 stays as a consistency fix (PHY gets the real bpc in FRL
 mode, as the PHY driver's configure API and the vendor glue expect), not as a fix for an observed failure.
+
+## 1207-1209 HDMI0 "No Signal" wedge after a 4:2:0 modeset (2026-10-31, work/_out/hdmi-wedge/)
+1208/1209: dw-hdmi-qp only resets its video input (IPI) after it sees the pixel clock stop for ~2 ms (CMU_STATUS.IPI_CLK_OFF);
+a back-to-back VOP disable/enable in one commit restarts DCLK faster, so leaving YCbCr 4:2:0 left the controller locked to
+the old stream (TV "No Signal" until reboot, no kernel error). The Rockchip glue now waits for IPI_CLK_OFF in
+.atomic_mode_set (after the VOP is off, before it is re-enabled). 1207: drm_connector_hdmi_sync_scdc() checked the TMDS
+scrambling bit, never set in FRL, so every connector probe forced a full modeset and FRL re-train; it now checks the FRL
+rate (SCDC 0x31). Verified: trigger 10/10, 4:2:0->1080p 5/5, run-2 order 13/13, regressions good (camera + IPI lock bit).
+
+## 1210 drm/bridge: synopsys: dw-dp: Add CEC-Tunneling-over-AUX support (2026-10-31, work/_out/dp-cec/)
+Mirrors i915: drm_dp_cec_register_connector (on first EDID read - the bridge only gets the connector there), set/unset
+EDID on read/disconnect, drm_dp_cec_irq on short HPD, unregister on detach. Config already has DRM_DISPLAY_DP_AUX_CEC=y.
+Builds W=1 clean. Board check pending: /dev/cecN appears, "not capable" on the current dock (DPCD 0x3000 = 0); end to end
+needs a CEC-tunnelling USB-C->HDMI adapter (user is looking for one).
+
+## 1211-1215 VOP2/HDMI clock and link-state fixes (2026-10-31, work/_out/hdmi-clk/)
+1211 vop2: don't use uninitialised dividers on RK3588 (rk3588_calc_cru_cfg). 1212 vop2: fix HDMI sync polarity on RK3588
+(DRM flags decoded correctly into GRF_VO1_CON0). 1213 dw-hdmi-qp: clear FRL link state (OPMODE FRL bits, FLT_CONFIG1) on
+TMDS fallback and disable. 1214 vop2: pick the HDMI PHY PLL vs CRU DCLK from crtc_state frl_enabled (shared with
+atomic_check). 1215 vop2: reject HDMI modes the CRU cannot clock exactly (59.94/119.88 Hz FRL at 10 bpc were running at
+500 MHz / 786 MHz from AUPLL). Verified by vblank-timestamp clock measurement (~20 ppm) + camera; regressions + wedge
+trigger (4096@60 594 MHz) 10/10. Follow-up: a dedicated rate-settable PLL for VP0 in FRL would make 59.94/119.88 exact.

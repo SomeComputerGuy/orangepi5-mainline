@@ -8,11 +8,12 @@ and, for the connector under the webcam, the camera verdict. Each case is checke
 from the sink EDID / DPCD and the source limits. Results: <out>/results.tsv (one row per case, appended,
 resumable), <out>/summary.txt, <out>/cases.json, <out>/case/<idx>/ (raw evidence).
 """
-import argparse, json, os, re, select, signal, subprocess, sys, time
+import argparse, atexit, json, os, re, select, shutil, signal, subprocess, sys, time
 
 HERE = os.path.dirname(os.path.abspath(__file__))
 sys.path.insert(0, HERE)
 import camcheck  # noqa: E402
+import camrec  # noqa: E402
 
 DBG = "/sys/kernel/debug/dri/0"
 SRC_TMDS_MAX = float(os.environ.get("SRC_TMDS_MAX_MHZ", "600")) * 1e6    # RK3588 HDMI 2.0 TMDS
@@ -296,6 +297,13 @@ def match_mode(modes, spec):
     return None
 
 
+def cf_canon(s):
+    """canonical colour format: RGB / YUV444 / YUV422 / YUV420 / AUTO from a property enum name ('YUV 4:4:4') or the
+    debugfs state text ('YCbCr 4:4:4'); case, any whitespace (NBSP too), ':' and '_' are ignored"""
+    s = re.sub(r"[\s:_-]", "", (s or "").replace("\xa0", " ")).upper().replace("YCBCR", "YUV")
+    return s
+
+
 def tmds_expected(clock_khz, bpc, fmt):
     r = clock_khz * 1000.0
     if fmt == "YCbCr 4:2:2" or fmt == "YUV422":
@@ -307,11 +315,11 @@ def tmds_expected(clock_khz, bpc, fmt):
 
 def hdmi_feasible(case, mode, caps):
     """True/False when the link budget decides whether (mode, max bpc, color format) is possible; None if unknown"""
-    cf, bpc = case.get("cf", "AUTO"), int(case.get("bpc") or 8)
-    if cf == "YUV 4:2:0":
+    cf, bpc = cf_canon(case.get("cf", "AUTO")), int(case.get("bpc") or 8)
+    if cf == "YUV420":
         return None                     # depends on the 4:2:0 capability map / VIC; not modelled
-    fmts = {"RGB": ["RGB"], "YUV 4:4:4": ["YUV444"], "YUV 4:2:2": ["YUV422"], "AUTO": ["RGB"]}[cf]
-    if cf == "YUV 4:4:4" and not caps.get("y444") or cf == "YUV 4:2:2" and not caps.get("y422"):
+    fmts = {"RGB": ["RGB"], "YUV444": ["YUV444"], "YUV422": ["YUV422"], "AUTO": ["RGB"]}[cf]
+    if cf == "YUV444" and not caps.get("y444") or cf == "YUV422" and not caps.get("y422"):
         return False
     lim = min(SRC_TMDS_MAX, caps["max_tmds"])
     smax = FRL_CODES.get(caps["max_frl"], (0, 0))
@@ -331,18 +339,21 @@ def hdmi_feasible(case, mode, caps):
 def check_hdmi(case, st, scdc, caps, mode):
     reasons, notes = [], []
     cs = st.get(case["conn"], {})
-    bpc, fmt = int(cs.get("output_bpc", "0") or 0), cs.get("output_format", "")
+    bpc, fmt_raw = int(cs.get("output_bpc", "0") or 0), cs.get("output_format", "")
+    fmt = cf_canon(fmt_raw)         # the state prints 'YUV 4:4:4' (hdmi colorspace names), the property 'YUV 4:4:4' too
     rate = float(cs.get("tmds_char_rate", "0") or 0)
     req_bpc = int(case.get("bpc") or 8)
     if bpc and bpc > req_bpc:
         reasons.append(f"output_bpc {bpc} > max bpc {req_bpc}")
-    if bpc and bpc < req_bpc and case.get("cf") in ("RGB", "YUV 4:4:4"):
+    if bpc and bpc < req_bpc and cf_canon(case.get("cf")) in ("RGB", "YUV444"):
         hi = dict(case, bpc=req_bpc)
         if req_bpc == 10 and caps["dc30"] and hdmi_feasible(hi, mode, dict(caps, dc36=0)):
             notes.append(f"output_bpc {bpc} although {req_bpc} fits the link")
-    want_fmt = {"RGB": "RGB", "YUV 4:4:4": "YCbCr 4:4:4", "YUV 4:2:2": "YCbCr 4:2:2", "YUV 4:2:0": "YCbCr 4:2:0"}
-    if case.get("cf") in want_fmt and fmt and fmt != want_fmt[case["cf"]]:
-        reasons.append(f"output_format {fmt} != requested {case['cf']}")
+    want = cf_canon(case.get("cf"))
+    if want in ("RGB", "YUV444", "YUV422", "YUV420") and fmt and fmt != want:
+        reasons.append(f"output_format {fmt_raw} != requested {case['cf']}")
+    if want == "AUTO" and fmt == "YUV444" and not caps.get("y444") or want == "AUTO" and fmt == "YUV422" and not caps.get("y422"):
+        reasons.append(f"output_format {fmt_raw} picked (AUTO) but the sink EDID does not list it")
     if rate and bpc:
         exp = tmds_expected(mode["clock"], bpc, fmt)
         if abs(rate - exp) > exp * 0.005:
@@ -356,8 +367,8 @@ def check_hdmi(case, st, scdc, caps, mode):
         if frl_rate > src[0] or frl_lanes > src[1]:
             reasons.append(f"FRL {frl_rate}G x{frl_lanes} > source {SRC_FRL_MAX}")
         cap = frl_rate * frl_lanes * 1e9 * 16 / 18                   # 16b/18b; ignores RS/packet overhead
-        need = mode["clock"] * 1000.0 * (bpc or 8) * (3 if fmt in ("RGB", "YCbCr 4:4:4", "") else
-                                                      2 if fmt == "YCbCr 4:2:2" else 1.5)
+        need = mode["clock"] * 1000.0 * (bpc or 8) * (3 if fmt in ("RGB", "YUV444", "") else
+                                                      2 if fmt == "YUV422" else 1.5)
         if need > cap:
             reasons.append(f"FRL {frl_rate}Gx{frl_lanes} capacity {cap / 1e9:.2f} < stream {need / 1e9:.2f} Gbit/s")
         notes.append(f"FRL {frl_rate}Gx{frl_lanes}")
@@ -374,13 +385,13 @@ def check_hdmi(case, st, scdc, caps, mode):
         notes.append(f"TMDS {rate / 1e6:.2f}MHz")
     if bpc > 8 and fmt == "RGB" and not caps["dc30"]:
         reasons.append("deep colour RGB but sink EDID has no DC_30bit")
-    if fmt == "YCbCr 4:2:0" and bpc == 10 and not caps["dc420_30"]:
+    if fmt == "YUV420" and bpc == 10 and not caps["dc420_30"]:
         reasons.append("10 bpc 4:2:0 but sink has no DC_420_30")
     if scdc.get("_unlocked") and (frl_rate or rate > 340e6):
         reasons.append("SCDC not locked: " + ",".join(scdc["_unlocked"]))
     if scdc.get("_errors"):
         reasons.append(f"SCDC errors {scdc['_errors']}")
-    return reasons, notes, {"output_bpc": bpc, "output_format": fmt, "tmds_char_rate": int(rate),
+    return reasons, notes, {"output_bpc": bpc, "output_format": fmt_raw, "tmds_char_rate": int(rate),
                             "link": notes[0] if notes else ""}
 
 
@@ -565,6 +576,7 @@ class Runner:
         if os.path.exists(cp):
             self.calib = json.load(open(cp))
         self.cam_dev = camcheck.find() if CAM_CONN else ""
+        self.marks = None                                 # camrec.Marks when --record
         cases = info.get("_cases", [])
         cal = [c for c in cases if c["group"] == "calib"]
         self.cal_white = next((c for c in cal if c["pattern"] == "white"), None)
@@ -582,13 +594,19 @@ class Runner:
         line = f"{time.strftime('%F %T')} {msg}"
         print(line, flush=True)
         open(f"{self.out}/camera-events.log", "a").write(line + "\n")
+        if self.marks:
+            self.marks.event(msg[:200])
 
     def save_spans(self):
         json.dump({"spans": self.spans, "last_good": self.last_good}, open(self.spans_path, "w"), indent=1)
 
     def _show(self, case, tag):
         self.nctl += 1
+        if self.marks:
+            self.marks.event(f"camera control: showing {tag} pattern", 2.0)
         row = self.run_case(dict(case, _dir=f"ctl/{self.nctl:04d}-{tag}", _ctl=1))
+        if self.marks:
+            self.marks.event(f"camera control {tag}: {row['cam']}", 3.0)
         open(f"{self.out}/controls.tsv", "a").write(
             f"{time.strftime('%F %T')}\t{tag}\t{row['mode']}\t{row['cam']}\t{row['dmesg']}\t{row['reasons']}\n")
         return row
@@ -653,11 +671,22 @@ class Runner:
                    "-P", f"{case['plane']}@{crtc}:{md['hdisplay']}x{md['vdisplay']}@{case['fmt']}", "-F", "smpte,smpte"]
             p = subprocess.Popen(cmd, stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.STDOUT,
                                  text=True)
-            time.sleep(2)
-            if p.poll() is not None:
-                o = p.stdout.read()
-                return None, False, (o.strip().splitlines() or ["modetest exited"])[-1][:160], {"cmd": cmd}
-            return p, True, "", {"cmd": cmd}
+            # modetest commits asynchronously: sample nothing until the state shows the requested mode on its CRTC
+            last, t0 = "no state", time.time()
+            while time.time() - t0 < 5:
+                if p.poll() is not None:
+                    o = p.stdout.read()
+                    return None, False, (o.strip().splitlines() or ["modetest exited"])[-1][:160], {"cmd": cmd}
+                st = parse_state(rd(f"{DBG}/state"))
+                cr = st.get(st.get(c["name"], {}).get("crtc", ""), {})
+                last = f"crtc {cr.get('_id')} active={cr.get('active')} mode={cr.get('mode')}"
+                if cr.get("_id") == crtc and cr.get("active") == "1" and cr.get("mode", {}).get("clock") == md["clock"] \
+                        and cr["mode"]["h"][0] == md["hdisplay"]:
+                    return p, True, "", {"cmd": cmd}
+                time.sleep(0.05)
+            self.stop(p)
+            return None, False, f"HARNESS: modetest commit not visible in state within 5 s (wanted crtc {crtc} " \
+                f"{mode_str(md)} clock {md['clock']}; last: {last})", {"cmd": cmd}
         heads = []
 
         def head(conn, mode, plane, extra=""):
@@ -910,7 +939,9 @@ class Runner:
             row["cam"] = "uncalibrated"
             return
         code = case["idx"] if case["pattern"] == "bars" else None
-        r = camcheck.classify(self.calib, img, case["pattern"], code)
+        m = self.conns[case["conn"]]["modes"][case["mode"]]
+        mwh = (m["hdisplay"], m["vdisplay"])
+        r = camcheck.classify(self.calib, img, case["pattern"], code, mwh)
         retry = float(os.environ.get("CAM_RETRY", "6"))
         if r["verdict"] != "GOOD" and retry and "_ctl" not in case:
             # some sinks take longer to resync: look again before judging; keep the first frame as cam-first.*
@@ -920,7 +951,7 @@ class Runner:
             time.sleep(retry)
             try:
                 r2 = camcheck.classify(self.calib, camcheck.load(camcheck.capture(f"{d}/cam", self.cam_dev)),
-                                       case["pattern"], code)
+                                       case["pattern"], code, mwh)
                 r2["first"] = r["verdict"]
                 r = r2
             except RuntimeError:
@@ -987,12 +1018,16 @@ def probe(info):
 
 
 def main():
+    if sys.argv[1:2] == ["reverdict"] and len(sys.argv) == 3:
+        return reverdict(sys.argv[2])
     ap = argparse.ArgumentParser()
     ap.add_argument("--out", required=True)
     ap.add_argument("--groups", default="calib,modes,modetest,props,hdr,vrr,planes,dual")
     ap.add_argument("--conn", default="")
     ap.add_argument("--max", type=int, default=0)
     ap.add_argument("--list-only", action="store_true")
+    ap.add_argument("--record", action="store_true",
+                    help="record the webcam for the whole run to <out>/video with per-case markers (or RECORD=1)")
     ap.add_argument("--info", help="kmsctl list JSON to use instead of the live device (dry runs)")
     a = ap.parse_args()
     global LEAVE_OTHERS
@@ -1027,6 +1062,16 @@ def main():
     runner = Runner(a.out, info)
     if CAM_CONN and not runner.cam_dev:
         print(f"WARNING: CAM_CONN={CAM_CONN} but no webcam matching {camcheck.CAM_NAME!r}: no picture checks", flush=True)
+    rec_dir = f"{a.out}/video"
+    if (a.record or os.environ.get("RECORD") == "1") and not a.list_only:
+        if shutil.which("gst-launch-1.0") and camcheck.find():
+            camrec.start_background(rec_dir)
+            atexit.register(camrec.stop_background, rec_dir)
+            os.environ["CAM_REC_DIR"] = rec_dir           # camcheck.capture() takes its pictures from the recorder
+            runner.marks = camrec.Marks(rec_dir)
+            print(f"recording the webcam to {rec_dir}", flush=True)
+        else:
+            print("WARNING: --record but no gst-launch-1.0 or no webcam: not recording", flush=True)
     if os.path.exists(prog):
         i = int(rd(prog) or -1)
         if 0 <= i < len(cases) and i not in done:
@@ -1044,7 +1089,14 @@ def main():
             break
         open(prog, "w").write(str(c["idx"]))
         os.sync()
+        if runner.marks:
+            runner.marks.case_start(c["idx"], len(cases), f"{c['group']} {c['conn']}")
         row = runner.run_case(c)
+        if runner.marks:
+            runner.marks.case_end(
+                c["idx"], f"case {c['idx'] + 1}/{len(cases)} {row['group']} {row['conn']} {row['mode']}\n"
+                f"bpc={row['bpc'] or '-'} cf={row['cf'] or '-'} plane={row['plane'] or '-'} "
+                f"{row['fmt'] or '-'}/{row['mod']}", row["verdict"])
         if CAM_CONN in (c["conn"], c.get("conn2")) and c["group"] != "calib" and not c.get("skip") \
                 and row["commit"] == "ok":
             runner.cam_cases += 1
@@ -1063,8 +1115,54 @@ def main():
         os.unlink(prog)
     if runner.cam_dev and runner.calib and runner.control:
         runner.control_check(cases[-1]["idx"])          # final control closes or confirms the last span
+    if runner.marks:
+        camrec.stop_background(rec_dir)
     summarize(a.out, cases)
     return 0
+
+
+def reverdict(run):
+    """offline: re-evaluate the HDMI link verdicts (output_format / tmds / FRL / deep colour) of a finished run from
+    case/<idx>/state.txt + scdc-<conn>.txt; modetest-engine rows were sampled before the commit landed and become
+    HARNESS-ERROR (re-run them). results.tsv is rewritten (original kept as results.pre-reverdict.tsv)."""
+    info, cases = json.load(open(f"{run}/cases.json"))
+    byidx = {c["idx"]: c for c in cases}
+    conns = {c["name"]: c for c in info["connectors"]}
+    caps = {n: edid_caps(c["edid"]) for n, c in conns.items() if c["edid"]}
+    mine = re.compile(r"^[\w-]+: (output_bpc|output_format|tmds_char_rate|FRL |TMDS |deep colour|10 bpc 4:2:0|SCDC)")
+    lines = open(f"{run}/results.tsv").read().splitlines()
+    cols, out, nfix, nharn = lines[0].split("\t"), [lines[0]], 0, 0
+    for line in lines[1:]:
+        r = dict(zip(cols, line.split("\t")))
+        c = byidx.get(int(r["idx"])) if r["idx"].isdigit() else None
+        d = f"{run}/case/{int(r['idx']):04d}" if c else ""
+        if c and r["commit"] == "ok" and r["engine"] == "modetest" and r["verdict"] != "HARNESS-ERROR":
+            r["verdict"] = "HARNESS-ERROR"
+            r["reasons"] = "state sampled before the modetest commit landed; re-run with --groups modetest"
+            nharn += 1
+        elif c and r["commit"] == "ok" and r["verdict"] in ("PASS", "FAIL") and os.path.exists(f"{d}/state.txt"):
+            st = parse_state(open(f"{d}/state.txt").read())
+            old = [x for x in r["reasons"].split("; ") if x]
+            keep = [x for x in old if not mine.match(x)]
+            new = []
+            for cn, mi in ((c["conn"], c["mode"]), (c.get("conn2"), c.get("mode2"))):
+                sp = f"{d}/scdc-{cn}.txt"
+                if cn and cn.startswith("HDMI") and os.path.exists(sp):
+                    rs, _, _ = check_hdmi(c if cn == c["conn"] else {"conn": cn}, st, parse_scdc(open(sp).read()),
+                                          caps.get(cn, edid_caps("")), conns[cn]["modes"][mi])
+                    new += [f"{cn}: {x}" for x in rs]
+            if new != [x for x in old if mine.match(x)]:
+                nfix += 1
+                r["reasons"] = "; ".join(keep + new)
+                r["verdict"] = "FAIL" if keep + new else "PASS"
+                r["notes"] = (r["notes"] + "; " if r["notes"] else "") + "reverdicted offline"
+        out.append("\t".join(r.get(k, "") for k in cols))
+    if not os.path.exists(f"{run}/results.pre-reverdict.tsv"):
+        shutil.copy(f"{run}/results.tsv", f"{run}/results.pre-reverdict.tsv")
+    open(f"{run}/results.tsv", "w").write("\n".join(out) + "\n")
+    summarize(run, cases)
+    print(f"reverdict: {nfix} link verdicts changed, {nharn} modetest rows -> HARNESS-ERROR "
+          f"(re-run --groups modetest); original kept as results.pre-reverdict.tsv")
 
 
 def summarize(out, cases):

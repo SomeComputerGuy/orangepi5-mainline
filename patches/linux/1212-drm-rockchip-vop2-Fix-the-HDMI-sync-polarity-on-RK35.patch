@@ -1,0 +1,51 @@
+From 1ea71b7e025279f87735f2001b753f0885c0dad5 Mon Sep 17 00:00:00 2001
+From: Arun Iyengar <aiyengar1990@gmail.com>
+Date: Sat, 31 Oct 2026 20:36:35 +0000
+Subject: [PATCH 2/5] drm/rockchip: vop2: Fix the HDMI sync polarity on RK3588
+
+rk3588_set_intf_mux() passes the POLFLAG bits of the mode to
+rk3588_get_hdmi_pol(), which decodes them as DRM mode flags: the
+VSYNC_POSITIVE bit is taken for DRM_MODE_FLAG_NHSYNC and POLFLAG_DCLK_INV
+for DRM_MODE_FLAG_NVSYNC. As a result GRF_VO1_CON0 marks the HSYNC of
+every +HSync/+VSync mode (e.g. all 1080p, 2160p CTA modes) as negative
+and both syncs of -HSync/-VSync modes (e.g. 720x480, 640x480) as
+positive.
+
+The bits in GRF_VO1_CON0 are set for a negative sync; that is how the
+vendor kernel programs them (vop2_get_hdmi_pol(), called with the mode
+flags, sets them for DRM_MODE_FLAG_NHSYNC/NVSYNC on RK3588). Decode the
+POLFLAG bits accordingly.
+
+Fixes: 5a028e8f062f ("drm/rockchip: vop2: Add support for rk3588")
+Assisted-by: Claude:claude-opus-5-5
+---
+ drivers/gpu/drm/rockchip/rockchip_vop2_reg.c | 10 +++++++---
+ 1 file changed, 7 insertions(+), 3 deletions(-)
+
+diff --git a/drivers/gpu/drm/rockchip/rockchip_vop2_reg.c b/drivers/gpu/drm/rockchip/rockchip_vop2_reg.c
+index 7bd4137..83203d1 100644
+--- a/drivers/gpu/drm/rockchip/rockchip_vop2_reg.c
++++ b/drivers/gpu/drm/rockchip/rockchip_vop2_reg.c
+@@ -1687,12 +1687,16 @@ static u32 rk3588_get_mipi_port_mux(int vp_id)
+ 		return 0;
+ }
+ 
+-static u32 rk3588_get_hdmi_pol(u32 flags)
++/*
++ * The HDMI sync polarity bits in GRF_VO1_CON0 are set for an active low
++ * (negative) sync.
++ */
++static u32 rk3588_get_hdmi_pol(u32 polflags)
+ {
+ 	u32 val;
+ 
+-	val = (flags & DRM_MODE_FLAG_NHSYNC) ? BIT(HSYNC_POSITIVE) : 0;
+-	val |= (flags & DRM_MODE_FLAG_NVSYNC) ? BIT(VSYNC_POSITIVE) : 0;
++	val = (polflags & BIT(HSYNC_POSITIVE)) ? 0 : BIT(HSYNC_POSITIVE);
++	val |= (polflags & BIT(VSYNC_POSITIVE)) ? 0 : BIT(VSYNC_POSITIVE);
+ 
+ 	return val;
+ }
+-- 
+2.55.0
+

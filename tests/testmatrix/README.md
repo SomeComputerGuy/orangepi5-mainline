@@ -16,11 +16,13 @@ Display matrix with objective verification. Runs ON the board as root, unattende
 recorded as FAIL). Needs the KMS device to itself: pass --stop-gdm to stop gdm for the run (it is
 started again on exit), or stop it yourself.
 
-sudo ./display-matrix.sh [--stop-gdm] [--out DIR] [--cam CONN] [--groups LIST] [--conn LIST] [--max N]
+sudo ./display-matrix.sh [--stop-gdm] [--out DIR] [--cam CONN] [--groups LIST] [--conn LIST] [--max N] [--record]
 sudo ./display-matrix.sh --list            # print the cases, run nothing
 sudo ./display-matrix.sh --summary         # rebuild summary.txt / results-final.tsv
 sudo ./display-matrix.sh --fresh ...       # forget a previous run in DIR
 
+--record (or RECORD=1): record the webcam for the whole run to DIR/video with a marker per case
+(needs CAM_CONN; see README, review with tools/make-review-video.sh on the host).
 Groups: calib (webcam: white/black + known-good/known-bad modes), modes (every EDID mode, kmsctl),
 modetest (every mode again through modetest -a with an explicit -P plane), props (every mode x max bpc
 x color format), hdr, vrr, planes (every plane x format x modifier at the preferred mode), dual.
@@ -52,15 +54,19 @@ codec x decode/encode x hardware block x userspace x display output, plus concur
 another job runs, v4l2-compliance and fluster (conformance MD5s; not duplicated here). Every hardware
 path is proven by the block's IRQ count rising (no silent software fallback). Logic from
 work/_out/modesweep/codecsweep.sh.
-sudo ./media-matrix.sh [--stop-gdm] [--out DIR] [--groups LIST] [--res LIST] [--calib calib.json]
+sudo ./media-matrix.sh [--stop-gdm] [--out DIR] [--groups LIST] [--res LIST] [--calib calib.json] [--record]
 Groups (default all): dec display enc jpeg rga iep concurrent openclose compliance fluster
 Env: SRC_YUV (NV12 3840x2160 clip, default $HOME/demo/yacht_2160p.nv12; else videotestsrc),
 DEMO (dir with rkvenc-enc / v4l2-h264-slenc, default $HOME/demo), FLUSTER_DIR, FLUSTER_SUITES,
-CAM_CONN + --calib (webcam check of decoded SMPTE bars on that output), PSNR_MIN (30).
+CAM_CONN + --calib (webcam check of decoded SMPTE bars on that output), PSNR_MIN (30),
+--record / RECORD=1 (record the webcam to DIR/video, one marker per row; see README).
 Output: DIR/results.tsv (id, verdict, detail), DIR/summary.txt, DIR/work (streams, logs).
 ```
 
 ### [`lib/camcheck.py`](lib/camcheck.py)
+
+
+### [`lib/camrec.py`](lib/camrec.py)
 
 
 ### [`lib/dmatrix.py`](lib/dmatrix.py)

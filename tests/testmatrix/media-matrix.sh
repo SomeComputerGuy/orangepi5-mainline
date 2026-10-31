@@ -5,31 +5,39 @@
 # another job runs, v4l2-compliance and fluster (conformance MD5s; not duplicated here). Every hardware
 # path is proven by the block's IRQ count rising (no silent software fallback). Logic from
 # work/_out/modesweep/codecsweep.sh.
-#   sudo ./media-matrix.sh [--stop-gdm] [--out DIR] [--groups LIST] [--res LIST] [--calib calib.json]
+#   sudo ./media-matrix.sh [--stop-gdm] [--out DIR] [--groups LIST] [--res LIST] [--calib calib.json] [--record]
 # Groups (default all): dec display enc jpeg rga iep concurrent openclose compliance fluster
 # Env: SRC_YUV (NV12 3840x2160 clip, default $HOME/demo/yacht_2160p.nv12; else videotestsrc),
 #   DEMO (dir with rkvenc-enc / v4l2-h264-slenc, default $HOME/demo), FLUSTER_DIR, FLUSTER_SUITES,
-#   CAM_CONN + --calib (webcam check of decoded SMPTE bars on that output), PSNR_MIN (30).
+#   CAM_CONN + --calib (webcam check of decoded SMPTE bars on that output), PSNR_MIN (30),
+#   --record / RECORD=1 (record the webcam to DIR/video, one marker per row; see README).
 # Output: DIR/results.tsv (id, verdict, detail), DIR/summary.txt, DIR/work (streams, logs).
 set -uo pipefail
 [ "$(id -u)" -eq 0 ] || exec sudo -E "$0" "$@"
 D=$(cd "$(dirname "$0")" && pwd)
 OUT=/var/tmp/testmatrix/media; GROUPS_SEL="dec display enc jpeg rga iep concurrent openclose compliance fluster"
-RES="640x360 1280x720 1920x1080 2560x1440 3840x2160"; STOP_GDM=0; CALIB=""
+RES="640x360 1280x720 1920x1080 2560x1440 3840x2160"; STOP_GDM=0; CALIB=""; REC=${RECORD:-0}
 while [ $# -gt 0 ]; do
   case $1 in
     --out) OUT=$2; shift ;; --groups) GROUPS_SEL=${2//,/ }; shift ;; --res) RES=${2//,/ }; shift ;;
-    --calib) CALIB=$2; shift ;; --stop-gdm) STOP_GDM=1 ;;
-    -h|--help) sed -n '2,14p' "$0"; exit 0 ;; *) echo "unknown option $1" >&2; exit 2 ;;
+    --calib) CALIB=$2; shift ;; --stop-gdm) STOP_GDM=1 ;; --record) REC=1 ;;
+    -h|--help) sed -n '2,15p' "$0"; exit 0 ;; *) echo "unknown option $1" >&2; exit 2 ;;
   esac; shift
 done
 W=$OUT/work; R=$OUT/results.tsv; mkdir -p "$W"; [ -s "$R" ] || printf 'id\tverdict\tdetail\n' > "$R"
 SRC_YUV=${SRC_YUV:-$HOME/demo/yacht_2160p.nv12}; DEMO=${DEMO:-$HOME/demo}; PSNR_MIN=${PSNR_MIN:-30}
 N=60          # frames per bit-exact stream
+if [ "$REC" = 1 ]; then   # one recorder owns the webcam for the whole run; camcheck.py takes its pictures from it
+  if [ -n "${CAM_CONN:-}" ] && command -v gst-launch-1.0 >/dev/null; then
+    export CAM_REC_DIR=$OUT/video; mkdir -p "$CAM_REC_DIR"
+    python3 -I -c "import sys; sys.path.insert(0,'$D/lib'); import camrec; camrec.start_background('$CAM_REC_DIR')"
+    trap 'python3 -I "$D/lib/camrec.py" stop "$OUT/video"' EXIT
+  else echo "--record needs CAM_CONN and gst-launch-1.0: not recording"; REC=0; fi
+fi
 export GST_DEBUG_NO_COLOR=1
 
 if pgrep -x 'gnome-shell|Xorg|weston|mutter' >/dev/null; then
-  if [ $STOP_GDM = 1 ]; then trap 'systemctl start gdm' EXIT; systemctl stop gdm; sleep 3
+  if [ $STOP_GDM = 1 ]; then trap 'systemctl start gdm; [ "$REC" = 1 ] && python3 -I "$D/lib/camrec.py" stop "$OUT/video"' EXIT; systemctl stop gdm; sleep 3
   else echo "a compositor holds the display: display tests will be SKIP (use --stop-gdm)"; NODISPLAY=1; fi
 fi
 NODISPLAY=${NODISPLAY:-0}
@@ -39,7 +47,8 @@ have() { command -v "$1" >/dev/null; }
 gst_has() { gst-inspect-1.0 "$1" >/dev/null 2>&1; }
 want() { [[ " $GROUPS_SEL " == *" $1 "* ]]; }
 done_id() { grep -q "^$1	" "$R"; }
-row() { printf '%s\t%s\t%s\n' "$1" "$2" "$3" >> "$R"; printf '%-62s %-5s %s\n' "$1" "$2" "$3"; }
+row() { printf '%s\t%s\t%s\n' "$1" "$2" "$3" >> "$R"; printf '%-62s %-5s %s\n' "$1" "$2" "$3"
+  [ "$REC" = 1 ] && python3 -I "$D/lib/camrec.py" span "$OUT/video" "$2" "$1: ${3:0:100}" >/dev/null 2>&1; return 0; }
 skip() { done_id "$1" || row "$1" SKIP "$2"; }
 node() { for d in /sys/class/video4linux/video*; do grep -q "$1" "$d/name" && { echo "/dev/${d##*/}"; return; }; done; }
 devaddr() { local n=${1#/dev/}; basename "$(readlink -f "/sys/class/video4linux/$n/device")" | cut -d. -f1; }

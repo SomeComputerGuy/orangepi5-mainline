@@ -5,11 +5,13 @@
 # recorded as FAIL). Needs the KMS device to itself: pass --stop-gdm to stop gdm for the run (it is
 # started again on exit), or stop it yourself.
 #
-#   sudo ./display-matrix.sh [--stop-gdm] [--out DIR] [--cam CONN] [--groups LIST] [--conn LIST] [--max N]
+#   sudo ./display-matrix.sh [--stop-gdm] [--out DIR] [--cam CONN] [--groups LIST] [--conn LIST] [--max N] [--record]
 #   sudo ./display-matrix.sh --list            # print the cases, run nothing
 #   sudo ./display-matrix.sh --summary         # rebuild summary.txt / results-final.tsv
 #   sudo ./display-matrix.sh --fresh ...       # forget a previous run in DIR
 #
+#   --record (or RECORD=1): record the webcam for the whole run to DIR/video with a marker per case
+#   (needs CAM_CONN; see README, review with tools/make-review-video.sh on the host).
 # Groups: calib (webcam: white/black + known-good/known-bad modes), modes (every EDID mode, kmsctl),
 #   modetest (every mode again through modetest -a with an explicit -P plane), props (every mode x max bpc
 #   x color format), hdr, vrr, planes (every plane x format x modifier at the preferred mode), dual.
@@ -30,7 +32,8 @@ while [ $# -gt 0 ]; do
     --list) MODE=list ;;
     --summary) MODE=summary ;;
     --fresh) FRESH=1 ;;
-    -h|--help) sed -n '2,20p' "$0"; exit 0 ;;
+    --record) ARGS+=(--record) ;;
+    -h|--help) sed -n '2,22p' "$0"; exit 0 ;;
     *) echo "unknown option $1" >&2; exit 2 ;;
   esac; shift
 done

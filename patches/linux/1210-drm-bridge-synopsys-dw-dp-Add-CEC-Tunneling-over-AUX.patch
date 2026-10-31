@@ -1,0 +1,107 @@
+From: Arun Iyengar <aiyengar1990@gmail.com>
+Subject: [PATCH] drm/bridge: synopsys: dw-dp: Add CEC-Tunneling-over-AUX support
+
+Some DisplayPort to HDMI protocol converters (PCONs) can tunnel HDMI CEC
+over the DP AUX channel. The DRM DP helpers already implement this, and
+i915, nouveau and amdgpu use them; dw-dp does not, so no CEC adapter is
+ever created for a converter that supports it.
+
+Hook the helpers up the same way i915 does:
+
+ - register the connector with the CEC helper once it is known (the
+   bridge connector is only passed to the .edid_read hook, so do it on
+   the first EDID read) and unregister it on bridge detach, before the
+   AUX channel goes away;
+ - set the physical address from the EDID after reading it, and unset it
+   when the EDID read fails or the sink is no longer detected, which
+   lets the helper drop the adapter when the DPCD no longer advertises
+   CEC;
+ - call drm_dp_cec_irq() on short HPD pulses so that CEC messages
+   signalled through DP_DEVICE_SERVICE_IRQ_VECTOR are processed.
+
+The helpers are no-ops unless CONFIG_DRM_DISPLAY_DP_AUX_CEC is enabled,
+and the adapter is only created when the sink advertises the CEC
+tunneling capability in the DPCD.
+
+Assisted-by: Claude:claude-opus-5-5
+---
+ drivers/gpu/drm/bridge/synopsys/dw-dp.c | 32 ++++++++++++++++++++++++++++++--
+ 1 file changed, 30 insertions(+), 2 deletions(-)
+
+diff --git a/drivers/gpu/drm/bridge/synopsys/dw-dp.c b/drivers/gpu/drm/bridge/synopsys/dw-dp.c
+index 646ea416dce4..48361079963f 100644
+--- a/drivers/gpu/drm/bridge/synopsys/dw-dp.c
++++ b/drivers/gpu/drm/bridge/synopsys/dw-dp.c
+@@ -360,6 +360,7 @@ struct dw_dp {
+ 	int audio_channel_allocation;
+ 	int audio_sample_width;
+ 	bool audio_muted;
++	bool cec_registered;
+ 	int audio_sdp_nr;
+ 	/* Serialize hpd status access */
+ 	struct mutex irq_lock;
+@@ -2214,12 +2215,17 @@ static enum drm_connector_status dw_dp_bridge_detect(struct drm_bridge *bridge,
+ 		return connector_status_disconnected;
+ 
+ 	if (!dw_dp_hpd_detect(dp))
+-		return connector_status_disconnected;
++		goto disconnected;
+ 
+ 	if (!dw_dp_hpd_detect_link(dp, connector))
+-		return connector_status_disconnected;
++		goto disconnected;
+ 
+ 	return connector_status_connected;
++
++disconnected:
++	drm_dp_cec_unset_edid(&dp->aux);
++
++	return connector_status_disconnected;
+ }
+ 
+ static const struct drm_edid *dw_dp_bridge_edid_read(struct drm_bridge *bridge,
+@@ -2239,6 +2245,20 @@ static const struct drm_edid *dw_dp_bridge_edid_read(struct drm_bridge *bridge,
+ 
+ 	dw_dp_update_dfp(dp, edid);
+ 
++	/*
++	 * The CEC adapter needs the connector, which is only known once the
++	 * bridge connector calls into us.
++	 */
++	if (!dp->cec_registered) {
++		drm_dp_cec_register_connector(&dp->aux, connector);
++		dp->cec_registered = true;
++	}
++
++	if (edid)
++		drm_dp_cec_set_edid(&dp->aux, drm_edid_raw(edid));
++	else
++		drm_dp_cec_unset_edid(&dp->aux);
++
+ 	return edid;
+ }
+ 
+@@ -2416,6 +2436,12 @@ static void dw_dp_bridge_detach(struct drm_bridge *bridge)
+ 
+ 	disable_irq(dp->irq);
+ 	cancel_work_sync(&dp->hpd_work);
++
++	if (dp->cec_registered) {
++		drm_dp_cec_unregister_connector(&dp->aux);
++		dp->cec_registered = false;
++	}
++
+ 	drm_dp_aux_unregister(&dp->aux);
+ 
+ 	if (!dp->usbc_mode)
+@@ -2557,6 +2583,8 @@ static void dw_dp_hpd_work(struct work_struct *work)
+ 	}
+ 
+ 	if (!long_hpd) {
++		drm_dp_cec_irq(&dp->aux);
++
+ 		if (dw_dp_needs_link_retrain(dp)) {
+ 			ret = dw_dp_link_retrain(dp);
+ 			if (ret)
+-- 
+2.50.0
