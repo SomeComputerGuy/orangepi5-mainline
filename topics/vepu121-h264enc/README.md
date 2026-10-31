@@ -1,6 +1,6 @@
 # vepu121-h264enc: H.264 stateless encode on the RK3588 VPU121 VEPU2 (hantro) on Paul Kocialkowski's H.264 encode uAPI RFC
 
-- Workspace branch: `opi5/vepu121-h264enc` (exported 2026-10-30)
+- Workspace branch: `opi5/vepu121-h264enc` (exported 2026-10-31)
 - Kernel fork branch: `opi5/vepu121-h264enc` (see PUBLISH.md)
 - Sits on: `hantro-robust-mc` (base commit `e170bd977f2a`)
 - Hardware test: yes: encodes on the board, decodes cleanly in FFmpeg

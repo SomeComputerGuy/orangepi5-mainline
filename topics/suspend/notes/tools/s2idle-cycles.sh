@@ -2,7 +2,8 @@
 # SPDX-License-Identifier: GPL-2.0
 # Fast s2idle cycling proof: N cycles of real s2idle (default console, no
 # pm_print_times), RTC wake, and device checks after every resume.
-# usage: sudo [COPY_DIR=/mnt/extreme] s2idle-cycles.sh <N> [logdir]
+# usage: sudo [COPY_DIR=/mnt/extreme] [USB3_WARN=1] s2idle-cycles.sh <N> [logdir]
+# USB3_WARN: a lost SuperSpeed link is logged as WARN instead of failing the cycle.
 # COPY_DIR: a directory on a mounted filesystem of the USB3 drive; each cycle
 # starts a 256 MiB file copy into it just before suspend and checks the copy
 # after resume (never writes the raw block device).
@@ -36,7 +37,10 @@ for k in $(seq 1 "$N"); do
 	irq=$(cat /sys/power/pm_wakeup_irq 2>/dev/null)
 	fail=""
 	[ $rc = 0 ] || fail="$fail rtcwake=$rc"
-	u=$(lsusb -t | grep -c "5000M"); [ "$u" -ge "$usb3_want" ] || fail="$fail usb3=$u/$usb3_want"
+	u=$(lsusb -t | grep -c "5000M"); warn=""
+	if [ "$u" -lt "$usb3_want" ]; then
+		if [ -n "$USB3_WARN" ]; then warn=" WARN usb3=$u/$usb3_want"; else fail="$fail usb3=$u/$usb3_want"; fi
+	fi
 	[ "$(cat $(ls -d /sys/class/drm/card*-DP-1 | head -1)/status)" = "$dp_want" ] || fail="$fail DP-1"
 	[ "$(cat $(ls -d /sys/class/drm/card*-HDMI-A-1 | head -1)/status)" = "$hdmi_want" ] || fail="$fail HDMI"
 	dd if=/dev/sda of=/dev/null bs=1M count=64 iflag=direct status=none skip=$((RANDOM % 2000)) || fail="$fail sata"
@@ -52,6 +56,6 @@ for k in $(seq 1 "$N"); do
 	e=$(dmesg | sed -n "/cycle $k start/,\$p" | grep -cE "AUX reply|failed to enable link|${XHC_OK:+NEVERMATCH}xHC error in resume|BUG|Oops|WARNING")
 	[ "$e" = 0 ] || fail="$fail dmesg-errors=$e"
 	if [ -n "$fail" ]; then echo "cycle $k: FAIL$fail (${ms} ms, irq $irq)" >> "$L"; exit 1; fi
-	echo "cycle $k: OK (${ms} ms total, wake irq $irq)" >> "$L"
+	echo "cycle $k: OK (${ms} ms total, wake irq $irq)$warn" >> "$L"
 done
 echo "### $(date -Is) done: $N/$N OK" >> "$L"

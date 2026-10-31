@@ -1,6 +1,6 @@
 # dw-dp-redetect: PARKED, NOT IN THE IMAGE: dw-dp re-detect after a missed HPD (patch 0275)
 
-- Workspace branch: `opi5/dw-dp-redetect-7.3` (exported 2026-10-30)
+- Workspace branch: `opi5/dw-dp-redetect-7.3` (exported 2026-10-31)
 - Kernel fork branch: `opi5/dw-dp-redetect` (see PUBLISH.md)
 - Sits on: `dp-smooth` (base commit `24b75a5854fb`)
 - Hardware test: not needed: the USBDP re-init (0270 v2) fixed the boot-time AUX -110 it targeted

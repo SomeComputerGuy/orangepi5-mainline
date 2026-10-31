@@ -1,6 +1,6 @@
 # suspend-k3: Suspend fixes on the integration stack: cpufreq unlisted-frequency check deferred on resume, dw_dp system sleep ops
 
-- Workspace branch: `opi5/suspend-test-7.3-k3` (exported 2026-10-30)
+- Workspace branch: `opi5/suspend-test-7.3-k3` (exported 2026-10-31)
 - Kernel fork branch: `opi5/suspend-k3` (see PUBLISH.md)
 - Sits on: `integration` (base commit `1afa8d268718`)
 - Hardware test: partly: in patches/linux (1101-1102); s2idle resume hang with a fast console still open (see topics/suspend)

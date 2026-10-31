@@ -30,9 +30,9 @@ Assisted-by: Claude:claude-opus-5-5
 ---
  .../rockchip/rkvdec/rkvdec-vdpu381-h264.c     |   5 +-
  .../rockchip/rkvdec/rkvdec-vdpu381-hevc.c     |   5 +-
- .../media/platform/rockchip/rkvdec/rkvdec.c   | 193 ++++++++++++++++--
+ .../media/platform/rockchip/rkvdec/rkvdec.c   | 202 ++++++++++++++++--
  .../media/platform/rockchip/rkvdec/rkvdec.h   |   9 +-
- 4 files changed, 196 insertions(+), 16 deletions(-)
+ 4 files changed, 205 insertions(+), 16 deletions(-)
 
 diff --git a/drivers/media/platform/rockchip/rkvdec/rkvdec-vdpu381-h264.c b/drivers/media/platform/rockchip/rkvdec/rkvdec-vdpu381-h264.c
 index 69967c34fffa..85206ed7322e 100644
@@ -81,7 +81,7 @@ index beb876a909a3..d67e9e05a2dc 100644
  	rkvdec_schedule_watchdog(core, hevc_ctx->regs.common.reg032_timeout_threshold);
  
 diff --git a/drivers/media/platform/rockchip/rkvdec/rkvdec.c b/drivers/media/platform/rockchip/rkvdec/rkvdec.c
-index cad725ba8f46..b3cc04b92b14 100644
+index 2bbf2a9f7e26..878af5815ea0 100644
 --- a/drivers/media/platform/rockchip/rkvdec/rkvdec.c
 +++ b/drivers/media/platform/rockchip/rkvdec/rkvdec.c
 @@ -1413,6 +1413,7 @@ static void rkvdec_job_hw_done(struct rkvdec_core *core,
@@ -157,7 +157,7 @@ index cad725ba8f46..b3cc04b92b14 100644
  }
  
  /* Is @buf a reference of a frame of @ctx that is still being decoded? */
-@@ -1681,6 +1694,17 @@ static void rkvdec_device_run(void *priv)
+@@ -1684,6 +1697,17 @@ static void rkvdec_device_run(void *priv)
  	struct rkvdec_job *job;
  	int ret;
  
@@ -175,7 +175,7 @@ index cad725ba8f46..b3cc04b92b14 100644
  	scoped_guard(mutex, &ctx->done_lock)
  		job = rkvdec_job_start(ctx);
  	if (WARN_ON(!job)) {
-@@ -1738,6 +1762,11 @@ static void rkvdec_device_run(void *priv)
+@@ -1741,6 +1765,11 @@ static void rkvdec_device_run(void *priv)
  	if (ret)
  		goto err;
  
@@ -187,7 +187,7 @@ index cad725ba8f46..b3cc04b92b14 100644
  	ctx->core = NULL;
  	ctx->job = NULL;
  	rkvdec_job_started(job);
-@@ -2154,6 +2183,139 @@ static bool rkvdec_core_recover(struct rkvdec_core *core)
+@@ -2174,6 +2203,148 @@ static bool rkvdec_core_recover(struct rkvdec_core *core)
  	return idle;
  }
  
@@ -231,6 +231,15 @@ index cad725ba8f46..b3cc04b92b14 100644
 +
 +	/* A failed job holds the runtime PM references of all the cores. */
 +	powered = !rkvdec_ccu_power_get(rkvdec);
++
++	/*
++	 * Force all the cores idle in the CCU first: a core that waits for a
++	 * failed one can then finish its job, see rkvdec_core_recover().
++	 */
++	for (i = 0; i < rkvdec->core_count; i++)
++		if (powered || rkvdec->cores[i]->needs_reset)
++			rkvdec_ccu_disconnect(rkvdec->ccu, rkvdec->cores[i]);
++
 +	for (i = 0; i < rkvdec->core_count; i++) {
 +		struct rkvdec_core *core = rkvdec->cores[i];
 +
@@ -327,7 +336,7 @@ index cad725ba8f46..b3cc04b92b14 100644
  /*
   * Completes the job of @core with @state, unless the watchdog already did or
   * the core has no job: the interrupt status is acknowledged in any case, a
-@@ -2179,8 +2341,8 @@ static void rkvdec_irq_job_done(struct rkvdec_core *core,
+@@ -2202,8 +2373,8 @@ static void rkvdec_irq_job_done(struct rkvdec_core *core,
  	if (WARN_ON(!ctx))
  		return;
  
@@ -338,7 +347,7 @@ index cad725ba8f46..b3cc04b92b14 100644
  	rkvdec_job_hw_done(core, state, true);
  }
  
-@@ -2309,6 +2471,7 @@ static void rkvdec_watchdog_func(struct work_struct *work)
+@@ -2332,6 +2503,7 @@ static void rkvdec_watchdog_func(struct work_struct *work)
  {
  	struct rkvdec_core *core;
  	struct rkvdec_ctx *ctx;
@@ -346,7 +355,7 @@ index cad725ba8f46..b3cc04b92b14 100644
  
  	core = container_of(to_delayed_work(work), struct rkvdec_core,
  			      watchdog_work);
-@@ -2317,9 +2480,10 @@ static void rkvdec_watchdog_func(struct work_struct *work)
+@@ -2340,9 +2512,10 @@ static void rkvdec_watchdog_func(struct work_struct *work)
  		dev_err_ratelimited(core->dev, "Frame processing timed out!\n");
  		/* No interrupt handler on this core while it's stopped. */
  		disable_irq(core->irq);
@@ -359,7 +368,7 @@ index cad725ba8f46..b3cc04b92b14 100644
  	}
  }
  
-@@ -2747,6 +2911,7 @@ static void rkvdec_unbind(struct device *dev)
+@@ -2772,6 +2945,7 @@ static void rkvdec_unbind(struct device *dev)
  
  	for (i = 0; i < rkvdec->core_count; i++)
  		cancel_delayed_work_sync(&rkvdec->cores[i]->watchdog_work);
@@ -367,7 +376,7 @@ index cad725ba8f46..b3cc04b92b14 100644
  
  	rkvdec_v4l2_cleanup(rkvdec);
  
-@@ -2812,6 +2977,8 @@ static int rkvdec_probe(struct platform_device *pdev)
+@@ -2837,6 +3011,8 @@ static int rkvdec_probe(struct platform_device *pdev)
  
  	mutex_init(&rkvdec->vdev_lock);
  	spin_lock_init(&rkvdec->cores_lock);
@@ -377,10 +386,10 @@ index cad725ba8f46..b3cc04b92b14 100644
  	rkvdec->next_film_idx = 1;
  
 diff --git a/drivers/media/platform/rockchip/rkvdec/rkvdec.h b/drivers/media/platform/rockchip/rkvdec/rkvdec.h
-index 0b11f0dc8156..7632dc9748c3 100644
+index 8b812c5b339c..8a5b4e6d6118 100644
 --- a/drivers/media/platform/rockchip/rkvdec/rkvdec.h
 +++ b/drivers/media/platform/rockchip/rkvdec/rkvdec.h
-@@ -166,6 +166,7 @@ struct rkvdec_coded_fmt_desc {
+@@ -167,6 +167,7 @@ struct rkvdec_coded_fmt_desc {
   *	      finished, so the next frame may start before this one is done
   * @hw_done: the hardware is done with the frame
   * @busy: the m2m state of the job is being changed, don't complete it
@@ -388,7 +397,7 @@ index 0b11f0dc8156..7632dc9748c3 100644
   * @dst_shared: an earlier job wrote @dst too (the other field of the frame)
   *		and left returning it to this one
   * @dst_error: an earlier job that wrote @dst failed
-@@ -187,6 +188,7 @@ struct rkvdec_job {
+@@ -188,6 +189,7 @@ struct rkvdec_job {
  	bool detached;
  	bool hw_done;
  	bool busy;
@@ -396,15 +405,15 @@ index 0b11f0dc8156..7632dc9748c3 100644
  	bool dst_shared;
  	bool dst_error;
  	unsigned int num_refs;
-@@ -212,6 +214,7 @@ struct rkvdec_core {
- 	bool broken;
+@@ -214,6 +216,7 @@ struct rkvdec_core {
+ 	bool stopped;
  	struct gen_pool *sram_pool;
  	struct iommu_domain *empty_domain;
 +	bool needs_reset;
  	struct rkvdec_rcb_config *rcb_config;
  	struct rkvdec_ctx *curr_ctx;
  	struct rkvdec_job *job;
-@@ -238,6 +241,10 @@ struct rkvdec_dev {
+@@ -240,6 +243,10 @@ struct rkvdec_dev {
  	struct rkvdec_ccu *ccu;
  	struct ida film_ida;
  	int next_film_idx;
@@ -415,7 +424,7 @@ index 0b11f0dc8156..7632dc9748c3 100644
  };
  
  struct rkvdec_ctx {
-@@ -289,7 +296,7 @@ void rkvdec_memcpy_toio(void __iomem *dst, void *src, size_t len);
+@@ -291,7 +298,7 @@ void rkvdec_memcpy_toio(void __iomem *dst, void *src, size_t len);
  void rkvdec_schedule_watchdog(struct rkvdec_core *core, u32 timeout_threshold);
  void rkvdec_job_add_ref(struct rkvdec_ctx *ctx, const struct vb2_buffer *ref);
  void rkvdec_job_add_poc(struct rkvdec_ctx *ctx, s32 poc, bool ref);

@@ -1,6 +1,6 @@
 # rkvenc-hevc: HEVC encoding for the VEPU580 driver (uses hevc-enc-uapi)
 
-- Workspace branch: `opi5/rkvenc-hevc-7.3` (exported 2026-10-30)
+- Workspace branch: `opi5/rkvenc-hevc-7.3` (exported 2026-10-31)
 - Kernel fork branch: `opi5/rkvenc-hevc` (see PUBLISH.md)
 - Sits on: `rkvenc` (base commit `c12698a646ee`)
 - Hardware test: not yet: compile- and KUnit-tested only

@@ -1,0 +1,4 @@
+OHCI root hubs: usb3(fc840000.usb) usb4(fc8c0000.usb) 
+usb3: status=suspended active_ms=186391 suspended_ms=408358
+usb4: status=suspended active_ms=186476 suspended_ms=408327
+OHCI runtime PM: 20/20 cycles OK

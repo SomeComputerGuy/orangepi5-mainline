@@ -1,6 +1,6 @@
 # audio: Audio: dw-hdmi-qp N/CTS after a link rate change, DP0 audio for RK3588 / Orange Pi 5
 
-- Workspace branch: `opi5/audio-7.3` (exported 2026-10-30)
+- Workspace branch: `opi5/audio-7.3` (exported 2026-10-31)
 - Kernel fork branch: `opi5/audio` (see PUBLISH.md)
 - Sits on: `integration` (base commit `1afa8d268718`)
 - Hardware test: partly: HDMI audible through FRL/TMDS mode changes; DP audio signal-level only; headphone jack not checked by ear

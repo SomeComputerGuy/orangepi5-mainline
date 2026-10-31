@@ -4,3 +4,4 @@
 ours/0001-media-rkvdec-Handle-interrupts-of-a-core-that-has-no.patch 6861a9de7709e61cb5689a9cae80c9dcc64f450f
 ours/0002-media-rkvdec-Reset-a-core-whose-job-failed-or-timed-.patch 5de0f1e64e928bb8054a846cd3f66622c5762abf
 ours/0003-iommu-rockchip-Don-t-walk-a-page-table-that-a-reset-.patch ef49dbd97305832b1cadb3da5c02d55f45eeb49b
+ours/0004-media-rkvdec-Let-a-timed-out-core-finish-its-job-bef.patch eaa2ac11332a44e467e2017055cffe3947f4dac3

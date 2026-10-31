@@ -1,6 +1,6 @@
 # rkvenc: VEPU580 (rkvenc) V4L2 stateless H.264 encoder driver
 
-- Workspace branch: `opi5/rkvenc-7.3` (exported 2026-10-30)
+- Workspace branch: `opi5/rkvenc-7.3` (exported 2026-10-31)
 - Kernel fork branch: `opi5/rkvenc` (see PUBLISH.md)
 - Sits on: `board-sata` (base commit `5e33b74b04cf`)
 - Hardware test: yes: working on the board, both cores in parallel, 0 decode errors

@@ -444,7 +444,7 @@ index c22b48d7b0bc..e06a915f3731 100644
  
  	return 0;
 diff --git a/drivers/media/platform/rockchip/rkvdec/rkvdec.c b/drivers/media/platform/rockchip/rkvdec/rkvdec.c
-index 3adf07856b4d..b16b915470a6 100644
+index ef528da76c5c..37ea0b4dc731 100644
 --- a/drivers/media/platform/rockchip/rkvdec/rkvdec.c
 +++ b/drivers/media/platform/rockchip/rkvdec/rkvdec.c
 @@ -34,6 +34,7 @@
@@ -608,7 +608,7 @@ index 3adf07856b4d..b16b915470a6 100644
  }
  
  void rkvdec_run_preamble(struct rkvdec_ctx *ctx, struct rkvdec_run *run)
-@@ -1474,9 +1578,21 @@ static void rkvdec_device_run(void *priv)
+@@ -1477,9 +1581,21 @@ static void rkvdec_device_run(void *priv)
  		goto out;
  	}
  
@@ -630,7 +630,7 @@ index 3adf07856b4d..b16b915470a6 100644
  	if (!rkvdec_rcb_buf_validate_size(ctx)) {
  		rkvdec_free_rcb(ctx->dev, core);
  
-@@ -1620,6 +1736,12 @@ static int rkvdec_open(struct file *filp)
+@@ -1623,6 +1739,12 @@ static int rkvdec_open(struct file *filp)
  	init_waitqueue_head(&ctx->jobs_wq);
  	mutex_init(&ctx->done_lock);
  	ctx->num_job_slots = 1;
@@ -643,7 +643,7 @@ index 3adf07856b4d..b16b915470a6 100644
  	rkvdec_reset_coded_fmt(ctx);
  	rkvdec_reset_decoded_fmt(ctx);
  	v4l2_fh_init(&ctx->fh, video_devdata(filp));
-@@ -1628,7 +1750,7 @@ static int rkvdec_open(struct file *filp)
+@@ -1631,7 +1753,7 @@ static int rkvdec_open(struct file *filp)
  					    rkvdec_queue_init);
  	if (IS_ERR(ctx->fh.m2m_ctx)) {
  		ret = PTR_ERR(ctx->fh.m2m_ctx);
@@ -652,7 +652,7 @@ index 3adf07856b4d..b16b915470a6 100644
  	}
  
  	ret = rkvdec_init_ctrls(ctx);
-@@ -1642,6 +1764,9 @@ static int rkvdec_open(struct file *filp)
+@@ -1645,6 +1767,9 @@ static int rkvdec_open(struct file *filp)
  err_cleanup_m2m_ctx:
  	v4l2_m2m_ctx_release(ctx->fh.m2m_ctx);
  
@@ -662,7 +662,7 @@ index 3adf07856b4d..b16b915470a6 100644
  err_free_ctx:
  	kfree(ctx);
  	return ret;
-@@ -1655,6 +1780,7 @@ static int rkvdec_release(struct file *filp)
+@@ -1658,6 +1783,7 @@ static int rkvdec_release(struct file *filp)
  	v4l2_m2m_ctx_release(ctx->fh.m2m_ctx);
  	v4l2_ctrl_handler_free(&ctx->ctrl_hdl);
  	v4l2_fh_exit(&ctx->fh);
@@ -670,7 +670,7 @@ index 3adf07856b4d..b16b915470a6 100644
  	mutex_destroy(&ctx->done_lock);
  	kfree(ctx);
  
-@@ -2109,6 +2235,7 @@ static const struct rkvdec_variant vdpu381_variant = {
+@@ -2133,6 +2259,7 @@ static const struct rkvdec_variant vdpu381_variant = {
  	.rcb_sizes = vdpu381_rcb_sizes,
  	.num_rcb_sizes = ARRAY_SIZE(vdpu381_rcb_sizes),
  	.ops = &vdpu381_variant_ops,
@@ -678,10 +678,10 @@ index 3adf07856b4d..b16b915470a6 100644
  };
  
  static const struct rcb_size_info vdpu383_rcb_sizes[] = {
-@@ -2227,8 +2354,20 @@ static int rkvdec_core_probe(struct platform_device *pdev)
- 
+@@ -2252,8 +2379,20 @@ static int rkvdec_core_probe(struct platform_device *pdev)
  	core->dev = &pdev->dev;
  	core->variant = variant;
+ 	core->stopped = true;
 +	core->ccu_port = -1;
  	INIT_DELAYED_WORK(&core->watchdog_work, rkvdec_watchdog_func);
  
@@ -699,7 +699,7 @@ index 3adf07856b4d..b16b915470a6 100644
  	ret = devm_clk_bulk_get_all_enabled(&pdev->dev, &core->clocks);
  	if (ret < 0)
  		return ret;
-@@ -2355,6 +2494,40 @@ static struct platform_driver rkvdec_core_pdrv = {
+@@ -2380,6 +2519,40 @@ static struct platform_driver rkvdec_core_pdrv = {
  	},
  };
  
@@ -740,7 +740,7 @@ index 3adf07856b4d..b16b915470a6 100644
  static int rkvdec_bind(struct device *dev)
  {
  	struct rkvdec_dev *rkvdec = dev_get_drvdata(dev);
-@@ -2366,6 +2539,40 @@ static int rkvdec_bind(struct device *dev)
+@@ -2391,6 +2564,40 @@ static int rkvdec_bind(struct device *dev)
  		return ret;
  	}
  
@@ -781,7 +781,7 @@ index 3adf07856b4d..b16b915470a6 100644
  	ret = rkvdec_v4l2_init(rkvdec);
  	if (ret)
  		goto err_unbind;
-@@ -2373,6 +2580,9 @@ static int rkvdec_bind(struct device *dev)
+@@ -2398,6 +2605,9 @@ static int rkvdec_bind(struct device *dev)
  	return 0;
  
  err_unbind:
@@ -791,7 +791,7 @@ index 3adf07856b4d..b16b915470a6 100644
  	component_unbind_all(dev, NULL);
  	return ret;
  }
-@@ -2390,6 +2600,10 @@ static void rkvdec_unbind(struct device *dev)
+@@ -2415,6 +2625,10 @@ static void rkvdec_unbind(struct device *dev)
  	for (i = 0; i < rkvdec->core_count; i++)
  		rkvdec_free_rcb(rkvdec, rkvdec->cores[i]);
  
@@ -802,7 +802,7 @@ index 3adf07856b4d..b16b915470a6 100644
  	component_unbind_all(dev, NULL);
  }
  
-@@ -2445,6 +2659,7 @@ static int rkvdec_probe(struct platform_device *pdev)
+@@ -2470,6 +2684,7 @@ static int rkvdec_probe(struct platform_device *pdev)
  
  	mutex_init(&rkvdec->vdev_lock);
  	spin_lock_init(&rkvdec->cores_lock);
@@ -810,7 +810,7 @@ index 3adf07856b4d..b16b915470a6 100644
  
  	dev_set_drvdata(dev, rkvdec);
  
-@@ -2453,7 +2668,10 @@ static int rkvdec_probe(struct platform_device *pdev)
+@@ -2478,7 +2693,10 @@ static int rkvdec_probe(struct platform_device *pdev)
  
  static void rkvdec_remove(struct platform_device *pdev)
  {
@@ -821,7 +821,7 @@ index 3adf07856b4d..b16b915470a6 100644
  }
  
  static struct platform_driver rkvdec_pdrv = {
-@@ -2522,10 +2740,14 @@ static int __init rkvdec_init(void)
+@@ -2547,10 +2765,14 @@ static int __init rkvdec_init(void)
  	if (ret)
  		return ret;
  
@@ -837,7 +837,7 @@ index 3adf07856b4d..b16b915470a6 100644
  	for (i = 0; i < ARRAY_SIZE(master_pdevs); i++) {
  		if (!rkvdec_of_has_available_node(of_rkvdec_match[i].compatible))
  			continue;
-@@ -2546,6 +2768,8 @@ static int __init rkvdec_init(void)
+@@ -2571,6 +2793,8 @@ static int __init rkvdec_init(void)
  		}
  	}
  	platform_driver_unregister(&rkvdec_pdrv);
@@ -846,7 +846,7 @@ index 3adf07856b4d..b16b915470a6 100644
  unregister_core_driver:
  	platform_driver_unregister(&rkvdec_core_pdrv);
  	return ret;
-@@ -2563,6 +2787,7 @@ static void __exit rkvdec_exit(void)
+@@ -2588,6 +2812,7 @@ static void __exit rkvdec_exit(void)
  		}
  	}
  	platform_driver_unregister(&rkvdec_pdrv);
@@ -855,7 +855,7 @@ index 3adf07856b4d..b16b915470a6 100644
  }
  module_exit(rkvdec_exit);
 diff --git a/drivers/media/platform/rockchip/rkvdec/rkvdec.h b/drivers/media/platform/rockchip/rkvdec/rkvdec.h
-index 3e53509275ad..0d721265fd1f 100644
+index 9b71e454921e..cc7a21498edd 100644
 --- a/drivers/media/platform/rockchip/rkvdec/rkvdec.h
 +++ b/drivers/media/platform/rockchip/rkvdec/rkvdec.h
 @@ -35,6 +35,7 @@
@@ -866,7 +866,7 @@ index 3e53509275ad..0d721265fd1f 100644
  struct rkvdec_rcb_config;
  
  struct rkvdec_ctrl_desc {
-@@ -94,6 +95,7 @@ struct rkvdec_variant {
+@@ -95,6 +96,7 @@ struct rkvdec_variant {
  	const struct rkvdec_variant_ops *ops;
  	bool has_single_reg_region;
  	unsigned int quirks;
@@ -874,7 +874,7 @@ index 3e53509275ad..0d721265fd1f 100644
  };
  
  struct rkvdec_coded_fmt_ops {
-@@ -123,6 +125,13 @@ struct rkvdec_decoded_fmt_desc {
+@@ -124,6 +126,13 @@ struct rkvdec_decoded_fmt_desc {
  	enum rkvdec_image_fmt image_fmt;
  };
  
@@ -888,7 +888,7 @@ index 3e53509275ad..0d721265fd1f 100644
  struct rkvdec_coded_fmt_desc {
  	u32 fourcc;
  	struct v4l2_frmsize_stepwise frmsize;
-@@ -131,8 +140,15 @@ struct rkvdec_coded_fmt_desc {
+@@ -132,8 +141,15 @@ struct rkvdec_coded_fmt_desc {
  	unsigned int num_decoded_fmts;
  	const struct rkvdec_decoded_fmt_desc *decoded_fmts;
  	u32 subsystem_flags;
@@ -904,7 +904,7 @@ index 3e53509275ad..0d721265fd1f 100644
  /**
   * struct rkvdec_job - a frame being decoded
   * @node: entry in the &rkvdec_ctx.jobs list
-@@ -147,6 +163,8 @@ struct rkvdec_coded_fmt_desc {
+@@ -148,6 +164,8 @@ struct rkvdec_coded_fmt_desc {
   *	      finished, so the next frame may start before this one is done
   * @hw_done: the hardware is done with the frame
   * @busy: the m2m state of the job is being changed, don't complete it
@@ -913,7 +913,7 @@ index 3e53509275ad..0d721265fd1f 100644
   */
  struct rkvdec_job {
  	struct list_head node;
-@@ -159,6 +177,8 @@ struct rkvdec_job {
+@@ -160,6 +178,8 @@ struct rkvdec_job {
  	bool detached;
  	bool hw_done;
  	bool busy;
@@ -922,7 +922,7 @@ index 3e53509275ad..0d721265fd1f 100644
  };
  
  struct rkvdec_core {
-@@ -180,6 +200,7 @@ struct rkvdec_core {
+@@ -182,6 +202,7 @@ struct rkvdec_core {
  	struct rkvdec_ctx *curr_ctx;
  	struct rkvdec_job *job;
  	int id;
@@ -930,7 +930,7 @@ index 3e53509275ad..0d721265fd1f 100644
  };
  
  struct rkvdec_dev {
-@@ -197,6 +218,8 @@ struct rkvdec_dev {
+@@ -199,6 +220,8 @@ struct rkvdec_dev {
  	struct rkvdec_core *main_core;
  	struct iommu_domain *iommu_global_domain;
  	struct rkvdec_job *held_job;
@@ -939,7 +939,7 @@ index 3e53509275ad..0d721265fd1f 100644
  };
  
  struct rkvdec_ctx {
-@@ -218,6 +241,7 @@ struct rkvdec_ctx {
+@@ -220,6 +243,7 @@ struct rkvdec_ctx {
  	unsigned int num_jobs;
  	wait_queue_head_t jobs_wq;
  	struct mutex done_lock; /* completes the jobs in decoding order */
@@ -947,7 +947,7 @@ index 3e53509275ad..0d721265fd1f 100644
  	void *priv;
  	u8 has_sps_st_rps: 1;
  	u8 has_sps_lt_rps: 1;
-@@ -244,6 +268,7 @@ void rkvdec_run_preamble(struct rkvdec_ctx *ctx, struct rkvdec_run *run);
+@@ -246,6 +270,7 @@ void rkvdec_run_preamble(struct rkvdec_ctx *ctx, struct rkvdec_run *run);
  void rkvdec_run_postamble(struct rkvdec_ctx *ctx, struct rkvdec_run *run);
  void rkvdec_memcpy_toio(void __iomem *dst, void *src, size_t len);
  void rkvdec_schedule_watchdog(struct rkvdec_core *core, u32 timeout_threshold);

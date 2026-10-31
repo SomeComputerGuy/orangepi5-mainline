@@ -1,0 +1,24 @@
+### 2026-10-30T20:16:37+00:00 start N=50 kernel=#susp1 SMP PREEMPT_DYNAMIC Fri Oct 30 19:01:54 UTC 2026
+baseline: usb3-links=7 DP-1=connected HDMI-A-1=connected
+### 2026-10-30T21:53:18+00:00 start N=50 kernel=#susp2 SMP PREEMPT_DYNAMIC Fri Oct 30 20:58:47 UTC 2026
+baseline: usb3-links=8 DP-1=connected HDMI-A-1=connected
+cycle 1: OK (44509 ms total, wake irq 52)
+cycle 2: OK (55511 ms total, wake irq 52)
+cycle 3: OK (55513 ms total, wake irq 52)
+cycle 4: OK (55518 ms total, wake irq 52)
+cycle 5: OK (55524 ms total, wake irq 52)
+cycle 6: OK (55503 ms total, wake irq 52)
+cycle 7: OK (55519 ms total, wake irq 52)
+cycle 8: OK (55525 ms total, wake irq 52)
+cycle 9: OK (55496 ms total, wake irq 52)
+cycle 10: OK (55525 ms total, wake irq 52)
+cycle 11: OK (55518 ms total, wake irq 52)
+cycle 12: OK (54518 ms total, wake irq 52)
+cycle 13: OK (55523 ms total, wake irq 52)
+cycle 14: OK (55511 ms total, wake irq 52)
+cycle 15: OK (55520 ms total, wake irq 52)
+cycle 16: OK (55515 ms total, wake irq 52)
+cycle 17: OK (55516 ms total, wake irq 52)
+cycle 18: OK (55526 ms total, wake irq 52)
+cycle 19: OK (55515 ms total, wake irq 52)
+cycle 20: FAIL usb3=7/8 (55526 ms, irq 52)

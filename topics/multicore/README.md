@@ -1,6 +1,6 @@
 # multicore: RGA3 and rkvdec (VDPU381) multi-core scheduling on v7.3
 
-- Workspace branch: `opi5/multicore-7.3` (exported 2026-10-30)
+- Workspace branch: `opi5/multicore-7.3` (exported 2026-10-31)
 - Kernel fork branch: `opi5/multicore` (see PUBLISH.md)
 - Sits on: `v7.3` (base commit `c03c1a14507d`)
 - Hardware test: yes: 2x 4K HEVC throughput, bit-exact vs FFmpeg, RGA3 jobs on both cores

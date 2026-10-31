@@ -69,9 +69,66 @@ static void rkvdec_dbg_check_canary(struct rkvdec_core *core, const char *when)
 	}
 }
 
+/*
+ * Reserved-RAM canary: a no-map reserved-memory region of the test DTB (dbg_rcanary_pa/size)
+ * filled with a pattern; a write that escapes the IOMMU to an IOVA in that range lands in it.
+ * dbg_min_iova: the lowest buffer IOVA programmed so far, to show the IOVAs reach the range.
+ */
+static ulong dbg_rcanary_pa;
+module_param(dbg_rcanary_pa, ulong, 0444);
+static ulong dbg_rcanary_size;
+module_param(dbg_rcanary_size, ulong, 0444);
+static uint dbg_min_iova = 0xffffffff;
+module_param(dbg_min_iova, uint, 0444);
+static uint dbg_canary_hits;
+module_param(dbg_canary_hits, uint, 0444);
+static void *dbg_rcanary;
+
+static void rkvdec_dbg_check_rcanary(struct rkvdec_core *core, const char *when)
+{
+	u8 *bad;
+
+	if (!dbg_rcanary_size)
+		return;
+	if (!dbg_rcanary) {
+		dbg_rcanary = memremap(dbg_rcanary_pa, dbg_rcanary_size, MEMREMAP_WB);
+		if (!dbg_rcanary) {
+			dev_err(core->dev, "rkvdec-dbg cannot map the RAM canary\n");
+			dbg_rcanary_size = 0;
+			return;
+		}
+		memset(dbg_rcanary, 0x5a, dbg_rcanary_size);
+		dev_info(core->dev, "rkvdec-dbg RAM canary %#lx+%#lx armed\n", dbg_rcanary_pa, dbg_rcanary_size);
+		return;
+	}
+	bad = memchr_inv(dbg_rcanary, 0x5a, dbg_rcanary_size);
+	if (bad) {
+		dbg_canary_hits++;
+		dev_err(core->dev, "rkvdec-dbg RAM CANARY HIT (%s) at PA %#lx\n", when,
+			dbg_rcanary_pa + (ulong)(bad - (u8 *)dbg_rcanary));
+		memset(dbg_rcanary, 0x5a, dbg_rcanary_size);
+	}
+}
+
+static void rkvdec_dbg_track_iova(struct rkvdec_core *core)
+{
+	int i;
+
+	for (i = 0; i < 5; i++) {	/* rlc, rlcwrite, decout, colmv_cur, error_ref */
+		u32 a = readl(core->regs + OFFSET_COMMON_ADDR_REGS + 4 * i);
+
+		if (a && a < dbg_min_iova)
+			dbg_min_iova = a;
+	}
+}
+
 void rkvdec_dbg_inject(struct rkvdec_core *core)
 {
 	u32 iova = inject_iova;
+
+	rkvdec_dbg_track_iova(core);
+	if (dbg_rcanary_size && !dbg_rcanary)
+		rkvdec_dbg_check_rcanary(core, "arm");
 
 	if (!inject_fault || ++core->dbg_jobs % inject_fault)
 		return;
@@ -130,6 +187,7 @@ rep('rkvdec.c', '''	else if (!rkvdec_iommu_restore(core))
 		idle = false;
 	rkvdec_dbg_dump(core, "restored");
 	rkvdec_dbg_check_canary(core, "after recovery");
+	rkvdec_dbg_check_rcanary(core, "after recovery");
 ''')
 rep('rkvdec.c', '''	status = readl(core->regs + VDPU381_REG_STA_INT);
 	writel(0, core->regs + VDPU381_REG_STA_INT);

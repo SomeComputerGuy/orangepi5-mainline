@@ -1,6 +1,6 @@
 # rkvdec-ccu-base: Base for rkvdec-ccu: the three codec-quality rkvdec commits
 
-- Workspace branch: `opi5/rkvdec-ccu-base-7.3` (exported 2026-10-30)
+- Workspace branch: `opi5/rkvdec-ccu-base-7.3` (exported 2026-10-31)
 - Kernel fork branch: `opi5/rkvdec-ccu-base` (see PUBLISH.md)
 - Sits on: `integration` (base commit `1afa8d268718`)
 - Hardware test: via codec-quality

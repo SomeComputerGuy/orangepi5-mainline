@@ -1,0 +1,8 @@
+### 2026-10-30T22:44:07+00:00 start N=5 kernel=#susp2 SMP PREEMPT_DYNAMIC Fri Oct 30 20:58:47 UTC 2026
+baseline: usb3-links=8 DP-1=connected HDMI-A-1=connected
+cycle 1: OK (52924 ms total, wake irq 52)
+cycle 2: OK (54954 ms total, wake irq 52)
+cycle 3: OK (53965 ms total, wake irq 52)
+cycle 4: OK (54967 ms total, wake irq 52)
+cycle 5: OK (54977 ms total, wake irq 52)
+### 2026-10-30T22:49:08+00:00 done: 5/5 OK

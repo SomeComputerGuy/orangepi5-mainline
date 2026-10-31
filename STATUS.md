@@ -1,4 +1,4 @@
-# Status (generated 2026-10-30 by tools/export-from-workspace.sh)
+# Status (generated 2026-10-31 by tools/export-from-workspace.sh)
 
 Every kernel topic, the branch it lives on, how far it got, and the next upstream step.
 `Ours/Carried/Local` count the patches in each category (see the topic README).
@@ -51,7 +51,7 @@ Nothing here has been sent upstream yet.
 | [tcpm](topics/tcpm/README.md) | USB Type-C tcpm: DP alt-mode discovery fixes (right SVID when resuming Discover Modes, Not_Supported only as a reply to an outstanding VDM, retry discovery after a VDM response timeout, don't NAK unexpected responses) | `integration` | 7 / 0 / 0 | yes: 100/100 dock attach cycles reach DP configured on kernel 5, 0 VDM timeouts; injected late-response stock-vs-fixed comparison in progress; in patches/linux (0271-0274) | send to linux-usb |
 | [dw-dp-redetect](topics/dw-dp-redetect/README.md) | PARKED, NOT IN THE IMAGE: dw-dp re-detect after a missed HPD (patch 0275) | `dp-smooth` | 1 / 0 / 0 | not needed: the USBDP re-init (0270 v2) fixed the boot-time AUX -110 it targeted | none (parked) |
 | [usb3-port](topics/usb3-port/README.md) | IN THE IMAGE (patches/linux 1501-1504): pair the Type-A USB3 port's EHCI and xHCI ports through a usb-a-connector node and retry SuperSpeed for a device stuck at 480M | `image-k6` | 4 / 0 / 0 | yes: a SanDisk Extreme present at boot is moved from 480M to 5000M by the retry; a SanDisk Ultra Fit ignores USB2 resets and needs a VBUS cycle (port VBUS is always on) | send to linux-usb |
-| [rkvdec-reset](topics/rkvdec-reset/README.md) | IN THE IMAGE (patches/linux 1801, 1802, 1804): rkvdec timeout recovery (ignore interrupts of a core without a job; reset a core whose job failed or timed out: soft reset, bus idle, CRU pulse, IOMMU reprogrammed) and rockchip-iommu log_iova() not walking a page table that a reset took away | `image-k6` | 3 / 0 / 0 | yes: KASAN kernel, 3178 recoveries with 0 crash/KASAN/ODEBUG reports and 0 canary hits, 600/600 bit-exact after every stress step, fluster unchanged, 600 reopen cycles (notes/RESULTS.md) | send the rkvdec patches to linux-media and the iommu fix to iommu |
+| [rkvdec-reset](topics/rkvdec-reset/README.md) | IN THE IMAGE (patches/linux 1801, 1802, 1804): rkvdec timeout recovery (ignore interrupts of a core without a job; reset a core whose job failed or timed out: soft reset, bus idle, CRU pulse, IOMMU reprogrammed) and rockchip-iommu log_iova() not walking a page table that a reset took away | `image-k6` | 4 / 0 / 0 | yes: KASAN kernel, 3178 recoveries with 0 crash/KASAN/ODEBUG reports and 0 canary hits, 600/600 bit-exact after every stress step, fluster unchanged, 600 reopen cycles (notes/RESULTS.md) | send the rkvdec patches to linux-media and the iommu fix to iommu |
 | [image-k7](topics/image-k7/README.md) | The image-kernel stack: v7.3 + patches/linux (321 patches) = image-k6 + usb3-port (1501-1504) + 1801/1802/1804; the branch tip has the same tree as v7.3 + git am patches/linux/*.patch | `usb3-port` | 3 / 0 / 0 | yes: 1501-1504 run on kernel build 5, 1801/1802/1804 proven on a KASAN kernel (see rkvdec-reset) | none (integration only); provenance in docs/image-kernel/MANIFEST.md |
 | [rkvdec-ccu](topics/rkvdec-ccu/README.md) | IN PROGRESS, NOT IN THE IMAGE: rkvdec decodes one stream on both RK3588 cores through the CCU, including VP9 (hardware probability adaptation) and field/MBAFF H.264 (field pairs on both cores); rebased on the rkvdec-reset timeout recovery (planned as patches/linux 1601-1616) | `rkvdec-reset` | 16 / 0 / 0 | in progress: earlier builds bit-exact (fluster identical to single-core, 600/600, HEVC 4K 130->227 fps, H.264 67->121 fps); the P4 board proof of this rebased series (KASAN kernel, recovery stress) is running | finish the P4 board proof and fluster, then RFC to linux-media |
 
@@ -59,7 +59,7 @@ Nothing here has been sent upstream yet.
 
 `patches/linux/` is what `scripts/build-kernel.sh` applies on v7.3 for the image (recreated as fork branch `opi5/image-7.3`). It is a snapshot of the topics that were ready for the image; the topic directories are the reference for upstreaming. Range-by-range provenance and test state: [docs/image-kernel/MANIFEST.md](docs/image-kernel/MANIFEST.md).
 
-Patches in patches/linux: 321; other patch directories: alsa-ucm-conf, chromium, ffmpeg, firefox, gst-plugins-good, gstreamer, linux-extra, linux-hold, mpv, tf-a, u-boot, upstream, weston.
+Patches in patches/linux: 328; other patch directories: alsa-ucm-conf, chromium, ffmpeg, firefox, gst-plugins-good, gstreamer, jellyfin-desktop, linux-extra, linux-hold, mpv, tf-a, u-boot, upstream, weston.
 
 ## U-Boot and TF-A
 

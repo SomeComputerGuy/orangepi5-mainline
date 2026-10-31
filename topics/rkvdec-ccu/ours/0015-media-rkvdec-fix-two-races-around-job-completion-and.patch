@@ -25,7 +25,7 @@ Assisted-by: Claude:claude-opus-5-5
  2 files changed, 41 insertions(+), 16 deletions(-)
 
 diff --git a/drivers/media/platform/rockchip/rkvdec/rkvdec.c b/drivers/media/platform/rockchip/rkvdec/rkvdec.c
-index b3cc04b92b14..be2f8f502241 100644
+index 878af5815ea0..f572abaa17db 100644
 --- a/drivers/media/platform/rockchip/rkvdec/rkvdec.c
 +++ b/drivers/media/platform/rockchip/rkvdec/rkvdec.c
 @@ -1076,9 +1076,20 @@ static void rkvdec_buf_request_complete(struct vb2_buffer *vb)
@@ -106,7 +106,7 @@ index b3cc04b92b14..be2f8f502241 100644
  }
  
  /*
-@@ -1694,19 +1727,10 @@ static void rkvdec_device_run(void *priv)
+@@ -1697,19 +1730,10 @@ static void rkvdec_device_run(void *priv)
  	struct rkvdec_job *job;
  	int ret;
  
@@ -129,10 +129,10 @@ index b3cc04b92b14..be2f8f502241 100644
  		v4l2_m2m_buf_done_and_job_finish(m2m_ctx->m2m_dev, m2m_ctx,
  						 VB2_BUF_STATE_ERROR);
 diff --git a/drivers/media/platform/rockchip/rkvdec/rkvdec.h b/drivers/media/platform/rockchip/rkvdec/rkvdec.h
-index 7632dc9748c3..3f28a3a77d0d 100644
+index 8a5b4e6d6118..ba74b19fb4e9 100644
 --- a/drivers/media/platform/rockchip/rkvdec/rkvdec.h
 +++ b/drivers/media/platform/rockchip/rkvdec/rkvdec.h
-@@ -264,6 +264,7 @@ struct rkvdec_ctx {
+@@ -266,6 +266,7 @@ struct rkvdec_ctx {
  	unsigned long busy_slots;
  	struct list_head jobs;
  	unsigned int num_jobs;

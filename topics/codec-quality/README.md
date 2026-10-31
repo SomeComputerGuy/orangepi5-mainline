@@ -1,6 +1,6 @@
 # codec-quality: Codec-quality fixes from the codec sweep (VDPU2 VP8 size limit, rkvdec colmv compression + HEVC SPS default, Hantro MPEG-2 field/hold fixes, rkjpegd error frames)
 
-- Workspace branch: `opi5/codec-quality` (exported 2026-10-30)
+- Workspace branch: `opi5/codec-quality` (exported 2026-10-31)
 - Kernel fork branch: `opi5/codec-quality` (see PUBLISH.md)
 - Sits on: `integration` (base commit `1afa8d268718`)
 - Hardware test: yes: decoders bit-exact in the sweep after the fixes; in patches/linux (1401-1408)

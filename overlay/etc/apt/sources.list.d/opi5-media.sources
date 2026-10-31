@@ -1,9 +1,10 @@
 # Orange Pi 5 rebuilds of Ubuntu packages (V4L2 stateless video decoding, board
 # audio profiles): FFmpeg, mpv, GStreamer, alsa-ucm-conf, and the VA-API driver
-# libva-v4l2-request, installed into /var/lib/opi5-media when the image is built.
-# Pinned by /etc/apt/preferences.d/opi5-media.pref. This takes the place of a
-# PPA until the rebuilds are published as one.
+# libva-v4l2-request. A signed repository with a PPA's layout, kept in the image
+# at /var/lib/opi5-media (scripts/make-media-repo.sh). Pinned by
+# /etc/apt/preferences.d/opi5-media.pref.
 Types: deb
 URIs: file:/var/lib/opi5-media
-Suites: ./
-Trusted: yes
+Suites: stonking
+Components: main
+Signed-By: /usr/share/keyrings/opi5-media-archive-keyring.gpg

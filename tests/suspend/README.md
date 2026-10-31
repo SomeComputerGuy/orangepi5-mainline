@@ -14,7 +14,8 @@ These are the scripts exactly as they were run on the test board, except that th
 ```
 Fast s2idle cycling proof: N cycles of real s2idle (default console, no
 pm_print_times), RTC wake, and device checks after every resume.
-usage: sudo [COPY_DIR=/mnt/extreme] s2idle-cycles.sh <N> [logdir]
+usage: sudo [COPY_DIR=/mnt/extreme] [USB3_WARN=1] s2idle-cycles.sh <N> [logdir]
+USB3_WARN: a lost SuperSpeed link is logged as WARN instead of failing the cycle.
 COPY_DIR: a directory on a mounted filesystem of the USB3 drive; each cycle
 starts a 256 MiB file copy into it just before suspend and checks the copy
 after resume (never writes the raw block device).

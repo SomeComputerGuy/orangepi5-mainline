@@ -1,6 +1,6 @@
 # rkvdec-hevc-rps: rkvdec HEVC short-term RPS control handling fixes (allocation failure, rebuild, request controls, bounds)
 
-- Workspace branch: `opi5/rkvdec-hevc-rps-7.3` (exported 2026-10-30)
+- Workspace branch: `opi5/rkvdec-hevc-rps-7.3` (exported 2026-10-31)
 - Kernel fork branch: `opi5/rkvdec-hevc-rps` (see PUBLISH.md)
 - Sits on: `integration` (base commit `1afa8d268718`)
 - Hardware test: see notes/TESTING.md

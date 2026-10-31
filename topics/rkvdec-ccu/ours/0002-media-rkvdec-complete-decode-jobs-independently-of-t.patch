@@ -36,7 +36,7 @@ Assisted-by: Claude:claude-opus-5-5
  2 files changed, 292 insertions(+), 60 deletions(-)
 
 diff --git a/drivers/media/platform/rockchip/rkvdec/rkvdec.c b/drivers/media/platform/rockchip/rkvdec/rkvdec.c
-index 47b2d0adfc4f..3adf07856b4d 100644
+index 6ff855454a7b..ef528da76c5c 100644
 --- a/drivers/media/platform/rockchip/rkvdec/rkvdec.c
 +++ b/drivers/media/platform/rockchip/rkvdec/rkvdec.c
 @@ -1072,6 +1072,11 @@ static void rkvdec_buf_request_complete(struct vb2_buffer *vb)
@@ -327,7 +327,7 @@ index 47b2d0adfc4f..3adf07856b4d 100644
  
  	/* Apply request(s) controls if needed. */
  	src_req = run->bufs.src->vb2_buf.req_obj.req;
-@@ -1283,48 +1444,72 @@ static void rkvdec_device_run(void *priv)
+@@ -1286,48 +1447,72 @@ static void rkvdec_device_run(void *priv)
  {
  	struct rkvdec_ctx *ctx = priv;
  	const struct rkvdec_coded_fmt_desc *desc = ctx->coded_fmt_desc;
@@ -417,7 +417,7 @@ index 47b2d0adfc4f..3adf07856b4d 100644
  };
  
  static int rkvdec_queue_init(void *priv,
-@@ -1431,6 +1616,10 @@ static int rkvdec_open(struct file *filp)
+@@ -1434,6 +1619,10 @@ static int rkvdec_open(struct file *filp)
  		return -ENOMEM;
  
  	ctx->dev = rkvdec;
@@ -428,7 +428,7 @@ index 47b2d0adfc4f..3adf07856b4d 100644
  	rkvdec_reset_coded_fmt(ctx);
  	rkvdec_reset_decoded_fmt(ctx);
  	v4l2_fh_init(&ctx->fh, video_devdata(filp));
-@@ -1466,6 +1655,7 @@ static int rkvdec_release(struct file *filp)
+@@ -1469,6 +1658,7 @@ static int rkvdec_release(struct file *filp)
  	v4l2_m2m_ctx_release(ctx->fh.m2m_ctx);
  	v4l2_ctrl_handler_free(&ctx->ctrl_hdl);
  	v4l2_fh_exit(&ctx->fh);
@@ -436,7 +436,7 @@ index 47b2d0adfc4f..3adf07856b4d 100644
  	kfree(ctx);
  
  	return 0;
-@@ -1719,7 +1909,7 @@ static void rkvdec_irq_job_done(struct rkvdec_core *core,
+@@ -1742,7 +1932,7 @@ static void rkvdec_irq_job_done(struct rkvdec_core *core,
  
  	if (state == VB2_BUF_STATE_ERROR)
  		rkvdec_core_recover(core);
@@ -445,7 +445,7 @@ index 47b2d0adfc4f..3adf07856b4d 100644
  }
  
  static irqreturn_t rk3399_irq_handler(struct rkvdec_core *core)
-@@ -1857,7 +2047,7 @@ static void rkvdec_watchdog_func(struct work_struct *work)
+@@ -1880,7 +2070,7 @@ static void rkvdec_watchdog_func(struct work_struct *work)
  		disable_irq(core->irq);
  		rkvdec_core_recover(core);
  		enable_irq(core->irq);
@@ -454,7 +454,7 @@ index 47b2d0adfc4f..3adf07856b4d 100644
  	}
  }
  
-@@ -2005,7 +2195,8 @@ static int rkvdec_core_bind(struct device *dev, struct device *master, void *dat
+@@ -2029,7 +2219,8 @@ static int rkvdec_core_bind(struct device *dev, struct device *master, void *dat
  		}
  	}
  
@@ -464,7 +464,7 @@ index 47b2d0adfc4f..3adf07856b4d 100644
  	rkvdec->core_count++;
  
  	dev_info(dev, "Registered core %d\n", id);
-@@ -2179,8 +2370,6 @@ static int rkvdec_bind(struct device *dev)
+@@ -2204,8 +2395,6 @@ static int rkvdec_bind(struct device *dev)
  	if (ret)
  		goto err_unbind;
  
@@ -474,7 +474,7 @@ index 47b2d0adfc4f..3adf07856b4d 100644
  
  err_unbind:
 diff --git a/drivers/media/platform/rockchip/rkvdec/rkvdec.h b/drivers/media/platform/rockchip/rkvdec/rkvdec.h
-index f014d97c8464..3e53509275ad 100644
+index d10d57e39a10..9b71e454921e 100644
 --- a/drivers/media/platform/rockchip/rkvdec/rkvdec.h
 +++ b/drivers/media/platform/rockchip/rkvdec/rkvdec.h
 @@ -30,7 +30,11 @@
@@ -489,7 +489,7 @@ index f014d97c8464..3e53509275ad 100644
  struct rkvdec_rcb_config;
  
  struct rkvdec_ctrl_desc {
-@@ -129,6 +133,34 @@ struct rkvdec_coded_fmt_desc {
+@@ -130,6 +134,34 @@ struct rkvdec_coded_fmt_desc {
  	u32 subsystem_flags;
  };
  
@@ -524,7 +524,7 @@ index f014d97c8464..3e53509275ad 100644
  struct rkvdec_core {
  	struct device *dev;
  	struct rkvdec_dev *rkvdec;
-@@ -146,6 +178,7 @@ struct rkvdec_core {
+@@ -148,6 +180,7 @@ struct rkvdec_core {
  	struct iommu_domain *empty_domain;
  	struct rkvdec_rcb_config *rcb_config;
  	struct rkvdec_ctx *curr_ctx;
@@ -532,7 +532,7 @@ index f014d97c8464..3e53509275ad 100644
  	int id;
  };
  
-@@ -160,9 +193,10 @@ struct rkvdec_dev {
+@@ -162,9 +195,10 @@ struct rkvdec_dev {
  	int core_count;
  	struct rkvdec_core **available_cores;
  	unsigned int available_core_count;
@@ -544,7 +544,7 @@ index f014d97c8464..3e53509275ad 100644
  };
  
  struct rkvdec_ctx {
-@@ -174,7 +208,16 @@ struct rkvdec_ctx {
+@@ -176,7 +210,16 @@ struct rkvdec_ctx {
  	struct rkvdec_dev *dev;
  	enum rkvdec_image_fmt image_fmt;
  	u32 colmv_offset;

@@ -1,6 +1,6 @@
 # v7.4-dp-altmode: 7.4 base: dw-dp / dwc3 glue series
 
-- Workspace branch: `opi5/dp-altmode` (exported 2026-10-30)
+- Workspace branch: `opi5/dp-altmode` (exported 2026-10-31)
 - Kernel fork branch: `opi5/v7.4-dp-altmode` (see PUBLISH.md)
 - Sits on: `c339f4010` (base commit `c339f4010dea`)
 - Hardware test: via dp-altmode (v7.3)

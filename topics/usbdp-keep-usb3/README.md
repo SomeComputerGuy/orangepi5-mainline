@@ -1,6 +1,6 @@
 # usbdp-keep-usb3: USBDP PHY: keep USB3 running when DP AltMode (pin D) is entered or left
 
-- Workspace branch: `opi5/usbdp-keep-usb3-7.3` (exported 2026-10-30)
+- Workspace branch: `opi5/usbdp-keep-usb3-7.3` (exported 2026-10-31)
 - Kernel fork branch: `opi5/usbdp-keep-usb3` (see PUBLISH.md)
 - Sits on: `dp-smooth` (base commit `24b75a5854fb`)
 - Hardware test: yes: 0 USB3 disconnects over 6 DP exit/entry transitions with read traffic on the dock, 2 runs; in patches/linux (0270)

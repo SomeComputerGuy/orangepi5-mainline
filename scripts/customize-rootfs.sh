@@ -13,10 +13,15 @@ echo 'LANG=C.UTF-8' > "$R/etc/default/locale"
 # be: packages from those sources that aren't preinstalled then install as our
 # builds (with the pin in overlay/etc/apt/preferences.d/opi5-media.pref) instead
 # of Ubuntu's, which would conflict with the installed ones of the same source.
-# A local flat repository until the rebuilds are published (e.g. a Launchpad PPA);
-# overlay/etc/apt/sources.list.d/opi5-media.sources points apt at it.
+# A signed repository with a PPA's layout (scripts/make-media-repo.sh) until the
+# rebuilds are published online; overlay/etc/apt/sources.list.d/opi5-media.sources
+# points apt at it, verified with the key in /usr/share/keyrings.
+[ -f "$TOP/out/media-repo/dists/stonking/InRelease" ] ||
+  { echo "no signed media repository (run scripts/make-media-repo.sh)"; exit 1; }
 install -d -m755 "$R/var/lib/opi5-media"
-install -m644 -t "$R/var/lib/opi5-media/" "$TOP"/out/debs-media/*.deb "$TOP/out/debs-media/Packages"
+cp -a "$TOP"/out/media-repo/dists "$TOP"/out/media-repo/pool "$R/var/lib/opi5-media/"
+install -D -m644 "$TOP/out/media-repo/opi5-media-archive-keyring.gpg" \
+  "$R/usr/share/keyrings/opi5-media-archive-keyring.gpg"
 
 # Kernel + headers (for DKMS): postinst hooks build the initramfs and extlinux.conf (u-boot-menu)
 cp "$TOP"/out/debs/linux-image-*.deb "$TOP"/out/debs/linux-headers-*.deb "$R/tmp/"

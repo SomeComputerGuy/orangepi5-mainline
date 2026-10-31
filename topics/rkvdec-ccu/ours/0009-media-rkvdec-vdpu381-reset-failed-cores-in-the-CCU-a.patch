@@ -156,7 +156,7 @@ index 80646885a222..beb876a909a3 100644
  
  	/* Start decoding! */
 diff --git a/drivers/media/platform/rockchip/rkvdec/rkvdec.c b/drivers/media/platform/rockchip/rkvdec/rkvdec.c
-index e4c17a6f1f4c..e0d177b67ac8 100644
+index 09fc4bcdc597..c0039a77f118 100644
 --- a/drivers/media/platform/rockchip/rkvdec/rkvdec.c
 +++ b/drivers/media/platform/rockchip/rkvdec/rkvdec.c
 @@ -1366,6 +1366,7 @@ static void rkvdec_job_hw_done(struct rkvdec_core *core,
@@ -226,7 +226,7 @@ index e4c17a6f1f4c..e0d177b67ac8 100644
  /* Is @buf a reference of a frame of @ctx that is still being decoded? */
  static bool rkvdec_ctx_buf_is_ref(struct rkvdec_ctx *ctx,
  				  const struct vb2_buffer *buf)
-@@ -2010,9 +2063,14 @@ static bool vdpu383_reset(struct rkvdec_core *core)
+@@ -2025,9 +2078,14 @@ static bool vdpu383_reset(struct rkvdec_core *core)
   */
  static bool rkvdec_core_recover(struct rkvdec_core *core)
  {
@@ -238,10 +238,10 @@ index e4c17a6f1f4c..e0d177b67ac8 100644
 +	if (ccu)
 +		rkvdec_ccu_disconnect(ccu, core);
 +
- 	idle = core->variant->ops->reset(core);
- 	if (core->resets) {
- 		if (!idle)
-@@ -2033,6 +2091,9 @@ static bool rkvdec_core_recover(struct rkvdec_core *core)
+ 	if (!READ_ONCE(core->stopped) && core->variant->ops->wait_stopped &&
+ 	    !core->variant->ops->wait_stopped(core))
+ 		dev_warn(core->dev, "the core is still busy, resetting it anyway\n");
+@@ -2053,6 +2111,9 @@ static bool rkvdec_core_recover(struct rkvdec_core *core)
  	if (!idle) {
  		dev_err(core->dev, "disabling the core\n");
  		WRITE_ONCE(core->broken, true);
@@ -251,7 +251,7 @@ index e4c17a6f1f4c..e0d177b67ac8 100644
  	}
  
  	return idle;
-@@ -2198,7 +2259,7 @@ static void rkvdec_watchdog_func(struct work_struct *work)
+@@ -2221,7 +2282,7 @@ static void rkvdec_watchdog_func(struct work_struct *work)
  			      watchdog_work);
  	ctx = core->curr_ctx;
  	if (ctx) {
@@ -261,10 +261,10 @@ index e4c17a6f1f4c..e0d177b67ac8 100644
  		disable_irq(core->irq);
  		rkvdec_core_recover(core);
 diff --git a/drivers/media/platform/rockchip/rkvdec/rkvdec.h b/drivers/media/platform/rockchip/rkvdec/rkvdec.h
-index 153cd2d50900..85351133e1ff 100644
+index a5c62c090497..10415ef6e5ae 100644
 --- a/drivers/media/platform/rockchip/rkvdec/rkvdec.h
 +++ b/drivers/media/platform/rockchip/rkvdec/rkvdec.h
-@@ -166,6 +166,10 @@ struct rkvdec_coded_fmt_desc {
+@@ -167,6 +167,10 @@ struct rkvdec_coded_fmt_desc {
   * @busy: the m2m state of the job is being changed, don't complete it
   * @num_refs: number of entries in @refs
   * @refs: the CAPTURE buffers the frame predicts from
@@ -275,7 +275,7 @@ index 153cd2d50900..85351133e1ff 100644
   */
  struct rkvdec_job {
  	struct list_head node;
-@@ -180,6 +184,10 @@ struct rkvdec_job {
+@@ -181,6 +185,10 @@ struct rkvdec_job {
  	bool busy;
  	unsigned int num_refs;
  	const struct vb2_buffer *refs[RKVDEC_MAX_REFS];
@@ -286,7 +286,7 @@ index 153cd2d50900..85351133e1ff 100644
  };
  
  struct rkvdec_core {
-@@ -272,6 +280,8 @@ void rkvdec_run_postamble(struct rkvdec_ctx *ctx, struct rkvdec_run *run);
+@@ -274,6 +282,8 @@ void rkvdec_run_postamble(struct rkvdec_ctx *ctx, struct rkvdec_run *run);
  void rkvdec_memcpy_toio(void __iomem *dst, void *src, size_t len);
  void rkvdec_schedule_watchdog(struct rkvdec_core *core, u32 timeout_threshold);
  void rkvdec_job_add_ref(struct rkvdec_ctx *ctx, const struct vb2_buffer *ref);

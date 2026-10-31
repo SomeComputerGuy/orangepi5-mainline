@@ -1,6 +1,6 @@
 # dp-smooth: USB-C DP alt-mode re-train fixes (typec DP HPD notify, dw-dp OOB HPD as IRQ_HPD, usbdp lane re-enable)
 
-- Workspace branch: `opi5/dp-smooth-7.3` (exported 2026-10-30)
+- Workspace branch: `opi5/dp-smooth-7.3` (exported 2026-10-31)
 - Kernel fork branch: `opi5/dp-smooth` (see PUBLISH.md)
 - Sits on: `integration` (base commit `1afa8d268718`)
 - Hardware test: yes: pin-assignment retrain fixed on the board; in patches/linux

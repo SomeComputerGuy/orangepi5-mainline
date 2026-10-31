@@ -1,0 +1,392 @@
+[   20.377318] PERSIST-DEBUG pd1
+[   20.444628] PM: suspend entry (s2idle)
+[   20.447194] Filesystems sync: 0.002 seconds
+[   20.451196] Freezing user space processes
+[   20.452865] Freezing user space processes completed (elapsed 0.001 seconds)
+[   20.452883] OOM killer disabled.
+[   20.452889] Freezing remaining freezable tasks
+[   20.453906] Freezing remaining freezable tasks completed (elapsed 0.001 seconds)
+[   20.453922] printk: Suspending console(s) (use no_console_suspend to debug)
+[   20.461726] hub 4-0:1.0: hub_resume
+[   20.461809] hub 4-0:1.0: hub_suspend
+[   20.462368] hub 1-0:1.0: hub_resume
+[   20.462411] usb 7-1.4: usb suspend, wakeup 0
+[   20.462426] hub 1-0:1.0: hub_suspend
+[   20.462511] hub 7-1:1.0: hub_suspend
+[   20.462720] usb 7-1: usb suspend, wakeup 0
+[   20.462759] hub 7-0:1.0: hub_suspend
+[   20.462798] xhci-hcd xhci-hcd.8.auto: port 7-1 not suspended
+[   20.463346] hub 5-0:1.0: hub_resume
+[   20.463363] xhci-hcd xhci-hcd.1.auto: Get port status 5-1 read: 0x2a0, return 0x100
+[   20.463411] hub 5-0:1.0: hub_suspend
+[   20.469615] rk_gmac-dwmac fe1c0000.ethernet end0: Link is Down
+[   20.469700] usb 8-1.3: usb suspend, wakeup 0
+[   20.474558] usb 8-1.1: usb suspend, wakeup 0
+[   20.475309] usb 8-1.2: usb suspend, wakeup 0
+[   20.485907] hub 8-1:1.0: hub_suspend
+[   20.486154] xhci-hcd xhci-hcd.8.auto: Set port 8-1 link state, portsc: 0x1203, write 0x11261
+[   20.491913] usb 8-1: usb suspend, wakeup 0
+[   20.502896] hub 8-0:1.0: hub_suspend
+[   20.510883] hub 3-0:1.0: hub_resume
+[   20.510885] hub 2-0:1.0: hub_resume
+[   20.510939] hub 3-0:1.0: hub_suspend
+[   20.510949] hub 2-0:1.0: hub_suspend
+[   20.629928] sd 2:0:0:0: [sdb] Synchronizing SCSI cache
+[   20.630160] sd 0:0:0:0: [sda] Synchronizing SCSI cache
+[   20.631319] xhci-hcd xhci-hcd.1.auto: Set port 6-1 link state, portsc: 0x1203, write 0x11261
+[   20.632545] ata1.00: Entering standby power mode
+[   20.639456] usb 6-1: usb suspend, wakeup 0
+[   20.650051] hub 6-0:1.0: hub_suspend
+[   20.711233] xhci-hcd xhci-hcd.1.auto: xHC error in resume, USBSTS 0x401, Reinit
+[   20.711251] usb usb5: root hub lost power or was reset
+[   20.711258] usb usb6: root hub lost power or was reset
+[   20.711755] xhci-hcd xhci-hcd.1.auto: xhci_hub_status_data: stopping usb5 port polling
+[   20.711815] hub 6-0:1.0: hub_reset_resume
+[   20.711817] hub 5-0:1.0: hub_reset_resume
+[   20.711822] hub 6-0:1.0: trying to enable port power on non-switchable hub
+[   20.711827] hub 5-0:1.0: trying to enable port power on non-switchable hub
+[   20.711832] xhci-hcd xhci-hcd.1.auto: set port power 6-1 ON, portsc: 0x2a0
+[   20.711839] xhci-hcd xhci-hcd.1.auto: set port power 5-1 ON, portsc: 0x2a0
+[   20.732796] xhci-hcd xhci-hcd.1.auto: Get port status 5-1 read: 0x2a0, return 0x100
+[   20.762252] usb usb1: root hub lost power or was reset
+[   20.762263] usb usb4: root hub lost power or was reset
+[   20.764623] hub 1-0:1.0: hub_reset_resume
+[   20.764630] hub 1-0:1.0: enabling power on all ports
+[   20.764791] hub 4-0:1.0: hub_reset_resume
+[   20.764801] hub 4-0:1.0: enabling power on all ports
+[   20.818954] usb usb2: root hub lost power or was reset
+[   20.820783] xhci-hcd xhci-hcd.1.auto: Get port status 6-1 read: 0x2e0, return 0x2e0
+[   20.820810] usb usb6-port1: status 02e0 change 0000
+[   20.873879] hub 2-0:1.0: hub_reset_resume
+[   20.873899] hub 2-0:1.0: trying to enable port power on non-switchable hub
+[   20.873974] usb usb3: root hub lost power or was reset
+[   20.888892] xhci-hcd xhci-hcd.8.auto: xHC error in resume, USBSTS 0x411, Reinit
+[   20.888899] usb usb7: root hub lost power or was reset
+[   20.888903] usb usb8: root hub lost power or was reset
+[   20.889824] hub 8-0:1.0: hub_reset_resume
+[   20.889835] hub 8-0:1.0: trying to enable port power on non-switchable hub
+[   20.889846] xhci-hcd xhci-hcd.8.auto: set port power 8-1 ON, portsc: 0x2b0
+[   20.900580] hub 7-0:1.0: hub_reset_resume
+[   20.900587] hub 7-0:1.0: trying to enable port power on non-switchable hub
+[   20.900595] xhci-hcd xhci-hcd.8.auto: set port power 7-1 ON, portsc: 0x206e1
+[   20.920967] xhci-hcd xhci-hcd.8.auto: Get port status 7-1 read: 0x206e1, return 0x10101
+[   20.921004] usb usb7-port1: status 0101 change 0001
+[   20.921012] xhci-hcd xhci-hcd.8.auto: clear port1 connect change, portsc: 0x6e1
+[   20.924090] xhci-hcd xhci-hcd.1.auto: Get port status 6-1 read: 0x2e0, return 0x2e0
+[   20.929887] hub 3-0:1.0: hub_reset_resume
+[   20.929897] hub 3-0:1.0: trying to enable port power on non-switchable hub
+[   20.955968] xhci-hcd xhci-hcd.1.auto: Get port status 6-1 read: 0x2e0, return 0x2e0
+[   20.976957] xhci-hcd xhci-hcd.1.auto: Get port status 6-1 read: 0x2e0, return 0x2e0
+[   20.979790] xhci-hcd xhci-hcd.8.auto: xhci_hub_status_data: stopping usb7 port polling
+[   20.995824] xhci-hcd xhci-hcd.8.auto: Get port status 8-1 read: 0x2f0, return 0x2f0
+[   20.995875] usb usb8-port1: status 02f0 change 0000
+[   20.997938] xhci-hcd xhci-hcd.1.auto: Get port status 6-1 read: 0x2e0, return 0x2e0
+[   21.018887] xhci-hcd xhci-hcd.1.auto: Get port status 6-1 read: 0x2e0, return 0x2e0
+[   21.028043] xhci-hcd xhci-hcd.8.auto: Get port status 7-1 read: 0x6e1, return 0x101
+[   21.028779] xhci-hcd xhci-hcd.8.auto: xhci_hub_status_data: stopping usb7 port polling
+[   21.038816] usb 7-1: Waited 0ms for CONNECT
+[   21.038836] usb 7-1: finish reset-resume
+[   21.039056] xhci-hcd xhci-hcd.8.auto: set port reset, actual port 7-1 status  = 0x6f1
+[   21.039865] xhci-hcd xhci-hcd.1.auto: Get port status 6-1 read: 0x2e0, return 0x2e0
+[   21.060874] xhci-hcd xhci-hcd.1.auto: Get port status 6-1 read: 0x2e0, return 0x2e0
+[   21.081935] xhci-hcd xhci-hcd.1.auto: Get port status 6-1 read: 0x2e0, return 0x2e0
+[   21.099941] xhci-hcd xhci-hcd.8.auto: Get port status 7-1 read: 0x200e03, return 0x100503
+[   21.100005] xhci-hcd xhci-hcd.8.auto: clear port1 reset change, portsc: 0xe03
+[   21.100027] xhci-hcd xhci-hcd.8.auto: Get port status 8-1 read: 0x2a1203, return 0x310203
+[   21.102938] xhci-hcd xhci-hcd.1.auto: Get port status 6-1 read: 0x2e0, return 0x2e0
+[   21.110929] usb 8-1: Waited 0ms for CONNECT
+[   21.110947] xhci-hcd xhci-hcd.8.auto: clear port1 connect change, portsc: 0x281203
+[   21.110975] usb 8-1: finish reset-resume
+[   21.123905] xhci-hcd xhci-hcd.1.auto: Get port status 6-1 read: 0x2e0, return 0x2e0
+[   21.144888] xhci-hcd xhci-hcd.1.auto: Get port status 6-1 read: 0x2e0, return 0x2e0
+[   21.150918] usb 7-1: reset high-speed USB device number 2 using xhci-hcd
+[   21.151389] xhci-hcd xhci-hcd.8.auto: set port reset, actual port 7-1 status  = 0xef1
+[   21.165872] xhci-hcd xhci-hcd.1.auto: Get port status 6-1 read: 0x2e0, return 0x2e0
+[   21.186878] xhci-hcd xhci-hcd.1.auto: Get port status 6-1 read: 0x2e0, return 0x2e0
+[   21.207885] xhci-hcd xhci-hcd.1.auto: Get port status 6-1 read: 0x2e0, return 0x2e0
+[   21.211809] xhci-hcd xhci-hcd.8.auto: Get port status 7-1 read: 0x200e03, return 0x100503
+[   21.211875] xhci-hcd xhci-hcd.8.auto: clear port1 reset change, portsc: 0xe03
+[   21.219871] ata1: SATA link up 6.0 Gbps (SStatus 133 SControl 300)
+[   21.223824] sd 0:0:0:0: [sda] Starting disk
+[   21.227791] xhci-hcd xhci-hcd.8.auto: xhci_hub_status_data: stopping usb7 port polling
+[   21.227806] xhci-hcd xhci-hcd.1.auto: xhci_hub_status_data: stopping usb6 port polling
+[   21.228598] ata1.00: configured for UDMA/133
+[   21.228873] xhci-hcd xhci-hcd.1.auto: Get port status 6-1 read: 0x2e0, return 0x2e0
+[   21.249885] xhci-hcd xhci-hcd.1.auto: Get port status 6-1 read: 0x2e0, return 0x2e0
+[   21.270883] xhci-hcd xhci-hcd.1.auto: Get port status 6-1 read: 0x2e0, return 0x2e0
+[   21.275070] xhci-hcd xhci-hcd.8.auto: Get port status 8-1 read: 0x281203, return 0x300203
+[   21.275103] xhci-hcd xhci-hcd.8.auto: set port reset, actual port 8-1 status  = 0x281311
+[   21.291889] xhci-hcd xhci-hcd.1.auto: Get port status 6-1 read: 0x2e0, return 0x2e0
+[   21.312886] xhci-hcd xhci-hcd.1.auto: Get port status 6-1 read: 0x2e0, return 0x2e0
+[   21.333884] xhci-hcd xhci-hcd.1.auto: Get port status 6-1 read: 0x2e0, return 0x2e0
+[   21.335893] xhci-hcd xhci-hcd.8.auto: Get port status 8-1 read: 0x281203, return 0x300203
+[   21.335930] xhci-hcd xhci-hcd.8.auto: clear port1 reset change, portsc: 0x81203
+[   21.335944] xhci-hcd xhci-hcd.8.auto: clear port1 warm(BH) reset change, portsc: 0x1203
+[   21.335956] xhci-hcd xhci-hcd.8.auto: clear port1 link state change, portsc: 0x1203
+[   21.335968] xhci-hcd xhci-hcd.8.auto: clear port1 connect change, portsc: 0x1203
+[   21.335979] xhci-hcd xhci-hcd.8.auto: Get port status 8-1 read: 0x1203, return 0x203
+[   21.337727] hub 7-1:1.0: hub_reset_resume
+[   21.337793] hub 7-1:1.0: enabling power on all ports
+[   21.354869] xhci-hcd xhci-hcd.1.auto: Get port status 6-1 read: 0x2e0, return 0x2e0
+[   21.375886] xhci-hcd xhci-hcd.1.auto: Get port status 6-1 read: 0x2e0, return 0x2e0
+[   21.387101] usb 8-1: reset SuperSpeed USB device number 2 using xhci-hcd
+[   21.396865] xhci-hcd xhci-hcd.1.auto: Get port status 6-1 read: 0x2e0, return 0x2e0
+[   21.417875] xhci-hcd xhci-hcd.1.auto: Get port status 6-1 read: 0x2e0, return 0x2e0
+[   21.433931] hub 8-1:1.0: hub_reset_resume
+[   21.434184] hub 8-1:1.0: enabling power on all ports
+[   21.438897] xhci-hcd xhci-hcd.1.auto: Get port status 6-1 read: 0x2e0, return 0x2e0
+[   21.444207] usb 7-1-port1: status 0101 change 0001
+[   21.445376] usb 7-1-port4: status 0101 change 0001
+[   21.459888] xhci-hcd xhci-hcd.1.auto: Get port status 6-1 read: 0x2e0, return 0x2e0
+[   21.475804] xhci-hcd xhci-hcd.8.auto: xhci_hub_status_data: stopping usb8 port polling
+[   21.480894] xhci-hcd xhci-hcd.1.auto: Get port status 6-1 read: 0x2e0, return 0x2e0
+[   21.501899] xhci-hcd xhci-hcd.1.auto: Get port status 6-1 read: 0x2e0, return 0x2e0
+[   21.522887] xhci-hcd xhci-hcd.1.auto: Get port status 6-1 read: 0x2e0, return 0x2e0
+[   21.540225] usb 8-1-port1: status 02a0 change 0001
+[   21.541004] usb 8-1-port2: status 0203 change 0010
+[   21.541597] usb 8-1-port3: status 0203 change 0010
+[   21.543898] xhci-hcd xhci-hcd.1.auto: Get port status 6-1 read: 0x2e0, return 0x2e0
+[   21.558887] usb 7-1.4: Waited 0ms for CONNECT
+[   21.558906] usb 7-1.4: finish reset-resume
+[   21.564887] xhci-hcd xhci-hcd.1.auto: Get port status 6-1 read: 0x2e0, return 0x2e0
+[   21.585891] xhci-hcd xhci-hcd.1.auto: Get port status 6-1 read: 0x2e0, return 0x2e0
+[   21.594193] usb 7-1-port4: not reset yet, waiting 10ms
+[   21.606889] xhci-hcd xhci-hcd.1.auto: Get port status 6-1 read: 0x2e0, return 0x2e0
+[   21.627886] xhci-hcd xhci-hcd.1.auto: Get port status 6-1 read: 0x2e0, return 0x2e0
+[   21.648897] xhci-hcd xhci-hcd.1.auto: Get port status 6-1 read: 0x2e0, return 0x2e0
+[   21.654878] usb 8-1.2: Waited 0ms for CONNECT
+[   21.654878] usb 8-1.3: Waited 0ms for CONNECT
+[   21.654888] usb 8-1.3: finish reset-resume
+[   21.654888] usb 8-1.2: finish reset-resume
+[   21.655879] usb 7-1.4: reset high-speed USB device number 4 using xhci-hcd
+[   21.669880] xhci-hcd xhci-hcd.1.auto: Get port status 6-1 read: 0x2e0, return 0x2e0
+[   21.690892] xhci-hcd xhci-hcd.1.auto: Get port status 6-1 read: 0x2e0, return 0x2e0
+[   21.711898] xhci-hcd xhci-hcd.1.auto: Get port status 6-1 read: 0x2e0, return 0x2e0
+[   21.732949] xhci-hcd xhci-hcd.1.auto: Get port status 6-1 read: 0x2e0, return 0x2e0
+[   21.753891] xhci-hcd xhci-hcd.1.auto: Get port status 6-1 read: 0x2e0, return 0x2e0
+[   21.774890] xhci-hcd xhci-hcd.1.auto: Get port status 6-1 read: 0x2e0, return 0x2e0
+[   21.795945] xhci-hcd xhci-hcd.1.auto: Get port status 6-1 read: 0x2e0, return 0x2e0
+[   21.816957] xhci-hcd xhci-hcd.1.auto: Get port status 6-1 read: 0x4002c0, return 0x4002c0
+[   21.833166] usb 8-1.3: reset SuperSpeed USB device number 3 using xhci-hcd
+[   21.837891] xhci-hcd xhci-hcd.1.auto: Get port status 6-1 read: 0x4002c0, return 0x4002c0
+[   21.848732] rk_gmac-dwmac fe1c0000.ethernet: init for RGMII_ID
+[   21.851897] dwmac4: Master AXI performs any burst length
+[   21.851924] rk_gmac-dwmac fe1c0000.ethernet end0: No Safety Features support found
+[   21.851959] rk_gmac-dwmac fe1c0000.ethernet end0: IEEE 1588-2008 Advanced Timestamp supported
+[   21.856354] rk_gmac-dwmac fe1c0000.ethernet end0: configuring for phy/rgmii-id link mode
+[   21.858807] xhci-hcd xhci-hcd.1.auto: Get port status 6-1 read: 0x4002c0, return 0x4002c0
+[   21.879881] xhci-hcd xhci-hcd.1.auto: Get port status 6-1 read: 0x4002c0, return 0x4002c0
+[   21.900902] xhci-hcd xhci-hcd.1.auto: Get port status 6-1 read: 0x4002c0, return 0x4002c0
+[   21.921895] xhci-hcd xhci-hcd.1.auto: Get port status 6-1 read: 0x4002c0, return 0x4002c0
+[   21.942902] xhci-hcd xhci-hcd.1.auto: Get port status 6-1 read: 0x4002c0, return 0x4002c0
+[   21.945561] usb 8-1.2: reset SuperSpeed USB device number 4 using xhci-hcd
+[   21.963900] xhci-hcd xhci-hcd.1.auto: Get port status 6-1 read: 0x4002c0, return 0x4002c0
+[   21.984895] xhci-hcd xhci-hcd.1.auto: Get port status 6-1 read: 0x4002c0, return 0x4002c0
+[   22.005879] xhci-hcd xhci-hcd.1.auto: Get port status 6-1 read: 0x4002c0, return 0x4002c0
+[   22.026911] xhci-hcd xhci-hcd.1.auto: Get port status 6-1 read: 0x4002c0, return 0x4002c0
+[   22.047908] xhci-hcd xhci-hcd.1.auto: Get port status 6-1 read: 0x4002c0, return 0x4002c0
+[   22.068910] xhci-hcd xhci-hcd.1.auto: Get port status 6-1 read: 0x4002c0, return 0x4002c0
+[   22.089899] xhci-hcd xhci-hcd.1.auto: Get port status 6-1 read: 0x4002c0, return 0x4002c0
+[   22.110903] xhci-hcd xhci-hcd.1.auto: Get port status 6-1 read: 0x4002c0, return 0x4002c0
+[   22.131904] xhci-hcd xhci-hcd.1.auto: Get port status 6-1 read: 0x4002c0, return 0x4002c0
+[   22.152905] xhci-hcd xhci-hcd.1.auto: Get port status 6-1 read: 0x4002c0, return 0x4002c0
+[   22.173884] xhci-hcd xhci-hcd.1.auto: Get port status 6-1 read: 0x4002c0, return 0x4002c0
+[   22.194897] xhci-hcd xhci-hcd.1.auto: Get port status 6-1 read: 0x4002c0, return 0x4002c0
+[   22.216001] xhci-hcd xhci-hcd.1.auto: Get port status 6-1 read: 0x4002c0, return 0x4002c0
+[   22.237019] xhci-hcd xhci-hcd.1.auto: Get port status 6-1 read: 0x4002c0, return 0x4002c0
+[   22.257891] xhci-hcd xhci-hcd.1.auto: Get port status 6-1 read: 0x4002c0, return 0x4002c0
+[   22.278909] xhci-hcd xhci-hcd.1.auto: Get port status 6-1 read: 0x4002c0, return 0x4002c0
+[   22.299985] xhci-hcd xhci-hcd.1.auto: Get port status 6-1 read: 0x4002c0, return 0x4002c0
+[   22.320992] xhci-hcd xhci-hcd.1.auto: Get port status 6-1 read: 0x4002c0, return 0x4002c0
+[   22.341923] xhci-hcd xhci-hcd.1.auto: Get port status 6-1 read: 0x4002c0, return 0x4002c0
+[   22.362960] xhci-hcd xhci-hcd.1.auto: Get port status 6-1 read: 0x4002c0, return 0x4002c0
+[   22.383967] xhci-hcd xhci-hcd.1.auto: Get port status 6-1 read: 0x4002c0, return 0x4002c0
+[   22.404996] xhci-hcd xhci-hcd.1.auto: Get port status 6-1 read: 0x4002c0, return 0x4002c0
+[   22.425935] xhci-hcd xhci-hcd.1.auto: Get port status 6-1 read: 0x4002c0, return 0x4002c0
+[   22.446994] xhci-hcd xhci-hcd.1.auto: Get port status 6-1 read: 0x4002c0, return 0x4002c0
+[   22.467821] xhci-hcd xhci-hcd.1.auto: Get port status 6-1 read: 0x4002c0, return 0x4002c0
+[   22.489022] xhci-hcd xhci-hcd.1.auto: Get port status 6-1 read: 0x4002c0, return 0x4002c0
+[   22.509998] xhci-hcd xhci-hcd.1.auto: Get port status 6-1 read: 0x4002c0, return 0x4002c0
+[   22.530991] xhci-hcd xhci-hcd.1.auto: Get port status 6-1 read: 0x4002c0, return 0x4002c0
+[   22.552012] xhci-hcd xhci-hcd.1.auto: Get port status 6-1 read: 0x4002c0, return 0x4002c0
+[   22.572919] xhci-hcd xhci-hcd.1.auto: Get port status 6-1 read: 0x4002c0, return 0x4002c0
+[   22.593918] xhci-hcd xhci-hcd.1.auto: Get port status 6-1 read: 0x4002c0, return 0x4002c0
+[   22.615013] xhci-hcd xhci-hcd.1.auto: Get port status 6-1 read: 0x4002c0, return 0x4002c0
+[   22.636013] xhci-hcd xhci-hcd.1.auto: Get port status 6-1 read: 0x4002c0, return 0x4002c0
+[   22.656916] xhci-hcd xhci-hcd.1.auto: Get port status 6-1 read: 0x4002c0, return 0x4002c0
+[   22.677936] xhci-hcd xhci-hcd.1.auto: Get port status 6-1 read: 0x4002c0, return 0x4002c0
+[   22.698929] xhci-hcd xhci-hcd.1.auto: Get port status 6-1 read: 0x4002c0, return 0x4002c0
+[   22.720023] xhci-hcd xhci-hcd.1.auto: Get port status 6-1 read: 0x4002c0, return 0x4002c0
+[   22.741007] xhci-hcd xhci-hcd.1.auto: Get port status 6-1 read: 0x4002c0, return 0x4002c0
+[   22.761976] xhci-hcd xhci-hcd.1.auto: Get port status 6-1 read: 0x4002c0, return 0x4002c0
+[   22.782943] xhci-hcd xhci-hcd.1.auto: Get port status 6-1 read: 0x4002c0, return 0x4002c0
+[   22.803949] xhci-hcd xhci-hcd.1.auto: Get port status 6-1 read: 0x4002c0, return 0x4002c0
+[   22.825004] xhci-hcd xhci-hcd.1.auto: Get port status 6-1 read: 0x4002c0, return 0x4002c0
+[   22.846012] xhci-hcd xhci-hcd.1.auto: Get port status 6-1 read: 0x4002c0, return 0x4002c0
+[   22.866998] xhci-hcd xhci-hcd.1.auto: Get port status 6-1 read: 0x4002c0, return 0x4002c0
+[   22.888013] xhci-hcd xhci-hcd.1.auto: Get port status 6-1 read: 0x4002c0, return 0x4002c0
+[   22.908983] xhci-hcd xhci-hcd.1.auto: Get port status 6-1 read: 0x4002c0, return 0x4002c0
+[   22.930001] xhci-hcd xhci-hcd.1.auto: Get port status 6-1 read: 0x4002c0, return 0x4002c0
+[   22.951013] xhci-hcd xhci-hcd.1.auto: Get port status 6-1 read: 0x4002c0, return 0x4002c0
+[   22.972028] xhci-hcd xhci-hcd.1.auto: Get port status 6-1 read: 0x4002c0, return 0x4002c0
+[   22.993011] xhci-hcd xhci-hcd.1.auto: Get port status 6-1 read: 0x4002c0, return 0x4002c0
+[   23.013932] xhci-hcd xhci-hcd.1.auto: Get port status 6-1 read: 0x4002c0, return 0x4002c0
+[   23.035012] xhci-hcd xhci-hcd.1.auto: Get port status 6-1 read: 0x4002c0, return 0x4002c0
+[   23.035050] usb 6-1: Waited 2000ms for CONNECT
+[   23.035055] usb 6-1: finish reset-resume
+[   23.035330] xhci-hcd xhci-hcd.1.auto: Get port status 6-1 read: 0x4002c0, return 0x4002c0
+[   23.096009] xhci-hcd xhci-hcd.1.auto: Get port status 6-1 read: 0x4002b0, return 0x4002b0
+[   23.096046] usb usb6-port1: not warm reset yet, waiting 60ms
+[   23.157016] xhci-hcd xhci-hcd.1.auto: Get port status 6-1 read: 0x6a1203, return 0x710203
+[   23.157055] xhci-hcd xhci-hcd.1.auto: clear port1 reset change, portsc: 0x4a1203
+[   23.157069] xhci-hcd xhci-hcd.1.auto: clear port1 warm(BH) reset change, portsc: 0x421203
+[   23.157081] xhci-hcd xhci-hcd.1.auto: clear port1 link state change, portsc: 0x21203
+[   23.157093] xhci-hcd xhci-hcd.1.auto: clear port1 connect change, portsc: 0x1203
+[   23.157105] xhci-hcd xhci-hcd.1.auto: Get port status 6-1 read: 0x1203, return 0x203
+[   23.208236] usb 6-1: reset SuperSpeed USB device number 2 using xhci-hcd
+[   23.227899] xhci-hcd xhci-hcd.1.auto: xhci_hub_status_data: stopping usb6 port polling
+[   23.323907] usb 6-1: reset SuperSpeed USB device number 2 using xhci-hcd
+[   23.436185] xhci-hcd xhci-hcd.1.auto: Set port 6-1 link state, portsc: 0x1203, write 0x11261
+[   23.444350] usb usb6-port1: logical disconnect
+[   23.444571] xhci-hcd xhci-hcd.1.auto: Set port 6-1 link state, portsc: 0x1263, write 0x11261
+[   23.452723] usb 6-1: gone after usb resume? status -19
+[   23.452735] usb 6-1: can't resume, status -19
+[   23.452738] usb usb6-port1: logical disconnect
+[   23.452951] xhci-hcd xhci-hcd.1.auto: Set port 6-1 link state, portsc: 0x1263, write 0x11261
+[   23.763371] usb 8-1.1: Waited 2000ms for CONNECT
+[   23.765377] usb 8-1-port1: status 0000.02a0 after resume, -19
+[   23.765392] usb 8-1.1: can't resume, status -19
+[   23.765396] usb 8-1-port1: logical disconnect
+[   23.769190] OOM killer enabled.
+[   23.769202] Restarting tasks: Starting
+[   23.769299] hub 4-0:1.0: state 7 ports 1 chg 0000 evt 0000
+[   23.769305] hub 8-1:1.0: state 7 ports 4 chg 0002 evt 0004
+[   23.769323] hub 5-0:1.0: state 7 ports 1 chg 0000 evt 0000
+[   23.769331] hub 6-0:1.0: state 7 ports 1 chg 0002 evt 0002
+[   23.769336] hub 3-0:1.0: state 7 ports 1 chg 0000 evt 0000
+[   23.769339] hub 7-0:1.0: state 7 ports 1 chg 0000 evt 0000
+[   23.769349] xhci-hcd xhci-hcd.1.auto: Get port status 6-1 read: 0x1263, return 0x263
+[   23.769375] usb usb6-port1: status 0263, change 0000, 5.0 Gb/s
+[   23.769382] usb 6-1: USB disconnect, device number 2
+[   23.769386] usb 6-1: unregistering device
+[   23.769410] hub 4-0:1.0: hub_suspend
+[   23.769443] hub 5-0:1.0: hub_suspend
+[   23.769460] xhci-hcd xhci-hcd.1.auto: xhci_hub_status_data: stopping usb5 port polling
+[   23.769469] hub 3-0:1.0: hub_suspend
+[   23.769830] usb 8-1-port1: status 02a0, change 0000, 5.0 Gb/s
+[   23.769839] usb 8-1.1: USB disconnect, device number 5
+[   23.769844] usb 8-1.1: unregistering device
+[   23.770159] usb usb5: usb wakeup-resume
+[   23.770222] Restarting tasks: Done
+[   23.770277] random: crng reseeded on system resumption
+[   23.770536] device offline error, dev sdd, sector 10368 op 0x0:(READ) flags 0x883700 phys_seg 2 prio class 2
+[   23.770552] hub 1-0:1.0: state 7 ports 1 chg 0000 evt 0000
+[   23.770655] hub 2-0:1.0: state 7 ports 1 chg 0000 evt 0000
+[   23.770675] hub 8-0:1.0: state 7 ports 1 chg 0000 evt 0002
+[   23.770701] xhci-hcd xhci-hcd.8.auto: Get port status 8-1 read: 0x1203, return 0x203
+[   23.770741] device offline error, dev sdd, sector 10392 op 0x0:(READ) flags 0x883700 phys_seg 1 prio class 2
+[   23.770802] hub 1-0:1.0: hub_suspend
+[   23.770804] hub 7-1:1.0: state 7 ports 4 chg 0002 evt 0000
+[   23.770861] PM: suspend exit
+[   23.770859] device offline error, dev sdd, sector 10408 op 0x0:(READ) flags 0x883700 phys_seg 1 prio class 2
+[   23.771039] device offline error, dev sdd, sector 10424 op 0x0:(READ) flags 0x883700 phys_seg 1 prio class 2
+[   23.771099] usb 7-1-port1: status 0101, change 0000, 12 Mb/s
+[   23.771124] device offline error, dev sdd, sector 10440 op 0x0:(READ) flags 0x883700 phys_seg 1 prio class 2
+[   23.771245] device offline error, dev sdd, sector 4196352 op 0x0:(READ) flags 0x883700 phys_seg 1 prio class 2
+[   23.771301] usb 7-1-port1: indicator auto status 0
+[   23.771302] device offline error, dev sdd, sector 4196424 op 0x0:(READ) flags 0x883700 phys_seg 1 prio class 2
+[   23.771382] device offline error, dev sdd, sector 4196440 op 0x0:(READ) flags 0x883700 phys_seg 1 prio class 2
+[   23.771439] device offline error, dev sdd, sector 8390656 op 0x0:(READ) flags 0x883700 phys_seg 1 prio class 2
+[   23.771555] device offline error, dev sdd, sector 12584960 op 0x0:(READ) flags 0x883700 phys_seg 2 prio class 2
+[   23.771614] hub 2-0:1.0: hub_suspend
+[   23.772062] EXT4-fs error (device sdd1): ext4_wait_block_bitmap:586: comm ext4lazyinit: Cannot read block bitmap - block_group = 126, block_bitmap = 3670030
+[   23.775846] hub 5-0:1.0: hub_resume
+[   23.775874] xhci-hcd xhci-hcd.1.auto: Get port status 5-1 read: 0x2a0, return 0x100
+[   23.775934] hub 5-0:1.0: state 7 ports 1 chg 0000 evt 0000
+[   23.775966] hub 5-0:1.0: hub_suspend
+[   23.775996] xhci-hcd xhci-hcd.1.auto: xhci_hub_status_data: stopping usb5 port polling
+[   23.778863] EXT4-fs (sdb1): shut down requested (2)
+[   23.778887] Aborting journal on device sdb1-8.
+[   23.778909] Buffer I/O error on dev sdb1, logical block 7372800, lost sync page write
+[   23.778930] JBD2: I/O error when updating journal superblock for sdb1-8.
+[   23.799532] EXT4-fs error (device sdd1): ext4_wait_block_bitmap:586: comm ext4lazyinit: Cannot read block bitmap - block_group = 255, block_bitmap = 7864335
+[   23.806068] usb 7-1-port1: not reset yet, waiting 10ms
+[   23.817029] usb 7-1-port1: not reset yet, waiting 10ms
+[   23.826716] Buffer I/O error on dev sdd1, logical block 15237120, lost sync page write
+[   23.826750] JBD2: I/O error when updating journal superblock for sdd1-8.
+[   23.826765] Aborting journal on device sdd1-8.
+[   23.826783] Buffer I/O error on dev sdd1, logical block 15237120, lost sync page write
+[   23.827884] JBD2: I/O error when updating journal superblock for sdd1-8.
+[   23.827935] EXT4-fs (sdd1): shut down requested (2)
+[   23.829115] usb 7-1-port1: not reset yet, waiting 200ms
+[   23.875388] xhci-hcd xhci-hcd.1.auto: Get port status 6-1 read: 0x1263, return 0x263
+[   23.875410] xhci-hcd xhci-hcd.1.auto: set port reset, actual port 6-1 status  = 0x1271
+[   23.890307] hub 8-1:1.0: state 7 ports 4 chg 0000 evt 0002
+[   23.890709] usb 8-1-port1: status 0203, change 0001, 5.0 Gb/s
+[   23.926062] rk_gmac-dwmac fe1c0000.ethernet end0: Link is Up - 1Gbps/Full - flow control rx/tx
+[   23.949311] xhci-hcd xhci-hcd.1.auto: Get port status 6-1 read: 0x12b1, return 0x2b1
+[   23.949328] usb usb6-port1: not reset yet, waiting 60ms
+[   23.999276] usb 8-1-port1: debounce total 100ms stable 100ms status 0x203
+[   24.009840] xhci-hcd xhci-hcd.1.auto: Get port status 6-1 read: 0x281203, return 0x300203
+[   24.009871] xhci-hcd xhci-hcd.1.auto: clear port1 reset change, portsc: 0x81203
+[   24.009887] xhci-hcd xhci-hcd.1.auto: clear port1 warm(BH) reset change, portsc: 0x1203
+[   24.009901] xhci-hcd xhci-hcd.1.auto: clear port1 link state change, portsc: 0x1203
+[   24.009913] xhci-hcd xhci-hcd.1.auto: clear port1 connect change, portsc: 0x1203
+[   24.009926] xhci-hcd xhci-hcd.1.auto: Get port status 6-1 read: 0x1203, return 0x203
+[   24.036338] usb 7-1-port1: not reset yet, waiting 200ms
+[   24.060924] usb 6-1: new SuperSpeed USB device number 3 using xhci-hcd
+[   24.073072] usb 6-1: New USB device found, idVendor=0781, idProduct=5580, bcdDevice= 0.10
+[   24.074079] usb 6-1: udev 3, busnum 6, minor = 642
+[   24.074092] usb 6-1: New USB device strings: Mfr=1, Product=2, SerialNumber=3
+[   24.074097] usb 6-1: Product: Extreme
+[   24.074100] usb 6-1: Manufacturer: SanDisk
+[   24.074103] usb 6-1: SerialNumber: AA011014141119500484
+[   24.074856] usb-storage 6-1:1.0: USB Mass Storage device detected
+[   24.075723] scsi host4: usb-storage 6-1:1.0
+[   24.076096] usb-storage 6-1:1.0: waiting for device to settle before scanning
+[   24.076318] hub 6-0:1.0: state 7 ports 1 chg 0000 evt 0002
+[   24.076333] xhci-hcd xhci-hcd.1.auto: Get port status 6-1 read: 0x1203, return 0x203
+[   24.227921] xhci-hcd xhci-hcd.1.auto: xhci_hub_status_data: stopping usb6 port polling
+[   24.244286] usb 7-1-port1: not reset yet, waiting 200ms
+[   24.452331] usb 7-1-port1: not reset yet, waiting 200ms
+[   24.453333] hub 7-1:1.0: state 7 ports 4 chg 0000 evt 0002
+[   24.454061] usb 7-1-port1: status 0100, change 0001, 12 Mb/s
+[   24.454484] usb 7-1-port1: indicator auto status 0
+[   24.517477] usb 8-1.1: new SuperSpeed USB device number 6 using xhci-hcd
+[   24.530566] usb 8-1.1: New USB device found, idVendor=8564, idProduct=4000, bcdDevice= 0.37
+[   24.533285] usb 8-1.1: udev 6, busnum 8, minor = 901
+[   24.533298] usb 8-1.1: New USB device strings: Mfr=3, Product=4, SerialNumber=5
+[   24.533303] usb 8-1.1: Product: Transcend
+[   24.533307] usb 8-1.1: Manufacturer: TS-RDF5 
+[   24.533310] usb 8-1.1: SerialNumber: 000000000039
+[   24.536266] usb-storage 8-1.1:1.0: USB Mass Storage device detected
+[   24.537784] scsi host5: usb-storage 8-1.1:1.0
+[   24.537937] usb-storage 8-1.1:1.0: waiting for device to settle before scanning
+[   24.538114] hub 8-1:1.0: state 7 ports 4 chg 0000 evt 0002
+[   24.558080] usb 7-1-port1: debounce total 100ms stable 100ms status 0x100
+[   25.139978] usb-storage 6-1:1.0: starting scan
+[   25.140141] usb-storage 6-1:1.0: scan complete
+[   25.141148] scsi 4:0:0:0: Direct-Access     SanDisk  Extreme          0001 PQ: 0 ANSI: 6
+[   25.141796] sd 4:0:0:0: Attached scsi generic sg1 type 0
+[   25.143101] sd 4:0:0:0: [sde] 125045424 512-byte logical blocks: (64.0 GB/59.6 GiB)
+[   25.144013] sd 4:0:0:0: [sde] Write Protect is off
+[   25.144024] sd 4:0:0:0: [sde] Mode Sense: 53 00 00 08
+[   25.144637] sd 4:0:0:0: [sde] Write cache: enabled, read cache: enabled, doesn't support DPO or FUA
+[   25.177909]  sde: sde1
+[   25.178235] sd 4:0:0:0: [sde] Attached SCSI removable disk
+[   25.588047] usb-storage 8-1.1:1.0: starting scan
+[   25.588469] usb-storage 8-1.1:1.0: scan complete
+[   25.591387] scsi 5:0:0:0: Direct-Access     TS-RDF5  SD  Transcend    TS37 PQ: 0 ANSI: 6
+[   25.592083] sd 5:0:0:0: Attached scsi generic sg3 type 0
+[   25.780289] usb 7-1.4: usb auto-suspend, wakeup 0
+[   25.792431] hub 7-1:1.0: hub_suspend
+[   25.792866] xhci-hcd xhci-hcd.8.auto: Set port 7-1 link state, portsc: 0xe03, write 0x10e61
+[   25.804032] usb 7-1: usb auto-suspend, wakeup 1
+[   25.814960] hub 7-0:1.0: hub_suspend
+[   25.815005] xhci-hcd xhci-hcd.8.auto: xhci_hub_status_data: stopping usb7 port polling
+[   25.941258] sd 5:0:0:0: [sdf] 250085376 512-byte logical blocks: (128 GB/119 GiB)
+[   25.942818] sd 5:0:0:0: [sdf] Write Protect is off
+[   25.942830] sd 5:0:0:0: [sdf] Mode Sense: 23 00 00 00
+[   25.944214] sd 5:0:0:0: [sdf] Write cache: disabled, read cache: enabled, doesn't support DPO or FUA
+[   25.976582]  sdf: sdf1
+[   25.976923] sd 5:0:0:0: [sdf] Attached SCSI removable disk

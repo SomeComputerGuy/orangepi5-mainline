@@ -1,6 +1,6 @@
 # board-sata: Orange Pi 5 M.2 SATA device-tree variant
 
-- Workspace branch: `@boardbase` (exported 2026-10-30)
+- Workspace branch: `@boardbase` (exported 2026-10-31)
 - Kernel fork branch: `opi5/board-sata` (see PUBLISH.md)
 - Sits on: `multicore` (base commit `d1b5768a932b`)
 - Hardware test: yes: the test board runs its root file system from an M.2 SATA SSD

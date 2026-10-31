@@ -1,6 +1,6 @@
 # vp9-conf: VDPU381 VP9 conformance fixes (register reset per frame, segmentation map)
 
-- Workspace branch: `opi5/vp9-conf-7.3` (exported 2026-10-30)
+- Workspace branch: `opi5/vp9-conf-7.3` (exported 2026-10-31)
 - Kernel fork branch: `opi5/vp9-conf` (see PUBLISH.md)
 - Sits on: `rkvdec-vp9` (base commit `afe2d3426baf`)
 - Hardware test: yes: fixed vectors verified on the board

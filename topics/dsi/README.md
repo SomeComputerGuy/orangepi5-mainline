@@ -1,6 +1,6 @@
 # dsi: MIPI DSI LCD: ili9881c Innolux AFJ101-BA2131 panel, dsi2 sentinel fix, LCD overlays
 
-- Workspace branch: `opi5/dsi-7.3` (exported 2026-10-30)
+- Workspace branch: `opi5/dsi-7.3` (exported 2026-10-31)
 - Kernel fork branch: `opi5/dsi` (see PUBLISH.md)
 - Sits on: `board-sata` (base commit `5e33b74b04cf`)
 - Hardware test: not yet: no panel attached

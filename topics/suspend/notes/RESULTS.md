@@ -354,3 +354,37 @@ Other HCDs: xhci-plat on RK3588 is a dwc3 child without its own phys (dwc3_core_
 resume, before the child) → not affected. ehci-platform has the same structure but its registers are accessible with the
 PHY down on RK3588 (E10, all Kb runs) → no change without evidence. v2 covers every generic-ohci + inno-usb2 SoC.
 Test kernel 7.3.0-opi5-susp (pkg 7.3.0-susp2) = patches/linux (321) + 1104 + v2: building.
+
+## Proof (2026-10-30 21:52-22:50): test kernel 7.3.0-opi5-susp, pkg 7.3.0-susp2 = patches/linux (321) + 1104 (dwc3) + v2 (ohci-platform)
+Logs: `_out/suspend/proof-susp2/` (proof50, proof30, proof-copy-usb, ohci-rpm.txt). Default console (kernel.printk=4), no
+pm_print_times — the configuration that wedged on every attempt before the fix.
+- **55 fast s2idle resumes, 0 wedges, 0 resets** (one boot, up 57 min at the end): run 1 cycles 1-19 strict OK, cycle 20 FAIL
+  only on the USB3 link count (7/8: Transcend back at 480M, see below; the board resumed fine); run 2: 30/30 OK with
+  every check (USB3 count as WARN: 0 warnings), then **5/5 copy cycles** (256 MiB file copy started just before suspend to
+  the Ultra Fit, /mnt/scratch-usb, 8-1.2; copy + cmp OK after each resume).
+- After every resume: DP-1 + HDMI-A-1 connected, DP AUX DPCD read OK, SATA read, network, no "AUX reply / failed to enable
+  link / xHC error in resume / BUG / Oops / WARNING" in dmesg (strict).
+- **OHCI runtime PM: 20/20** forced resume / autosuspend cycles of both OHCI root hubs OK.
+- "xHC error in resume, USBSTS 0x401" no longer appears (1104).
+**Open bug (separate, found during the proof):** after each resume the USB core's reset-resume of the SanDisk Extreme
+(6-1, host2 SuperSpeed) and of the Transcend reader (dock 8-1.1) fails ("reset SuperSpeed USB device" twice, then
+"USB disconnect") and they are re-enumerated: block device changes, a mounted filesystem dies ("device offline",
+EXT4 shutdown). Ultra Fit (8-1.2) and AX88179 reset-resume fine. 1503's peer reset does not fire on resume.
+Next: dyndbg on hub.c/port.c + xhci-hub, check plain #5, fix, then a copy surviving 20 resumes on each of the 3 drives.
+
+## Reset-resume loss of USB drives (2026-10-31, plain #5 + 1103 drop-in; log `_out/suspend/persist-pd1/`)
+Reproduced without 1104: Extreme (6-1) and Transcend (8-1.1) mounts DEAD after one fast s2idle, Ultra Fit (8-1.2) alive.
+Root cause: after resume the SuperSpeed links retrain from scratch (dwc3 tears down host2's core/PHY; the reset-resumed
+dock hub drops its downstream links). Extreme: port status 02e0 (link Polling, no CONNECT) → "Waited 2000ms for CONNECT"
+→ resets → "gone after usb resume? status -19" → logical disconnect; port connected (0263) ~0.3 s later. Transcend: 02a0
+(Rx.Detect) for 2000 ms → disconnect; connected (0203) ~2.35 s after the hub resumed. The USB core's reset-resume
+wait_for_connected() allows only 2 s; these devices need ~2.3-2.7 s. Ultra Fit / AX88179 relink at once.
+Proposed fix (usb core, hub.c wait_for_connected): keep waiting beyond 2 s (e.g. up to 5 s) while a SuperSpeed port's
+link is still training (Polling / Rx.Detect / Recovery), keep 2 s otherwise.
+Timeline (pd1): host2 xHCI reinit + port power at 20.711 s, port 6-1 in Polling at 20.821 s (host up in time), Extreme
+connects ~23.7 s (~2.9 s in Polling); dock hub reset-resume re-powers its ports at 21.434 s, Transcend port in Rx.Detect
+(no terminations) 21.540 → 23.89 s. So the delay is device-side recovery after *we* drop the links (dwc3_core_exit in
+host-mode system suspend + the hub reset it cascades into), not late PHY/xHCI init.
+Draft fix (data-supported, not timeout extension): `patches/persist/0001-usb-dwc3-Keep-the-host-core-up-across-suspend-to-idle.patch`
+— keep the dwc3 host core/PHYs/links up for s2idle (as for wakeup) + device_set_wakeup_path() so PD_USB stays on; deep
+and needs_full_reinit unchanged. Builds W=1 clean; untested on the board.

@@ -1,6 +1,6 @@
 # tcpm: USB Type-C tcpm: DP alt-mode discovery fixes (right SVID when resuming Discover Modes, Not_Supported only as a reply to an outstanding VDM, retry discovery after a VDM response timeout, don't NAK unexpected responses)
 
-- Workspace branch: `opi5/tcpm-svid-retry-7.3` (exported 2026-10-30)
+- Workspace branch: `opi5/tcpm-svid-retry-7.3` (exported 2026-10-31)
 - Kernel fork branch: `opi5/tcpm` (see PUBLISH.md)
 - Sits on: `integration` (base commit `1afa8d268718`)
 - Hardware test: yes: 100/100 dock attach cycles reach DP configured on kernel 5, 0 VDM timeouts; injected late-response stock-vs-fixed comparison in progress; in patches/linux (0271-0274)

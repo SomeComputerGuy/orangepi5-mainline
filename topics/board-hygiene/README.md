@@ -1,6 +1,6 @@
 # board-hygiene: Board fixes: dwmac-rk delay parsing, i2s-tdm regmap default, rgmii-id, SPI NOR supply, RK806 reset mode
 
-- Workspace branch: `opi5/board-hygiene-7.3` (exported 2026-10-30)
+- Workspace branch: `opi5/board-hygiene-7.3` (exported 2026-10-31)
 - Kernel fork branch: `opi5/board-hygiene` (see PUBLISH.md)
 - Sits on: `board-sata` (base commit `5e33b74b04cf`)
 - Hardware test: partly: driver fixes in the image kernel; rgmii-id DT change still needs a board test

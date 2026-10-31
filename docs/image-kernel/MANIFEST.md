@@ -186,3 +186,33 @@ Tested on build 5: the port pairing works and the SuperSpeed retry fires, but th
 
 ## 1501-1504 RESTORED (2026-10-30 20:45). The earlier "DROPPED" entry was wrong
 On kernel 5 (which has them), the SanDisk Extreme (0781:5580) on the top Type-A port enumerates first at HS on EHCI host1 and is then moved to SuperSpeed by 1503 ("usb 4-1: SuperSpeed peer port available, resetting", then usb 6-1 at 5000M). On a kernel without 1501-1504 (the 7.3.0-opi5-susp test build), it stays at 480M. So the patches fix devices that retry SuperSpeed on a USB2 reset, as the USB3 spec requires. The SanDisk Ultra Fit (0781:5583) doesn't, and only a VBUS cycle helps it (hardware: VBUS always on). Back in patches/linux (321 patches; all apply in order on v7.3).
+
+## 1103, 1104: s2idle resume wedge on RK3588 (2026-10-30, branch opi5/suspend-fix-7.3-v2)
+- 1103 usb: ohci-platform: Power the root hub PHYs up before resuming the controller. genpd power-cycles PD_USB in s2idle; any OHCI register access from the controller's system-resume callback before the root-hub USB2 PHY is powered wedged the RK3588 USB interconnect (xHCI commands aborted, CPUs stopped answering IPIs, soft lockups). The PHY bracket (usb_phy_roothub_resume → ohci_resume → usb_phy_roothub_suspend) is refcount-balanced with hcd_bus_resume.
+- 1104 usb: dwc3: Tell xhci-plat when the core lost its state (power_lost, like cdns3); removes the bogus CRS restore ("xHC error in resume, USBSTS 0x401"). Independent of 1103.
+- Proof (work/_out/suspend/proof-susp2, RESULTS.md): 55 fast s2idle resumes in the config that wedged 100% before, 0 wedges/resets; per-cycle DP/HDMI/AUX/SATA/net/dmesg checks; 5/5 copy-during-suspend; 20/20 OHCI runtime PM.
+- Open, separate: the SanDisk Extreme (6-1) and the dock's Transcend reader (8-1.1) fail reset-resume after s2idle and re-enumerate, killing mounted filesystems (suspend agent).
+
+## 1805 media: rkvdec: Let a timed-out core finish its job before resetting it (2026-10-31)
+A soft reset of a still-busy core puts its IOMMU in bypass while bus accesses are in flight, and those escape untranslated (memory corruption in P4). Recovery now waits up to 100 ms for the core to report done before resetting. Proof: KASAN in-tree, 1300 recoveries, 902 timeouts, 0 reports, 0 hits on a 112 MiB RAM canary covering the buffer IOVAs, bit-exact after every step. CCU series 16xx is still held (rare AVC_V1 victim corruption, RESULTS §8).
+
+## 1203 drm/rockchip: dw_hdmi_qp: Pass color depth to the PHY in FRL mode (2026-10-31, branch opi5/hdmi-10bpc-7.3)
+Fixes the 0300-098 glue: in FRL mode `dw_hdmi_qp_rockchip_encoder_atomic_check()` left `phy_cfg.hdmi.bpc` at 0, so the
+HDPTX PHY set its pixel-clock colour depth for 8 bpc while GRF/VOP2 sent 10 bpc: FRL trained (10G x4, 0 errors) but the
+picture was black. Seen with GNOME (mutter asks for 10 bpc) on HDMI 4K60 (742.5 MHz, needs FRL). Also re-passes the bpc in
+`.set_frl_rate()` (FRL rate fallback). Could be folded into 0300-098. Root cause + EDID: work/_out/hdmi-10bpc/RESULTS.md.
+Status: builds W=1 clean; board test pending (drop-in on the SD desktop image, updates/opi5-hdmi10).
+
+## 1204-1206 drm/bridge: synopsys: dw-dp: DP branch device / protocol converter support (2026-10-31, work/_out/dp-4k30/)
+i915-equivalent handling of DP->HDMI/DVI/VGA converters (USB-C docks): 1204 reads downstream port info on detect and
+configures the PCON on enable (HDMI vs DVI output from DFP type + sink EDID, 4:2:0 / RGB->YCbCr conversion off), gated
+like intel_dp_configure_protocol_converter() (DPCD >= 1.3 via drm_dp_read_dpcd_caps, branch); 1205 enforces the
+downstream max bpc / dotclock / TMDS range in mode_valid and output format selection; 1206 re-detects on
+DOWNSTREAM_PORT_STATUS_CHANGED / SINK_COUNT changes. Verified on the board through a Switch-style dock (PCON OUI 0010fa,
+DPCD 1.2 basic / 1.4 extended): 1080p/1440p/4K30 CEA bars by camera, sink CRCs unchanged, 0x3050=01, greeter lit,
+ELD on dp0. Pending: dock replug, audio by ear, Zerlon 4K30 batch. Not covered: PCON FRL (this PCON has none), using
+the PCON's 444->420 conversion.
+1203 UPDATE (08:40): camera A/B on the TCL TV shows 4K60 10 bpc RGB over FRL (742.5 MHz, 10G x4) displays correctly
+WITHOUT 1203 as well (hdmi-10bpc/batch1/off-19.jpg vs A-19.jpg). The "black HDMI" reports were the gdm greeter's dark
+background on the non-primary output and the idle blank. 1203 stays as a consistency fix (PHY gets the real bpc in FRL
+mode, as the PHY driver's configure API and the vendor glue expect), not as a fix for an observed failure.

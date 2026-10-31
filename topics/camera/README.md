@@ -1,6 +1,6 @@
 # camera: MIPI-CSI camera: rkisp2 v3 series + fixups + Orange Pi 5 CAM1 sensor overlays
 
-- Workspace branch: `opi5/camera-7.3` (exported 2026-10-30)
+- Workspace branch: `opi5/camera-7.3` (exported 2026-10-31)
 - Kernel fork branch: `opi5/camera` (see PUBLISH.md)
 - Sits on: `board-sata` (base commit `5e33b74b04cf`)
 - Hardware test: partly: no camera module attached; detection only

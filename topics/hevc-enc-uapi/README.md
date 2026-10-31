@@ -1,6 +1,6 @@
 # hevc-enc-uapi: Proposed V4L2 HEVC stateless encode uAPI + helpers + KUnit tests
 
-- Workspace branch: `opi5/hevc-enc-uapi` (exported 2026-10-30)
+- Workspace branch: `opi5/hevc-enc-uapi` (exported 2026-10-31)
 - Kernel fork branch: `opi5/hevc-enc-uapi` (see PUBLISH.md)
 - Sits on: `board-sata` (base commit `5e33b74b04cf`)
 - Hardware test: not applicable (uAPI); KUnit passes

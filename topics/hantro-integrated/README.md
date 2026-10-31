@@ -1,6 +1,6 @@
 # hantro-integrated: hantro-validate on top of hantro-robust-mc (integration branch)
 
-- Workspace branch: `opi5/hantro-integrated` (exported 2026-10-30)
+- Workspace branch: `opi5/hantro-integrated` (exported 2026-10-31)
 - Kernel fork branch: `opi5/hantro-integrated` (see PUBLISH.md)
 - Sits on: `hantro-robust-mc` (base commit `e170bd977f2a`)
 - Hardware test: integration of the above

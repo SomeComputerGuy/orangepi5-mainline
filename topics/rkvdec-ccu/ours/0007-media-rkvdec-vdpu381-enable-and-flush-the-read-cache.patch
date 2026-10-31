@@ -42,10 +42,10 @@ index f6398add7e2d..6faa90d1e347 100644
  #define VDPU381_STA_INT_DEC_RDY_STA	BIT(2)
  #define VDPU381_STA_INT_ERROR		BIT(4)
 diff --git a/drivers/media/platform/rockchip/rkvdec/rkvdec.c b/drivers/media/platform/rockchip/rkvdec/rkvdec.c
-index b16b915470a6..c72925a5fdfc 100644
+index 37ea0b4dc731..b0a7b05d3caf 100644
 --- a/drivers/media/platform/rockchip/rkvdec/rkvdec.c
 +++ b/drivers/media/platform/rockchip/rkvdec/rkvdec.c
-@@ -1544,6 +1544,25 @@ void rkvdec_schedule_watchdog(struct rkvdec_core *core, u32 timeout_threshold)
+@@ -1547,6 +1547,25 @@ void rkvdec_schedule_watchdog(struct rkvdec_core *core, u32 timeout_threshold)
  	schedule_delayed_work(&core->watchdog_work, msecs_to_jiffies(watchdog_time));
  }
  
@@ -71,7 +71,7 @@ index b16b915470a6..c72925a5fdfc 100644
  static void rkvdec_device_run(void *priv)
  {
  	struct rkvdec_ctx *ctx = priv;
-@@ -1593,6 +1612,8 @@ static void rkvdec_device_run(void *priv)
+@@ -1596,6 +1615,8 @@ static void rkvdec_device_run(void *priv)
  	if (ctx->dev->ccu)
  		rkvdec_ccu_prepare(ctx);
  
@@ -80,7 +80,7 @@ index b16b915470a6..c72925a5fdfc 100644
  	if (!rkvdec_rcb_buf_validate_size(ctx)) {
  		rkvdec_free_rcb(ctx->dev, core);
  
-@@ -2236,6 +2257,7 @@ static const struct rkvdec_variant vdpu381_variant = {
+@@ -2260,6 +2281,7 @@ static const struct rkvdec_variant vdpu381_variant = {
  	.num_rcb_sizes = ARRAY_SIZE(vdpu381_rcb_sizes),
  	.ops = &vdpu381_variant_ops,
  	.has_ccu = true,
@@ -88,7 +88,7 @@ index b16b915470a6..c72925a5fdfc 100644
  };
  
  static const struct rcb_size_info vdpu383_rcb_sizes[] = {
-@@ -2387,6 +2409,12 @@ static int rkvdec_core_probe(struct platform_device *pdev)
+@@ -2412,6 +2434,12 @@ static int rkvdec_core_probe(struct platform_device *pdev)
  		core->link = devm_platform_ioremap_resource_byname(pdev, "link");
  		if (IS_ERR(core->link))
  			return PTR_ERR(core->link);
@@ -102,10 +102,10 @@ index b16b915470a6..c72925a5fdfc 100644
  
  	if (iommu_get_domain_for_dev(&pdev->dev)) {
 diff --git a/drivers/media/platform/rockchip/rkvdec/rkvdec.h b/drivers/media/platform/rockchip/rkvdec/rkvdec.h
-index 0d721265fd1f..923a46551237 100644
+index cc7a21498edd..b6af2e176a9e 100644
 --- a/drivers/media/platform/rockchip/rkvdec/rkvdec.h
 +++ b/drivers/media/platform/rockchip/rkvdec/rkvdec.h
-@@ -96,6 +96,7 @@ struct rkvdec_variant {
+@@ -97,6 +97,7 @@ struct rkvdec_variant {
  	bool has_single_reg_region;
  	unsigned int quirks;
  	bool has_ccu;
@@ -113,7 +113,7 @@ index 0d721265fd1f..923a46551237 100644
  };
  
  struct rkvdec_coded_fmt_ops {
-@@ -199,6 +200,7 @@ struct rkvdec_core {
+@@ -201,6 +202,7 @@ struct rkvdec_core {
  	struct rkvdec_rcb_config *rcb_config;
  	struct rkvdec_ctx *curr_ctx;
  	struct rkvdec_job *job;

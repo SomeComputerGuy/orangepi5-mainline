@@ -155,3 +155,59 @@ Boot: "rkvdec rockchip,rk3588-vdec: 2 cores, decoding with the CCU". Logs: logs/
 | rkvdec_ccu_reset_work() on rkvdec->reset_wq | every core idle, or held (needs_reset) with its job started | core->job, core->needs_reset, job->started | core->job=NULL in rkvdec_job_hw_done() + wake_up(reset_wq); needs_reset=true in rkvdec_core_failed() + wake_up(reset_wq) (NEW); started=true in device_run() + wake_up(reset_wq) |
 | v4l2_m2m (finished) | m2m core | TRANS_RUNNING | unchanged m2m code; the deferred m2m job is run by the reset work once pending is cleared (deferred_ctx set and read under cores_lock with ccu_reset_pending) |
 No other wait_event/wait_for_completion in rkvdec or the series' v4l2-mem2mem changes.
+
+### P4 panic (rerun, ~21:47 board time, uptime 1493 s) and the fix (new in-tree patch 1805)
+- Serial: during the watchdog sweep (dbg_wd_us=4000, jobs timed out while still decoding), a read page fault of
+  core1 at an unmapped IOVA (0xfd000200), then in the reset work's recovery of core1 ("enter" dump: DEBUG_INT
+  0x0040ffa1, i.e. the core still busy; the "soft-ok" dump right after: IOMMU DTE 0, paging off) the timer
+  irq hit: lockdep "trying to register non-static key", a KASAN report on a task stack (8-page vmalloc region
+  from kernel_clone; text mostly dropped), "list_del corruption ... next->prev ... was 0x20" in
+  __wake_up_common (printk's log_wait, whose waiter sleeps on its task stack), then PC 0xaaaaaa (SP/PC
+  alignment) -> panic. The journal of that boot ends before it (not flushed); tmpfs logs lost.
+- Most likely mechanism (consistent with §3): both the soft reset and the AXI reset line reset the core's
+  IOMMU into bypass at once; resetting a core that is still decoding lets its remaining bus accesses go out
+  untranslated to the physical addresses of their IOVAs (0xe....... is RAM on this board). In P3 the same
+  forced early timeouts didn't hit RAM that mattered; the CCU run (more buffers, lower IOVAs) did.
+- Fix: 1805 "media: rkvdec: Let a timed-out core finish its job before resetting it": the core records whether
+  it reported (any interrupt) since it was started; rkvdec_core_recover() waits (VDPU381: STA_INT, <=100 ms)
+  for a core that didn't, as the BSP only resets cores that reported. CCU (folded into 1609/1614): the core is
+  forced idle in the CCU before that wait, and the reset work forces all cores idle first, so that a core
+  waiting for a failed one can finish.
+
+### P4 rerun with 1805 (CCU, KASAN 7.3.0-5kasan3, RAM canary 0xe0000000+112 MiB reserved in the test DTB)
+(The canary was first 256 MiB; the upper part overlapped early-boot reservations, so it was cut to 112 MiB.)
+Logs: logs/p4-ccu3/. Lowest buffer IOVA programmed: 0xc8000000 (the buffers span the canary range).
+| step | result |
+|---|---|
+| write-fault injection (decoder output -> canary PA), every 25th job | 23 faults, recovered; 600/600 x3 bit-exact |
+| read-fault injection | 32 faults, recovered; 600/600 x3 |
+| corrupted H.264/HEVC streams | error irqs, recovered; 600/600 x3 |
+| watchdog sweep 4/6/8 ms (the 6 ms point panicked before 1805) | 100/97/38 timeouts, no "still busy" fallback needed; 600/600 x3 |
+| totals so far | 1604 recoveries, 0 KASAN/ODEBUG/lockdep/list/oops/hung, 0 RAM-canary hits, 0 physical-canary hits |
+| 30 min two-stream 4K playback | 216 + 216 passes, 0 failed |
+| fluster -j2 (CCU) | HEVC 146/147, FR-EXT 65/69, VP9 230/305 identical to reference; **AVC_V1 122/135: REGRESSION**, see below |
+| 200 close/reopen x {normal, SIGKILL mid, SIGKILL start} | 0 hangs, 0 timeouts, 0 hung tasks |
+| totals | 1734 recoveries, 0 KASAN/ODEBUG/lockdep/list/oops/hung, 0 RAM-canary hits (lowest IOVA 0xb4400000), 0 physical-canary hits |
+
+### OPEN (blocks the CCU series, not the in-tree patches): victim SVA_* vectors next to SP1_BT_A
+- CCU-mode JVT-AVC_V1 runs: 122, 129, 128, 122, 128 /135 (reference 129); the extra failures are always SVA_*
+  (SVA_BA1_B, SVA_BA2_D, SVA_Base_B, SVA_CL1_E, SVA_FM1_E, SVA_NL1_B, SVA_NL2_E): they pass alone and next to
+  FM2_SVA_C / FM1_FT_E, and are the -j2 neighbours of SP1_BT_A (SP slices: every frame fails, error irq).
+- Isolated A/B, same KASAN kernel, `board/svasp.sh 8` (4 SVA vectors x 8 rounds, each decoded next to SP1_BT_A):
+  old CCU tip 7ec28cf1 (before this rework) 32/32 bit-exact; new tip (1601-1616 on 1801-1805) 31/32 (and 2/3 in
+  an earlier sva.sh run). So the rework introduced a rare victim corruption, or made an existing one likelier.
+- Bisect plan (modules already built, /tmp/rrb/mods/varA, varB; branch = opi5/rkvdec-reset-ccu-dbg-7.3 + edit):
+  - varA: no "force all cores idle in the CCU first" loop in rkvdec_ccu_reset_work() (1614 fixup).
+  - varB: no 1805 wait (rkvdec_core_recover() resets a not-yet-reported core at once).
+  - next if both still fail: complete the failed job right away when its core reported (IRQ path; only watchdog
+    timeouts and dependents keep their core until the reset), as the old 1614 did; then the soft-reset write
+    (old: SOFT_RESET_EN only, new: | DEC_IRQ_DISABLE).
+  Each: install, boot, `svasp.sh 16` (64 decodes) + one fluster JVT-AVC_V1; old tip gives the 0-failure baseline.
+
+## 9. In-tree 1805 check (own boot, KASAN kernel, RAM canary 0xe0000000+112 MiB), logs/p5-intree-1805
+| step | result |
+|---|---|
+| FMO pair FM1_BT_B+FM1_FT_E x50 | 350 recoveries, 0 faults, then 3x600 frames bit-exact on both cores |
+| injection (reg 2, reg 0) x48 | 51 IOMMU faults (injected only), 0 not-attached, each followed by 3x600 bit-exact |
+| watchdog sweep 4/6/8 ms (latirq) | 521/380/1 timeouts, rc 0, then 3x600 bit-exact |
+| totals | 902 timeouts, 1300 recoveries, 0 "still busy", 0 cores disabled, 0 KASAN/ODEBUG/lockdep/list/oops/WARNING/hung, 0 RAM-canary and physical-canary hits (lowest buffer IOVA 0xc2000000) |

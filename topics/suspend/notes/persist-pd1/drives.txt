@@ -1,0 +1,6 @@
+before: EXT /dev/sdb1 6-1
+before: USB /dev/sdc1 8-1.2
+before: SD /dev/sdd1 8-1.1
+after: EXT /dev/sdb1 rw,relatime,shutdown DEAD
+after: USB /dev/sdc1 rw,relatime alive
+after: SD /dev/sdd1 rw,relatime,shutdown DEAD

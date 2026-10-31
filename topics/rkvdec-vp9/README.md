@@ -1,6 +1,6 @@
 # rkvdec-vp9: VP9 decode on rkvdec VDPU381 (carried series + multi-core port + smaller-frame fix)
 
-- Workspace branch: `opi5/rkvdec-vp9-7.3` (exported 2026-10-30)
+- Workspace branch: `opi5/rkvdec-vp9-7.3` (exported 2026-10-31)
 - Kernel fork branch: `opi5/rkvdec-vp9` (see PUBLISH.md)
 - Sits on: `multicore` (base commit `d1b5768a932b`)
 - Hardware test: yes: fluster VP9 224/305 baseline, matches the series author

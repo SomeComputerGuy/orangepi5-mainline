@@ -20,6 +20,9 @@ while [ $# -gt 0 ]; do
   esac
 done
 case $VARIANT in server|desktop) ;; *) echo "unknown variant: $VARIANT"; exit 1 ;; esac
+# The signed media repository is made as the invoking user, whose home holds the
+# repository signing key (scripts/make-media-repo.sh), before switching to root
+[ "$(id -u)" -eq 0 ] || "$(dirname "$0")/make-media-repo.sh"
 # sudo drops the environment, so pass the variant on as an option
 [ -n "$ROOTFS_TAR" ] || [ "$(id -u)" -eq 0 ] || exec sudo "$0" --variant "$VARIANT" "${args[@]}"
 TOP=$(cd "$(dirname "$0")/.." && pwd)
@@ -44,6 +47,10 @@ PKGS=(
   openssh-client sysstat tcpdump telnet trace-cmd ufw update-manager-core uuid-runtime
   # Firmware: GPU (Mali CSF), common USB Wi-Fi/BT/ethernet dongles
   linux-firmware-misc linux-firmware-realtek linux-firmware-mediatek wireless-regdb
+  # Sound: the board's UCM profiles (our alsa-ucm-conf rebuild, patches/alsa-ucm-conf)
+  # and alsa-utils, whose udev rule (alsactl) applies their boot defaults: without
+  # it the ES8388 jack starts at -96 dB. The desktop seed has both anyway.
+  alsa-ucm-conf alsa-utils
 )
 # Desktop: Ubuntu Desktop as Ubuntu preinstalls it on boards (the Raspberry Pi desktop
 # image is ubuntu-desktop with its Recommends; scripts/desktop-exclude.pref leaves out
