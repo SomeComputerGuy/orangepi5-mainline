@@ -181,6 +181,12 @@ if [ ${#ONLY[@]} -eq 0 ] || [[ " ${ONLY[*]} " == *" image "* ]]; then
   apply_dir "$REPO/patches/linux"
   # Package version as scripts/build-kernel.sh sets it: <kernelversion><suffix>
   suffix=$(sed -n 's/.*KDEB_PKGVERSION="$(make -s -C "$SRC" kernelversion)\([^"]*\)".*/\1/p' "$REPO/scripts/build-kernel.sh")
+  # The revision may be a variable with a default: OPI5_PKGREV=${OPI5_PKGREV:-<n>}
+  if [[ $suffix == *'$OPI5_PKGREV'* ]]; then
+    rev=$(sed -n 's/.*OPI5_PKGREV=\${OPI5_PKGREV:-\([0-9][0-9]*\)}.*/\1/p' "$REPO/scripts/build-kernel.sh" | head -1)
+    [ -n "$rev" ] || { echo "no OPI5_PKGREV=\${OPI5_PKGREV:-<n>} default in scripts/build-kernel.sh"; exit 1; }
+    suffix=${suffix//'$OPI5_PKGREV'/$rev}
+  fi
   [ -n "$suffix" ] || { echo "no KDEB_PKGVERSION=\"\$(make ... kernelversion)-<n>\" in scripts/build-kernel.sh"; exit 1; }
   ver=$(make -s -C "$WORK" kernelversion)$suffix
   g branch -q -f opi5/image HEAD
