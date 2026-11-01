@@ -136,10 +136,12 @@ class Topics:
                 self.boardbase_refs = line.split("=", 1)[1].split()
                 continue
             f = [x.strip() for x in line.split(" | ")]
-            if len(f) != 7:
+            if len(f) not in (7, 8) or (len(f) == 8 and not f[7].startswith("tag:")):
                 sys.exit(f"topics.conf: bad line: {line}")
-            self.items.append(dict(zip(
-                ["name", "branch", "parent", "out", "title", "hw", "next"], f)))
+            t = dict(zip(["name", "branch", "parent", "out", "title", "hw", "next"], f))
+            # 8th field "tag:<tag>": published as that tag, not as branch opi5/<name>
+            t["tag"] = f[7][4:] if len(f) == 8 else ""
+            self.items.append(t)
         self.byname = {t["name"]: t for t in self.items}
 
     def git(self, *a, check=True):
@@ -199,7 +201,7 @@ def export_topic(topics, t, ws, dest):
     (d / "topic.env").write_text(
         f"NAME={t['name']}\nWORKSPACE_BRANCH={t['branch']}\nPARENT={t['parent']}\n"
         f"UPSTREAM_BASE={upstream_base(topics, t)}\nBASE_ORIG={base}\nTIP_ORIG={tip}\n"
-        f"TIP_TREE={tree}\nCOMMITS={len(commits)}\n")
+        f"TIP_TREE={tree}\nCOMMITS={len(commits)}\n" + (f"TAG={t['tag']}\n" if t["tag"] else ""))
     t.update(counts=counts, rows=rows, ncommits=len(commits))
 
     # Notes, results and test tools from work/_out/<out>
@@ -252,7 +254,8 @@ def topic_readme(t):
     c = t["counts"]
     out = [f"# {t['name']}: {t['title']}", "",
            f"- Workspace branch: `{t['branch']}` (exported {datetime.date.today()})",
-           f"- Kernel fork branch: `opi5/{t['name']}` (see PUBLISH.md)",
+           (f"- Kernel fork: tag `{t['tag']}` (retired branch `opi5/{t['name']}`; see PUBLISH.md)" if t["tag"]
+            else f"- Kernel fork branch: `opi5/{t['name']}` (see PUBLISH.md)"),
            f"- Sits on: `{t['parent']}` (base commit `{t['base'][:12]}`)",
            f"- Hardware test: {t['hw']}",
            f"- Next upstream step: {t['next']}",
@@ -455,12 +458,14 @@ def status_md(topics, repo):
          "|---|---|---|---|---|---|"]
     for t in topics.items:
         c = t["counts"]
-        L.append(f"| [{t['name']}](topics/{t['name']}/README.md) | {md_escape(t['title'])} | "
+        title = md_escape(t["title"]) + (f" (retired branch; fork tag `{t['tag']}`)" if t["tag"] else "")
+        L.append(f"| [{t['name']}](topics/{t['name']}/README.md) | {title} | "
                  f"`{t['parent']}` | {c['ours']} / {c['carried']} / {c['local']} | "
                  f"{md_escape(t['hw'])} | {md_escape(t['next'])} |")
     L += ["", "## Image kernel", "",
           "`patches/linux/` is what `scripts/build-kernel.sh` applies on v7.3 for the image "
-          "(recreated as fork branch `opi5/image-7.3`). It is a snapshot of the topics that "
+          "(recreated as fork branch `opi5/image`, plus tag `image-<kernel package version>` for every "
+          "image kernel, e.g. `image-7.3.0-8`). It is a snapshot of the topics that "
           "were ready for the image; the topic directories are the reference for upstreaming."
           + (" Range-by-range provenance and test state: [docs/image-kernel/MANIFEST.md](docs/image-kernel/MANIFEST.md)."
              if (repo / "docs/image-kernel/MANIFEST.md").exists() else ""), "",

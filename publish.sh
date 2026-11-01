@@ -3,13 +3,19 @@
 # release binaries). Nothing is pushed until you confirm. See PUBLISH.md.
 #
 #   ./publish.sh --private|--public [--name NAME] [--owner LOGIN]
-#                [--kernel-fork [--fork-name NAME]] [--release DIR] [--yes]
+#                [--kernel-fork [--fork-name NAME] [--force-branches]]
+#                [--release DIR] [--yes]
 #
 #   --private / --public  visibility of the main repository (required; pick one)
 #   --name NAME           repository name (default orangepi5-mainline)
 #   --owner LOGIN         GitHub account (default SomeComputerGuy)
 #   --kernel-fork         also fork torvalds/linux and push the opi5/* branches
-#                         (a fork of a public repository is always public)
+#                         and the image-*/archive/* tags of .work/linux (a fork
+#                         of a public repository is always public). New and
+#                         fast-forward branches and new tags are pushed; nothing
+#                         on the fork is deleted or moved backwards
+#   --force-branches      also force-push opi5/* branches that were rewritten
+#                         (e.g. a topic rebase); existing tags are never moved
 #   --fork-name NAME      name of the kernel fork (default linux: the existing
 #                         fork github.com/SomeComputerGuy/linux)
 #   --release DIR         also create a GitHub release with the binaries in DIR
@@ -18,7 +24,7 @@
 set -euo pipefail
 REPO=$(cd "$(dirname "$0")" && pwd)
 cd "$REPO"
-VIS= NAME=orangepi5-mainline OWNER=SomeComputerGuy FORK=0 FORK_NAME=linux RELDIR= YES=0
+VIS= NAME=orangepi5-mainline OWNER=SomeComputerGuy FORK=0 FORK_NAME=linux RELDIR= YES=0 FORCE_BR=0
 while [ $# -gt 0 ]; do
   case "$1" in
     --private) VIS=private; shift ;;
@@ -27,9 +33,10 @@ while [ $# -gt 0 ]; do
     --owner) OWNER=$2; shift 2 ;;
     --kernel-fork) FORK=1; shift ;;
     --fork-name) FORK_NAME=$2; shift 2 ;;
+    --force-branches) FORCE_BR=1; shift ;;
     --release) RELDIR=$2; shift 2 ;;
     --yes) YES=1; shift ;;
-    -h|--help) sed -n '2,19p' "$0"; exit 0 ;;
+    -h|--help) sed -n '2,25p' "$0"; exit 0 ;;
     *) echo "unknown option: $1"; exit 1 ;;
   esac
 done
@@ -72,9 +79,9 @@ echo "Pushed: https://github.com/$OWNER/$NAME"
 if [ $FORK = 1 ]; then
   echo "==> Kernel branches"
   [ -d .work/linux/.git ] || tools/recreate-kernel-branches.sh
-  echo "Branches to push (a fork of torvalds/linux is PUBLIC):"
-  git -C .work/linux for-each-ref --format='  %(refname:short)' refs/heads/opi5/
-  confirm "Fork torvalds/linux as $OWNER/$FORK_NAME and push these branches?" || { echo "stopped"; exit 1; }
+  echo "Branches and tags to push (a fork of torvalds/linux is PUBLIC):"
+  git -C .work/linux for-each-ref --format='  %(refname:short)' refs/heads/opi5/ 'refs/tags/image-*' 'refs/tags/archive/*'
+  confirm "Fork torvalds/linux as $OWNER/$FORK_NAME and push these?" || { echo "stopped"; exit 1; }
   if ! gh repo view "$OWNER/$FORK_NAME" >/dev/null 2>&1; then
     gh repo fork torvalds/linux --clone=false --default-branch-only --fork-name "$FORK_NAME"
     for i in $(seq 30); do gh repo view "$OWNER/$FORK_NAME" >/dev/null 2>&1 && break; sleep 5; done
@@ -84,18 +91,49 @@ if [ $FORK = 1 ]; then
   # push.negotiate lets git find them so only the new objects (~90 MB) go up.
   FURL=git@github.com:$OWNER/$FORK_NAME.git
   git ls-remote "$FURL" >/dev/null 2>&1 || FURL=https://github.com/$OWNER/$FORK_NAME.git
-  # The fork's opi5/* branches mirror .work/linux: delete any others (e.g. a
-  # branch pushed straight from the workspace clone, whose commits carry the
-  # build host's committer address)
-  stale=()
-  while read -r _ ref; do
-    git -C .work/linux rev-parse -q --verify "$ref" >/dev/null || stale+=("$ref")
-  done < <(git ls-remote "$FURL" 'refs/heads/opi5/*')
-  if [ ${#stale[@]} -gt 0 ]; then
-    printf '  stale on the fork: %s\n' "${stale[@]}"
-    confirm "Delete these from $OWNER/$FORK_NAME?" && git push "$FURL" "${stale[@]/#/:}"
+  # Classify every local opi5/* branch against the fork: new, unchanged,
+  # fast-forward, or rewritten (pushed only with --force-branches). Branches on
+  # the fork that are no longer generated are listed, never deleted here.
+  declare -A remote=()
+  while read -r sha ref; do remote[$ref]=$sha; done < <(git ls-remote "$FURL" 'refs/heads/opi5/*' 'refs/tags/image-*' 'refs/tags/archive/*')
+  push=() rewritten=() stale=()
+  while read -r sha ref; do
+    r=${remote[$ref]:-}
+    if [ -z "$r" ]; then push+=("$ref:$ref")
+    elif [ "$r" = "$sha" ]; then :
+    elif git -C .work/linux merge-base --is-ancestor "$r" "$sha" 2>/dev/null; then push+=("$ref:$ref")
+    else rewritten+=("$ref")
+    fi
+  done < <(git -C .work/linux for-each-ref --format='%(objectname) %(refname)' refs/heads/opi5/)
+  # Tags: only new ones (an existing tag on the fork is never moved)
+  while read -r sha ref; do
+    r=${remote[$ref]:-}
+    if [ -z "$r" ]; then push+=("$ref:$ref")
+    elif [ "$r" != "$sha" ]; then
+      [ "$(git -C .work/linux rev-parse -q --verify "$r^{commit}" 2>/dev/null)" = "$(git -C .work/linux rev-parse "$ref^{commit}")" ] ||
+        echo "  WARNING: tag ${ref#refs/tags/} differs on the fork; left alone"
+    fi
+  done < <(git -C .work/linux for-each-ref --format='%(objectname) %(refname)' 'refs/tags/image-*' 'refs/tags/archive/*')
+  for ref in "${!remote[@]}"; do
+    [[ $ref == refs/heads/* ]] || continue
+    git -C .work/linux rev-parse -q --verify "$ref" >/dev/null || stale+=("${ref#refs/heads/}")
+  done
+  if [ ${#rewritten[@]} -gt 0 ]; then
+    printf '  rewritten (not a fast-forward): %s\n' "${rewritten[@]#refs/heads/}"
+    if [ $FORCE_BR = 1 ]; then push+=("${rewritten[@]/#/+}")
+    else echo "  not pushed; re-run with --force-branches to force-push them"; fi
   fi
-  git -C .work/linux -c push.negotiate=true push --force "$FURL" 'refs/heads/opi5/*:refs/heads/opi5/*'
+  if [ ${#push[@]} -gt 0 ]; then
+    printf '  push: %s\n' "${push[@]%%:*}"
+    git -C .work/linux -c push.negotiate=true push "$FURL" "${push[@]}"
+  else
+    echo "  fork is up to date"
+  fi
+  if [ ${#stale[@]} -gt 0 ]; then
+    mapfile -t stale < <(printf '%s\n' "${stale[@]}" | sort)
+    echo "  On the fork but no longer generated (not deleted; check that an archive/ or image- tag keeps each tip, then):"
+    echo "    git -C .work/linux push $FURL --delete ${stale[*]}"
+  fi
   echo "Pushed: https://github.com/$OWNER/$FORK_NAME/branches"
 fi
 

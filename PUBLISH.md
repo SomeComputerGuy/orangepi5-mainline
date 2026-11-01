@@ -72,7 +72,10 @@ creates `<you>/orangepi5-mainline` (`--name` to change it), adds it as `origin` 
 ## 4. Optional: kernel branches (fork of torvalds/linux)
 
 People who want `git` history rather than patch files get one branch per topic,
-`opi5/<topic>`, plus `opi5/image-7.3` (exactly v7.3 + `patches/linux`, the image kernel).
+`opi5/<topic>`, plus `opi5/image` (exactly v7.3 + `patches/linux`, the current image kernel)
+and an annotated tag per image kernel, `image-<package version>` (the version is
+`KDEB_PKGVERSION` in `scripts/build-kernel.sh`, e.g. `image-7.3.0-8`), plus
+`image-<version>-extra` for the `OPI5_EXTRA=1` build (+ `patches/linux-extra`).
 
 ```sh
 ./publish.sh --private --kernel-fork          # main repo + fork "orangepi5-linux"
@@ -80,12 +83,16 @@ People who want `git` history rather than patch files get one branch per topic,
 
 This runs `tools/recreate-kernel-branches.sh` if needed. It forks torvalds/linux with
 "default branch only", uses the fork `SomeComputerGuy/linux` (created already; `--fork-name` to change it), and
-force-pushes `refs/heads/opi5/*`. Manually, it is:
+pushes the `opi5/*` branches that are new or fast-forwards plus the `image-*` and `archive/*`
+tags the fork doesn't have yet. It never deletes anything on the fork and never moves a tag;
+a rewritten branch (topic rebase) is only force-pushed with `--force-branches`, and branches
+that are no longer generated are listed with the command to delete them. Manually, it is:
 
 ```sh
 tools/recreate-kernel-branches.sh             # ~2 min, verifies every topic tree
-git -C .work/linux -c push.negotiate=true push --force \
-    git@github.com:SomeComputerGuy/linux.git 'refs/heads/opi5/*:refs/heads/opi5/*'
+git -C .work/linux -c push.negotiate=true push \
+    git@github.com:SomeComputerGuy/linux.git 'refs/heads/opi5/*:refs/heads/opi5/*' \
+    'refs/tags/image-*:refs/tags/image-*' 'refs/tags/archive/*:refs/tags/archive/*'
 ```
 
 **Which branches** get pushed (all `opi5/`, matching `topics/`):
@@ -93,8 +100,9 @@ git -C .work/linux -c push.negotiate=true push --force \
 - one branch per topic with commits: `multicore board-sata shutdown-hang board-hygiene
   gpu-npu rkvdec-vp9 vp9-conf vp9-perf hantro-validate hantro-robust hantro-multicore
   hantro-robust-mc hantro-integrated vepu121-h264enc rkvenc rkvenc-hevc hevc-enc-uapi
-  jpeg-dec iep2 camera dsi hdmi-frl dp-altmode board-dt integration codec-quality
-  vop2-underflow-int dp-smooth audio suspend-k3 rkvdec-hevc-rps rkvdec-ccu-base rkvdec-ccu`
+  jpeg-dec iep2 camera dsi hdmi-frl hdmi-10bpc hdmi-frl-fixes hdmi-wedge vop2-hdmi-clk
+  dp-altmode dw-dp-pcon board-dt codec-quality vop2-underflow-int dp-smooth usbdp-keep-usb3
+  audio suspend-k3 rkvdec-hevc-rps tcpm usb3-port rkvdec-reset rkvdec-ccu`
   (`rkvdec-ccu` is work in progress and not in the image kernel). These stack on each other the
   same way as the topics, and each still contains its few `local/` commits (for example
   the v4l2-core symbol-version shims), so that it builds and tests exactly as it did on the
@@ -102,13 +110,27 @@ git -C .work/linux -c push.negotiate=true push --force \
   topic README;
 - `v7.4-multicore v7.4-rkvdec-vp9 v7.4-dp-altmode v7.4-rkisp2 v7.4-hdmi-frl`: the early
   versions on the 7.4 merge window, kept as the starting point for the 7.4-rc rebase;
-- `image-7.3`: exactly what the image kernel is built from, and `image-7.3-extra` (plus
-  `patches/linux-extra`, when that directory exists).
+- `image`: exactly what the current image kernel is built from (tag `image-<version>` marks
+  each image kernel; `image-<version>-extra` adds `patches/linux-extra`).
+
+**Tags** (annotated, never moved):
+
+- `image-7.3.0-8` = `opi5/image` (337 patches), `image-7.3.0-8-extra` (+ `patches/linux-extra`),
+  `image-7.3.0-7` (321 patches, was branch `opi5/image-k7`), `image-7.3.0-6` (314 patches, the
+  base of kernel build 6, was branch `opi5/image-k6`). Earlier image kernels were not tagged.
+- `archive/<topic>`: the tips of retired branches: `archive/integration` (the 2026-10-29
+  integration branch that the topics from `codec-quality` on still sit on),
+  `archive/rkvdec-ccu-base` (superseded: `rkvdec-ccu` now sits on `rkvdec-reset`) and
+  `archive/dw-dp-redetect` (parked patch, never in the image, not needed after the USBDP
+  re-init fix). `integration`, `image-k6` and `image-k7` are still recreated (as tags) because
+  other topics sit on them; see the 8th field in `tools/export/topics.conf`.
+- Retired branch names (`opi5/integration`, `opi5/image-k6`, `opi5/image-k7`, `opi5/image-7.3`,
+  `opi5/image-7.3-extra`, `opi5/rkvdec-ccu-base`, `opi5/dw-dp-redetect`) are no longer generated.
 
 Not pushed: `opi5/vepu580` (port of a vendor driver, other authors, all NOT FOR UPSTREAM),
 `opi5/*-debug` (fault injection), `opi5/shutdown-hang-7.3-clk` (duplicate), and the empty
 `opi5/base`, `opi5/iep2` and `opi5/jpeg-dec`. Any other `opi5/*` branch on the fork is
-offered for deletion by `publish.sh`.
+listed by `publish.sh` with the command to delete it (it never deletes them itself).
 
 **Note on the 2026-10-29 test push:** `opi5/shutdown-hang-7.3` was pushed to the fork once, straight from the workspace clone, and its commits showed the build host's committer address. It has been deleted (the fork has only `master`). GitHub may keep unreferenced commits reachable by SHA for some time; ask GitHub support to purge them if that matters. The workspace clone now has a repository-local `user.name`/`user.email`, so new commits there are clean, but older ones aren't, so always push the recreated branches.
 
@@ -120,7 +142,7 @@ offered for deletion by `publish.sh`.
   kept, and the committer is the owner with the author date. So the commit IDs are
   reproducible, and the same patches always give the same IDs.
 - Every recreated topic tip has been checked against the tree ID of the original
-  workspace branch (`TIP_TREE` in `topic.env`), and every topic with commits matches. `opi5/image-7.3`
+  workspace branch (`TIP_TREE` in `topic.env`), and every topic with commits matches. `opi5/image`
   is identical to the source tree that `scripts/build-kernel.sh` last built.
 - The scratch repository borrows objects from the workspace clone, so nothing is
   downloaded. Like that clone, it is shallow, cut at v7.3 (`c03c1a14`) and at
@@ -140,7 +162,8 @@ route. This downloads a lot: a blobless clone of the fork is a few GB and takes 
 ```sh
 git clone --filter=blob:none --no-checkout https://github.com/<you>/orangepi5-linux.git /tmp/opi5-linux
 git -C /tmp/opi5-linux fetch ~/orangepi5-github/.work/linux 'refs/heads/opi5/*:refs/heads/opi5/*'
-git -C /tmp/opi5-linux push --force origin 'refs/heads/opi5/*:refs/heads/opi5/*'
+git -C /tmp/opi5-linux fetch ~/orangepi5-github/.work/linux 'refs/tags/image-*:refs/tags/image-*' 'refs/tags/archive/*:refs/tags/archive/*'
+git -C /tmp/opi5-linux push origin 'refs/heads/opi5/*:refs/heads/opi5/*' 'refs/tags/image-*' 'refs/tags/archive/*'
 ```
 
 Without the workspace (anyone else), `tools/recreate-kernel-branches.sh --linux <any clone
@@ -199,8 +222,10 @@ The workspace is still changing. Before pushing again:
 
 ```sh
 tools/export-from-workspace.sh --commit --branches   # re-export, recreate branches, secret scan, commit
-./publish.sh --private --kernel-fork                 # pushes main, force-pushes opi5/* in the fork
+./publish.sh --private --kernel-fork                 # pushes main, new/fast-forward opi5/* and new tags
 ```
 
-The kernel fork branches are mirrors, so they are force-pushed. Unchanged topics keep their
-commit IDs.
+Unchanged topics keep their commit IDs, so they are not pushed again. A topic that was
+rebased is reported as rewritten and only force-pushed with `--force-branches`. A new image
+kernel needs a new package version in `scripts/build-kernel.sh` (`KDEB_PKGVERSION`), so it
+gets its own `image-<version>` tag; an existing tag is never moved.

@@ -114,7 +114,8 @@ What each step does:
   (the kernel enforces lockdown) and cross-builds `linux-headers` for on-board DKMS through a
   private arm64 sysroot. The module-signing key is generated in `build/linux/certs/` and must
   stay private. It is never part of this repository or of any package. The same tree is
-  branch `opi5/image-7.3` in the [kernel fork](https://github.com/SomeComputerGuy/linux).
+  branch `opi5/image` in the [kernel fork](https://github.com/SomeComputerGuy/linux), and every
+  image kernel has a tag named after its package version (`image-7.3.0-8`, `image-7.3.0-7`, ...).
 - **`build-uboot.sh`** builds TF-A BL31 from source (`BL31_SRC=rkbin` uses Rockchip's binary
   instead), resetting `src/tf-a` to v2.15.0 and applying `patches/tf-a/*.patch`. It patches
   a copy of the rkbin DDR blob to print at 115200 baud, adds the board fragments from
@@ -246,8 +247,8 @@ Most topics are based on **v7.3**, on top of `multicore` and `board-sata` (see e
 early versions on the 7.4 merge window (`c339f4010`).
 
 For `git` history instead of patch files, use the kernel fork named in
-[`PUBLISH.md`](PUBLISH.md): branch `opi5/<topic>` for each topic, and `opi5/image-7.3`
-for the exact image kernel. `tools/recreate-kernel-branches.sh` builds the same branches
+[`PUBLISH.md`](PUBLISH.md): branch `opi5/<topic>` for each topic, `opi5/image` for the exact
+current image kernel and tags `image-<version>` for every image kernel built so far. `tools/recreate-kernel-branches.sh` builds the same branches
 locally from these patch files and verifies every tree.
 
 ## Licensing

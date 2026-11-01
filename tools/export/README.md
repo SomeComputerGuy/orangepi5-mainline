@@ -19,8 +19,9 @@ and identical recreated commit IDs.
 - `export.py`: does the work. Run it with `python3 -I`.
 - `../secret-scan.sh` and `../secret-scan.allow`: the pre-publish scan, and the hits that were
   reviewed and allowed.
-- `../recreate-kernel-branches.sh`: rebuilds `opi5/<topic>` and `opi5/image-7.3` from the
-  patch files in a scratch repository (`.work/linux`), for pushing to the kernel fork.
+- `../recreate-kernel-branches.sh`: rebuilds `opi5/<topic>`, `opi5/image` and the tags
+  `image-<version>` (+ `-extra`) and `archive/<topic>` from the patch files in a scratch
+  repository (`.work/linux`), for pushing to the kernel fork.
 
 ## What is exported, and how
 

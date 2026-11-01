@@ -15,8 +15,15 @@
 #   topic...     only these topics (their parents must exist already)
 #
 # Result: branches opi5/<topic> for every topic in tools/export/topics.conf
-# that has commits, plus opi5/image-7.3 (v7.3 + patches/linux, i.e. the image
-# kernel). Commits keep their authors and author dates; the committer is
+# that has commits (a topic with "tag:<tag>" as 8th field gets that annotated
+# tag instead of a branch), plus the image kernel: branch opi5/image (v7.3 +
+# patches/linux, what scripts/build-kernel.sh builds) and annotated tag
+# image-<version> (KDEB_PKGVERSION of scripts/build-kernel.sh, e.g. 7.3.0-8),
+# and tag image-<version>-extra (+ patches/linux-extra). Tags are never moved:
+# an existing tag that points elsewhere is reported (bump the package version).
+# A full run (no topic arguments) removes local opi5/* branches it did not
+# make, so the scratch repository mirrors topics.conf; the fork is not touched.
+# Commits keep their authors and author dates; the committer is
 # $COMMITTER_NAME <$COMMITTER_EMAIL> (default: the repository owner) with the
 # author date, so unchanged patches always give the same commit IDs.
 #
@@ -37,7 +44,7 @@ while [ $# -gt 0 ]; do
     --linux) LINUX=$2; shift 2 ;;
     --work) WORK=$2; shift 2 ;;
     --no-verify) VERIFY=0; shift ;;
-    -h|--help) sed -n '2,25p' "$0"; exit 0 ;;
+    -h|--help) sed -n '2,32p' "$0"; exit 0 ;;
     *) ONLY+=("$1"); shift ;;
   esac
 done
@@ -84,10 +91,27 @@ lookup() { awk -v k="$1" '$1 == k {print $2}' "$MAP" | tail -1; }
 
 checkout() { g checkout -q -f --detach "$1"; g clean -q -fdx; }
 
+# Annotated tag, created once and never moved. Tagger = owner, dated like the
+# commit, so a recreated tag object is identical too.
+tagged=()
+mktag() { # tag commit message
+  local cur d
+  cur=$(g rev-parse -q --verify "refs/tags/$1^{commit}" 2>/dev/null || true)
+  if [ -n "$cur" ]; then
+    [ "$cur" = "$2" ] || echo "WARNING: tag $1 exists at ${cur:0:12}, not ${2:0:12}; left alone (new image kernel? bump KDEB_PKGVERSION in scripts/build-kernel.sh)"
+  else
+    d=$(g log -1 --format=%cI "$2")
+    GIT_COMMITTER_DATE=$d g -c user.name="$COMMITTER_NAME" -c user.email="$COMMITTER_EMAIL" tag -a -m "$3" "$1" "$2"
+  fi
+  tagged+=("refs/tags/$1")
+}
+
 # --- topics ------------------------------------------------------------------
-mapfile -t TOPICS < <(grep -vE '^\s*(#|$|BOARDBASE=)' "$REPO/tools/export/topics.conf" | awk -F' [|] ' '{print $1}')
+conf_lines() { grep -vE '^\s*(#|$|BOARDBASE=)' "$REPO/tools/export/topics.conf"; }
+mapfile -t TOPICS < <(conf_lines | awk -F' [|] ' '{print $1}')
 made=()
 for t in "${TOPICS[@]}"; do
+  tag=$(conf_lines | awk -F' [|] ' -v t="$t" '$1 == t && $8 ~ /^tag:/ {sub(/^tag:/, "", $8); print $8}')
   if [ ${#ONLY[@]} -gt 0 ] && [[ ! " ${ONLY[*]} " == *" $t "* ]]; then continue; fi
   env=$REPO/topics/$t/topic.env
   [ -f "$env" ] || { echo "skip $t (not exported)"; continue; }
@@ -99,9 +123,9 @@ for t in "${TOPICS[@]}"; do
   if [ -z "$start" ]; then
     # Parent created in an earlier run: use the existing branch
     parent=$(sed -n 's/^PARENT=//p' "$env")
-    if g rev-parse -q --verify "refs/heads/opi5/$parent" >/dev/null &&
+    if g rev-parse -q --verify "refs/topics/$parent" >/dev/null &&
        [ "$(sed -n 's/^TIP_ORIG=//p' "$REPO/topics/$parent/topic.env")" = "$BASE_ORIG" ]; then
-      start=$(g rev-parse "refs/heads/opi5/$parent")
+      start=$(g rev-parse "refs/topics/$parent")
     else
       echo "$t: base $BASE_ORIG is not a recreated commit (recreate its parent '$parent' in the same run)"; exit 1
     fi
@@ -120,13 +144,19 @@ for t in "${TOPICS[@]}"; do
   if [ $VERIFY = 1 ] && [ "$(g rev-parse 'HEAD^{tree}')" != "$TIP_TREE" ]; then
     echo; echo "$t: recreated tree $(g rev-parse 'HEAD^{tree}') != exported $TIP_TREE"; exit 1
   fi
-  g branch -q -f "opi5/$t" HEAD
-  made+=("opi5/$t")
-  echo "$n commits, $([ $VERIFY = 1 ] && echo 'tree verified' || echo 'not verified')"
+  g update-ref "refs/topics/$t" HEAD    # internal: parent lookup for later runs
+  if [ -n "$tag" ]; then
+    mktag "$tag" "$(g rev-parse HEAD)" "Retired branch opi5/$t (topics/$t in orangepi5-mainline): $(conf_lines | awk -F' [|] ' -v t="$t" '$1 == t {print $5}')"
+  else
+    g branch -q -f "opi5/$t" HEAD
+    made+=("opi5/$t")
+  fi
+  echo "$n commits, $([ $VERIFY = 1 ] && echo 'tree verified' || echo 'not verified')${tag:+, tag $tag}"
 done
 
 # --- image kernel: v7.3 + patches/linux (what scripts/build-kernel.sh builds) --
-# plus opi5/image-7.3-extra = that + patches/linux-extra (OPI5_EXTRA=1 builds)
+# branch opi5/image + tag image-<version>; tag image-<version>-extra = that +
+# patches/linux-extra (OPI5_EXTRA=1 builds, same package version)
 apply_dir() { # dir
   local p d n=0
   for p in "$1"/*.patch; do
@@ -145,27 +175,41 @@ apply_dir() { # dir
   done
   echo "$n patches"
 }
-if [ ${#ONLY[@]} -eq 0 ] || [[ " ${ONLY[*]} " == *" image-7.3 "* ]]; then
-  printf '==> %-20s on v7.3 ... ' image-7.3
+if [ ${#ONLY[@]} -eq 0 ] || [[ " ${ONLY[*]} " == *" image "* ]]; then
+  printf '==> %-20s on v7.3 ... ' image
   checkout $V73
   apply_dir "$REPO/patches/linux"
-  g branch -q -f opi5/image-7.3 HEAD
-  made+=(opi5/image-7.3)
+  # Package version as scripts/build-kernel.sh sets it: <kernelversion><suffix>
+  suffix=$(sed -n 's/.*KDEB_PKGVERSION="$(make -s -C "$SRC" kernelversion)\([^"]*\)".*/\1/p' "$REPO/scripts/build-kernel.sh")
+  [ -n "$suffix" ] || { echo "no KDEB_PKGVERSION=\"\$(make ... kernelversion)-<n>\" in scripts/build-kernel.sh"; exit 1; }
+  ver=$(make -s -C "$WORK" kernelversion)$suffix
+  g branch -q -f opi5/image HEAD
+  made+=(opi5/image)
+  mktag "image-$ver" "$(g rev-parse HEAD)" "Image kernel $ver: v7.3 + patches/linux ($(ls "$REPO"/patches/linux/*.patch | wc -l) patches), as built by scripts/build-kernel.sh"
+  echo "    tag image-$ver"
   if compgen -G "$REPO/patches/linux-extra/*.patch" >/dev/null; then
-    printf '==> %-20s on image-7.3 ... ' image-7.3-extra
+    printf '==> %-20s on image ... ' "image-$ver-extra"
     apply_dir "$REPO/patches/linux-extra"
-    g branch -q -f opi5/image-7.3-extra HEAD
-    made+=(opi5/image-7.3-extra)
-  else
-    g branch -q -D opi5/image-7.3-extra 2>/dev/null || true
+    mktag "image-$ver-extra" "$(g rev-parse HEAD)" "Image kernel $ver with OPI5_EXTRA=1: + patches/linux-extra ($(ls "$REPO"/patches/linux-extra/*.patch | wc -l) patches, not tested on hardware)"
   fi
+fi
+
+# A full run mirrors topics.conf: drop local opi5/* branches that were not made
+# (retired topics). Only this scratch repository; the fork is never pruned here.
+if [ ${#ONLY[@]} -eq 0 ]; then
+  while read -r b; do
+    [[ " ${made[*]} " == *" $b "* ]] || { echo "local branch $b is no longer generated: removed from $WORK"; g branch -q -D "$b"; }
+  done < <(g for-each-ref --format='%(refname:short)' refs/heads/opi5/)
 fi
 
 echo
 echo "Branches in $WORK:"
 g for-each-ref --format='  %(refname:short) %(objectname:short) %(subject)' refs/heads/opi5/
+echo "Tags:"
+g for-each-ref --format='  %(refname:short) %(*objectname:short) %(subject)' refs/tags/
 # Private-data check on what would be pushed: commit identities and messages
-leak=$(g log --format='%an <%ae>%n%cn <%ce>%n%B' "${made[@]}" --not refs/base/v7.3 $(have $C339 && echo refs/base/c339f4010) |
+leak=$( { g for-each-ref --format='%(taggername) %(taggeremail)%0a%(contents)' refs/tags/
+           g log --format='%an <%ae>%n%cn <%ce>%n%B' "${made[@]}" "${tagged[@]}" --not refs/base/v7.3 $(have $C339 && echo refs/base/c339f4010); } |
        grep -nE "$(sed -n 's/^scan\t//p' "$REPO/.work/private/private.conf" 2>/dev/null | paste -sd'|' | sed 's/^$/^$NONE/')" || true)
 if [ -n "$leak" ]; then
   echo "PRIVATE DATA in the recreated commits:"; echo "$leak" | head; exit 1
