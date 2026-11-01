@@ -23,7 +23,7 @@ import camcheck  # noqa: E402
 
 OUT = sys.argv[1] if len(sys.argv) > 1 else "/var/tmp/vop2uf"
 HOLD = float(os.environ.get("HOLD", "10"))
-ENV = dict(os.environ, KMSCTL_PROBE="1")
+ENV = dict(os.environ, KMSCTL_PROBE="1", KMSCTL_FORCE_LINEAR="1")
 KMS = [sys.executable, "-I", f"{LIB}/kmsctl.py"]
 DBG = "/sys/kernel/debug"
 HDMI, DP = os.environ.get("HDMI_CONN", "HDMI-A-1"), os.environ.get("DP_CONN", "DP-1")
@@ -293,7 +293,10 @@ def main():
             ov = [f"conn={HDMI},plane={P_E0},fmt=XR24,mod=linear,pattern=bars,code={R.code}"]
             R.case("i-c0+e0+dp", [R.head(m120, P_C0), R.dp_head()], ov, expect="reject",
                    note="the matrix case: modetest primary + plane 59 with DP lit; old kernel: POST_BUF_EMPTY")
-            R.case("i-e0+dp", [R.head(m120, P_E0), R.dp_head()], note="Esmart0 alone at 4K120 + DP: fits")
+            ov = [f"conn={HDMI},plane={P_E0},fmt=XR24,mod=linear,pattern=bars,code={R.code}"]
+            R.case("i-c0afbc+e0+dp", [R.head(m120, P_C0, mod=hex(YTR_MOD)), R.dp_head()], ov, expect="info",
+                   note="C0 AFBC: refused by the worst-case (uncompressed) estimate; old kernel shows what HW does")
+            R.case("i-e0+dp",[R.head(m120, P_E0), R.dp_head()], note="Esmart0 alone at 4K120 + DP: fits")
         else:
             log("SKIP  i-*+dp: DP-1 not connected (the over-budget case needs the DP layer)")
     else:

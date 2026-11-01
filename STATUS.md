@@ -62,7 +62,7 @@ Nothing here has been sent upstream yet.
 
 `patches/linux/` is what `scripts/build-kernel.sh` applies on v7.3 for the image (recreated as fork branch `opi5/image`, plus tag `image-<kernel package version>` for every image kernel, e.g. `image-7.3.0-8`). It is a snapshot of the topics that were ready for the image; the topic directories are the reference for upstreaming. Range-by-range provenance and test state: [docs/image-kernel/MANIFEST.md](docs/image-kernel/MANIFEST.md).
 
-Patches in patches/linux: 337; other patch directories: alsa-ucm-conf, chromium, ffmpeg, firefox, gst-plugins-good, gstreamer, jellyfin-desktop, linux-extra, linux-hold, mpv, tf-a, u-boot, upstream, weston.
+Patches in patches/linux: 422; other patch directories: alsa-ucm-conf, chromium, ffmpeg, firefox, gst-plugins-good, gstreamer, jellyfin-desktop, linux-extra, linux-hold, mpv, tf-a, u-boot, upstream, weston.
 
 ## U-Boot and TF-A
 

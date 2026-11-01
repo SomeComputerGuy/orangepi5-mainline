@@ -13,6 +13,7 @@ kernel (rockchip-linux/kernel, develop-6.1), whose node uses the
 "rockchip,rkv-jpeg-decoder-v1" compatible of the vendor MPP framework.
 
 Assisted-by: Claude:claude-opus-5-5
+Signed-off-by: Arun Iyengar <aiyengar1990@gmail.com>
 ---
  .../media/rockchip,rk3588-jpeg-decoder.yaml   | 86 +++++++++++++++++++
  MAINTAINERS                                   |  7 ++

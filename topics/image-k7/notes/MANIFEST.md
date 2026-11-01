@@ -238,3 +238,18 @@ TMDS fallback and disable. 1214 vop2: pick the HDMI PHY PLL vs CRU DCLK from crt
 atomic_check). 1215 vop2: reject HDMI modes the CRU cannot clock exactly (59.94/119.88 Hz FRL at 10 bpc were running at
 500 MHz / 786 MHz from AUPLL). Verified by vblank-timestamp clock measurement (~20 ppm) + camera; regressions + wedge
 trigger (4096@60 594 MHz) 10/10. Follow-up: a dedicated rate-settable PLL for VP0 in FRL would make 59.94/119.88 exact.
+
+## Kernel 9 (7.3.0-9, 2026-11-01): patches 1901-1916, 2001-2017 (from branch opi5/test-k9 on opi5/stack-337)
+Built at the user's request before the board tests ran ("assume it's good"); the board results are still owed and go in the topic RESULTS files.
+
+| Patches | n | Topic | Source | Tested |
+|---|---|---|---|---|
+| 1901 | 1 | dwc3: keep the host bus suspended across s2idle | usb-resume/ | board test pending |
+| 1902-1904 | 3 | dw-dp AUX: no AUX while HPD low, wait HPD after resume, PHY power for AUX | dw-dp-aux/ | board test pending |
+| 1905-1906 | 2 | fw_devlink refused sync_state-only links; dw-hdmi-qp audio prepare while disabled | klog-19b/ | board test pending |
+| 1907 | 1 | dw-hdmi-qp DDC retry + stale I2C IRQs | hdmi-ddc/ | board test pending |
+| 1908-1910 | 3 | vop2: ACLK above 600 Mpix/s, no AFBC YTR for RGB565, AXI read-port overload reject | vop2-underflow/v2 | board test pending |
+| 1911-1915 | 5 | V0PLL exact DCLK for HDMI FRL (PLL maths, rk3588 V0PLL, binding, vop2, DT) | hdmi-frl-pll/ | host-verified; board test pending |
+| 1916 | 1 | VPU981 AV1 tile column buffer check | av1-tiles/ (0001 only; 0002/0003 wait on the debug run) | board test pending |
+| 2001-2016 | 16 | rkvdec dual-core CCU decode (was 1601-1616) | rkvdec-reset/patches-16xx | board (reproducer, KASAN) |
+| 2017 | 1 | CCU reset work: act only on a pending reset, list of deferred streams | rkvdec-reset/scripts/fix-reset-work.py | reproducer 8/8; stats run in progress |

@@ -30,6 +30,7 @@ to be sent, ignore the Message and let the VDM go out.
 
 Fixes: f1fbd950b59b ("usb: typec: tcpm: Fix wrong handling for Not_Supported in VDM AMS")
 Assisted-by: Claude:claude-opus-5-5
+Signed-off-by: Arun Iyengar <aiyengar1990@gmail.com>
 ---
  drivers/usb/typec/tcpm/tcpm.c | 13 ++++++++++++-
  1 file changed, 12 insertions(+), 1 deletion(-)

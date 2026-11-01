@@ -2,7 +2,9 @@
 # Build TF-A BL31 (open source) + mainline U-Boot for Orange Pi 5 (RK3588S)
 set -euo pipefail
 . "$(dirname "$0")/env.sh"
-SRC=$OPI5_SRC OUT=$TOP/out
+# SRC/OUT can point at another tree (e.g. worktrees of tf-a and u-boot plus
+# an rkbin link) to build test firmware without touching src/ and out/
+SRC=${SRC:-$OPI5_SRC} OUT=${OUT:-$TOP/out}
 for s in u-boot tf-a rkbin; do
   [ -e "$SRC/$s/.git" ] || "$TOP/scripts/fetch-sources.sh" "$s"
 done
@@ -12,7 +14,7 @@ DDR_BLOB_ORIG=$SRC/rkbin/bin/rk35/rk3588_ddr_lp4_2112MHz_lp5_2400MHz_v1.24.bin
 
 # The DDR init blob prints at 1500000 baud; patch a copy (rkbin's ddrbin_tool,
 # only "uart baudrate" set, everything else kept) to match the 115200 console
-DDR_WORK=$TOP/build/ddr
+DDR_WORK=${DDR_WORK:-$TOP/build/ddr}
 DDR_BLOB=$DDR_WORK/$(basename "$DDR_BLOB_ORIG" .bin)_uart115200.bin
 mkdir -p "$DDR_WORK"
 cp "$DDR_BLOB_ORIG" "$DDR_BLOB"
@@ -27,11 +29,13 @@ BL31_SRC=${BL31_SRC:-tfa}
 case "$BL31_SRC" in
   tfa)
     # src/tf-a is v2.15.0 plus patches/tf-a/*.patch, re-applied only when the
-    # patch set changes (the previous source diff is saved first)
+    # patch set changes (the previous source diff is saved first).
+    # TFA_PATCHES=none builds $SRC/tf-a as it is (e.g. a topic branch).
     TFA_BASE=v2.15.0
     mkdir -p "$TOP/build"
     want=$(cd "$TOP/patches/tf-a" && sha256sum ./*.patch)
-    if [ "$(cat "$TOP/build/.tf-a-patches-applied" 2>/dev/null)" != "$want" ]; then
+    if [ "${TFA_PATCHES:-}" != none ] &&
+       [ "$(cat "$TOP/build/.tf-a-patches-applied" 2>/dev/null)" != "$want" ]; then
       git -C "$SRC/tf-a" diff --binary HEAD > "$TOP/build/src-tf-a-before-patches.diff"
       git -C "$SRC/tf-a" reset -q --hard "$TFA_BASE"
       for p in "$TOP"/patches/tf-a/*.patch; do
@@ -57,6 +61,20 @@ EXTRA_DTSIS=(rk3588s-orangepi-5-sata-u-boot.dtsi rk3588s-orangepi-5-auto-u-boot.
 M2_DETECT='if pci enum && nvme scan && nvme dev 0; then setenv opi5_m2 nvme; elif scsi scan && scsi dev 0; then setenv opi5_m2 sata; setenv fdtfile rockchip/rk3588s-orangepi-5-sata.dtb; else setenv opi5_m2 none; fi; echo M.2 slot: ${opi5_m2}'
 
 cd "$SRC/u-boot"
+# src/u-boot is v2026.10 (detached) plus patches/u-boot/*.patch, re-applied only
+# when the patch set changes (the previous source diff is saved first).
+# UBOOT_PATCHES=none builds $SRC/u-boot as it is (e.g. a topic branch).
+UBOOT_BASE=v2026.10
+want=$(cd "$TOP/patches/u-boot" && sha256sum ./*.patch)
+if [ "${UBOOT_PATCHES:-}" != none ] &&
+   [ "$(cat "$TOP/build/.u-boot-patches-applied" 2>/dev/null)" != "$want" ]; then
+  git diff --binary HEAD > "$TOP/build/src-u-boot-before-patches.diff"
+  git checkout -q -f --detach "$UBOOT_BASE"
+  for p in "$TOP"/patches/u-boot/*.patch; do
+    git apply --index "$p" || { echo "patch failed: $p"; exit 1; }
+  done
+  echo "$want" > "$TOP/build/.u-boot-patches-applied"
+fi
 git checkout -q -- "$BOARD_DTSI"
 for f in "${EXTRA_DTSIS[@]}"; do rm -f "arch/arm/dts/$f"; done
 case "$M2_MODE" in

@@ -29,6 +29,7 @@ Link: https://gitlab.collabora.com/hardware-enablement/rockchip-3588/linux/-/com
 Link: https://gitlab.collabora.com/hardware-enablement/rockchip-3588/linux/-/commit/c2d2e2b10a55c4d740a2faf1526a70c4f19da047
 
 Assisted-by: Claude:claude-opus-5-5
+Signed-off-by: Arun Iyengar <aiyengar1990@gmail.com>
 ---
  .../dts/rockchip/rk3588s-orangepi-5-5b.dtsi   | 89 ++++++++++++++++---
  1 file changed, 78 insertions(+), 11 deletions(-)

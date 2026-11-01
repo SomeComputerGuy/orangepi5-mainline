@@ -1,0 +1,65 @@
+From 066e9c04ecc930cecace231f303f6183317e898d Mon Sep 17 00:00:00 2001
+From: Arun Iyengar <aiyengar1990@gmail.com>
+Date: Sun, 1 Nov 2026 06:01:40 +0000
+Subject: [PATCH 03/33] drm/bridge: synopsys: dw-dp: Wait for the HPD state
+ after runtime resume
+
+Runtime resume reinitializes the controller, which restarts its HPD
+state machine. The sink is reported as plugged only after it has held
+HPD high for at least 100 ms, and resume sleeps a fixed 110 ms for that.
+
+The margin is too small: with a DP Alt Mode dock that sends IRQ_HPD
+Attentions while the controller is runtime suspended, the short pulse
+handler resumes the controller and its first DPCD read can start before
+the state machine reports the sink (and before the hot plug event that
+the restart produces). That read then cannot succeed.
+
+Poll the HPD state for up to 200 ms instead, as dw_dp_reset() does after
+a controller reset. This waits only as long as needed when a sink is
+present, and not at all when the Type-C side reports HPD low.
+
+(cherry picked from commit 0e525158e7de122acaefc626e9704bd4c84e2b1e)
+
+Assisted-by: Claude:claude-opus-5-5
+Signed-off-by: Arun Iyengar <aiyengar1990@gmail.com>
+---
+ drivers/gpu/drm/bridge/synopsys/dw-dp.c | 15 ++++++++++++---
+ 1 file changed, 12 insertions(+), 3 deletions(-)
+
+diff --git a/drivers/gpu/drm/bridge/synopsys/dw-dp.c b/drivers/gpu/drm/bridge/synopsys/dw-dp.c
+index 8d66375804c1..b78a71beeb27 100644
+--- a/drivers/gpu/drm/bridge/synopsys/dw-dp.c
++++ b/drivers/gpu/drm/bridge/synopsys/dw-dp.c
+@@ -2915,6 +2915,7 @@ EXPORT_SYMBOL_GPL(dw_dp_runtime_suspend);
+ 
+ int dw_dp_runtime_resume(struct dw_dp *dp)
+ {
++	u32 value;
+ 	int ret;
+ 
+ 	ret = clk_prepare_enable(dp->apb_clk);
+@@ -2937,10 +2938,18 @@ int dw_dp_runtime_resume(struct dw_dp *dp)
+ 	enable_irq(dp->irq);
+ 
+ 	/*
+-	 * HPD_HOT_PLUG bit is asserted only after the sink holds HPD
+-	 * high for at least 100ms.
++	 * The HPD state machine restarts with the controller, and reports
++	 * the sink as plugged only after it has held HPD high for at least
++	 * 100 ms. Wait for that, so that the AUX transfers, detection or
++	 * short pulse handling that resumed the controller see the sink.
++	 * Nothing to wait for if the Type-C side reports HPD low.
+ 	 */
+-	msleep(110);
++	if (dp->usbc_mode && !dp->usbc_hpd)
++		return 0;
++
++	regmap_read_poll_timeout(dp->regmap, DW_DP_HPD_STATUS, value,
++				 FIELD_GET(HPD_STATE, value) == DW_DP_HPD_STATE_PLUG,
++				 5000, 200000);
+ 
+ 	return 0;
+ }
+-- 
+2.55.0
+

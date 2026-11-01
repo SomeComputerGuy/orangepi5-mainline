@@ -24,6 +24,7 @@ reserved for device trees that really lack a required delay. Behaviour
 for "rgmii", "rgmii-rxid" and "rgmii-txid" is unchanged.
 
 Assisted-by: Claude:claude-opus-5-5
+Signed-off-by: Arun Iyengar <aiyengar1990@gmail.com>
 ---
  .../net/ethernet/stmicro/stmmac/dwmac-rk.c    | 47 ++++++++++++-------
  1 file changed, 29 insertions(+), 18 deletions(-)

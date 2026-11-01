@@ -35,6 +35,7 @@ crop set through VIDIOC_S_SELECTION, which is restricted to the last
 macroblock.
 
 Assisted-by: Claude:claude-opus-5-5
+Signed-off-by: Arun Iyengar <aiyengar1990@gmail.com>
 ---
  .../media/platform/verisilicon/hantro_v4l2.c  | 26 +++++++++++++++++++
  1 file changed, 26 insertions(+)

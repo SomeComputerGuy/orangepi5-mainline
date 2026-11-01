@@ -24,6 +24,7 @@ next one may start on the core. The core keeps its variant and its
 rkvdec device, so the IOMMU restore doesn't need a context either.
 
 Assisted-by: Claude:claude-opus-5-5
+Signed-off-by: Arun Iyengar <aiyengar1990@gmail.com>
 ---
  .../media/platform/rockchip/rkvdec/rkvdec.c   | 63 ++++++++++++-------
  .../media/platform/rockchip/rkvdec/rkvdec.h   |  6 +-

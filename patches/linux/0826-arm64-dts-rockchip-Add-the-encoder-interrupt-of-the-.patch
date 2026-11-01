@@ -17,6 +17,7 @@ The VEPU121 cores at 0xfdba0000-0xfdbac000 are JPEG encoders only, the
 VEPU2 of the VPU121 is the H.264 encoder of the VPU1 generation.
 
 Assisted-by: Claude:claude-opus-5-5
+Signed-off-by: Arun Iyengar <aiyengar1990@gmail.com>
 ---
  arch/arm64/boot/dts/rockchip/rk3588-base.dtsi | 5 +++--
  1 file changed, 3 insertions(+), 2 deletions(-)

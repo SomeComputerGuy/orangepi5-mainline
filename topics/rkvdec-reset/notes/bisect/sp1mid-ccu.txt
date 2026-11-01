@@ -1,0 +1,16 @@
+round 1 SVA_BA1_B: frames 17/17, differing 0, first bad 
+round 1 SVA_Base_B: frames 17/17, differing 0, first bad 
+round 1 SVA_NL1_B: frames 17/17, differing 0, first bad 
+round 1 SVA_FM1_E: frames 17/17, differing 0, first bad 
+round 1 dmesg: timeouts 0, recovers 29, busy 0
+round 2 SVA_BA1_B: frames 17/17, differing 0, first bad 
+round 2 SVA_Base_B: frames 17/17, differing 0, first bad 
+round 2 SVA_NL1_B: frames 17/17, differing 0, first bad 
+round 2 SVA_FM1_E: frames 17/17, differing 0, first bad 
+round 2 dmesg: timeouts 0, recovers 31, busy 0
+round 3 SVA_BA1_B: frames 17/17, differing 0, first bad 
+round 3 SVA_Base_B: frames 17/17, differing 0, first bad 
+round 3 SVA_NL1_B: frames 17/17, differing 0, first bad 
+round 3 SVA_FM1_E: frames 17/17, differing 0, first bad 
+round 3 dmesg: timeouts 0, recovers 31, busy 0
+DONE

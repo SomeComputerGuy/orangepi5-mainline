@@ -1,0 +1,16 @@
+round 1 before: SVA_BA1_B 0/17 bad; SVA_Base_B 0/17 bad;  SVA_NL1_B 0/17 bad; SVA_FM1_E 0/17 bad; 
+round 1 SP1+sp2: sp2_bt_b=255
+SP1_BT_A=0
+round 1 after: SVA_BA1_B 0/17 bad; SVA_Base_B 0/17 bad;  SVA_NL1_B 0/17 bad; SVA_FM1_E 0/17 bad; 
+round 1 dmesg: timeouts 0, recovers 0, busy 0
+round 2 before: SVA_BA1_B 0/17 bad; SVA_Base_B 0/17 bad;  SVA_NL1_B 0/17 bad; SVA_FM1_E 0/17 bad; 
+round 2 SP1+sp2: sp2_bt_b=255
+SP1_BT_A=0
+round 2 after: SVA_BA1_B 0/17 bad; SVA_Base_B 0/17 bad;  SVA_NL1_B 0/17 bad; SVA_FM1_E 0/17 bad; 
+round 2 dmesg: timeouts 0, recovers 0, busy 0
+round 3 before: SVA_BA1_B 0/17 bad; SVA_Base_B 0/17 bad;  SVA_NL1_B 0/17 bad; SVA_FM1_E 0/17 bad; 
+round 3 SP1+sp2: sp2_bt_b=255
+SP1_BT_A=0
+round 3 after: SVA_BA1_B 0/17 bad; SVA_Base_B 0/17 bad;  SVA_NL1_B 0/17 bad; SVA_FM1_E 0/17 bad; 
+round 3 dmesg: timeouts 0, recovers 0, busy 0
+DONE

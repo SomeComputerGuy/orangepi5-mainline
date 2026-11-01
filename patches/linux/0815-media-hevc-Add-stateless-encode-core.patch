@@ -45,6 +45,7 @@ gets stored in the request. Nothing changes in the reference state before
 completion, so a failed or dropped encode run can simply be retried.
 
 Assisted-by: Claude:claude-opus-5-5
+Signed-off-by: Arun Iyengar <aiyengar1990@gmail.com>
 ---
  drivers/media/v4l2-core/Kconfig         |    5 +
  drivers/media/v4l2-core/Makefile        |    1 +

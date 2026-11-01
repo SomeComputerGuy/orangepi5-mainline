@@ -32,6 +32,7 @@ Apply with `git am` in the order listed in [`series`](series), on top of the par
 ## Notes, results and test tools
 
 - [notes/RESULTS.md](notes/RESULTS.md)
+- [notes/board-run-k10.txt](notes/board-run-k10.txt)
 - [notes/board-run1-sps-patched.txt](notes/board-run1-sps-patched.txt)
 - [notes/board-run1.txt](notes/board-run1.txt)
 - [notes/board-run2.txt](notes/board-run2.txt)

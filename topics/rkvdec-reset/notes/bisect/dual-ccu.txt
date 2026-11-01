@@ -1,0 +1,18 @@
+round 1: SP1+sp2 exit codes 255 0 
+round 1 SVA_BA1_B: frames 17/17, differing 0
+round 1 SVA_Base_B: frames 17/17, differing 0
+round 1 SVA_NL1_B: frames 17/17, differing 0
+round 1 dmesg: timeouts 0, recovers 78, busy 0
+[  172.730550] audit: type=1400 audit(1793515351.629:187): apparmor="STATUS" operation="profile_replace" info="same as current profile, skipping" profile="uncon
+round 2: SP1+sp2 exit codes 255 1 
+round 2 SVA_BA1_B: frames 17/17, differing 0
+round 2 SVA_Base_B: frames 17/17, differing 0
+round 2 SVA_NL1_B: frames 17/17, differing 0
+round 2 dmesg: timeouts 0, recovers 2, busy 0
+[  212.644617] workqueue: rkvdec_ccu_reset_work [rockchip_vdec] hogged CPU for >1000000us 5 times, consider switching to WQ_UNBOUND
+round 3: SP1+sp2 exit codes 255 0 
+round 3 SVA_BA1_B: frames 17/17, differing 0
+round 3 SVA_Base_B: frames 17/17, differing 0
+round 3 SVA_NL1_B: frames 17/17, differing 0
+round 3 dmesg: timeouts 0, recovers 0, busy 0
+DONE

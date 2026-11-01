@@ -65,6 +65,7 @@ registers was checked against the Rockchip MPP userspace driver
 (hal_h264e_vepu2_v2.c), no code was taken from it.
 
 Assisted-by: Claude:claude-opus-5-5
+Signed-off-by: Arun Iyengar <aiyengar1990@gmail.com>
 ---
  drivers/media/platform/verisilicon/Kconfig    |   1 +
  drivers/media/platform/verisilicon/Makefile   |   1 +

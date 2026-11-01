@@ -11,6 +11,7 @@ arm-smmu-v3 is still bound to the SMMU.
 Describe the clock, so that the SMMU driver keeps it running.
 
 Assisted-by: Claude:claude-opus-5-5
+Signed-off-by: Arun Iyengar <aiyengar1990@gmail.com>
 ---
  arch/arm64/boot/dts/rockchip/rk3588-base.dtsi | 1 +
  1 file changed, 1 insertion(+)

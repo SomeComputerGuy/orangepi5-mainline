@@ -25,6 +25,7 @@ completes before the check. A device that still can't train its
 SuperSpeed link stays connected at high speed after that one reset.
 
 Assisted-by: Claude:claude-opus-5-5
+Signed-off-by: Arun Iyengar <aiyengar1990@gmail.com>
 ---
  drivers/usb/core/hub.c | 88 ++++++++++++++++++++++++++++++++++++++++++
  drivers/usb/core/hub.h |  1 +

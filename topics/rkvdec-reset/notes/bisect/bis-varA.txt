@@ -1,21 +1,15 @@
-grep: /run/rr/fluster-varA-1/*.md: No such file or directory
-./flcmp.sh: line 5: ~/ccu/fluster-single/$s.fail.txt: ambiguous redirect
-
-grep: /run/rr/fluster-varA-2/*.md: No such file or directory
-./flcmp.sh: line 5: ~/ccu/fluster-single/$s.fail.txt: ambiguous redirect
-
-grep: /run/rr/fluster-varA-3/*.md: No such file or directory
-./flcmp.sh: line 5: ~/ccu/fluster-single/$s.fail.txt: ambiguous redirect
-
-grep: /run/rr/fluster-varA-4/*.md: No such file or directory
-./flcmp.sh: line 5: ~/ccu/fluster-single/$s.fail.txt: ambiguous redirect
-
-grep: /run/rr/fluster-varA-5/*.md: No such file or directory
-./flcmp.sh: line 5: ~/ccu/fluster-single/$s.fail.txt: ambiguous redirect
-
-grep: /run/rr/fluster-varA-6/*.md: No such file or directory
-./flcmp.sh: line 5: ~/ccu/fluster-single/$s.fail.txt: ambiguous redirect
-
-since start: timeouts 0, KASAN/Oops/canary 0
+Ran 125/135
+1: fails: CVFC1_Sony_C FM1_BT_B FM1_FT_E FM2_SVA_C SP1_BT_A SVA_BA2_D SVA_CL1_E SVA_NL1_B SVA_NL2_E sp2_bt_b  -> DIFFERENT
+Ran 129/135
+1: fails: CVFC1_Sony_C FM1_BT_B FM1_FT_E FM2_SVA_C SP1_BT_A sp2_bt_b  -> identical
+Ran 129/135
+1: fails: CVFC1_Sony_C FM1_BT_B FM1_FT_E FM2_SVA_C SP1_BT_A sp2_bt_b  -> identical
+Ran 129/135
+1: fails: CVFC1_Sony_C FM1_BT_B FM1_FT_E FM2_SVA_C SP1_BT_A sp2_bt_b  -> identical
+Ran 125/135
+1: fails: CVFC1_Sony_C FM1_BT_B FM1_FT_E FM2_SVA_C SP1_BT_A SVA_BA2_D SVA_CL1_E SVA_NL1_B SVA_NL2_E sp2_bt_b  -> DIFFERENT
+Ran 129/135
+1: fails: CVFC1_Sony_C FM1_BT_B FM1_FT_E FM2_SVA_C SP1_BT_A sp2_bt_b  -> identical
+since start: timeouts 4, KASAN/Oops/canary 0
 DONE
-boot: timeouts 0, IOMMU not-attached faults 0
+boot: timeouts 7, IOMMU not-attached faults 0

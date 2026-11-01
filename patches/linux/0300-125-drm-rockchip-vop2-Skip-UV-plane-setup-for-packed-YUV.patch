@@ -1,0 +1,38 @@
+From 20bf1c6fd4affc54187fcb83b0ddafc5c1adfb78 Mon Sep 17 00:00:00 2001
+From: Chaoyi Chen <chaoyi.chen@rock-chips.com>
+Date: Thu, 22 Oct 2026 15:17:36 +0800
+Subject: [PATCH] drm/rockchip: vop2: Skip UV plane setup for packed YUV formats
+
+Packed YUV formats store chroma interleaved with luma in the same plane,
+so they have no plane 1 that the UV address registers could point at.
+
+Restrict both the plane 1 offset calculation and the UV register writes
+to formats with more than one plane.
+
+Signed-off-by: Chaoyi Chen <chaoyi.chen@rock-chips.com>
+Link: https://patch.msgid.link/20261022071737.508-3-kernel@airkyi.com
+Signed-off-by: Sebastian Reichel <sebastian.reichel@collabora.com>
+
+Link: https://gitlab.collabora.com/hardware-enablement/rockchip-3588/linux/-/commit/20bf1c6fd4affc54187fcb83b0ddafc5c1adfb78
+---
+diff --git a/drivers/gpu/drm/rockchip/rockchip_drm_vop2.c b/drivers/gpu/drm/rockchip/rockchip_drm_vop2.c
+--- a/drivers/gpu/drm/rockchip/rockchip_drm_vop2.c
++++ b/drivers/gpu/drm/rockchip/rockchip_drm_vop2.c
+@@ -1373,7 +1373,7 @@ static void vop2_plane_atomic_update(struct drm_plane *plane,
+ 	rk_obj = to_rockchip_obj(fb->obj[0]);
+ 
+ 	yrgb_mst = rk_obj->dma_addr + offset + fb->offsets[0];
+-	if (fb->format->is_yuv) {
++	if (fb->format->is_yuv && fb->format->num_planes > 1) {
+ 		int hsub = fb->format->hsub;
+ 		int vsub = fb->format->vsub;
+ 
+@@ -1528,7 +1528,7 @@ static void vop2_plane_atomic_update(struct drm_plane *plane,
+ 	uv_swap = vop2_win_uv_swap(fb->format->format);
+ 	vop2_win_write(win, VOP2_WIN_UV_SWAP, uv_swap);
+ 
+-	if (fb->format->is_yuv) {
++	if (fb->format->is_yuv && fb->format->num_planes > 1) {
+ 		vop2_win_write(win, VOP2_WIN_UV_VIR, DIV_ROUND_UP(fb->pitches[1], 4));
+ 		vop2_win_write(win, VOP2_WIN_UV_MST, uv_mst);
+ 	}

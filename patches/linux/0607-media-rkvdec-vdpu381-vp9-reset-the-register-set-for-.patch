@@ -22,6 +22,7 @@ Clear the register set before programming each frame, as the H.264 and
 HEVC VDPU381 backends already do.
 
 Assisted-by: Claude:claude-opus-5-5
+Signed-off-by: Arun Iyengar <aiyengar1990@gmail.com>
 ---
  .../media/platform/rockchip/rkvdec/rkvdec-vdpu381-vp9.c    | 7 +++++++
  1 file changed, 7 insertions(+)

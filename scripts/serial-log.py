@@ -5,7 +5,7 @@ Each line is prefixed with seconds since the logger started, so gaps in the
 boot (e.g. where U-Boot waits) are easy to spot."""
 import os, sys, termios, time
 
-dev = sys.argv[1] if len(sys.argv) > 1 else "/dev/ttyUSB0"
+dev = sys.argv[1] if len(sys.argv) > 1 else os.environ.get("OPI5_SERIAL", "/dev/ttyUSB0")
 baud = int(sys.argv[2]) if len(sys.argv) > 2 else 115200
 log = sys.argv[3] if len(sys.argv) > 3 else "serial.log"
 

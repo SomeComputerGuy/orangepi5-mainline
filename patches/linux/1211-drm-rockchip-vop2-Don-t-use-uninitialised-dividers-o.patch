@@ -18,6 +18,7 @@ letting it run at the full DCLK rate.
 
 Fixes: 5a028e8f062f ("drm/rockchip: vop2: Add support for rk3588")
 Assisted-by: Claude:claude-opus-5-5
+Signed-off-by: Arun Iyengar <aiyengar1990@gmail.com>
 ---
  drivers/gpu/drm/rockchip/rockchip_vop2_reg.c | 12 ++++++++++++
  1 file changed, 12 insertions(+)

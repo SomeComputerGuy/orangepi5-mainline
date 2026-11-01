@@ -88,10 +88,17 @@ def tag_assisted(text):
     body = CLAUDE_TRAILER_RE.sub("", body).rstrip("\n")
     last = body.rsplit("\n\n", 1)[-1] if body else ""
     # Append to an existing trailer block, otherwise start one
+    # The submitter's own Signed-off-by stays last, after the Assisted-by tag
+    sob = f"Signed-off-by: {USER_NAME} <{USER_EMAIL}>"
+    had_sob = re.search(r"(?m)^" + re.escape(sob) + "$", body) is not None
+    body = re.sub(r"(?m)^" + re.escape(sob) + r"\n?", "", body + "\n").rstrip("\n")
+    last = body.rsplit("\n\n", 1)[-1] if body else ""
     if body and "\n\n" in body and all(re.match(r"^[A-Za-z-]+: \S", l) for l in last.splitlines()):
         body += "\n" + ASSISTED_BY
     else:
         body += ("\n\n" if body else "") + ASSISTED_BY
+    if had_sob:
+        body += "\n" + sob
     return hdr + "\n\n" + body + "\n" + rest
 
 

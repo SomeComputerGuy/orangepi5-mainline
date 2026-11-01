@@ -3,8 +3,16 @@
 # configured like Ubuntu's generic arm64 kernel plus Orange Pi 5 tweaks
 set -euo pipefail
 . "$(dirname "$0")/env.sh"
-SRC=$OPI5_SRC/linux OUT=$TOP/out BUILD=$TOP/build/linux
+SRC=$OPI5_SRC/linux BUILD=$TOP/build/linux
 [ -e "$SRC/.git" ] || "$TOP/scripts/fetch-sources.sh" linux
+# Test kernels use the same SRC and BUILD as the official one (so they share
+# ccache entries and kbuild's incremental state) and only differ in what is
+# checked out and where the debs go:
+#   OPI5_REF=<ref in src/linux>  build that commit's tree instead of v7.3 + patches/linux
+#   OPI5_PKGREV=<rev>           package revision, <kernelversion>-<rev> (default 10)
+#   OPI5_OUT=<dir>              output directory (default out; tests: out/test)
+OUT=${OPI5_OUT:-$TOP/out}
+OPI5_REF=${OPI5_REF:-} OPI5_PKGREV=${OPI5_PKGREV:-10}
 export ARCH=arm64 CROSS_COMPILE=aarch64-linux-gnu-
 # Two builds in the same O= directory corrupt each other's objects
 mkdir -p "$TOP/build"
@@ -60,6 +68,13 @@ KCC="${CROSS_COMPILE}gcc -isystem $SYSROOT/usr/include -isystem $SYSROOT/usr/inc
 KMAKE_CC=$KCC
 if [ "${OPI5_CCACHE:-1}" != 0 ] && command -v ccache >/dev/null; then
   export CCACHE_BASEDIR=$TOP
+  # The xtool gcc wrapper above is rewritten on every run, so ccache's default
+  # compiler check (the compiler's mtime) changed every key; identify the
+  # compiler by the real gcc's version output plus the wrapper's contents
+  CCACHE_COMPILERCHECK="string:$({ /usr/bin/${CROSS_COMPILE}gcc -v 2>&1; cat "$XTOOL/${CROSS_COMPILE}gcc"; } | sha256sum | cut -c1-16)"
+  export CCACHE_COMPILERCHECK
+  # with -g ccache keys on the cwd too; that only hits because SRC and BUILD are
+  # the same for every build, test kernels included (OPI5_REF above)
   # 30G unless the user set a size (env or ccache.conf)
   if [ -z "${CCACHE_MAXSIZE:-}" ] && ccache --show-config | grep '^(default) max_size' >/dev/null; then
     ccache -M 30G >/dev/null
@@ -96,6 +111,12 @@ if [ "$OPI5_EXTRA" = 1 ]; then
   PATCH_DIRS+=("$TOP/patches/linux-extra")
   CONFIGS+=("$TOP/scripts/opi5-extra.config")
   echo "OPI5_EXTRA=1: also applying patches/linux-extra (not tested on hardware)"
+fi
+if [ -n "$OPI5_REF" ]; then
+  [ "$OPI5_EXTRA" = 0 ] || { echo "OPI5_REF and OPI5_EXTRA don't combine"; exit 1; }
+  BASE=$(git -C "$SRC" rev-parse --verify -q "$OPI5_REF^{commit}") || { echo "no $OPI5_REF in $SRC"; exit 1; }
+  PATCH_DIRS=()
+  echo "OPI5_REF=$OPI5_REF: building $BASE as is (no patches/linux)"
 fi
 mkdir -p "$BUILD"
 want=$(for d in "${PATCH_DIRS[@]}"; do (cd "$d" && sha256sum ./*.patch | sed "s|\./|${d##*/}/|"); done)
@@ -145,6 +166,6 @@ done
 # so skip dpkg's build-dep check (-d).
 # Debug info is kept for BTF (eBPF tooling); skip the huge -dbg package
 export DEB_BUILD_PROFILES=pkg.linux-upstream.nokerneldbg
-make -C "$SRC" O="$BUILD" CC="$KMAKE_CC" -j"$(nproc)" DPKG_FLAGS=-d KDEB_PKGVERSION="$(make -s -C "$SRC" kernelversion)-8" bindeb-pkg
+make -C "$SRC" O="$BUILD" CC="$KMAKE_CC" -j"$(nproc)" DPKG_FLAGS=-d KDEB_PKGVERSION="$(make -s -C "$SRC" kernelversion)-$OPI5_PKGREV" bindeb-pkg
 mv "$BUILD"/../linux-*.deb "$OUT/debs/"
 ls -l "$OUT/debs"

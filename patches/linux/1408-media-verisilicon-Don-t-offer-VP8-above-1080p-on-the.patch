@@ -19,6 +19,7 @@ CAPTURE format. Userspace that checks VIDIOC_ENUM_FRAMESIZES, and the
 S_FMT clamping, then know that a 4K VP8 stream needs another decoder.
 
 Assisted-by: Claude:claude-opus-5-5
+Signed-off-by: Arun Iyengar <aiyengar1990@gmail.com>
 ---
  drivers/media/platform/verisilicon/rockchip_vpu_hw.c | 8 ++++----
  1 file changed, 4 insertions(+), 4 deletions(-)

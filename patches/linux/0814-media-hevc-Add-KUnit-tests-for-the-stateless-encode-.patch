@@ -34,6 +34,7 @@ Add a .kunitconfig so the tests can be run with:
   ./tools/testing/kunit/kunit.py run --kunitconfig=drivers/media/v4l2-core
 
 Assisted-by: Claude:claude-opus-5-5
+Signed-off-by: Arun Iyengar <aiyengar1990@gmail.com>
 ---
  drivers/media/v4l2-core/.kunitconfig          |   5 +
  drivers/media/v4l2-core/Kconfig               |  13 +

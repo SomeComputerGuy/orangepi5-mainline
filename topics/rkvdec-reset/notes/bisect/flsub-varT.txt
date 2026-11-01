@@ -1,0 +1,17 @@
+run 1: SL1_SVA_B=Success sp2_bt_b=Error SVA_BA1_B=Fail SVA_BA2_D=Fail SVA_Base_B=Success SP1_BT_A=Error SVA_CL1_E=Fail SVA_FM1_E=Fail SVA_NL1_B=Fail SVA_NL2_E=Fail 
+run 1 dmesg: timeouts 6, recovers 104, busy 1, other:       6 rkvdec-core fdc38000.video-codec: rkvdec-trace dependent film 13 of fdc40000.video-codec;      1 rkvdec-core fdc38000.video-codec: rkvdec-trace dependent film 17 of fdc40000.video-codec;      1 rkvdec-core fdc38000.video-codec: rkvdec-trace dependent film 19 of fdc40000.video-codec;      5 rkvdec-core fdc38000.video-codec: rkvdec-trace dependent film 25 of fdc40000.video-codec;      1 rkvdec-core fdc38000.video-codec: rkvdec-trace dependent film 27 of fdc40000.video-codec;
+run 2: SL1_SVA_B=Success sp2_bt_b=Error SVA_BA1_B=Success SVA_BA2_D=Success SVA_Base_B=Success SVA_CL1_E=Success SVA_FM1_E=Success SVA_NL1_B=Success SVA_NL2_E=Success SP1_BT_A=Fail 
+run 2 dmesg: timeouts 0, recovers 80, busy 0, other:      19 rkvdec-core fdc38000.video-codec: rkvdec-trace dependent film 37 of fdc40000.video-codec;      1 rkvdec-core fdc38000.video-codec: rkvdec-trace dependent film 39 of fdc40000.video-codec;      9 rkvdec-core fdc38000.video-codec: rkvdec-trace failed film 37 job 0;      9 rkvdec-core fdc38000.video-codec: rkvdec-trace hw_done film 37 job 0 ERROR started 1 nr 0;     19 rkvdec-core fdc38000.video-codec: rkvdec-trace hw_done film 37 job 1 ERROR started 1 nr 0;
+run 3: SL1_SVA_B=Success sp2_bt_b=Error SVA_BA1_B=Success SVA_BA2_D=Success SVA_Base_B=Success SVA_CL1_E=Success SVA_FM1_E=Success SVA_NL1_B=Success SVA_NL2_E=Success SP1_BT_A=Fail 
+run 3 dmesg: timeouts 0, recovers 0, busy 0, other: 
+run 4: SL1_SVA_B=Success sp2_bt_b=Error SP1_BT_A=Error SVA_BA1_B=Fail SVA_BA2_D=Fail SVA_Base_B=Fail SVA_FM1_E=Fail SVA_NL1_B=Fail SVA_CL1_E=Fail SVA_NL2_E=Fail 
+run 4 dmesg: timeouts 0, recovers 0, busy 0, other: 
+run 5: SL1_SVA_B=Success SP1_BT_A=Error SVA_BA1_B=Fail SVA_BA2_D=Fail sp2_bt_b=Error SVA_Base_B=Fail SVA_FM1_E=Fail SVA_NL1_B=Fail SVA_CL1_E=Fail SVA_NL2_E=Fail 
+run 5 dmesg: timeouts 0, recovers 4, busy 0, other:       1 rkvdec-core fdc40000.video-codec: rkvdec-trace failed film 119 job 0;      1 rkvdec-core fdc40000.video-codec: rkvdec-trace hw_done film 119 job 0 ERROR started 1 nr 0;
+run 6: SL1_SVA_B=Success sp2_bt_b=Error SVA_BA1_B=Fail SVA_BA2_D=Fail SP1_BT_A=Error SVA_Base_B=Fail SVA_FM1_E=Fail SVA_NL1_B=Fail SVA_CL1_E=Fail SVA_NL2_E=Fail 
+run 6 dmesg: timeouts 0, recovers 1, busy 0, other: 
+run 7: SL1_SVA_B=Success SP1_BT_A=Error SVA_BA1_B=Fail sp2_bt_b=Error SVA_Base_B=Fail SVA_BA2_D=Fail SVA_FM1_E=Fail SVA_NL1_B=Fail SVA_NL2_E=Fail SVA_CL1_E=Fail 
+run 7 dmesg: timeouts 0, recovers 1, busy 0, other: 
+run 8: SL1_SVA_B=Success SP1_BT_A=Error sp2_bt_b=Error SVA_BA1_B=Fail SVA_BA2_D=Fail SVA_Base_B=Fail SVA_FM1_E=Fail SVA_NL1_B=Error SVA_CL1_E=Fail SVA_NL2_E=Fail 
+run 8 dmesg: timeouts 0, recovers 0, busy 0, other: 
+DONE

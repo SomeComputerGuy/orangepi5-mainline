@@ -39,6 +39,7 @@ Apply with `git am` in the order listed in [`series`](series), on top of the par
 - [notes/tools/runtest.sh](notes/tools/runtest.sh)
 - [notes/tools/vm.sh](notes/tools/vm.sh)
 - [notes/tools/watch.sh](notes/tools/watch.sh)
+- [notes/v2/RESULTS.md](notes/v2/RESULTS.md)
 - [notes/v2/mk.sh](notes/v2/mk.sh)
 - [notes/v2/test/lib/camcheck.py](notes/v2/test/lib/camcheck.py)
 - [notes/v2/test/lib/camrec.py](notes/v2/test/lib/camrec.py)

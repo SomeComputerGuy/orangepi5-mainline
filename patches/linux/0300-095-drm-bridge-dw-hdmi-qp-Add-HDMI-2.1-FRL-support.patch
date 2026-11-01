@@ -1,4 +1,4 @@
-From b95b1608e853ab5d5ce24bd7a8cf1eb052bcbf99 Mon Sep 17 00:00:00 2001
+From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
 From: Cristian Ciocaltea <cristian.ciocaltea@collabora.com>
 Date: Tue, 9 Jun 2026 21:30:24 +0000
 Subject: [PATCH] drm/bridge: dw-hdmi-qp: Add HDMI 2.1 FRL support
@@ -27,19 +27,20 @@ bumped to 2.1.
 
 Signed-off-by: Cristian Ciocaltea <cristian.ciocaltea@collabora.com>
 Link: https://gitlab.collabora.com/hardware-enablement/rockchip-3588/linux/-/commit/4ec5a0f99f1088358f9f6e86efdb107ffc75d1d1
+[ Arun: rebased onto the v12 dw_hdmi_qp_hpd_notify() helper: curr_conn is set and cleared under hdmi->mutex with a connector reference ]
 ---
- drivers/gpu/drm/bridge/synopsys/dw-hdmi-qp.c | 154 +++++++++++++++++--
+ drivers/gpu/drm/bridge/synopsys/dw-hdmi-qp.c | 152 +++++++++++++++++--
  drivers/gpu/drm/bridge/synopsys/dw-hdmi-qp.h |   3 +
  include/drm/bridge/dw_hdmi_qp.h              |  10 +-
- 3 files changed, 152 insertions(+), 15 deletions(-)
+ 3 files changed, 151 insertions(+), 14 deletions(-)
 
 diff --git a/drivers/gpu/drm/bridge/synopsys/dw-hdmi-qp.c b/drivers/gpu/drm/bridge/synopsys/dw-hdmi-qp.c
-index 2c6a0fb12..d59bdfc71 100644
+index c6551f4cbf93..1a3ac2615340 100644
 --- a/drivers/gpu/drm/bridge/synopsys/dw-hdmi-qp.c
 +++ b/drivers/gpu/drm/bridge/synopsys/dw-hdmi-qp.c
-@@ -84,7 +84,11 @@ struct dw_hdmi_qp {
- 
- 	/* Written by the atomic enable/disable hooks, read locklessly by HPD */
+@@ -85,7 +85,11 @@ struct dw_hdmi_qp {
+ 	/* Guards curr_conn between atomic hooks and HPD notify readers */
+ 	struct mutex mutex;
  	struct drm_connector *curr_conn;
 -	unsigned long tmds_char_rate;
 +
@@ -50,7 +51,7 @@ index 2c6a0fb12..d59bdfc71 100644
  	bool no_hpd;
  };
  
-@@ -251,7 +255,11 @@ static void dw_hdmi_qp_set_sample_rate(struct dw_hdmi_qp *hdmi, unsigned long lo
+@@ -252,7 +256,11 @@ static void dw_hdmi_qp_set_sample_rate(struct dw_hdmi_qp *hdmi, unsigned long lo
  {
  	unsigned int n, cts;
  
@@ -63,7 +64,7 @@ index 2c6a0fb12..d59bdfc71 100644
  
  	dw_hdmi_qp_set_cts_n(hdmi, cts, n);
  }
-@@ -541,6 +549,21 @@ static struct i2c_adapter *dw_hdmi_qp_i2c_adapter(struct dw_hdmi_qp *hdmi)
+@@ -534,6 +542,21 @@ static struct i2c_adapter *dw_hdmi_qp_i2c_adapter(struct dw_hdmi_qp *hdmi)
  	return adap;
  }
  
@@ -85,7 +86,7 @@ index 2c6a0fb12..d59bdfc71 100644
  static void dw_hdmi_qp_bridge_atomic_enable(struct drm_bridge *bridge,
  					    struct drm_atomic_commit *state)
  {
-@@ -549,7 +572,6 @@ static void dw_hdmi_qp_bridge_atomic_enable(struct drm_bridge *bridge,
+@@ -542,7 +565,6 @@ static void dw_hdmi_qp_bridge_atomic_enable(struct drm_bridge *bridge,
  	const struct drm_display_mode *mode;
  	struct drm_crtc_state *crtc_state;
  	struct drm_connector *connector;
@@ -93,7 +94,7 @@ index 2c6a0fb12..d59bdfc71 100644
  	int ret;
  
  	connector = drm_atomic_get_new_connector_for_encoder(state, bridge->encoder);
-@@ -564,33 +586,39 @@ static void dw_hdmi_qp_bridge_atomic_enable(struct drm_bridge *bridge,
+@@ -557,22 +579,23 @@ static void dw_hdmi_qp_bridge_atomic_enable(struct drm_bridge *bridge,
  		crtc_state = drm_atomic_get_new_crtc_state(state, conn_state->crtc);
  		mode = &crtc_state->mode;
  
@@ -121,9 +122,11 @@ index 2c6a0fb12..d59bdfc71 100644
  		dev_dbg(hdmi->dev, "%s mode=DVI\n", __func__);
  	}
  
+@@ -580,12 +603,17 @@ static void dw_hdmi_qp_bridge_atomic_enable(struct drm_bridge *bridge,
+ 	scoped_guard(mutex, &hdmi->mutex)
+ 		hdmi->curr_conn = connector;
+ 
 -	hdmi->phy.ops->init(hdmi, hdmi->phy.data);
-+	WRITE_ONCE(hdmi->curr_conn, connector);
-+
 +	ret = hdmi->phy.ops->init(hdmi, hdmi->phy.data);
 +	if (ret)
 +		dev_warn(hdmi->dev, "Failed to enable PHY: %d\n", ret);
@@ -132,21 +135,25 @@ index 2c6a0fb12..d59bdfc71 100644
 -	dw_hdmi_qp_mod(hdmi, op_mode, OPMODE_DVI, LINK_CONFIG0);
  
  	drm_atomic_helper_connector_hdmi_update_infoframes(connector, state);
- 
--	WRITE_ONCE(hdmi->curr_conn, connector);
++
 +	ret = drm_connector_hdmi_enable_frl(connector, conn_state);
 +	if (ret)
 +		dev_warn(hdmi->dev, "Failed to enable FRL: %d\n", ret);
  }
  
  static void dw_hdmi_qp_bridge_atomic_disable(struct drm_bridge *bridge,
-@@ -599,11 +627,15 @@ static void dw_hdmi_qp_bridge_atomic_disable(struct drm_bridge *bridge,
+@@ -594,6 +622,8 @@ static void dw_hdmi_qp_bridge_atomic_disable(struct drm_bridge *bridge,
  	struct dw_hdmi_qp *hdmi = bridge->driver_private;
  	struct drm_connector *connector;
  
 +	dw_hdmi_qp_tx_disable(hdmi);
 +
- 	WRITE_ONCE(hdmi->curr_conn, NULL);
+ 	scoped_guard(mutex, &hdmi->mutex) {
+ 		if (hdmi->curr_conn) {
+ 			drm_connector_put(hdmi->curr_conn);
+@@ -602,9 +632,11 @@ static void dw_hdmi_qp_bridge_atomic_disable(struct drm_bridge *bridge,
+ 	}
+ 
  	hdmi->tmds_char_rate = 0;
 +	hdmi->frl_rate_per_lane = 0;
  
@@ -156,7 +163,7 @@ index 2c6a0fb12..d59bdfc71 100644
  
  	hdmi->phy.ops->disable(hdmi, hdmi->phy.data);
  }
-@@ -639,6 +671,92 @@ dw_hdmi_qp_bridge_edid_read(struct drm_bridge *bridge,
+@@ -640,6 +672,92 @@ dw_hdmi_qp_bridge_edid_read(struct drm_bridge *bridge,
  	return drm_edid;
  }
  
@@ -249,7 +256,7 @@ index 2c6a0fb12..d59bdfc71 100644
  static int dw_hdmi_qp_bridge_scrambler_enable(struct drm_bridge *bridge)
  {
  	struct dw_hdmi_qp *hdmi = bridge->driver_private;
-@@ -663,8 +781,7 @@ static int dw_hdmi_qp_bridge_clear_avi_infoframe(struct drm_bridge *bridge)
+@@ -664,8 +782,7 @@ static int dw_hdmi_qp_bridge_clear_avi_infoframe(struct drm_bridge *bridge)
  {
  	struct dw_hdmi_qp *hdmi = bridge->driver_private;
  
@@ -259,7 +266,7 @@ index 2c6a0fb12..d59bdfc71 100644
  
  	return 0;
  }
-@@ -745,8 +862,8 @@ static int dw_hdmi_qp_bridge_write_avi_infoframe(struct drm_bridge *bridge,
+@@ -746,8 +863,8 @@ static int dw_hdmi_qp_bridge_write_avi_infoframe(struct drm_bridge *bridge,
  	dw_hdmi_qp_write_infoframe(hdmi, buffer, len, PKT_AVI_CONTENTS0);
  
  	dw_hdmi_qp_mod(hdmi, 0, PKTSCHED_AVI_FIELDRATE, PKTSCHED_PKT_CONFIG1);
@@ -270,7 +277,7 @@ index 2c6a0fb12..d59bdfc71 100644
  
  	return 0;
  }
-@@ -1032,6 +1149,11 @@ static const struct drm_bridge_funcs dw_hdmi_qp_bridge_funcs = {
+@@ -1033,6 +1150,11 @@ static const struct drm_bridge_funcs dw_hdmi_qp_bridge_funcs = {
  	.hpd_enable = dw_hdmi_qp_bridge_hpd_enable,
  	.hpd_disable = dw_hdmi_qp_bridge_hpd_disable,
  	.edid_read = dw_hdmi_qp_bridge_edid_read,
@@ -282,7 +289,7 @@ index 2c6a0fb12..d59bdfc71 100644
  	.hdmi_scrambler_enable = dw_hdmi_qp_bridge_scrambler_enable,
  	.hdmi_scrambler_disable = dw_hdmi_qp_bridge_scrambler_disable,
  	.hdmi_clear_avi_infoframe = dw_hdmi_qp_bridge_clear_avi_infoframe,
-@@ -1168,6 +1290,10 @@ struct dw_hdmi_qp *dw_hdmi_qp_bind(struct platform_device *pdev,
+@@ -1173,6 +1295,10 @@ struct dw_hdmi_qp *dw_hdmi_qp_bind(struct platform_device *pdev,
  	} else {
  		hdmi->bridge.supported_hdmi_ver = HDMI_VERSION_2_0;
  		hdmi->bridge.ops |= DRM_BRIDGE_OP_HPD;
@@ -294,7 +301,7 @@ index 2c6a0fb12..d59bdfc71 100644
  
  	if (plat_data->supported_formats)
 diff --git a/drivers/gpu/drm/bridge/synopsys/dw-hdmi-qp.h b/drivers/gpu/drm/bridge/synopsys/dw-hdmi-qp.h
-index c07847e8d..dfb8cb661 100644
+index c07847e8d7dd..dfb8cb6614ad 100644
 --- a/drivers/gpu/drm/bridge/synopsys/dw-hdmi-qp.h
 +++ b/drivers/gpu/drm/bridge/synopsys/dw-hdmi-qp.h
 @@ -23,6 +23,7 @@
@@ -315,7 +322,7 @@ index c07847e8d..dfb8cb661 100644
  #define PKTSCHED_PKT_STATUS0				0xab4
  #define PKTSCHED_PKT_STATUS1				0xab8
 diff --git a/include/drm/bridge/dw_hdmi_qp.h b/include/drm/bridge/dw_hdmi_qp.h
-index ad33f9caf..1cd8ee27b 100644
+index ad33f9cafdeb..1cd8ee27b4d0 100644
 --- a/include/drm/bridge/dw_hdmi_qp.h
 +++ b/include/drm/bridge/dw_hdmi_qp.h
 @@ -1,12 +1,14 @@
@@ -354,3 +361,6 @@ index ad33f9caf..1cd8ee27b 100644
  };
  
  struct dw_hdmi_qp *dw_hdmi_qp_bind(struct platform_device *pdev,
+-- 
+2.55.0
+

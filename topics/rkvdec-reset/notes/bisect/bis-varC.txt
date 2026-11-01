@@ -1,0 +1,15 @@
+Ran 128/135
+1: fails: CVFC1_Sony_C FM1_BT_B FM1_FT_E FM2_SVA_C HCBP1_HHI_A SP1_BT_A sp2_bt_b  -> DIFFERENT
+Ran 122/135
+1: fails: CVFC1_Sony_C FM1_BT_B FM1_FT_E FM2_SVA_C SP1_BT_A SVA_BA1_B SVA_BA2_D SVA_Base_B SVA_CL1_E SVA_FM1_E SVA_NL1_B SVA_NL2_E sp2_bt_b  -> DIFFERENT
+Ran 122/135
+1: fails: CVFC1_Sony_C FM1_BT_B FM1_FT_E FM2_SVA_C SP1_BT_A SVA_BA1_B SVA_BA2_D SVA_Base_B SVA_CL1_E SVA_FM1_E SVA_NL1_B SVA_NL2_E sp2_bt_b  -> DIFFERENT
+Ran 129/135
+1: fails: CVFC1_Sony_C FM1_BT_B FM1_FT_E FM2_SVA_C SP1_BT_A sp2_bt_b  -> identical
+Ran 129/135
+1: fails: CVFC1_Sony_C FM1_BT_B FM1_FT_E FM2_SVA_C SP1_BT_A sp2_bt_b  -> identical
+Ran 129/135
+1: fails: CVFC1_Sony_C FM1_BT_B FM1_FT_E FM2_SVA_C SP1_BT_A sp2_bt_b  -> identical
+since start: timeouts 0, KASAN/Oops/canary 0
+DONE
+boot: timeouts 6, IOMMU not-attached faults 0

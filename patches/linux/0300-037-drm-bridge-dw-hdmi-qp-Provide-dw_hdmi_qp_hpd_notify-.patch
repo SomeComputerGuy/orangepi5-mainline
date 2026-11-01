@@ -1,8 +1,11 @@
-From 317935f5c434a01cc92fabe9cb01cd5305e90680 Mon Sep 17 00:00:00 2001
+From a58efc1aa0bb67abe1946be72a1c67d17d78aadf Mon Sep 17 00:00:00 2001
 From: Cristian Ciocaltea <cristian.ciocaltea@collabora.com>
-Date: Thu, 7 May 2026 00:30:25 +0300
+Date: Mon, 5 Oct 2026 03:38:06 +0300
 Subject: [PATCH] drm/bridge: dw-hdmi-qp: Provide dw_hdmi_qp_hpd_notify()
  helper
+MIME-Version: 1.0
+Content-Type: text/plain; charset=UTF-8
+Content-Transfer-Encoding: 8bit
 
 Export dw_hdmi_qp_hpd_notify() for platform drivers to report hot-plug
 detection events.  Unlike drm_helper_hpd_irq_event() which polls all
@@ -10,20 +13,44 @@ connectors, this helper targets only the affected connector and ensures
 .detect_ctx() is invoked on reconnection events to trigger SCDC state
 recovery.
 
-Note that this helper may sleep, so it must only be called from a
+Track the connector in use in curr_conn, set and cleared by the atomic
+enable/disable hooks.  Since the helper runs asynchronously from
+IRQ/work context, hold a reference on that connector for as long as the
+bridge is enabled, so that the pointer is always safe to dereference.
+Otherwise validity would rest on the platform glue quiescing HPD before
+the DRM-managed connector is freed during teardown, risking a
+use-after-free on a late HPD event.
+
+The helper must take its own temporary reference while running, because
+the long-lived reference above only guarantees the pointer is valid at
+the time it is read, not that the connector survives a concurrent
+atomic_disable dropping that reference while the helper is still using
+it.  Moreover, reading the pointer and acquiring the temporary reference
+must be atomic with respect to atomic_disable, otherwise a window exists
+where drm_connector_get() is called on a connector whose refcount
+already reached zero, hence guard curr_conn with a mutex for this
+purpose.  Holding the mutex across the whole helper instead is not an
+option, as it takes modeset locks while atomic_disable is called with
+them held.
+
+Also note that this helper may sleep, so it must only be called from a
 threaded HPD interrupt handler or a work function.
 
 Tested-by: Maud Spierings <maud_spierings@hotmail.com>
 Tested-by: Diederik de Haas <diederik@cknow-tech.com>  # NanoPC-T6 LTS, Rock 5B
+Tested-by: Robin Räber <robin.raebi@gmail.com>
+Tested-by: Igor Paunovic <royalnet026@gmail.com> # RK3588 Orange Pi 5 Plus, dual HDMI
 Signed-off-by: Cristian Ciocaltea <cristian.ciocaltea@collabora.com>
-Link: https://gitlab.collabora.com/hardware-enablement/rockchip-3588/linux/-/commit/bcfadf6bc367db93a59d414d52b453a848fdf2a9
+Signed-off-by: Heiko Stuebner <heiko@sntech.de>
+Link: https://patch.msgid.link/20261005-dw-hdmi-qp-scramb-v12-5-195157ba0b40@collabora.com
+(cherry picked from commit a58efc1aa0bb67abe1946be72a1c67d17d78aadf)
 ---
- drivers/gpu/drm/bridge/synopsys/dw-hdmi-qp.c | 37 ++++++++++++++++++++
+ drivers/gpu/drm/bridge/synopsys/dw-hdmi-qp.c | 59 ++++++++++++++++++++
  include/drm/bridge/dw_hdmi_qp.h              |  1 +
- 2 files changed, 38 insertions(+)
+ 2 files changed, 60 insertions(+)
 
 diff --git a/drivers/gpu/drm/bridge/synopsys/dw-hdmi-qp.c b/drivers/gpu/drm/bridge/synopsys/dw-hdmi-qp.c
-index 6c8d25bc0..e0771878f 100644
+index 14723ee5cb05..54181b052fe2 100644
 --- a/drivers/gpu/drm/bridge/synopsys/dw-hdmi-qp.c
 +++ b/drivers/gpu/drm/bridge/synopsys/dw-hdmi-qp.c
 @@ -28,6 +28,7 @@
@@ -34,33 +61,53 @@ index 6c8d25bc0..e0771878f 100644
  
  #include <media/cec.h>
  
-@@ -81,6 +82,8 @@ struct dw_hdmi_qp {
+@@ -81,6 +82,9 @@ struct dw_hdmi_qp {
  	struct regmap *regm;
  	int main_irq;
  
-+	/* Written by the atomic enable/disable hooks, read locklessly by HPD */
++	/* Guards curr_conn between atomic hooks and HPD notify readers */
++	struct mutex mutex;
 +	struct drm_connector *curr_conn;
  	unsigned long tmds_char_rate;
  	bool no_hpd;
  };
-@@ -578,6 +581,8 @@ static void dw_hdmi_qp_bridge_atomic_enable(struct drm_bridge *bridge,
- 	dw_hdmi_qp_mod(hdmi, op_mode, OPMODE_DVI, LINK_CONFIG0);
+@@ -564,6 +568,10 @@ static void dw_hdmi_qp_bridge_atomic_enable(struct drm_bridge *bridge,
+ 		dev_dbg(hdmi->dev, "%s mode=DVI\n", __func__);
+ 	}
  
- 	drm_atomic_helper_connector_hdmi_update_infoframes(connector, state);
++	drm_connector_get(connector);
++	scoped_guard(mutex, &hdmi->mutex)
++		hdmi->curr_conn = connector;
 +
-+	WRITE_ONCE(hdmi->curr_conn, connector);
- }
+ 	hdmi->phy.ops->init(hdmi, hdmi->phy.data);
  
- static void dw_hdmi_qp_bridge_atomic_disable(struct drm_bridge *bridge,
-@@ -586,6 +591,7 @@ static void dw_hdmi_qp_bridge_atomic_disable(struct drm_bridge *bridge,
+ 	dw_hdmi_qp_mod(hdmi, HDCP2_BYPASS, HDCP2_BYPASS, HDCP2LOGIC_CONFIG0);
+@@ -578,6 +586,13 @@ static void dw_hdmi_qp_bridge_atomic_disable(struct drm_bridge *bridge,
  	struct dw_hdmi_qp *hdmi = bridge->driver_private;
  	struct drm_connector *connector;
  
-+	WRITE_ONCE(hdmi->curr_conn, NULL);
++	scoped_guard(mutex, &hdmi->mutex) {
++		if (hdmi->curr_conn) {
++			drm_connector_put(hdmi->curr_conn);
++			hdmi->curr_conn = NULL;
++		}
++	}
++
  	hdmi->tmds_char_rate = 0;
  
  	connector = drm_atomic_get_old_connector_for_encoder(state, bridge->encoder);
-@@ -1202,6 +1208,37 @@ struct dw_hdmi_qp *dw_hdmi_qp_bind(struct platform_device *pdev,
+@@ -1099,6 +1114,10 @@ struct dw_hdmi_qp *dw_hdmi_qp_bind(struct platform_device *pdev,
+ 	if (IS_ERR(hdmi))
+ 		return ERR_CAST(hdmi);
+ 
++	ret = devm_mutex_init(dev, &hdmi->mutex);
++	if (ret)
++		return ERR_PTR(ret);
++
+ 	hdmi->dev = dev;
+ 
+ 	regs = devm_platform_ioremap_resource(pdev, 0);
+@@ -1194,6 +1213,46 @@ struct dw_hdmi_qp *dw_hdmi_qp_bind(struct platform_device *pdev,
  }
  EXPORT_SYMBOL_GPL(dw_hdmi_qp_bind);
  
@@ -75,8 +122,14 @@ index 6c8d25bc0..e0771878f 100644
 + */
 +void dw_hdmi_qp_hpd_notify(struct dw_hdmi_qp *hdmi)
 +{
-+	struct drm_connector *conn = READ_ONCE(hdmi->curr_conn);
 +	enum drm_connector_status status;
++	struct drm_connector *conn;
++
++	scoped_guard(mutex, &hdmi->mutex) {
++		conn = hdmi->curr_conn;
++		if (conn)
++			drm_connector_get(conn);
++	}
 +
 +	status = hdmi->phy.ops->read_hpd(hdmi, hdmi->phy.data);
 +	dev_dbg(hdmi->dev, "%s status=%d\n", __func__, status);
@@ -92,6 +145,9 @@ index 6c8d25bc0..e0771878f 100644
 +		drm_connector_helper_hpd_irq_event(conn);
 +	else
 +		drm_bridge_hpd_notify(&hdmi->bridge, status);
++
++	if (conn)
++		drm_connector_put(conn);
 +}
 +EXPORT_SYMBOL_GPL(dw_hdmi_qp_hpd_notify);
 +
@@ -99,7 +155,7 @@ index 6c8d25bc0..e0771878f 100644
  {
  	disable_irq(hdmi->main_irq);
 diff --git a/include/drm/bridge/dw_hdmi_qp.h b/include/drm/bridge/dw_hdmi_qp.h
-index b80fceffc..b4fb1c578 100644
+index b80fceffc315..b4fb1c578a5b 100644
 --- a/include/drm/bridge/dw_hdmi_qp.h
 +++ b/include/drm/bridge/dw_hdmi_qp.h
 @@ -36,6 +36,7 @@ struct dw_hdmi_qp_plat_data {
@@ -110,3 +166,6 @@ index b80fceffc..b4fb1c578 100644
  void dw_hdmi_qp_suspend(struct device *dev, struct dw_hdmi_qp *hdmi);
  void dw_hdmi_qp_resume(struct device *dev, struct dw_hdmi_qp *hdmi);
  #endif /* __DW_HDMI_QP__ */
+-- 
+2.55.0
+

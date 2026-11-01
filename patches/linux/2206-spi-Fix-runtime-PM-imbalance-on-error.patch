@@ -1,0 +1,45 @@
+From c7cfa432c13d1c4bab8bae4d27fbdadcfbca1a84 Mon Sep 17 00:00:00 2001
+From: Sebastian Reichel <sebastian.reichel@collabora.com>
+Date: Sat, 05 Sep 2026 00:26:40 +0200
+Subject: [PATCH] spi: Fix runtime PM imbalance on error
+
+The current code drops the runtime PM twice resulting in the error path
+resulting in follow-up runtime PM imbalance:
+
+spi_master spi2: noqueue transfer failed
+rockchip-spi feb20000.spi: Runtime PM usage count underflow!
+
+Fix the problem by always keeping the runtime PM count increased when
+exiting __spi_pump_transfer_message(), as the caller handles decreasing
+the count.
+
+Note, that the function already had some other error paths where it
+exits with the runtime PM count increased.
+
+Signed-off-by: Sebastian Reichel <sebastian.reichel@collabora.com>
+Link: https://gitlab.collabora.com/hardware-enablement/rockchip-3588/linux/-/commit/c7cfa432c13d1c4bab8bae4d27fbdadcfbca1a84
+---
+diff --git a/drivers/spi/spi.c b/drivers/spi/spi.c
+--- a/drivers/spi/spi.c
++++ b/drivers/spi/spi.c
+@@ -1942,7 +1942,6 @@ static int __spi_pump_transfer_message(struct spi_controller *ctlr,
+ 	if (!was_busy && ctlr->auto_runtime_pm) {
+ 		ret = pm_runtime_get_sync(ctlr->dev.parent);
+ 		if (ret < 0) {
+-			pm_runtime_put_noidle(ctlr->dev.parent);
+ 			dev_err(&ctlr->dev, "Failed to power device: %d\n",
+ 				ret);
+ 
+@@ -1963,9 +1962,6 @@ static int __spi_pump_transfer_message(struct spi_controller *ctlr,
+ 				"failed to prepare transfer hardware: %d\n",
+ 				ret);
+ 
+-			if (ctlr->auto_runtime_pm)
+-				pm_runtime_put(ctlr->dev.parent);
+-
+ 			msg->status = ret;
+ 			spi_finalize_current_message(ctlr);
+ 
+-- 
+gitlab
+

@@ -450,7 +450,10 @@ class Shower:
             return mods[0]
         m = 0 if mod == "linear" else int(mod, 0)
         if m not in mods:
-            raise RuntimeError(f"plane {plane['id']} does not list {fmt} {m:#x}")
+            # KMSCTL_FORCE_LINEAR=1: hand linear to the kernel even when IN_FORMATS doesn't list it (RK3588
+            # Cluster windows list only AFBC but take linear framebuffers, which fbcon and modetest use)
+            if not (m == 0 and os.environ.get("KMSCTL_FORCE_LINEAR") == "1"):
+                raise RuntimeError(f"plane {plane['id']} does not list {fmt} {m:#x}")
         return m
 
     def run(self, heads, extra, test_only, hold):

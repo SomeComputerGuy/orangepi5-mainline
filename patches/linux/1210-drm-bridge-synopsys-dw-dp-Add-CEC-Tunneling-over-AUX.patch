@@ -15,7 +15,8 @@ Hook the helpers up the same way i915 does:
  - set the physical address from the EDID after reading it, and unset it
    when the EDID read fails or the sink is no longer detected, which
    lets the helper drop the adapter when the DPCD no longer advertises
-   CEC;
+   CEC (detect can run before the first EDID read, so only once the
+   connector is registered: the helper's work item is set up there);
  - call drm_dp_cec_irq() on short HPD pulses so that CEC messages
    signalled through DP_DEVICE_SERVICE_IRQ_VECTOR are processed.
 
@@ -24,9 +25,10 @@ and the adapter is only created when the sink advertises the CEC
 tunneling capability in the DPCD.
 
 Assisted-by: Claude:claude-opus-5-5
+Signed-off-by: Arun Iyengar <aiyengar1990@gmail.com>
 ---
- drivers/gpu/drm/bridge/synopsys/dw-dp.c | 32 ++++++++++++++++++++++++++++++--
- 1 file changed, 30 insertions(+), 2 deletions(-)
+ drivers/gpu/drm/bridge/synopsys/dw-dp.c | 33 +++++++++++++++++++++++++++++++--
+ 1 file changed, 31 insertions(+), 2 deletions(-)
 
 diff --git a/drivers/gpu/drm/bridge/synopsys/dw-dp.c b/drivers/gpu/drm/bridge/synopsys/dw-dp.c
 index 646ea416dce4..48361079963f 100644
@@ -40,7 +42,7 @@ index 646ea416dce4..48361079963f 100644
  	int audio_sdp_nr;
  	/* Serialize hpd status access */
  	struct mutex irq_lock;
-@@ -2214,12 +2215,17 @@ static enum drm_connector_status dw_dp_bridge_detect(struct drm_bridge *bridge,
+@@ -2214,12 +2215,18 @@ static enum drm_connector_status dw_dp_bridge_detect(struct drm_bridge *bridge,
  		return connector_status_disconnected;
  
  	if (!dw_dp_hpd_detect(dp))
@@ -54,7 +56,8 @@ index 646ea416dce4..48361079963f 100644
  	return connector_status_connected;
 +
 +disconnected:
-+	drm_dp_cec_unset_edid(&dp->aux);
++	if (dp->cec_registered)
++		drm_dp_cec_unset_edid(&dp->aux);
 +
 +	return connector_status_disconnected;
  }

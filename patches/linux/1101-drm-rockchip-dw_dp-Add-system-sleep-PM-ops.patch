@@ -36,6 +36,7 @@ Fixes the runtime PM support added in:
 Link: https://patch.msgid.link/20260806-synopsys-dw-dp-improvements-v11-15-0d508505f383@collabora.com
 
 Assisted-by: Claude:claude-opus-5-5
+Signed-off-by: Arun Iyengar <aiyengar1990@gmail.com>
 ---
  drivers/gpu/drm/rockchip/dw_dp-rockchip.c | 1 +
  1 file changed, 1 insertion(+)

@@ -22,6 +22,7 @@ while still allowing applications to ask for larger buffers. The
 decoder behaviour is unchanged.
 
 Assisted-by: Claude:claude-opus-5-5
+Signed-off-by: Arun Iyengar <aiyengar1990@gmail.com>
 ---
  drivers/media/platform/verisilicon/hantro_v4l2.c | 16 +++++++++++++---
  1 file changed, 13 insertions(+), 3 deletions(-)

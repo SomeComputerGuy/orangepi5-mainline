@@ -11,6 +11,7 @@ context states for each QP.
 Make the table used by the decoders global, and document its layout.
 
 Assisted-by: Claude:claude-opus-5-5
+Signed-off-by: Arun Iyengar <aiyengar1990@gmail.com>
 ---
  drivers/media/platform/verisilicon/hantro_h264.c | 5 +++--
  drivers/media/platform/verisilicon/hantro_hw.h   | 9 +++++++++

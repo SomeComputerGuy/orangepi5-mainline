@@ -1,0 +1,54 @@
+From e186fa6eb2f88731ec223ea0a9b93c4316ef3339 Mon Sep 17 00:00:00 2001
+From: Arun Iyengar <aiyengar1990@gmail.com>
+Date: Sun, 1 Nov 2026 09:29:01 +0000
+Subject: [PATCH 2107/2117] pmdomain: rockchip: put only the clocks that were
+ got on error
+
+When of_clk_get() fails for clock i of a power domain,
+rockchip_pm_add_one_domain() jumps to err_put_clocks, which calls
+clk_bulk_put() on all pd->num_clks entries. That includes the
+ERR_PTR() just stored in pd->clks[i] (clk_put() warns on it) and
+the NULL entries after it.
+
+This is hit whenever a domain clock is not yet available and probe is
+deferred, so every deferral leaves a warning in the log and the error
+itself is reported with dev_err() instead of being recorded as a
+deferral reason.
+
+Put only the i clocks that were obtained, and report the failure with
+dev_err_probe().
+
+Based on Armbian patch patch/kernel/archive/rockchip64-7.3/general-pmdomain-rockchip-put-only-the-clocks-that-were-got.patch by Igor Pecovnik, https://github.com/armbian/build/blob/fb22cb0f1940bfeaabdfefd5a05a3ccb70087734/patch/kernel/archive/rockchip64-7.3/general-pmdomain-rockchip-put-only-the-clocks-that-were-got.patch
+
+Assisted-by: Claude:claude-opus-5-5
+Signed-off-by: Arun Iyengar <aiyengar1990@gmail.com>
+---
+ drivers/pmdomain/rockchip/pm-domains.c | 12 +++++++-----
+ 1 file changed, 7 insertions(+), 5 deletions(-)
+
+diff --git a/drivers/pmdomain/rockchip/pm-domains.c b/drivers/pmdomain/rockchip/pm-domains.c
+index e193f978d5f3..1aac093e8403 100644
+--- a/drivers/pmdomain/rockchip/pm-domains.c
++++ b/drivers/pmdomain/rockchip/pm-domains.c
+@@ -850,11 +850,13 @@ static int rockchip_pm_add_one_domain(struct rockchip_pmu *pmu,
+ 	for (i = 0; i < pd->num_clks; i++) {
+ 		pd->clks[i].clk = of_clk_get(node, i);
+ 		if (IS_ERR(pd->clks[i].clk)) {
+-			error = PTR_ERR(pd->clks[i].clk);
+-			dev_err(pmu->dev,
+-				"%pOFn: failed to get clk at index %d: %d\n",
+-				node, i, error);
+-			goto err_put_clocks;
++			error = dev_err_probe(pmu->dev,
++					      PTR_ERR(pd->clks[i].clk),
++					      "%pOFn: failed to get clk at index %d\n",
++					      node, i);
++			/* Only the clocks before index i were got */
++			clk_bulk_put(i, pd->clks);
++			return error;
+ 		}
+ 	}
+ 
+-- 
+2.55.0
+

@@ -1,0 +1,42 @@
+From: Jakob Unterwurzacher <jakob.unterwurzacher@cherry.de>
+Date: Thu, 29 Oct 2026 11:06:25 +0100
+Subject: [PATCH] mfd: rk8xx-spi: add system sleep PM ops
+
+Unlike rk8xx-i2c, the SPI driver does not hook up rk8xx_suspend() and
+rk8xx_resume(), so the RK806 never gets its system sleep handling, e.g.
+keeping its interrupt disabled while the SPI controller is suspended.
+
+Add the same PM ops as rk8xx-i2c.
+
+Fixes: 210f418f8ace ("mfd: rk8xx: Add rk806 support")
+Link: https://patch.msgid.link/20261029-dev-tiger-v7-4-pre-20261028-tiger-suspend-b4-v1-3-cb12621c1fb4@cherry.de
+---
+---
+ drivers/mfd/rk8xx-spi.c | 3 +++
+ 1 file changed, 3 insertions(+)
+
+diff --git a/drivers/mfd/rk8xx-spi.c b/drivers/mfd/rk8xx-spi.c
+index bb85fe60518f6..a0b7d7a058108 100644
+--- a/drivers/mfd/rk8xx-spi.c
++++ b/drivers/mfd/rk8xx-spi.c
+@@ -97,6 +97,8 @@ static int rk8xx_spi_probe(struct spi_device *spi)
+ 	return rk8xx_probe(&spi->dev, RK806_ID, spi->irq, regmap);
+ }
+ 
++static DEFINE_SIMPLE_DEV_PM_OPS(rk8xx_spi_pm_ops, rk8xx_suspend, rk8xx_resume);
++
+ static const struct of_device_id rk8xx_spi_of_match[] = {
+ 	{ .compatible = "rockchip,rk806", },
+ 	{ }
+@@ -113,6 +115,7 @@ static struct spi_driver rk8xx_spi_driver = {
+ 	.driver		= {
+ 		.name	= "rk8xx-spi",
+ 		.of_match_table = rk8xx_spi_of_match,
++		.pm = pm_sleep_ptr(&rk8xx_spi_pm_ops),
+ 	},
+ 	.probe		= rk8xx_spi_probe,
+ 	.id_table	= rk8xx_spi_id_table,
+
+-- 
+2.47.3
+

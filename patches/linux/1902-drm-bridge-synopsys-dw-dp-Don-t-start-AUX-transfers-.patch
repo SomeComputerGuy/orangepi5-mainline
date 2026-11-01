@@ -1,0 +1,60 @@
+From d1935231dec1d150284292762252dc6b431734b9 Mon Sep 17 00:00:00 2001
+From: Arun Iyengar <aiyengar1990@gmail.com>
+Date: Sun, 1 Nov 2026 06:01:26 +0000
+Subject: [PATCH 02/33] drm/bridge: synopsys: dw-dp: Don't start AUX transfers
+ while HPD is deasserted
+
+The DW DP controller does not process an AUX command while its HPD state
+machine is not in the plugged state. No AUX_REPLY_EVENT is raised, so
+dw_dp_aux_transfer() waits for the full 10 ms software timeout, logs
+"timeout waiting for AUX reply" and resets the AUX block. The DPCD
+helpers retry a failed native transaction up to 32 times, so a single
+DPCD access made while HPD is low costs up to ~350 ms and as many error
+messages.
+
+This is seen with a USB-C dock whose DP-to-HDMI protocol converter sends
+an IRQ_HPD and then drops HPD: the short pulse handler starts reading
+the DPCD, the reads hit the time HPD is low, and "timeout waiting for
+AUX reply" is logged a few times before the controller reports the
+following hot plug.
+
+A source must not start AUX transactions while HPD is deasserted. Check
+the HPD state before starting a transfer and fail with -ENXIO right
+away, as the MSM DP driver does. The DPCD helpers retry errors other
+than -ETIMEDOUT with a delay, which still covers an HPD IRQ pulse.
+
+Fixes: 86eecc3a9c2e ("drm/bridge: synopsys: Add DW DPTX Controller support library")
+(cherry picked from commit e39ebf6d951bf214a161eba30ecdf31e22e529b1)
+
+Assisted-by: Claude:claude-opus-5-5
+Signed-off-by: Arun Iyengar <aiyengar1990@gmail.com>
+---
+ drivers/gpu/drm/bridge/synopsys/dw-dp.c | 12 ++++++++++++
+ 1 file changed, 12 insertions(+)
+
+diff --git a/drivers/gpu/drm/bridge/synopsys/dw-dp.c b/drivers/gpu/drm/bridge/synopsys/dw-dp.c
+index 48361079963f..8d66375804c1 100644
+--- a/drivers/gpu/drm/bridge/synopsys/dw-dp.c
++++ b/drivers/gpu/drm/bridge/synopsys/dw-dp.c
+@@ -1595,6 +1595,18 @@ static ssize_t dw_dp_aux_transfer(struct drm_dp_aux *aux,
+ 	if (ret)
+ 		return ret;
+ 
++	/*
++	 * The controller does not run an AUX transaction while its HPD state
++	 * machine reports the sink as unplugged: there is no reply event and
++	 * the transfer would only end with the software timeout. A source
++	 * must not start AUX transactions while HPD is deasserted anyway, so
++	 * fail right away. This happens e.g. when a branch device drops HPD
++	 * while a short pulse is being handled, or while the state machine is
++	 * still debouncing HPD after the controller has been (re)initialized.
++	 */
++	if (!dw_dp_hpd_detect(dp))
++		return -ENXIO;
++
+ 	reinit_completion(&dp->complete);
+ 
+ 	switch (msg->request & ~DP_AUX_I2C_MOT) {
+-- 
+2.55.0
+

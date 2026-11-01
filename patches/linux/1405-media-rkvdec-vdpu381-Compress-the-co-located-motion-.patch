@@ -28,6 +28,7 @@ current 128 bytes per macroblock: 8.3 MB instead of 4.1 MB per 4K
 CAPTURE buffer.
 
 Assisted-by: Claude:claude-opus-5-5
+Signed-off-by: Arun Iyengar <aiyengar1990@gmail.com>
 ---
  .../rockchip/rkvdec/rkvdec-vdpu381-h264.c      | 10 ++++++++++
  .../media/platform/rockchip/rkvdec/rkvdec.c    | 18 +++++++++++++++++-

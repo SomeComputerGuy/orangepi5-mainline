@@ -22,6 +22,7 @@ is bound.
 
 Fixes: da92d3dfc871 ("arm64: dts: rockchip: enable the mmu600_pcie IOMMU on the rk3588 SoC")
 Assisted-by: Claude:claude-opus-5-5
+Signed-off-by: Arun Iyengar <aiyengar1990@gmail.com>
 ---
  arch/arm64/boot/dts/rockchip/rk3588-base.dtsi | 1 +
  1 file changed, 1 insertion(+)

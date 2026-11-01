@@ -1,0 +1,32 @@
+From 3b43606fcca57e1781d9d3ed5bec8d541d1e1dee Mon Sep 17 00:00:00 2001
+From: Shawn Lin <shawn.lin@rock-chips.com>
+Date: Mon, 21 Sep 2026 14:52:53 +0800
+Subject: [PATCH] pmdomain: rockchip: drop duplicated errno from supply failure
+ message
+
+dev_err_probe() already appends the error code.
+
+Signed-off-by: Shawn Lin <shawn.lin@rock-chips.com>
+Reviewed-by: Sebastian Reichel <sebastian.reichel@collabora.com>
+Signed-off-by: Ulf Hansson <ulfh@kernel.org>
+(cherry picked from commit 3b43606fcca57e1781d9d3ed5bec8d541d1e1dee)
+---
+ drivers/pmdomain/rockchip/pm-domains.c | 2 +-
+ 1 file changed, 1 insertion(+), 1 deletion(-)
+
+diff --git a/drivers/pmdomain/rockchip/pm-domains.c b/drivers/pmdomain/rockchip/pm-domains.c
+index bb63bf1baf2f..db3879846db6 100644
+--- a/drivers/pmdomain/rockchip/pm-domains.c
++++ b/drivers/pmdomain/rockchip/pm-domains.c
+@@ -721,7 +721,7 @@ static int rockchip_pd_power_on(struct generic_pm_domain *domain)
+ 	ret = rockchip_pd_regulator_enable(pd);
+ 	if (ret)
+ 		return dev_err_probe(pd->pmu->dev, ret,
+-				     "Failed to enable supply: %d\n", ret);
++				     "Failed to enable supply\n");
+ 
+ 	ret = rockchip_pd_power(pd, true);
+ 	if (ret)
+-- 
+2.55.0
+

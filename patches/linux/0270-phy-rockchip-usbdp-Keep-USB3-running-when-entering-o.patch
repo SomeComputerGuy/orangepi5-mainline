@@ -61,6 +61,7 @@ boot and after every transition.
 
 Link: https://gitlab.collabora.com/hardware-enablement/rockchip-3588/linux/-/commit/b6c756709db3ae6f85ef8133de754a8e7b7ec894 # the change this fixes (not in mainline yet)
 Assisted-by: Claude:claude-opus-5-5
+Signed-off-by: Arun Iyengar <aiyengar1990@gmail.com>
 ---
  drivers/phy/rockchip/phy-rockchip-usbdp.c | 100 ++++++++++++++++++----
  1 file changed, 85 insertions(+), 15 deletions(-)

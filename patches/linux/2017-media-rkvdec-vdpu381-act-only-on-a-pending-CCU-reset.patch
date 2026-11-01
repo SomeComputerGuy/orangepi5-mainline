@@ -1,0 +1,132 @@
+From a7de1a42d0ea1064bfdd410f148dde943102482d Mon Sep 17 00:00:00 2001
+From: Arun Iyengar <aiyengar1990@gmail.com>
+Date: Sun, 1 Nov 2026 08:22:38 +0000
+Subject: [PATCH 33/33] media: rkvdec: vdpu381: act only on a pending CCU
+ reset, keep every deferred stream
+
+Every failed core job schedules the CCU reset work. When a second
+failure arrives while the work runs, the work runs again after the
+reset already cleared ccu_reset_pending, finds the cores settled and
+resets them under the jobs of the next stream, which then fail and
+schedule it once more.
+
+Return from the work unless a reset is pending, and queue the streams
+whose jobs could not start during the reset on a list instead of a
+single pointer, which lost all but the last one and stalled them.
+
+Assisted-by: Claude:claude-opus-5-5
+Signed-off-by: Arun Iyengar <aiyengar1990@gmail.com>
+---
+ .../media/platform/rockchip/rkvdec/rkvdec.c   | 41 +++++++++++++++----
+ .../media/platform/rockchip/rkvdec/rkvdec.h   |  5 ++-
+ 2 files changed, 36 insertions(+), 10 deletions(-)
+
+diff --git a/drivers/media/platform/rockchip/rkvdec/rkvdec.c b/drivers/media/platform/rockchip/rkvdec/rkvdec.c
+index 03d0874c5c2d..819074c503e9 100644
+--- a/drivers/media/platform/rockchip/rkvdec/rkvdec.c
++++ b/drivers/media/platform/rockchip/rkvdec/rkvdec.c
+@@ -1229,7 +1229,8 @@ static struct rkvdec_job *rkvdec_job_start(struct rkvdec_ctx *ctx)
+ 	 * idle that is being set up.
+ 	 */
+ 	if (rkvdec->ccu_reset_pending) {
+-		rkvdec->deferred_ctx = ctx;
++		if (!ctx->num_deferred++)
++			list_add_tail(&ctx->deferred_node, &rkvdec->deferred_ctxs);
+ 		return ERR_PTR(-EAGAIN);
+ 	}
+ 
+@@ -1927,6 +1928,7 @@ static int rkvdec_open(struct file *filp)
+ 
+ 	ctx->dev = rkvdec;
+ 	INIT_LIST_HEAD(&ctx->jobs);
++	INIT_LIST_HEAD(&ctx->deferred_node);
+ 	init_waitqueue_head(&ctx->jobs_wq);
+ 	mutex_init(&ctx->done_lock);
+ 	ctx->num_job_slots = 1;
+@@ -2269,9 +2271,19 @@ static void rkvdec_ccu_reset_work(struct work_struct *work)
+ 	struct rkvdec_dev *rkvdec = container_of(work, struct rkvdec_dev,
+ 						 reset_work);
+ 	struct rkvdec_ctx *ctx;
++	unsigned int runs;
+ 	bool powered;
+ 	int i;
+ 
++	/*
++	 * Each failure schedules the work, and one reset handles all the
++	 * failures up to it: a run without a reset pending must not touch the
++	 * cores, which run new jobs again.
++	 */
++	scoped_guard(spinlock_irqsave, &rkvdec->cores_lock)
++		if (!rkvdec->ccu_reset_pending)
++			return;
++
+ 	wait_event(rkvdec->reset_wq, rkvdec_cores_settled(rkvdec));
+ 
+ 	/* A failed job holds the runtime PM references of all the cores. */
+@@ -2309,14 +2321,24 @@ static void rkvdec_ccu_reset_work(struct work_struct *work)
+ 			rkvdec_job_hw_done(core, VB2_BUF_STATE_ERROR, true);
+ 	}
+ 
+-	scoped_guard(spinlock_irqsave, &rkvdec->cores_lock) {
+-		rkvdec->ccu_reset_pending = false;
+-		ctx = rkvdec->deferred_ctx;
+-		rkvdec->deferred_ctx = NULL;
+-	}
+-
+-	if (ctx)
+-		rkvdec_device_run(ctx);
++	/*
++	 * Run the m2m jobs that couldn't start meanwhile, of all the contexts:
++	 * each one waits for its job to be run.
++	 */
++	spin_lock_irq(&rkvdec->cores_lock);
++	rkvdec->ccu_reset_pending = false;
++	while (!rkvdec->ccu_reset_pending &&
++	       (ctx = list_first_entry_or_null(&rkvdec->deferred_ctxs,
++					       struct rkvdec_ctx, deferred_node))) {
++		list_del_init(&ctx->deferred_node);
++		runs = ctx->num_deferred;
++		ctx->num_deferred = 0;
++		spin_unlock_irq(&rkvdec->cores_lock);
++		while (runs--)
++			rkvdec_device_run(ctx);
++		spin_lock_irq(&rkvdec->cores_lock);
++	}
++	spin_unlock_irq(&rkvdec->cores_lock);
+ }
+ 
+ /*
+@@ -3045,6 +3067,7 @@ static int rkvdec_probe(struct platform_device *pdev)
+ 	mutex_init(&rkvdec->vdev_lock);
+ 	spin_lock_init(&rkvdec->cores_lock);
+ 	init_waitqueue_head(&rkvdec->reset_wq);
++	INIT_LIST_HEAD(&rkvdec->deferred_ctxs);
+ 	INIT_WORK(&rkvdec->reset_work, rkvdec_ccu_reset_work);
+ 	ida_init(&rkvdec->film_ida);
+ 	rkvdec->next_film_idx = 1;
+diff --git a/drivers/media/platform/rockchip/rkvdec/rkvdec.h b/drivers/media/platform/rockchip/rkvdec/rkvdec.h
+index 8eb6fe205f3f..474436b225ef 100644
+--- a/drivers/media/platform/rockchip/rkvdec/rkvdec.h
++++ b/drivers/media/platform/rockchip/rkvdec/rkvdec.h
+@@ -246,7 +246,7 @@ struct rkvdec_dev {
+ 	struct ida film_ida;
+ 	int next_film_idx;
+ 	bool ccu_reset_pending;
+-	struct rkvdec_ctx *deferred_ctx;
++	struct list_head deferred_ctxs;
+ 	wait_queue_head_t reset_wq;
+ 	struct work_struct reset_work;
+ };
+@@ -273,6 +273,9 @@ struct rkvdec_ctx {
+ 	/* completes the jobs in decoding order, serializes it with new jobs */
+ 	struct mutex done_lock;
+ 	int film_idx;
++	/* m2m jobs to run once the cores are reset, see rkvdec_job_start() */
++	struct list_head deferred_node;
++	unsigned int num_deferred;
+ 	void *priv;
+ 	u8 has_sps_st_rps: 1;
+ 	u8 has_sps_lt_rps: 1;
+-- 
+2.55.0
+

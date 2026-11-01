@@ -16,6 +16,7 @@ add the new control types to the VIDIOC_QUERYCTRL and VIDIOC_G_EXT_CTRLS
 references.
 
 Assisted-by: Claude:claude-opus-5-5
+Signed-off-by: Arun Iyengar <aiyengar1990@gmail.com>
 ---
  .../media/v4l/ext-ctrls-codec-stateless.rst   | 411 ++++++++++++++++++
  .../media/v4l/pixfmt-compressed.rst           |   3 +

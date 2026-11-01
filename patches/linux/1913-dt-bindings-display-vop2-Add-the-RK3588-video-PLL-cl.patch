@@ -1,0 +1,69 @@
+From 94660eadadfd1d4a293604ebbb5fb9062f57c11b Mon Sep 17 00:00:00 2001
+From: Arun Iyengar <aiyengar1990@gmail.com>
+Date: Sun, 1 Nov 2026 06:35:55 +0000
+Subject: [PATCH 13/33] dt-bindings: display: vop2: Add the RK3588 video PLL
+ clock
+
+On RK3588 the video port pixel clocks are muxed from the HDMI PHY PLLs
+or from the CRU, where they are integer fractions of GPLL, CPLL, AUPLL or
+the video PLL V0PLL. When the HDMI PHY PLL cannot be used (HDMI FRL mode,
+DisplayPort, eDP, DSI), only a retuned V0PLL gives rates such as the
+1/1.001 ones exactly.
+
+Document an optional "pll_v0" clock for that PLL, after the HDMI PHY PLL
+clocks. RK3588S has no HDMI1 PHY, so there it directly follows
+pll_hdmiphy0.
+
+(cherry picked from commit 713088133f914af5ee6c9720ce8a39617a86a972)
+
+Assisted-by: Claude:claude-opus-5-5
+Signed-off-by: Arun Iyengar <aiyengar1990@gmail.com>
+---
+ .../bindings/display/rockchip/rockchip-vop2.yaml       | 10 ++++++++--
+ 1 file changed, 8 insertions(+), 2 deletions(-)
+
+diff --git a/Documentation/devicetree/bindings/display/rockchip/rockchip-vop2.yaml b/Documentation/devicetree/bindings/display/rockchip/rockchip-vop2.yaml
+index f993cef0323b..8ab78b17cd3f 100644
+--- a/Documentation/devicetree/bindings/display/rockchip/rockchip-vop2.yaml
++++ b/Documentation/devicetree/bindings/display/rockchip/rockchip-vop2.yaml
+@@ -68,6 +68,7 @@ properties:
+       - {}
+       - {}
+       - {}
++      - {}
+ 
+   clock-names:
+     minItems: 5
+@@ -81,6 +82,7 @@ properties:
+       - {}
+       - {}
+       - {}
++      - {}
+ 
+   resets:
+     minItems: 5
+@@ -257,7 +259,10 @@ allOf:
+             - description: Pixel clock for video port 3.
+             - description: Peripheral(vop grf/dsi) clock.
+             - description: Alternative pixel clock provided by HDMI0 PHY PLL.
+-            - description: Alternative pixel clock provided by HDMI1 PHY PLL.
++            - description: Alternative pixel clock provided by HDMI1 PHY PLL,
++                or the video PLL if there is no HDMI1 PHY.
++            - description: Video PLL (V0PLL) the video ports may retune for
++                pixel clocks the system PLLs cannot divide down exactly.
+ 
+         clock-names:
+           minItems: 7
+@@ -270,7 +275,8 @@ allOf:
+             - const: dclk_vp3
+             - const: pclk_vop
+             - const: pll_hdmiphy0
+-            - const: pll_hdmiphy1
++            - enum: [pll_hdmiphy1, pll_v0]
++            - const: pll_v0
+ 
+         resets:
+           minItems: 6
+-- 
+2.55.0
+

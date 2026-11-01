@@ -25,6 +25,7 @@ devfreq_set_target(), as before.
 
 Fixes: 62453f1ba5d5 ("PM / devfreq: Use more accurate returned new_freq as resume_freq")
 Assisted-by: Claude:claude-opus-5-5
+Signed-off-by: Arun Iyengar <aiyengar1990@gmail.com>
 ---
  drivers/devfreq/devfreq.c | 9 +++++++++
  1 file changed, 9 insertions(+)

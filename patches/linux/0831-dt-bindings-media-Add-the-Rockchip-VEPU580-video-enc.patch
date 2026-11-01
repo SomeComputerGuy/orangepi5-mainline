@@ -13,6 +13,7 @@ in the hardware ties the cores together, so how they are used (one job per
 core, or both cores on one stream) is left to the operating system.
 
 Assisted-by: Claude:claude-opus-5-5
+Signed-off-by: Arun Iyengar <aiyengar1990@gmail.com>
 ---
  .../media/rockchip,rk3588-vepu580.yaml        | 93 +++++++++++++++++++
  1 file changed, 93 insertions(+)

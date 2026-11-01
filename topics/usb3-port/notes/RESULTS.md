@@ -135,3 +135,14 @@ Cases this covers:
   root hub port 1 the core looks up. For single-port host 2 these coincide, which the series relies on.
 - Other RK3588 boards with the same split (rock-5a/5b/5c, orangepi-5-plus/max/ultra, nanopc-t6 …) would need the
   same connector nodes. Only OPi5/5B are done here.
+
+---
+
+## UPDATE 2026-11-01: is the Type-A VBUS switchable? (host-only analysis, see work/_out/usb3-vbus/RESULTS.md)
+
+Re-checked our DT and the vendor 5.10 DT: the only USB VBUS GPIO regulator is `vbus_typec` (gpio3 RK_PC0), which feeds
+the Type-C port. There is no GPIO-switched Type-A VBUS and no `phy-supply`/`vbus-supply` for host1/host2. The OPi5
+schematic could not be fetched online (distributed via orangepi.org downloads page), so this is DT evidence only.
+Sibling boards (OPi5 Pro: gpio0 RK_PC4 `vcc5v0_otg_en`) do switch it. No patch written. `vbus-supply = <&vcc5v0_sys>`
+on the connector in 1504 stays correct. If the schematic shows an enable GPIO, add a `regulator-fixed` and point the
+connector's `vbus-supply` at it; cycling it from `port*/disable` would additionally need a new usbcore/xhci feature.

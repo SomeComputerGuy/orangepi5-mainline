@@ -14,6 +14,7 @@ registers are first accessed, and keep them enabled while the driver is
 bound. Nodes without clocks are not affected.
 
 Assisted-by: Claude:claude-opus-5-5
+Signed-off-by: Arun Iyengar <aiyengar1990@gmail.com>
 ---
  drivers/iommu/arm/arm-smmu-v3/arm-smmu-v3.c | 7 +++++++
  1 file changed, 7 insertions(+)

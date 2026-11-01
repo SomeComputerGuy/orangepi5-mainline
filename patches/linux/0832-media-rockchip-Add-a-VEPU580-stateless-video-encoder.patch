@@ -51,6 +51,7 @@ out-of-tree port, with the interrupt status bits corrected to the layout
 used by MPP (safe clear done is bit 2, watchdog bit 8).
 
 Assisted-by: Claude:claude-opus-5-5
+Signed-off-by: Arun Iyengar <aiyengar1990@gmail.com>
 ---
  drivers/media/platform/rockchip/Kconfig       |    1 +
  drivers/media/platform/rockchip/Makefile      |    1 +

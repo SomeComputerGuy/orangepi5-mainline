@@ -17,6 +17,7 @@ the DCLK source selection into a helper so that atomic_check can make
 the same decision.
 
 Assisted-by: Claude:claude-opus-5-5
+Signed-off-by: Arun Iyengar <aiyengar1990@gmail.com>
 ---
  drivers/gpu/drm/rockchip/rockchip_drm_vop2.c | 101 +++++++++++--------
  1 file changed, 59 insertions(+), 42 deletions(-)

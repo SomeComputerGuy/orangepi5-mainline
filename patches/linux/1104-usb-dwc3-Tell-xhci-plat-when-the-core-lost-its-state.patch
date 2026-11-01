@@ -21,6 +21,7 @@ when it was kept running for wakeup), so xhci_resume() goes straight to
 the reset and re-init path.
 
 Assisted-by: Claude:claude-opus-5-5
+Signed-off-by: Arun Iyengar <aiyengar1990@gmail.com>
 ---
  drivers/usb/dwc3/core.c |  3 +++
  drivers/usb/dwc3/core.h |  3 +++

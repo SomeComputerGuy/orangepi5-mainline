@@ -55,6 +55,7 @@ faults injected in the address registers, corrupted streams and the
 fluster suites.
 
 Assisted-by: Claude:claude-opus-5-5
+Signed-off-by: Arun Iyengar <aiyengar1990@gmail.com>
 ---
  .../rockchip/rkvdec/rkvdec-vdpu381-regs.h     |   4 +
  .../media/platform/rockchip/rkvdec/rkvdec.c   | 211 +++++++++++++-----

@@ -1,0 +1,13 @@
+run 1: SL1_SVA_B=Success SP1_BT_A=Error SVA_BA1_B=Success SVA_BA2_D=Success SVA_Base_B=Success SVA_CL1_E=Success SVA_FM1_E=Success SVA_NL1_B=Success SVA_NL2_E=Error sp2_bt_b=Error 
+run 1 dmesg: timeouts 0, recovers 0, busy 0, other: 
+run 2: SL1_SVA_B=Success sp2_bt_b=Error SVA_BA1_B=Success SVA_BA2_D=Success SVA_Base_B=Success SVA_CL1_E=Success SVA_FM1_E=Success SVA_NL1_B=Success SVA_NL2_E=Success SP1_BT_A=Fail 
+run 2 dmesg: timeouts 0, recovers 0, busy 0, other: 
+run 3: SL1_SVA_B=Success SP1_BT_A=Error SVA_BA1_B=Success SVA_BA2_D=Success SVA_Base_B=Success sp2_bt_b=Error SVA_CL1_E=Success SVA_NL1_B=Success SVA_FM1_E=Success SVA_NL2_E=Success 
+run 3 dmesg: timeouts 0, recovers 0, busy 0, other: 
+run 4: SL1_SVA_B=Success sp2_bt_b=Error SP1_BT_A=Error SVA_BA1_B=Success SVA_BA2_D=Success SVA_Base_B=Success SVA_CL1_E=Success SVA_FM1_E=Success SVA_NL1_B=Success SVA_NL2_E=Success 
+run 4 dmesg: timeouts 0, recovers 0, busy 0, other: 
+run 5: SL1_SVA_B=Success SP1_BT_A=Error SVA_BA1_B=Success SVA_BA2_D=Success SVA_Base_B=Success SVA_CL1_E=Success SVA_FM1_E=Success SVA_NL1_B=Success SVA_NL2_E=Success sp2_bt_b=Fail 
+run 5 dmesg: timeouts 0, recovers 0, busy 0, other: 
+run 6: SL1_SVA_B=Success sp2_bt_b=Error SVA_BA1_B=Fail SVA_BA2_D=Fail SVA_Base_B=Error SP1_BT_A=Error SVA_FM1_E=Fail SVA_CL1_E=Fail SVA_NL1_B=Fail SVA_NL2_E=Fail 
+run 6 dmesg: timeouts 0, recovers 3, busy 0, other: 
+DONE

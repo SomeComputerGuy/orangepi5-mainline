@@ -41,6 +41,7 @@ and 0 while it is suspended.
 Link: https://github.com/armbian/linux-rockchip/pull/380
 Suggested-by: Jonas Karlman <jonas@kwiboo.se>
 Assisted-by: Claude:claude-opus-5-5
+Signed-off-by: Arun Iyengar <aiyengar1990@gmail.com>
 ---
  drivers/gpu/drm/panthor/panthor_devfreq.c | 42 +++++++++++++++++++++--
  1 file changed, 39 insertions(+), 3 deletions(-)

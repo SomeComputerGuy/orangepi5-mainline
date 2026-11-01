@@ -107,3 +107,8 @@ and the weston demo covered the dual-overlay case at 4K60 + 4K30.
 - Pacing: kmssink at 4K120 renders ~60-63 fps of 120 fps content even though decode-only reaches 125 fps. This is the
   blocking legacy SetPlane path in kmssink (see dp-smooth RESULTS), not vop2: planetest atomic flips run 120/120.
   4K60 content plays at 60.
+
+## Round 2 (2026-11-01): the three HDMI-RUN1 matrix cases
+See `v2/RESULTS.md`: (i) Esmart0 4K120 = three-layer bandwidth limit -> AXI port admission check (v2 0003);
+(ii) RG16 AFBC YTR not decodable -> no YTR for 16 bpp RGB (v2 0002); (iii) 4K120 4:2:0 goes over TMDS so ACLK stayed at
+500 MHz -> ACLK by pixel rate (v2 0001). Board test: v2/test/vop2uf-test.sh, deploy: v2/deploy/deploy.sh.

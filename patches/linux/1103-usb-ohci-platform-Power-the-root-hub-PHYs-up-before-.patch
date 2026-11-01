@@ -35,6 +35,7 @@ with the PHYs powered around an unmodified ohci_resume() it resumes
 cleanly.
 
 Assisted-by: Claude:claude-opus-5-5
+Signed-off-by: Arun Iyengar <aiyengar1990@gmail.com>
 ---
  drivers/usb/host/ohci-platform.c | 20 ++++++++++++++++++++
  1 file changed, 20 insertions(+)

@@ -55,6 +55,7 @@ the MPP userspace library programs. The V4L2 buffer handling follows
 the sun8i-di driver.
 
 Assisted-by: Claude:claude-opus-5-5
+Signed-off-by: Arun Iyengar <aiyengar1990@gmail.com>
 ---
  MAINTAINERS                                   |    9 +
  drivers/media/platform/rockchip/Kconfig       |    1 +

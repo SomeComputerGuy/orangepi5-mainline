@@ -17,6 +17,7 @@ These are kernel-internal definitions: the uAPI carries nal_unit_type as
 the raw H.265 value, like the HEVC decoding controls already do.
 
 Assisted-by: Claude:claude-opus-5-5
+Signed-off-by: Arun Iyengar <aiyengar1990@gmail.com>
 ---
  include/media/v4l2-hevc.h | 132 +++++++++++++++++++++++++++++++++++++-
  1 file changed, 131 insertions(+), 1 deletion(-)

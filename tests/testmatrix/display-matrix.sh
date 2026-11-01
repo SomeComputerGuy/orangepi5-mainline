@@ -61,6 +61,8 @@ if [ -n "$masters" ]; then
   [ -n "$masters" ] && { echo "a compositor holds the display (pass --stop-gdm or stop it):"; echo "$masters"; exit 1; }
 fi
 pkill -INT -x modetest 2>/dev/null; pkill -INT -x gst-launch-1.0 2>/dev/null
+# the TV must be on this board's input: a run on another input is all "No Signal"
+[ "${NO_TV_INPUT:-0}" = 1 ] || sh "$D/lib/tv-input.sh"
 { echo "# $(date '+%F %T') $(uname -r) $(uname -v) cam=${CAM_CONN:-none} args=${ARGS[*]:-}"; } >> "$OUT/runs.log"
 python3 -I "$D/lib/dmatrix.py" --out "$OUT" "${ARGS[@]}"
 rc=$?

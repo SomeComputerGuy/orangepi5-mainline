@@ -29,6 +29,7 @@ it in both back-ends. This also replaces the VPU2 back-end's test of
 V4L2_MPEG2_PIC_TOP_FIELD, a picture_structure value, against the flags.
 
 Assisted-by: Claude:claude-opus-5-5
+Signed-off-by: Arun Iyengar <aiyengar1990@gmail.com>
 ---
  .../verisilicon/hantro_g1_mpeg2_dec.c         |  8 ++---
  .../media/platform/verisilicon/hantro_hw.h    |  8 +++++

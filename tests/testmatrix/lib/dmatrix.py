@@ -125,7 +125,8 @@ def parse_state(txt):
             t = line.strip()
             if t.startswith("mode:"):
                 f = t.split()
-                cur["mode"] = {"clock": int(f[3]), "h": [int(x) for x in f[4:8]], "v": [int(x) for x in f[8:12]]}
+                cur["mode"] = {"clock": int(f[3]), "h": [int(x) for x in f[4:8]], "v": [int(x) for x in f[8:12]],
+                               "flags": int(f[13], 0) & 0x7f if len(f) > 13 else None}
             elif "=" in t:
                 k, _, v = t.partition("=")
                 cur.setdefault(k, v)
@@ -262,8 +263,10 @@ MT_FLAGS = {"phsync": 1, "nhsync": 2, "pvsync": 4, "nvsync": 8, "interlace": 16,
 
 
 def modetest_index(conn_id, m):
-    """modetest's '#index' for the exact timing (its list can differ in order from ours)"""
-    out = sh("modetest", "-M", "rockchip", "-c")
+    """modetest's '-s #index' for the exact timing. The list must be taken with -a: atomic clients get the
+    aspect-ratio mode variants from the kernel, a plain '-c' hides them and its '#N' drifts from what '-s' (atomic)
+    indexes (modetest.c connector_find_mode(): connector->modes[atoi(str+1)] of the atomic client's list)"""
+    out = sh("modetest", "-M", "rockchip", "-a", "-c")
     cur = None
     for line in out.splitlines():
         f = line.split()
@@ -279,6 +282,15 @@ def modetest_index(conn_id, m):
                                              m["clock"]] and fl == m["flags"] & 0x7f:
                 return int(f[0][1:])
     return None
+
+
+def crtc_mode_matches(cm, m):
+    """full-timing compare of a parsed CRTC 'mode:' line against a connector mode (clock, h/v disp/sync/total, flags)"""
+    if not cm:
+        return False
+    return cm["clock"] == m["clock"] and cm["h"] == [m["hdisplay"], m["hsync_start"], m["hsync_end"], m["htotal"]] \
+        and cm["v"] == [m["vdisplay"], m["vsync_start"], m["vsync_end"], m["vtotal"]] \
+        and (cm.get("flags") is None or cm["flags"] == m["flags"] & 0x7f)
 
 
 def mode_str(m):
@@ -487,6 +499,7 @@ def build_cases(info, groups, only_conn):
         if "modes" in groups:
             for i in range(len(c["modes"])):
                 add(group="modes", conn=c["name"], mode=i, plane=pp["id"], fmt=f8)
+        if "modetest" in groups:
             ov = next((p for p in planes if p["type"] == "Overlay" and crtc in p["possible_crtcs"]
                        and "0x0" in p["formats"].get("XR24", [])), None)
             if ov:   # the same modes through modetest (legacy-free atomic, explicit -P, smpte fill)
@@ -680,8 +693,7 @@ class Runner:
                 st = parse_state(rd(f"{DBG}/state"))
                 cr = st.get(st.get(c["name"], {}).get("crtc", ""), {})
                 last = f"crtc {cr.get('_id')} active={cr.get('active')} mode={cr.get('mode')}"
-                if cr.get("_id") == crtc and cr.get("active") == "1" and cr.get("mode", {}).get("clock") == md["clock"] \
-                        and cr["mode"]["h"][0] == md["hdisplay"]:
+                if cr.get("_id") == crtc and cr.get("active") == "1" and crtc_mode_matches(cr.get("mode"), md):
                     return p, True, "", {"cmd": cmd}
                 time.sleep(0.05)
             self.stop(p)
@@ -866,7 +878,7 @@ class Runner:
             cr = st.get(crtc_name, {})
             if cr.get("active") != "1":
                 reasons.append(f"{cn}: CRTC {crtc_name or '-'} not active")
-            elif cr.get("mode", {}).get("clock") != mode["clock"] or cr["mode"]["h"][0] != mode["hdisplay"]:
+            elif not crtc_mode_matches(cr.get("mode"), mode):
                 reasons.append(f"{cn}: CRTC mode {cr.get('mode')} != requested {mode_str(mode)}")
             vp = next((v for v in vps.values() if v.get("connector") == cn), {})
             if cn.startswith("HDMI"):
@@ -1018,6 +1030,8 @@ def probe(info):
 
 
 def main():
+    # SIGTERM (kill, systemd stop) must run the atexit handlers too, or the webcam recorder keeps running
+    signal.signal(signal.SIGTERM, lambda *_: sys.exit(128 + signal.SIGTERM))
     if sys.argv[1:2] == ["reverdict"] and len(sys.argv) == 3:
         return reverdict(sys.argv[2])
     ap = argparse.ArgumentParser()

@@ -1,0 +1,59 @@
+From: Sebastian Reichel <sebastian.reichel@collabora.com>
+Date: Thu, 01 Oct 2026 15:12:39 +0200
+Subject: [PATCH] phy: rockchip: inno-usb2: simplify and unify PHY op debug messages
+
+Add debug message for init/exit in addition to power_on/power_off and
+avoid the useless extra dereference in the existing power_on/power_off
+to make the prints consistent.
+
+Signed-off-by: Sebastian Reichel <sebastian.reichel@collabora.com>
+Link: https://patch.msgid.link/20261001-phy-rockchip-inno-usb2-clock-fix-v2-1-e01bf509359e@collabora.com
+---
+---
+ drivers/phy/rockchip/phy-rockchip-inno-usb2.c | 8 ++++++--
+ 1 file changed, 6 insertions(+), 2 deletions(-)
+
+diff --git a/drivers/phy/rockchip/phy-rockchip-inno-usb2.c b/drivers/phy/rockchip/phy-rockchip-inno-usb2.c
+index 7d8a533f24ae..0ab054ee84cb 100644
+--- a/drivers/phy/rockchip/phy-rockchip-inno-usb2.c
++++ b/drivers/phy/rockchip/phy-rockchip-inno-usb2.c
+@@ -508,6 +508,8 @@ static int rockchip_usb2phy_init(struct phy *phy)
+ 	struct rockchip_usb2phy *rphy = dev_get_drvdata(phy->dev.parent);
+ 	int ret = 0;
+ 
++	dev_dbg(&phy->dev, "phy port init\n");
++
+ 	mutex_lock(&rport->mutex);
+ 
+ 	if (rport->port_id == USB2PHY_PORT_OTG) {
+@@ -592,7 +594,7 @@ static int rockchip_usb2phy_power_on(struct phy *phy)
+ 	struct rockchip_usb2phy *rphy = dev_get_drvdata(phy->dev.parent);
+ 	int ret;
+ 
+-	dev_dbg(&rport->phy->dev, "port power on\n");
++	dev_dbg(&phy->dev, "port power on\n");
+ 
+ 	if (!rport->suspended)
+ 		return 0;
+@@ -632,7 +634,7 @@ static int rockchip_usb2phy_power_off(struct phy *phy)
+ 	struct rockchip_usb2phy *rphy = dev_get_drvdata(phy->dev.parent);
+ 	int ret;
+ 
+-	dev_dbg(&rport->phy->dev, "port power off\n");
++	dev_dbg(&phy->dev, "port power off\n");
+ 
+ 	if (rport->suspended)
+ 		return 0;
+@@ -651,6 +653,8 @@ static int rockchip_usb2phy_exit(struct phy *phy)
+ {
+ 	struct rockchip_usb2phy_port *rport = phy_get_drvdata(phy);
+ 
++	dev_dbg(&phy->dev, "phy port exit\n");
++
+ 	if (rport->port_id == USB2PHY_PORT_OTG &&
+ 	    rport->mode != USB_DR_MODE_HOST &&
+ 	    rport->mode != USB_DR_MODE_UNKNOWN) {
+
+-- 
+2.53.0
+

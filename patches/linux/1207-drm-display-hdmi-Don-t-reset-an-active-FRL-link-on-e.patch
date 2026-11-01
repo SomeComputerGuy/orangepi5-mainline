@@ -19,6 +19,7 @@ clears it on a reset or reconnect, exactly when the link needs to be
 trained again.
 
 Assisted-by: Claude:claude-opus-5-5
+Signed-off-by: Arun Iyengar <aiyengar1990@gmail.com>
 ---
  drivers/gpu/drm/display/drm_hdmi_helper.c | 29 +++++++++++++++++------
  1 file changed, 22 insertions(+), 7 deletions(-)
