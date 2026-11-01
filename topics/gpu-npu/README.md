@@ -3,8 +3,8 @@
 - Workspace branch: `opi5/gpu-npu-7.3` (exported 2026-11-01)
 - Kernel fork branch: `opi5/gpu-npu` (see PUBLISH.md)
 - Sits on: `board-sata` (base commit `5e33b74b04cf`)
-- Hardware test: partly: GPU/NPU baseline measured; fixes waiting for a full kernel install
-- Next upstream step: re-test with the full image kernel; send panthor, rocket and devfreq patches to their lists
+- Hardware test: yes: in the image kernel since build 2 (patches/linux 0501-0514); GPU 995-1024 MHz under load, NPU 1 GHz DVFS, 200 GPU runtime suspend/resume jobs, devfreq resumes at the remembered OPP
+- Next upstream step: send panthor 0512 and devfreq 0514 (prepared); the rocket DVFS series is on the list by its author
 - Patches: 14 = 2 ours, 12 carried from others, 0 local-only
 
 Apply with `git am` in the order listed in [`series`](series), on top of the parent topic (or check out the fork branch). Patch numbers are the position in that order.

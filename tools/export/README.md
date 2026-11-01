@@ -31,7 +31,7 @@ and identical recreated commit IDs.
 | `patches/**` | `patches/**` | copied as is, whatever the layout (the image-kernel stack may be reorganised) |
 | `overlay-desktop/` | `overlay-desktop/` | desktop-image overlay (`build-image.sh --variant desktop`) |
 | `overlay/`, `cidata/` | `overlay/`, `cidata/` | `cidata/user-data` becomes `cidata/user-data.example`; the real one stays local |
-| `docs/*.md`, `work/_out/GSTREAMER-FOLLOWUPS.md` | `docs/workspace/` | |
+| `docs/*.md`, `work/_out/GSTREAMER-FOLLOWUPS.md`, `work/_out/upstream-send/TESTMAP.md` (as `UPSTREAM-TESTMAP.md`) | `docs/workspace/` | |
 | `work/_out/integration/` (MANIFEST.md, ...) | `docs/image-kernel/` | provenance of each `patches/linux` range, if present |
 | `work/_out/<item>/` test scripts listed in `tests.conf` | `tests/<name>/` + generated `README.md` | lab values (board login, host address, home directory) become overridable defaults through `.work/private/tests-public.conf` (`sub<TAB>regex<TAB>replacement`), then the redaction rules apply |
 | kernel branches | `topics/<topic>/{ours,carried,local}/`, `series`, `topic.env`, `README.md` | `git format-patch --zero-commit` per commit, from `merge-base(branch, parent)..branch` |

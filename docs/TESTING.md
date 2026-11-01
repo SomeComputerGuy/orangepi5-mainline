@@ -12,10 +12,11 @@ parts run on the host; each section says where.
 ## Prerequisites
 
 1. **The board runs the image built from this repository** (server image is fine; see the top-level
-   README for building and flashing). The reference results ran on kernel build 3 of
-   `patches/linux`, partly with drop-in modules from topic branches (see RESULTS.md, "Kernels"). A
-   kernel built from the current `patches/linux` contains all of those fixes except the rkvdec CCU.
-   Check what is running with `uname -v` and `modinfo -n rockchip_vdec`.
+   README for building and flashing). The reference results of sections 1-10 ran on kernel build 3
+   of `patches/linux`, partly with drop-in modules from topic branches (see RESULTS.md, "Kernels");
+   the later ones on builds 7 to 11. A kernel built from the current `patches/linux` (build 11)
+   contains all of those fixes, the rkvdec CCU included. Check what is running with `uname -v` and
+   `modinfo -n rockchip_vdec`.
 2. **SSH login with the project key:** `scripts/pi-add-key.sh [user@host]` creates the key (if
    needed) and installs it on the board once (it asks for the board password).
 3. **Environment** (on the host; set them in `local.env` or export them):
@@ -201,11 +202,11 @@ as `HANG:` with thread backtraces instead of blocking the run.
 fluster, codec-quality fluster, VA driver tests); it writes `~/queue/summary.txt` ending in `DONE`
 and expects the other test directories in `~/ccu`, `~/cq` and `~/browser-hwdec`.
 
-## 9. rkvdec CCU (`tests/rkvdec-ccu`, development kernel only)
+## 9. rkvdec CCU (`tests/rkvdec-ccu`)
 
-This needs the **in-progress** CCU driver from `topics/rkvdec-ccu` (modules built from that branch
-in `updates/opi5-rkvdec-ccu/` and the CCU DT overlay applied to the DTB), not the image kernel. On
-the image kernel `ccu-verify.sh` only shows that the CCU isn't there. Copy the directory to `~/ccu`.
+The CCU driver is in the image kernel since build 9 (`patches/linux/2001-2017`, DT node included),
+so this runs on the image kernel. On an older kernel `ccu-verify.sh` only shows that the CCU isn't
+there. Copy the directory to `~/ccu`.
 
 ```sh
 bash ~/ccu/baseline.sh            # optional, before installing the CCU driver: fps and bit-exactness
@@ -217,10 +218,10 @@ Results: `~/ccu/run-<time>/summary.txt` and `~/ccu/fluster-ccu/summary.txt`. Pas
 with the CCU" in dmesg, 600/600 frames bit-exact in every mode, fluster equal to the baseline
 (HEVC 146/147, AVC_V1 129/135, FR-EXT 65/69, VP9 230/305), both cores' IRQ counts advancing for
 one stream, no timeouts or IOMMU faults. Reference: HEVC 4K 130.4 -> 227.8 fps, H.264 4K 67.6 ->
-121.4 fps. The interlaced H.264 fix is not verified yet; the earlier module hung the decoder in
-JVT-FR-EXT and the board panicked, so run fluster attended.
+121.4 fps. The finished driver also decodes interlaced H.264 and VP9 through the CCU; the earlier
+development module hung the decoder in JVT-FR-EXT, so run fluster attended the first time.
 
-## 10. Max-out test (`tests/maxout`, never run)
+## 10. Max-out test (`tests/maxout`, no recorded run)
 
 Board, both displays, about 6 minutes, attended (a bare board may hit the 85 °C trip; the script
 aborts above 95 °C). Needs the HTTP server from section 4, `~/demo/rkvenc-enc`, the NPU venv

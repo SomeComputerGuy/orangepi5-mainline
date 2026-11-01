@@ -74,7 +74,7 @@ creates `<you>/orangepi5-mainline` (`--name` to change it), adds it as `origin` 
 People who want `git` history rather than patch files get one branch per topic,
 `opi5/<topic>`, plus `opi5/image` (exactly v7.3 + `patches/linux`, the current image kernel)
 and an annotated tag per image kernel, `image-<package version>` (the version is
-`KDEB_PKGVERSION` in `scripts/build-kernel.sh`, e.g. `image-7.3.0-8`), plus
+`KDEB_PKGVERSION` in `scripts/build-kernel.sh`, e.g. `image-7.3.0-11`), plus
 `image-<version>-extra` for the `OPI5_EXTRA=1` build (+ `patches/linux-extra`).
 
 ```sh
@@ -103,7 +103,7 @@ git -C .work/linux -c push.negotiate=true push \
   jpeg-dec iep2 camera dsi hdmi-frl hdmi-10bpc hdmi-frl-fixes hdmi-wedge vop2-hdmi-clk
   dp-altmode dw-dp-pcon board-dt codec-quality vop2-underflow-int dp-smooth usbdp-keep-usb3
   audio suspend-k3 rkvdec-hevc-rps tcpm usb3-port rkvdec-reset rkvdec-ccu`
-  (`rkvdec-ccu` is work in progress and not in the image kernel). These stack on each other the
+  (`rkvdec-ccu` is in the image kernel since build 9 as `patches/linux/2001-2017`). These stack on each other the
   same way as the topics, and each still contains its few `local/` commits (for example
   the v4l2-core symbol-version shims), so that it builds and tests exactly as it did on the
   board. Those commits are labelled in the subject (`DO NOT UPSTREAM: ...`) and in the
@@ -115,9 +115,12 @@ git -C .work/linux -c push.negotiate=true push \
 
 **Tags** (annotated, never moved):
 
-- `image-7.3.0-8` = `opi5/image` (337 patches), `image-7.3.0-8-extra` (+ `patches/linux-extra`),
-  `image-7.3.0-7` (321 patches, was branch `opi5/image-k7`), `image-7.3.0-6` (314 patches, the
-  base of kernel build 6, was branch `opi5/image-k6`). Earlier image kernels were not tagged.
+- `image-7.3.0-11` = `opi5/image` (422 patches, the current image kernel, build 11) and
+  `image-7.3.0-11-extra` (+ `patches/linux-extra`); `image-7.3.0-8` (337 patches) and
+  `image-7.3.0-8-extra`; `image-7.3.0-7` (321 patches, was branch `opi5/image-k7`);
+  `image-7.3.0-6` (314 patches, the base of kernel build 6, was branch `opi5/image-k6`).
+  Kernel builds 9 and 10 (370 and 387 patches) were not tagged; their contents are listed in
+  `docs/image-kernel/MANIFEST.md`. Earlier image kernels were not tagged either.
 - `archive/<topic>`: the tips of retired branches: `archive/integration` (the 2026-10-29
   integration branch that the topics from `codec-quality` on still sit on),
   `archive/rkvdec-ccu-base` (superseded: `rkvdec-ccu` now sits on `rkvdec-reset`) and

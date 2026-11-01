@@ -3,7 +3,11 @@
 Branch `opi5/dp-altmode-7.3` (worktree `~/orangepi5/work/dp-altmode-7.3`), on top of
 `5e33b74b0` (v7.3 + rga/rkvdec sync + multicore + SATA DTS). 67 commits:
 65 kernel commits (`patches/0201..0265`) and 2 DT commits (`dt/0001..0002`).
-**Nothing has been tested on hardware yet.**
+**Update 2026-11-01: tested.** The series and the Orange Pi 5 DT patch (`patches/linux/1005`) are in the
+image kernel; USB-C DP alt mode works on the board through a USB-C dock (DP-1 connected at boot on
+kernel 11, 100/100 dock attach cycles reach DP configured with the tcpm fixes 0271-0274, pin-assignment
+re-train fixed by 0267-0269, PCON docks by 1204-1206). Known open on kernel 11: no USB device behind
+the dock enumerates, USB 2.0 or USB 3 (regression from kernel 10, fix in progress). The text below is the port as written before the first test.
 
 ## 1. Sources
 

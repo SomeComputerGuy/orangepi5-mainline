@@ -20,10 +20,11 @@ pasting them.
 - Upstream is the goal. The patches under `topics/*/ours/` follow kernel conventions:
   `subsystem: summary` subjects, `checkpatch.pl --strict` clean, and DT changes checked with
   `dtbs_check` / `dt_binding_check`.
-- They carry no `Signed-off-by:` here. The author adds it, as a Developer Certificate of
-  Origin statement, when the series is sent to the lists. Please don't add sign-offs to
-  other people's patches, and don't send these patches upstream on the author's behalf. Do
-  comment on the upstream threads they link to, though.
+- They carry an `Assisted-by:` tag for the AI assistance used. The image-kernel copies in
+  `patches/linux` carry the author's `Signed-off-by:` (Developer Certificate of Origin); the
+  topic branches get it when they are rebased for sending. Please don't add sign-offs to other
+  people's patches, and don't send these patches upstream on the author's behalf. Do comment on
+  the upstream threads they link to, though.
 - Series from other people (`carried/`) are kept byte-for-byte with their authorship, tags
   and `Link:`. Report problems with them on their upstream thread.
 - If you want to propose a change, open a pull request against the topic's patch files, or

@@ -1,5 +1,19 @@
 # Suspend test results: Orange Pi 5 (RK3588S), 7.3.0-opi5 #2, TF-A v2.15.0 + PHP-CRU patch (SPI NOR)
 
+> **Update 2026-11-01: s2idle works.** The "resume hang with a fast console" below (bug 3) was not a
+> hang. The HYM8563 RTC has minute-resolution alarms and `rtc_set_alarm()` rounds down, so a short
+> `rtcwake -s 15` usually armed an alarm in the past: the hardware alarm was never set and the board
+> slept with no wake source. Fixed by `patches/linux/1917` (rtc core: round such an alarm up to the next
+> minute). Proof: 47/47 s2idle cycles on kernel 10 + the fix (20 verbose, 20 quiet, 7 initial), then
+> 10/10 on kernel 11 (`7.3.0-11`), each resume followed by USB3 (same device numbers), DP-1, HDMI-A-1,
+> SATA and Ethernet checks. Bug 1 (dw-dp link dead after resume) is fixed by 1101 and bug 2 (cpufreq
+> BUG on CPU online) by 1102, both in the image kernel; 1102's deep-suspend path is still untested.
+> **Deep suspend (mem) has not been run yet**: TF-A fixes and an unattended board test are prepared.
+> Open after resume: USB3 drives can re-enumerate (dwc3 tears the host down in system suspend; 1901
+> keeps the bus suspended instead and is in the image kernel, under test).
+>
+> The rest of this file is the 2026-10-29 analysis as written at the time.
+
 Date: 2026-10-29, 19:04 to 20:40. Board: SATA root, GbE end0, USB-C DP dongle (USB3 hub + AX88179 in cdc_ncm
 mode, DP alt mode), UVC webcam on USB2 (ehci fc880000). From 19:20 the TV was on HDMI0 (4K60/4K120 FRL) and DP-1
 was disconnected. From 19:24 the media drivers were loaded (coordinator demo).

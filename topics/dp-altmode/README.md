@@ -3,8 +3,8 @@
 - Workspace branch: `opi5/dp-altmode-7.3` (exported 2026-11-01)
 - Kernel fork branch: `opi5/dp-altmode` (see PUBLISH.md)
 - Sits on: `board-sata` (base commit `5e33b74b04cf`)
-- Hardware test: not yet
-- Next upstream step: test on the board; send the Orange Pi 5 DT patch after the dw-dp series lands
+- Hardware test: yes: in the image kernel; DP alt mode works through a USB-C dock (DP-1 at boot, 100/100 attach cycles with the tcpm fixes); known issue on kernel 11: the dock's USB 2.0 side does not enumerate (under investigation)
+- Next upstream step: send the Orange Pi 5 DT patch 1005 (prepared); the carried series are on the list by their authors
 - Patches: 67 = 2 ours, 65 carried from others, 0 local-only
 
 Apply with `git am` in the order listed in [`series`](series), on top of the parent topic (or check out the fork branch). Patch numbers are the position in that order.

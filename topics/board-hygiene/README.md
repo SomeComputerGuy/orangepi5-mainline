@@ -3,8 +3,8 @@
 - Workspace branch: `opi5/board-hygiene-7.3` (exported 2026-11-01)
 - Kernel fork branch: `opi5/board-hygiene` (see PUBLISH.md)
 - Sits on: `board-sata` (base commit `5e33b74b04cf`)
-- Hardware test: partly: driver fixes in the image kernel; rgmii-id DT change still needs a board test
-- Next upstream step: test rgmii-id on the board, then send driver fixes (netdev, ASoC) and DT patches separately
+- Hardware test: yes: all in the image kernel (patches/linux 0400-0401, 1001-1003); rgmii-id runs on the board since kernel 4 (940 Mbit/s, 0 errors); the SPI NOR supply and RK806 reset-mode DT changes boot but their effect is not measured
+- Next upstream step: send the dwmac-rk fix (netdev), the i2s-tdm fix (ASoC) and the DT patches (linux-rockchip): all prepared
 - Patches: 5 = 5 ours, 0 carried from others, 0 local-only
 
 Apply with `git am` in the order listed in [`series`](series), on top of the parent topic (or check out the fork branch). Patch numbers are the position in that order.

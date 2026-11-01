@@ -1,10 +1,10 @@
-# suspend: System suspend analysis (TF-A PHP CRU gate fix)
+# suspend: System suspend: analysis, TF-A PHP CRU gate fix, s2idle root cause (RTC minute alarm, patches/linux 1917)
 
 - Workspace branch: `opi5/suspend-7.3` (exported 2026-11-01)
 - Kernel fork branch: `opi5/suspend` (see PUBLISH.md)
 - Sits on: `board-sata` (base commit `5e33b74b04cf`)
-- Hardware test: not run (analysis only; TF-A patch in patches/tf-a)
-- Next upstream step: test deep suspend on the board; send the TF-A fix to TF-A Gerrit
+- Hardware test: s2idle works: 47/47 cycles on kernel 10 + 1917, 10/10 on kernel 11, with the TF-A fix in SPI NOR; deep suspend (mem) not run yet (TF-A fixes and an unattended board test are prepared in the workspace)
+- Next upstream step: run the deep-suspend test; send 1917 to linux-rtc (prepared) and the TF-A fix to TF-A Gerrit
 - Patches: 0 = 0 ours, 0 carried from others, 0 local-only
 
 Apply with `git am` in the order listed in [`series`](series), on top of the parent topic (or check out the fork branch). Patch numbers are the position in that order.

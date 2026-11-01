@@ -6,6 +6,13 @@ Branch `opi5/rkvdec-ccu-7.3` (worktree `work/rkvdec-ccu-7.3`), based on `opi5/rk
 **Status: implemented, compile-tested (every commit, W=1), checkpatch/dt_binding_check/dtbs_check clean,
 installed on the board; board verification NEEDS THE REBOOT** (see "Board state" and "After the reboot").
 
+> **Update 2026-11-01:** the finished series is in the image kernel as `patches/linux/2001-2017` (since
+> kernel build 9; kernels 10 and 11 run on the board). It decodes H.264 (frame and field/MBAFF), HEVC
+> and VP9 on both cores through the CCU, bit-exact (fluster identical to single-core, 600/600 on the
+> 4K clips; HEVC 4K 130 -> 227 fps, H.264 4K 67 -> 121 fps), and survived the KASAN recovery stress of
+> `rkvdec-reset/`. Per-patch evidence: `upstream-send/TESTMAP.md` (2004 binding and 2006 DT are the
+> only entries still marked NEEDS TEST). The text below is the design and the first board runs.
+
 ## 1. How the vendor runs one stream on both cores
 
 Sources (read-only reference, nothing copied): Rockchip BSP kernel `mpp_rkvdec2.c`, `mpp_rkvdec2_link.c`,

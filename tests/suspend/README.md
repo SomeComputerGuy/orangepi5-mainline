@@ -1,4 +1,4 @@
-# suspend: Suspend/resume: RTC-alarm s2idle cycles with post-resume checks (USB3, DP, HDMI, SATA, network), resume watchdog and per-device resume-delay bisect modules
+# suspend: Suspend/resume: RTC-alarm s2idle cycles with post-resume checks (USB3, DP, HDMI, SATA, network), resume watchdog and per-device resume-delay bisect modules (the alarm is aimed past the next full minute: the HYM8563 has minute resolution, see patches/linux 1917)
 
 - Runs on: **board** (copy this directory to the board, e.g. with `scp -r`)
 - How it was run: `sudo bash s2idle-cycles.sh 50`

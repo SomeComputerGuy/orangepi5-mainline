@@ -77,6 +77,14 @@ done
 patch_mails=0
 for f in "${FILES[@]}"; do
   [ -f "$f" ] && grep -Iq . "$f" 2>/dev/null || continue
+  # Patch files and cover letters are only counted, never flagged: count their
+  # address lines in one pass instead of forking sed/grep for every line
+  if [[ $f == *.patch || $f == */cover-letter* ]]; then
+    n=$(grep -IE '[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,}' "$f" 2>/dev/null |
+        sed -E 's#[a-z]+://[^ )>`"]*##g' |
+        grep -iE '[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,}' | grep -viF "$OWNER_EMAIL" | wc -l)
+    patch_mails=$((patch_mails + n)); continue
+  fi
   while IFS= read -r hit; do
     [ -n "$hit" ] || continue
     ln=${hit%%:*} txt=${hit#*:}

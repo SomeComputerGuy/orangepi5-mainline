@@ -17,6 +17,13 @@ built from `patches/linux` (16:45/17:44 builds), or as drop-in modules and the c
 from the listed branch. Evidence paths are relative to `work/_out/`. Nothing has been sent
 upstream from this project.
 
+**Current state (2026-11-01):** the image kernel is build 11 (`7.3.0-11`) = v7.3 + the 422 patches
+in `patches/linux` (fork tag `image-7.3.0-11`). The sections at the end of this file ("Kernel 9",
+"Kernel 10", "Kernel 11") list what each build added after the 337-patch stack of kernel 8 and how
+it was tested. Per-patch hardware evidence for our own patches is in
+`work/_out/upstream-send/TESTMAP.md` (100 tested, 32 still need a test as of 2026-11-01); the
+upstream series prepared from them are described in `upstream-send/SERIES.md` (prepared, not sent).
+
 ## Main stack: `patches/linux/` (291 patches, applied by default)
 
 | Range | # | What | Source | Tested on hardware | Evidence | Upstream status |
@@ -253,3 +260,49 @@ Built at the user's request before the board tests ran ("assume it's good"); the
 | 1916 | 1 | VPU981 AV1 tile column buffer check | av1-tiles/ (0001 only; 0002/0003 wait on the debug run) | board test pending |
 | 2001-2016 | 16 | rkvdec dual-core CCU decode (was 1601-1616) | rkvdec-reset/patches-16xx | board (reproducer, KASAN) |
 | 2017 | 1 | CCU reset work: act only on a pending reset, list of deferred streams | rkvdec-reset/scripts/fix-reset-work.py | reproducer 8/8; stats run in progress |
+
+Kernel 9 was built but never installed on the board; kernel 10 and 11 were, and the board results
+for 1901-1916 and 2001-2017 come from those builds (see below and TESTMAP.md).
+
+## Kernel 10 (7.3.0-10, 2026-11-01): patches 2100-2117 (branch opi5/test-k10 = kernel 9 + 17)
+
+Carried fixes found by the Armbian review (`armbian/REPORT.md`) and the upstream overlap check
+(`patch-audit/REPORT.md`): nothing of ours except 2107.
+
+| Patches | n | What | Source | Tested |
+|---|---|---|---|---|
+| 2100 | 1 | PCI: dwc: suspend_poweroff flag for root complexes that lose power (prerequisite of 2108-2117) | lore (Richard Zhu) | in kernel 10 and 11 on the board; PCIe is unused on the SATA board |
+| 2101, 2102 | 2 | fusb302: drain the RX FIFO on TX_SUCCESS/GCRCSENT; naneng-combphy: rk3588 pipe_con1_for_sata offset | Armbian (Ricardo Pardini, authorship kept) | board: in kernel 10 and 11 (SATA root; DP alt mode on the USB-C dock on kernel 11) |
+| 2103 | 1 | Orange Pi 5 DT: route the ES8388 MCLK to the IO pin | Armbian (authorship kept) | board: in kernel 10 and 11; the jack is still unchecked by ear |
+| 2104, 2105 | 2 | pl330 unbalanced runtime PM; dwmac-rk keep the GMAC powered when the PHY wakes the system | Armbian (authorship kept) | board: Ethernet up after every one of the 47 + 10 s2idle cycles (suspend-k10/RESULTS.md, k11/s2idle.txt) |
+| 2106 | 1 | rkvdec: do not keep the clocks enabled from probe (runtime PM) | lore v2 (Igor Velkov) | board: decoders run on kernel 10/11 (needtest/ runs) |
+| 2107 | 1 | pmdomain: rockchip: put only the clocks that were got on error | ours (re-implementation of an Armbian fix; authorship to settle before sending) | NEEDS TEST (error path never provoked) |
+| 2108-2117 | 10 | PCI: dw-rockchip: system PM support, v6 | lore (Sebastian Reichel) | compile and boot only: no PCIe device on the SATA test board |
+
+Kernel 10 was the base of the s2idle root-cause work (`suspend-k10/RESULTS.md`: the "hang" was a
+lost HYM8563 minute-resolution alarm, fixed by 1917; 47/47 cycles with the fix), of the HDMI audio
+EINVAL fix (`hdmi-audio/README.txt`: 0402/0403) and of the HDMI 4:2:0 -> RGB wedge runs
+(`hdmi-10bpc-k10/runs/vop2rst-*`: the carried VOP2 DT resets 0300-122 fix it; our 1216 was not
+needed and is not in the stack).
+
+## Kernel 11 (7.3.0-11, 2026-11-01 21:08 UTC): 35 patches on kernel 10 (= 422)
+
+| Patches | n | What | Source | Tested |
+|---|---|---|---|---|
+| 0300-122..128 | 7 | Rest of the Collabora HDMI FRL branch: RK3588 VOP2 resets (DT + driver AXI reset at bind), vop2 pitch/packed-YUV fixes, SND_SOC_HDMI_CODEC selects, clock-rate mode check | Collabora `cristicc/hdmi-frl` (authorship kept) | board: boot.txt `resets=axi ahb dclk_vp0..3`; 4:2:0 -> RGB wedge trigger clean (hdmi-10bpc-k10/runs/vop2rst-A, -B, k11-wedge) |
+| 0402, 0403 | 2 | ASoC: rockchip i2s-tdm / i2s: register the PCM before the DAI (HDMI audio open returned EINVAL on kernel 10) | ours | 0402 board: `hdmi-audio/s2-*` (speaker-test and aplay on hdmi0 work), k11/boot.txt lists the hdmi0 and dp0 cards; 0403 NEEDS TEST (no plain I2S instance on this board) |
+| 1805 | 1 | rkvdec: let a timed-out core finish its job before resetting it | ours (`rkvdec-reset/`) | board: KASAN recovery stress (rkvdec-reset/RESULTS.md) |
+| 1917 | 1 | rtc: don't lose a minute-resolution alarm that rounds down into the past | ours (`suspend-k10/`) | board: 47/47 s2idle cycles on kernel 10 + fix, 10/10 on kernel 11 (`k11/s2idle.txt`) |
+| 2201-2209 | 9 | PM core: no begin/end for s2idle, DPM watchdog in every phase; rk8xx poweroff/IRQ/SPI sleep ops; spi runtime-PM imbalance; pmdomain rockchip fixes | lore / Collabora (authorship kept; `patch-audit/REPORT.md`) | board: boot.txt `warn=0`, 10/10 s2idle |
+| 2210-2213 | 4 | phy: rockchip: inno-usb2 suspend handling v2 (the proper fix of the OHCI resume wedge that 1103 works around) | lore (Sebastian Reichel) | board: kernel 11 s2idle 10/10; 1103 stays until this is proven over more cycles (FIXLIST 13b) |
+| 2214-2216 | 3 | clk_init_data initialisation (clk, phy); naneng-combphy TX-detect RX-termination errata | lore (authorship kept) | board: boots, SATA root |
+| 2217-2221 | 5 | hantro/verisilicon: init leaks, MPEG-2 control NULL hardening, EOS event; rockchip-iommu of_xlate reference leak; rkvdec up to 64 capture buffers | lore / cherry-picks (authorship kept) | board: codecs run on kernel 11; needtest/ runs in progress |
+| 2222, 2223 | 2 | tcpm: SNK_WAIT_CAPABILITIES_TIMEOUT for vbus_never_low; log a cancelled VDM AMS | Collabora (authorship kept) | board: USB-C dock reaches DP configured |
+| 2224 | 1 | phy: rockchip: samsung-hdptx: power down the lanes on power_off | ours (`hdptx-pwroff/`) | board: `hdmi-10bpc-k10/runs/pwrchk` (lanes off through a 3 s blank, picture back), `runs/hdptx-B` 80 GOOD / 0 BLACK by camera, s2idle `lanefail=0` |
+
+Kernel 11 on the board (`k11/boot.txt`, `k11/s2idle.txt`): no kernel warnings, SATA root, three
+USB3 devices, HDMI-A-1 and DP-1 connected, hdmi0 and dp0 sound cards, RTC hym8563, 0 deferred
+probes and 0 failed units; s2idle 10/10 with the RTC alarm. Known open on kernel 11: no USB device
+behind the USB-C dock enumerates, USB 2.0 or USB 3 (DP alt mode on the same dock works; regression, fix in progress,
+`usbc-usb2/`). Not yet validated on any kernel: deep suspend (`deep-suspend/RESULTS.md`, firmware
+and test prepared), the headphone jack by ear, the camera-checked display matrix on kernel 11.

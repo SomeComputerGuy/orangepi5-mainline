@@ -137,3 +137,14 @@ Cards (by name; numbering changed): hdmi0, dp0, rockchipes8388. Verified by sign
     cards), not a small fix, and isn't written. Stock behaviour, as on the Rock 5B (ES8316 +
     HDMI): the first card is the default; once the user picks an output in Settings,
     WirePlumber remembers it (state-default-nodes).
+
+## 2026-11-01: HDMI audio open returned EINVAL on kernel 10, fixed by 0402/0403
+
+On kernel 10 (`7.3.0-10`) opening the hdmi0 PCM failed with -EINVAL: the dmaengine PCM component was
+never registered because the DAI was registered before the PCM (`asoc/hdmi0` in debugfs had no
+`dma:fddf0000.i2s`, while dp0 had its `dma:fddb0000.spdif-tx`). `patches/linux/0402` (i2s-tdm) and
+`0403` (plain i2s, same pattern, compile-tested only: this board has no plain I2S instance) register
+the PCM first. Verified on the test kernel and on kernel 11: `speaker-test` and `aplay` on
+`plughw:CARD=hdmi0` work; diagnosis and verification logs in `work/_out/hdmi-audio/`. Still open: DP
+audio is checked at signal level only, and the 3.5 mm jack has not been checked by ear.
+
