@@ -1,6 +1,6 @@
 # vop2-underflow-int: VOP2: balance window fetches across both AXI ports on RK3588, rate-limit POST_BUF_EMPTY
 
-- Workspace branch: `opi5/vop2-underflow-int-7.3` (exported 2026-10-31)
+- Workspace branch: `opi5/vop2-underflow-int-7.3` (exported 2026-11-01)
 - Kernel fork branch: `opi5/vop2-underflow-int` (see PUBLISH.md)
 - Sits on: `integration` (base commit `1afa8d268718`)
 - Hardware test: yes: 4K120 + overlay and dual display with 0 underflows; in patches/linux (1301-1302)
@@ -39,3 +39,9 @@ Apply with `git am` in the order listed in [`series`](series), on top of the par
 - [notes/tools/runtest.sh](notes/tools/runtest.sh)
 - [notes/tools/vm.sh](notes/tools/vm.sh)
 - [notes/tools/watch.sh](notes/tools/watch.sh)
+- [notes/v2/mk.sh](notes/v2/mk.sh)
+- [notes/v2/test/lib/camcheck.py](notes/v2/test/lib/camcheck.py)
+- [notes/v2/test/lib/camrec.py](notes/v2/test/lib/camrec.py)
+- [notes/v2/test/lib/kmsctl.py](notes/v2/test/lib/kmsctl.py)
+- [notes/v2/test/vop2uf-test.sh](notes/v2/test/vop2uf-test.sh)
+- [notes/v2/test/vop2uf.py](notes/v2/test/vop2uf.py)

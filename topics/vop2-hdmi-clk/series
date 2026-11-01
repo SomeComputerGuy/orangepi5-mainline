@@ -1,0 +1,7 @@
+# Apply in this order on top of the parent topic (see topic.env):
+#   while read -r p sha; do git am "$p"; done < <(grep -v '^#' series)
+# Second column: the original commit in the workspace clone (for reference).
+ours/0001-drm-rockchip-vop2-Don-t-use-uninitialised-dividers-o.patch 0ed2942f6d06f887568128cad07a4c96dba0d71c
+ours/0002-drm-rockchip-vop2-Fix-the-HDMI-sync-polarity-on-RK35.patch 194a102d8efe1d84112ee3233ef847b6a73f06b6
+ours/0003-drm-rockchip-vop2-Don-t-take-DCLK-from-the-HDMI-PHY-.patch 9103d5b0c95bd55f11fb5446405b56023e303b11
+ours/0004-drm-rockchip-vop2-Reject-HDMI-modes-the-CRU-cannot-c.patch 543a537b7b5a8c0c58ac037becfac23f11b3fad3

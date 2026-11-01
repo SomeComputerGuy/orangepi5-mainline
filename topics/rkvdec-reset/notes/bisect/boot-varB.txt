@@ -1,0 +1,5 @@
+7.3.0-opi5-kasan
+2e3bf054dd77
+2e3bf054dd77
+[    0.000000] OF: reserved mem: 0x00000000e0000000..0x00000000e6ffffff (114688 KiB) nomap non-reusable rkvdec
+[   26.773640] rkvdec rockchip,rk3588-vdec: 2 cores, decoding with the CCU

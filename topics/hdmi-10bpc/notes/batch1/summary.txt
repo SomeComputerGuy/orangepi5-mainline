@@ -1,0 +1,5 @@
+enums 420= 444=
+ctl 3840x2160-60 [3840x2160-60 -w 88:max bpc:8] :: output_bpc=8 output_format=RGB tmds_char_rate=594000000  scdc31=00 scdc40=4f | bpc=10 1lts
+A 3840x2160-60 [3840x2160-60 -w 88:max bpc:10] :: output_bpc=10 output_format=RGB tmds_char_rate=742500000  scdc31=35 scdc40=5e | bpc=10 2lts
+C 3840x2160-30 [3840x2160-30 -w 88:max bpc:10] :: output_bpc=10 output_format=RGB tmds_char_rate=371250000  scdc31=00 scdc40=4f | bpc=10 2lts
+D 3840x2160-120 [3840x2160-120 -w 88:max bpc:8] :: output_bpc=8 output_format=RGB tmds_char_rate=1188000000  scdc31=35 scdc40=5e | bpc=10 2lts

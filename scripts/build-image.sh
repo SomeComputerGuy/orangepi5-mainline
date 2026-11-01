@@ -24,7 +24,7 @@ case $VARIANT in server|desktop) ;; *) echo "unknown variant: $VARIANT"; exit 1 
 # repository signing key (scripts/make-media-repo.sh), before switching to root
 [ "$(id -u)" -eq 0 ] || "$(dirname "$0")/make-media-repo.sh"
 # sudo drops the environment, so pass the variant on as an option
-[ -n "$ROOTFS_TAR" ] || [ "$(id -u)" -eq 0 ] || exec sudo "$0" --variant "$VARIANT" "${args[@]}"
+[ -n "$ROOTFS_TAR" ] || [ "$(id -u)" -eq 0 ] || exec sudo ${OPI5_APT_PROXY:+OPI5_APT_PROXY="$OPI5_APT_PROXY"} "$0" --variant "$VARIANT" "${args[@]}"
 TOP=$(cd "$(dirname "$0")/.." && pwd)
 if [ "$VARIANT" = server ]; then WORK=$TOP/build/image; else WORK=$TOP/build/image-$VARIANT; fi
 [ -z "$ROOTFS_TAR" ] || WORK=$TOP/build/rootfs-tar-$VARIANT
@@ -131,6 +131,22 @@ if [ "$VARIANT" = desktop ]; then
   SOURCES+=("$TOP/overlay-desktop/etc/apt/sources.list.d/mozilla.sources")
 fi
 
+# apt cache: apt-cacher-ng on 127.0.0.1:3142 is used if it is listening
+# (OPI5_APT_PROXY=http://host:port overrides, OPI5_APT_PROXY=none disables). Only
+# http is proxied; https sources go direct. The option lands in the build chroot's
+# /etc/apt/apt.conf.d/99mmdebstrap, which customize-rootfs.sh removes from the image.
+APT_PROXY=${OPI5_APT_PROXY:-}
+if [ -z "$APT_PROXY" ] && (exec 3<>/dev/tcp/127.0.0.1/3142) 2>/dev/null; then
+  APT_PROXY=http://127.0.0.1:3142
+fi
+APT_PROXY_OPTS=()
+if [ -n "$APT_PROXY" ] && [ "$APT_PROXY" != none ]; then
+  APT_PROXY_OPTS=(--aptopt="Acquire::http::Proxy \"$APT_PROXY\"" --aptopt='Acquire::https::Proxy "DIRECT"')
+  echo "apt cache: using $APT_PROXY"
+else
+  echo "apt cache: not used (nothing on 127.0.0.1:3142, or OPI5_APT_PROXY=none)"
+fi
+
 # An interrupted run can leave /dev, /proc, /sys bind-mounted in the old rootfs
 if findmnt -rno TARGET | grep -q "^$WORK/"; then
   echo "mounts still active under $WORK; unmount them (findmnt | grep $WORK) and retry"; exit 1
@@ -147,6 +163,7 @@ mmdebstrap --mode=$MODE --arch=arm64 --variant=apt \
   --keyring=/usr/share/keyrings/ubuntu-archive-keyring.gpg \
   --aptopt="APT::Install-Recommends \"$RECOMMENDS\"" \
   --dpkgopt=force-unsafe-io \
+  "${APT_PROXY_OPTS[@]}" \
   --essential-hook='if [ -x "$1/usr/bin/debconf-set-selections" ]; then echo "man-db man-db/auto-update boolean false" | chroot "$1" debconf-set-selections; fi' \
   --include="$(IFS=,; echo "${PKGS[*]}")" \
   "${EXTRA[@]}" \

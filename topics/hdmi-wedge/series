@@ -1,0 +1,5 @@
+# Apply in this order on top of the parent topic (see topic.env):
+#   while read -r p sha; do git am "$p"; done < <(grep -v '^#' series)
+# Second column: the original commit in the workspace clone (for reference).
+ours/0001-drm-bridge-dw-hdmi-qp-Add-helper-to-wait-for-the-vid.patch 4bdfdfdbeba1bee28a107619384f752b02072f90
+ours/0002-drm-rockchip-dw_hdmi_qp-Let-the-controller-see-DCLK-.patch 9baf3b9b8d8cd9b284f9bfdf8013ad024d24d247

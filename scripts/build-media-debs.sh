@@ -53,6 +53,13 @@ if [ "${1:-}" = --in-chroot ]; then
   # any: the arm64 packages (-B); all: an Architecture: all source (-A)
   if [ "$build" = all ]; then bd=--indep-only bt=-A; else bd=--arch-only bt=-B; fi
   apt-get build-dep -q -y $bd -Pnocheck ./
+  # ccache (installed and seeded by the host side, see below): compilers of this
+  # name in /usr/lib/ccache come first in PATH. Sources are always unpacked at
+  # /build, so hits carry over between runs. Cache size is capped to keep the
+  # copy in/out cheap.
+  if [ -d /usr/lib/ccache ] && [ -d /build/opi5-media-ccache ]; then
+    export PATH=/usr/lib/ccache:$PATH CCACHE_DIR=/build/opi5-media-ccache CCACHE_BASEDIR=/build CCACHE_MAXSIZE=3G
+  fi
   DEB_BUILD_OPTIONS="nocheck noautodbgsym parallel=$jobs" \
     dpkg-buildpackage $bt -us -uc -Pnocheck
   mv ../*.deb /build/debs/
@@ -87,6 +94,40 @@ else
   SOURCES=(ffmpeg mpv gst-plugins-bad1.0 gst-plugins-good1.0 alsa-ucm-conf)
 fi
 
+# apt cache: apt-cacher-ng on 127.0.0.1:3142 is used if it is listening
+# (OPI5_APT_PROXY=http://host:port overrides, OPI5_APT_PROXY=none disables). Only
+# http is proxied; https sources go direct. The option lands in the build chroot's
+# /etc/apt/apt.conf.d/99mmdebstrap (the chroot is thrown away).
+APT_PROXY=${OPI5_APT_PROXY:-}
+if [ -z "$APT_PROXY" ] && (exec 3<>/dev/tcp/127.0.0.1/3142) 2>/dev/null; then
+  APT_PROXY=http://127.0.0.1:3142
+fi
+APT_PROXY_OPTS=()
+if [ -n "$APT_PROXY" ] && [ "$APT_PROXY" != none ]; then
+  APT_PROXY_OPTS=(--aptopt="Acquire::http::Proxy \"$APT_PROXY\"" --aptopt='Acquire::https::Proxy "DIRECT"')
+  echo "apt cache: using $APT_PROXY"
+else
+  echo "apt cache: not used (nothing on 127.0.0.1:3142, or OPI5_APT_PROXY=none)"
+fi
+
+# ccache for the compiles inside the chroot (OPI5_MEDIA_CCACHE=0 disables). The
+# cache lives on the host in $CCACHE_HOST and is copied into each build chroot and
+# synced back out afterwards (bind mounts aren't permitted in the user namespace).
+# The synced-out copy replaces the host cache, so evicted entries don't pile up; a
+# failed build doesn't sync its cache back. Only the cache is exchanged: nothing
+# of it ends up in the debs.
+CCACHE_HOST=$HOME/.cache/opi5-media-ccache   # basename must stay opi5-media-ccache
+CCACHE_OPTS=() CCACHE_SYNC=()
+if [ "${OPI5_MEDIA_CCACHE:-1}" != 0 ]; then
+  rm -rf "$CCACHE_HOST.new"; mkdir -p "$CCACHE_HOST"
+  CCACHE_OPTS=(--include=ccache
+    --customize-hook='mkdir -p "$1/build"'
+    --customize-hook="copy-in '$CCACHE_HOST' /build")
+  CCACHE_SYNC=(--customize-hook="sync-out /build/opi5-media-ccache '$CCACHE_HOST.new'")
+  echo "ccache: build chroot uses $CCACHE_HOST"
+else
+  echo "ccache: not used (OPI5_MEDIA_CCACHE=0)"
+fi
 mkdir -p "$REPO" "$WORK"
 index_repo() {
   (cd "$REPO" && dpkg-scanpackages --multiversion . /dev/null > Packages 2>/dev/null)
@@ -119,19 +160,23 @@ for src in "${SOURCES[@]}"; do
     --keyring=/usr/share/keyrings/ubuntu-archive-keyring.gpg \
     --aptopt='APT::Install-Recommends "false"' \
     --dpkgopt=force-unsafe-io \
+    "${APT_PROXY_OPTS[@]}" \
     --include=ca-certificates \
     --setup-hook="mkdir -p \"\$1/tmp\"" \
     --setup-hook="copy-in '$STAGE' /tmp" \
     --customize-hook="copy-in '$pdir' /tmp" \
     --customize-hook="mv \"\$1/tmp/${PDIR[$src]}\" \"\$1/tmp/opi5-patches\"" \
     --customize-hook="copy-in '$SELF' /tmp" \
+    "${CCACHE_OPTS[@]}" \
     --customize-hook="chroot \"\$1\" /bin/bash /tmp/$(basename "$SELF") --in-chroot '$src' '$ver' '$rev' '$JOBS' '${PDIR[$src]}' '${BUILD[$src]:-any}'" \
     --customize-hook="sync-out /build/debs '$w/debs'" \
+    "${CCACHE_SYNC[@]}" \
     "$SUITE" /dev/null \
     "deb $MIRROR $SUITE $COMPONENTS" \
     "deb-src $MIRROR $SUITE $COMPONENTS" \
     "deb [trusted=yes] file://$STAGE ./" \
     > "$w/build.log" 2>&1 || { echo "$src failed; see $w/build.log"; tail -20 "$w/build.log"; exit 1; }
+  if [ -d "$CCACHE_HOST.new" ]; then rm -rf "$CCACHE_HOST"; mv "$CCACHE_HOST.new" "$CCACHE_HOST"; fi
   # Replace the previous build of this source in the repository
   for d in "$REPO"/*.deb; do
     [ -e "$d" ] || continue

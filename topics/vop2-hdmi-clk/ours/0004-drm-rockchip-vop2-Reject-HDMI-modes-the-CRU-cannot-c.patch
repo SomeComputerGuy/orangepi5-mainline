@@ -1,0 +1,199 @@
+From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
+From: Arun Iyengar <aiyengar1990@gmail.com>
+Date: Sat, 31 Oct 2026 20:39:19 +0000
+Subject: [PATCH] drm/rockchip: vop2: Reject HDMI modes the CRU cannot clock
+ exactly
+
+When the DCLK of a video port driving HDMI cannot come from the HDMI PHY
+PLL (FRL mode, pixel clocks above 600 MHz), it is taken from the system
+CRU, where dclk_vopN_src divides one of the fixed system PLLs (GPLL,
+CPLL, AUPLL, V0PLL) by an integer. clk_set_rate() then silently settles
+for the closest lower rate. On an Orange Pi 5 (RK3588S) with an HDMI 2.1
+TV, measured from the vblank timestamps:
+
+  mode                                   requested     DCLK
+  3840x2160@60Hz 10 bpc (FRL)            594.000 MHz   594.000 MHz
+  3840x2160@59.94Hz 10 bpc (FRL)         593.407 MHz   500.000 MHz
+  4096x2160@59.94Hz 10 bpc (FRL)         593.407 MHz   500.000 MHz
+  3840x2160@120Hz 8/10 bpc (FRL)         1188.000 MHz  1188.000 MHz
+  3840x2160@119.88Hz 8/10 bpc (FRL)      1186.813 MHz  786.432 MHz (AUPLL)
+
+The sink still shows a picture, but at 50.5 Hz instead of 59.94 Hz and
+79.5 Hz instead of 119.88 Hz, and the commit reports success. Taking the
+DCLK from the audio PLL also makes it change whenever the audio rate
+does.
+
+HDMI needs the exact pixel clock. The vendor kernel likewise rejects
+HDMI/DP modes above 600 MHz whose CRU rate does not round to the
+requested one (vop2_crtc_mode_valid()), but misses the FRL modes below
+600 MHz. Do the same in the CRTC atomic_check, where the
+output format and the link mode are known: compute the DCLK rate the
+video port will request, and if it will not come from the HDMI PHY PLL,
+refuse the state unless the CRU can provide that rate to the kHz.
+
+The DCLK rate depends on the SoC specific interface clocking, so add a
+.dclk_rate() vop2_ops callback that computes it for a given CRTC state;
+implement it for RK3588 by letting rk3588_calc_cru_cfg() work on that
+state. Without the callback nothing changes.
+
+Assisted-by: Claude:claude-opus-5-5
+---
+ drivers/gpu/drm/rockchip/rockchip_drm_vop2.c | 66 ++++++++++++++++++++
+ drivers/gpu/drm/rockchip/rockchip_drm_vop2.h |  3 +
+ drivers/gpu/drm/rockchip/rockchip_vop2_reg.c | 20 ++++--
+ 3 files changed, 84 insertions(+), 5 deletions(-)
+
+diff --git a/drivers/gpu/drm/rockchip/rockchip_drm_vop2.c b/drivers/gpu/drm/rockchip/rockchip_drm_vop2.c
+index e269611300c6..d073b22d9e5e 100644
+--- a/drivers/gpu/drm/rockchip/rockchip_drm_vop2.c
++++ b/drivers/gpu/drm/rockchip/rockchip_drm_vop2.c
+@@ -2087,6 +2087,68 @@ static int vop2_crtc_atomic_check_gamma(struct vop2_video_port *vp,
+ 	return 0;
+ }
+ 
++/*
++ * HDMI needs the exact pixel clock. The HDMI PHY PLL can generate any rate
++ * the PHY supports, but when the DCLK has to come from the system CRU (FRL
++ * mode, or rates beyond the PHY PLL), it is derived by integer division
++ * from a few fixed PLLs, and the clock framework silently picks the closest
++ * lower rate: e.g. 3840x2160@59.94Hz (593.407 MHz) would run at 500 MHz.
++ * Refuse such a configuration instead of scanning out at a wrong rate.
++ */
++static int vop2_crtc_atomic_check_dclk(struct vop2_video_port *vp,
++				       struct drm_crtc_state *crtc_state)
++{
++	const struct drm_display_mode *mode = &crtc_state->adjusted_mode;
++	struct vop2 *vop2 = vp->vop2;
++	struct drm_encoder *encoder;
++	unsigned long clock = 0;
++	struct clk *cru_clk;
++	long rate;
++
++	if (!vop2->ops->dclk_rate || !crtc_state->active ||
++	    !drm_atomic_crtc_needs_modeset(crtc_state))
++		return 0;
++
++	/* Without an HDMI PHY PLL the CRU is the only DCLK source anyway */
++	if (!vop2->pll_hdmiphy0 && !vop2->pll_hdmiphy1)
++		return 0;
++
++	drm_for_each_encoder_mask(encoder, vop2->drm, crtc_state->encoder_mask) {
++		struct rockchip_encoder *rkencoder = to_rockchip_encoder(encoder);
++		int id = rkencoder->crtc_endpoint_id;
++
++		if (id != ROCKCHIP_VOP2_EP_HDMI0 && id != ROCKCHIP_VOP2_EP_HDMI1)
++			return 0;
++
++		clock = vop2->ops->dclk_rate(vp, id, crtc_state);
++	}
++
++	if (!clock)
++		return 0;
++
++	if (mode->flags & DRM_MODE_FLAG_DBLCLK)
++		clock *= 2;
++
++	if (vop2_crtc_dclk_hdmiphy_pll(vp, crtc_state, clock))
++		return 0;
++
++	/* The CRU source vop2_crtc_atomic_disable() restores */
++	cru_clk = vp->dclk_src ?: clk_get_parent(vp->dclk);
++	if (!cru_clk || clk_is_match(cru_clk, vop2->pll_hdmiphy0) ||
++	    clk_is_match(cru_clk, vop2->pll_hdmiphy1))
++		return 0;
++
++	rate = clk_round_rate(cru_clk, clock);
++	if (rate <= 0 || DIV_ROUND_CLOSEST(rate, 1000) != DIV_ROUND_CLOSEST(clock, 1000)) {
++		drm_dbg_kms(vop2->drm,
++			    "vp%d: DCLK %lu Hz not available from the CRU (closest %ld Hz)\n",
++			    vp->id, clock, rate);
++		return -EINVAL;
++	}
++
++	return 0;
++}
++
+ static int vop2_crtc_atomic_check(struct drm_crtc *crtc,
+ 				  struct drm_atomic_commit *state)
+ {
+@@ -2100,6 +2162,10 @@ static int vop2_crtc_atomic_check(struct drm_crtc *crtc,
+ 	if (ret)
+ 		return ret;
+ 
++	ret = vop2_crtc_atomic_check_dclk(vp, crtc_state);
++	if (ret)
++		return ret;
++
+ 	drm_atomic_crtc_state_for_each_plane(plane, crtc_state)
+ 		nplanes++;
+ 
+diff --git a/drivers/gpu/drm/rockchip/rockchip_drm_vop2.h b/drivers/gpu/drm/rockchip/rockchip_drm_vop2.h
+index cc06904b4053..407fc75ace40 100644
+--- a/drivers/gpu/drm/rockchip/rockchip_drm_vop2.h
++++ b/drivers/gpu/drm/rockchip/rockchip_drm_vop2.h
+@@ -271,6 +271,9 @@ struct vop2_video_port {
+  */
+ struct vop2_ops {
+ 	unsigned long (*setup_intf_mux)(struct vop2_video_port *vp, int ep_id, u32 polflags);
++	/* DCLK rate setup_intf_mux() will return for this state, 0 if invalid */
++	unsigned long (*dclk_rate)(struct vop2_video_port *vp, int ep_id,
++				   const struct drm_crtc_state *crtc_state);
+ 	void (*setup_bg_dly)(struct vop2_video_port *vp);
+ 	void (*setup_overlay)(struct vop2_video_port *vp);
+ };
+diff --git a/drivers/gpu/drm/rockchip/rockchip_vop2_reg.c b/drivers/gpu/drm/rockchip/rockchip_vop2_reg.c
+index 7c48b440cb29..26fac1bbd675 100644
+--- a/drivers/gpu/drm/rockchip/rockchip_vop2_reg.c
++++ b/drivers/gpu/drm/rockchip/rockchip_vop2_reg.c
+@@ -1564,13 +1564,13 @@ static unsigned long rk3588_calc_dclk(unsigned long child_clk, unsigned long max
+  * DSI: mipi_pixclk <= dclk_out <= dclk_core
+  */
+ static unsigned long rk3588_calc_cru_cfg(struct vop2_video_port *vp, int id,
++					 const struct drm_crtc_state *crtc_state,
+ 					 int *dclk_core_div, int *dclk_out_div,
+ 					 int *if_pixclk_div, int *if_dclk_div)
+ {
+ 	struct vop2 *vop2 = vp->vop2;
+-	struct drm_crtc *crtc = &vp->crtc;
+-	struct drm_display_mode *adjusted_mode = &crtc->state->adjusted_mode;
+-	struct rockchip_crtc_state *vcstate = to_rockchip_crtc_state(crtc->state);
++	const struct drm_display_mode *adjusted_mode = &crtc_state->adjusted_mode;
++	struct rockchip_crtc_state *vcstate = to_rockchip_crtc_state(crtc_state);
+ 	int output_mode = vcstate->output_mode;
+ 	unsigned long v_pixclk = adjusted_mode->crtc_clock * 1000LL; /* video timing pixclk */
+ 	unsigned long dclk_core_rate = v_pixclk >> 2;
+@@ -1677,6 +1677,15 @@ static unsigned long rk3588_calc_cru_cfg(struct vop2_video_port *vp, int id,
+  * 1: Video Port3
+  * 3: Video Port 1(MIPI1 only)
+  */
++static unsigned long rk3588_dclk_rate(struct vop2_video_port *vp, int id,
++				      const struct drm_crtc_state *crtc_state)
++{
++	int dclk_core_div, dclk_out_div, if_pixclk_div, if_dclk_div;
++
++	return rk3588_calc_cru_cfg(vp, id, crtc_state, &dclk_core_div,
++				   &dclk_out_div, &if_pixclk_div, &if_dclk_div);
++}
++
+ static u32 rk3588_get_mipi_port_mux(int vp_id)
+ {
+ 	if (vp_id == 1)
+@@ -1708,8 +1717,8 @@ static unsigned long rk3588_set_intf_mux(struct vop2_video_port *vp, int id, u32
+ 	unsigned long clock;
+ 	u32 die, dip, div, vp_clk_div, val;
+ 
+-	clock = rk3588_calc_cru_cfg(vp, id, &dclk_core_div, &dclk_out_div,
+-				    &if_pixclk_div, &if_dclk_div);
++	clock = rk3588_calc_cru_cfg(vp, id, vp->crtc.state, &dclk_core_div,
++				    &dclk_out_div, &if_pixclk_div, &if_dclk_div);
+ 	if (!clock)
+ 		return 0;
+ 
+@@ -2513,6 +2522,7 @@ static const struct vop2_ops rk3576_vop_ops = {
+ 
+ static const struct vop2_ops rk3588_vop_ops = {
+ 	.setup_intf_mux = rk3588_set_intf_mux,
++	.dclk_rate = rk3588_dclk_rate,
+ 	.setup_bg_dly = rk3568_vop2_setup_bg_dly,
+ 	.setup_overlay = rk3568_vop2_setup_overlay,
+ };

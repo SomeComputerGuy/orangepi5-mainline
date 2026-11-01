@@ -1,6 +1,6 @@
 # suspend: System suspend analysis (TF-A PHP CRU gate fix)
 
-- Workspace branch: `opi5/suspend-7.3` (exported 2026-10-31)
+- Workspace branch: `opi5/suspend-7.3` (exported 2026-11-01)
 - Kernel fork branch: `opi5/suspend` (see PUBLISH.md)
 - Sits on: `board-sata` (base commit `5e33b74b04cf`)
 - Hardware test: not run (analysis only; TF-A patch in patches/tf-a)

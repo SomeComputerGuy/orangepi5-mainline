@@ -1,0 +1,21 @@
+grep: /run/rr/fluster-varA-1/*.md: No such file or directory
+./flcmp.sh: line 5: ~/ccu/fluster-single/$s.fail.txt: ambiguous redirect
+
+grep: /run/rr/fluster-varA-2/*.md: No such file or directory
+./flcmp.sh: line 5: ~/ccu/fluster-single/$s.fail.txt: ambiguous redirect
+
+grep: /run/rr/fluster-varA-3/*.md: No such file or directory
+./flcmp.sh: line 5: ~/ccu/fluster-single/$s.fail.txt: ambiguous redirect
+
+grep: /run/rr/fluster-varA-4/*.md: No such file or directory
+./flcmp.sh: line 5: ~/ccu/fluster-single/$s.fail.txt: ambiguous redirect
+
+grep: /run/rr/fluster-varA-5/*.md: No such file or directory
+./flcmp.sh: line 5: ~/ccu/fluster-single/$s.fail.txt: ambiguous redirect
+
+grep: /run/rr/fluster-varA-6/*.md: No such file or directory
+./flcmp.sh: line 5: ~/ccu/fluster-single/$s.fail.txt: ambiguous redirect
+
+since start: timeouts 0, KASAN/Oops/canary 0
+DONE
+boot: timeouts 0, IOMMU not-attached faults 0

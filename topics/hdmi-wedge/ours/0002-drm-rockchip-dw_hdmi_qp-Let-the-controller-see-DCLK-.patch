@@ -1,0 +1,60 @@
+From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
+From: Arun Iyengar <aiyengar1990@gmail.com>
+Date: Sat, 31 Oct 2026 19:50:43 +0000
+Subject: [PATCH] drm/rockchip: dw_hdmi_qp: Let the controller see DCLK stop on
+ a modeset
+
+When a modeset disables and re-enables the VOP video port driving the
+HDMI controller within one commit, the VOP gates DCLK in its
+.atomic_disable() and ungates it again in its .atomic_enable() right
+afterwards. The HDMI controller needs about 2 ms to detect that its
+video input clock stopped, and only then reinitializes its input pixel
+interface.
+
+Without that, leaving YCbCr 4:2:0 output breaks the next mode on RK3588,
+e.g. switching from 4096x2160@60 YCbCr 4:2:0 to 4096x2160@60 10 bpc RGB
+over FRL fails in about half of the attempts: the controller does not
+lock onto the new video stream and the sink shows "no signal" while the
+link itself is fine. The broken state can then survive further modesets
+done this way, including plain 1080p TMDS modes, so the output looks
+dead until it is disabled in a separate commit or the board is rebooted.
+
+The encoder's .atomic_mode_set() is called after the CRTC has been
+disabled and before it is enabled again, so wait there until the
+controller reports the input clock as stopped. If the CRTC was already
+off, the clock is already reported stopped and this returns immediately.
+
+Assisted-by: Claude:claude-opus-5-5
+---
+ drivers/gpu/drm/rockchip/dw_hdmi_qp-rockchip.c | 16 ++++++++++++++++
+ 1 file changed, 16 insertions(+)
+
+diff --git a/drivers/gpu/drm/rockchip/dw_hdmi_qp-rockchip.c b/drivers/gpu/drm/rockchip/dw_hdmi_qp-rockchip.c
+index f9b03c3ed16b..eb1b5f49bb3d 100644
+--- a/drivers/gpu/drm/rockchip/dw_hdmi_qp-rockchip.c
++++ b/drivers/gpu/drm/rockchip/dw_hdmi_qp-rockchip.c
+@@ -297,8 +297,24 @@ dw_hdmi_qp_rockchip_encoder_atomic_check(struct drm_encoder *encoder,
+ 	return 0;
+ }
+ 
++static void
++dw_hdmi_qp_rockchip_encoder_atomic_mode_set(struct drm_encoder *encoder,
++					    struct drm_crtc_state *crtc_state,
++					    struct drm_connector_state *conn_state)
++{
++	struct rockchip_hdmi_qp *hdmi = to_rockchip_hdmi_qp(encoder);
++
++	/*
++	 * This runs after the VOP has been disabled and before it is enabled
++	 * again. Keep DCLK stopped until the controller has noticed, so that
++	 * its video input starts afresh with the new mode.
++	 */
++	dw_hdmi_qp_wait_input_clk_off(hdmi->hdmi);
++}
++
+ static const struct
+ drm_encoder_helper_funcs dw_hdmi_qp_rockchip_encoder_helper_funcs = {
++	.atomic_mode_set = dw_hdmi_qp_rockchip_encoder_atomic_mode_set,
+ 	.atomic_enable	= dw_hdmi_qp_rockchip_encoder_atomic_enable,
+ 	.atomic_check	= dw_hdmi_qp_rockchip_encoder_atomic_check,
+ };

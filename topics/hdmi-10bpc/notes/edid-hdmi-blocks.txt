@@ -1,0 +1,26 @@
+block 0 tag 00 cksum ok
+block 1 tag 02 cksum ok
+block 2 tag 02 cksum ok
+block 3 tag 02 cksum ok
+mfg 506c product 9653 ver 1 3
+CTA rev 3 flags f0 (YCbCr444=1 422=1)
+ext tag 120 03
+ext tag 0 cb
+HDMI VSDB: 030c001000b84425008001020304
+  DC48=0 DC36=1 DC30=1 DCY444=1
+  Max_TMDS_Clock(VSDB)=340 MHz
+HF-VSDB: d85dc40178806f0230f0
+  Max_TMDS_Character_Rate=600 MHz
+  SCDC_Present=1 RR=0 LTE_340_scramble=0
+  Max_FRL_Rate=6 DC_420_48=1 36=1 30=1
+  byte8 02 (FAPA/ALLM/FVA/CNMVRR/CinemaVRR/MDelta)
+ext tag 5 e301
+ext tag 15 1f
+ext tag 6 0f01
+ext tag 1 46d0004d1a967860777e
+ext tag 1 8b849001
+CTA rev 3 flags f0 (YCbCr444=1 422=1)
+ext tag 1 fbbb1a0001
+ext tag 1 6241da01
+VSDB oui 00001a 1a0000030330f00020910a6610f0f0
+CTA rev 3 flags f0 (YCbCr444=1 422=1)

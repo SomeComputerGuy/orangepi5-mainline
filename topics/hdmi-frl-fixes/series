@@ -1,0 +1,5 @@
+# Apply in this order on top of the parent topic (see topic.env):
+#   while read -r p sha; do git am "$p"; done < <(grep -v '^#' series)
+# Second column: the original commit in the workspace clone (for reference).
+ours/0001-drm-display-hdmi-Don-t-reset-an-active-FRL-link-on-e.patch f444ca6d7353930b90fcd2ec3cd6cb937d5c4f00
+ours/0002-drm-bridge-dw-hdmi-qp-Clear-the-FRL-link-state-when-.patch d3da9183333eb5cc0f312688a8c5c54ff1f22a1f

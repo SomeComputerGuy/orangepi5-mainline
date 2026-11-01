@@ -1,0 +1,7 @@
+# Apply in this order on top of the parent topic (see topic.env):
+#   while read -r p sha; do git am "$p"; done < <(grep -v '^#' series)
+# Second column: the original commit in the workspace clone (for reference).
+ours/0001-drm-bridge-synopsys-dw-dp-Configure-DP-protocol-conv.patch e2831655291ef8d5c415accb6ad1ffd84c0157a5
+ours/0002-drm-bridge-synopsys-dw-dp-Respect-the-limits-of-a-br.patch ccf4b41931b229e4e58a7a214c5d499f859a0cb7
+ours/0003-drm-bridge-synopsys-dw-dp-Re-detect-when-a-branch-s-.patch 37ab58f1b961b733d8d9176deda73a33aa64e09e
+ours/0004-drm-bridge-synopsys-dw-dp-Add-CEC-Tunneling-over-AUX.patch 04b3d5688d121c9a667054bc801c2f5d73154a06

@@ -1,7 +1,7 @@
 # image-k7: The image-kernel stack: v7.3 + patches/linux (321 patches) = image-k6 + usb3-port (1501-1504) + 1801/1802/1804; the branch tip has the same tree as v7.3 + git am patches/linux/*.patch
 
-- Workspace branch: `opi5/image-k7-7.3` (exported 2026-10-31)
-- Kernel fork branch: `opi5/image-k7` (see PUBLISH.md)
+- Workspace branch: `opi5/image-k7-7.3` (exported 2026-11-01)
+- Kernel fork: tag `image-7.3.0-7` (retired branch `opi5/image-k7`; see PUBLISH.md)
 - Sits on: `usb3-port` (base commit `398229c00d6f`)
 - Hardware test: yes: 1501-1504 run on kernel build 5, 1801/1802/1804 proven on a KASAN kernel (see rkvdec-reset)
 - Next upstream step: none (integration only); provenance in docs/image-kernel/MANIFEST.md

@@ -53,6 +53,22 @@ export PATH=$XTOOL:$PATH
 # Kept identical to earlier builds so kbuild doesn't see a changed compiler
 # command line and rebuild everything (the wrapper supplies the paths anyway)
 KCC="${CROSS_COMPILE}gcc -isystem $SYSROOT/usr/include -isystem $SYSROOT/usr/include/aarch64-linux-gnu -L$LIBDIR -Wl,-rpath-link=$LIBDIR"
+# ccache, if installed (OPI5_CCACHE=0 disables): compiler results are cached in
+# ~/.cache/ccache (ccache's default CCACHE_DIR), shared by every tree under $TOP.
+# KBUILD_BUILD_TIMESTAMP is deliberately not set (that would change the kernel's
+# identity); only the few files that embed it miss the cache.
+KMAKE_CC=$KCC
+if [ "${OPI5_CCACHE:-1}" != 0 ] && command -v ccache >/dev/null; then
+  export CCACHE_BASEDIR=$TOP
+  # 30G unless the user set a size (env or ccache.conf)
+  if [ -z "${CCACHE_MAXSIZE:-}" ] && ccache --show-config | grep '^(default) max_size' >/dev/null; then
+    ccache -M 30G >/dev/null
+  fi
+  KMAKE_CC="ccache $KCC"
+  echo "ccache: enabled (CCACHE_DIR=${CCACHE_DIR:-~/.cache/ccache}, $(ccache -p 2>/dev/null | sed -n 's/^.*max_size = //p' | head -1))"
+else
+  echo "ccache: not used (not installed or OPI5_CCACHE=0)"
+fi
 # Release is exactly <version>-opi5: no "+"/"-dirty" for our patched tree
 export LOCALVERSION=
 # Keep the build machine's user/host name out of the binaries (/proc/version,
@@ -68,6 +84,10 @@ export DEBEMAIL=${DEBEMAIL:-${OPI5_EMAIL:-opi5@invalid}}
 # yet (USB-C DP alt mode, MIPI DSI LCD and MIPI CSI camera overlays, rkisp2).
 # Re-applied only when the patch set changes, so unchanged sources keep their
 # mtimes and the build stays incremental. The previous source diff is saved first.
+# build/linux/.opi5-patchset records a hash of the base commit and of the ordered
+# patch files (names and contents), plus the index tree that resulted; the reset is
+# skipped only if the hash matches and src/linux still is that base commit with
+# that index and no worktree edits (something else touched it otherwise).
 BASE=v7.3
 OPI5_EXTRA=${OPI5_EXTRA:-0}
 PATCH_DIRS=("$TOP/patches/linux")
@@ -79,23 +99,39 @@ if [ "$OPI5_EXTRA" = 1 ]; then
 fi
 mkdir -p "$BUILD"
 want=$(for d in "${PATCH_DIRS[@]}"; do (cd "$d" && sha256sum ./*.patch | sed "s|\./|${d##*/}/|"); done)
-if [ "$(cat "$BUILD/.patches-applied" 2>/dev/null)" != "$want" ]; then
+base_commit=$(git -C "$SRC" rev-parse --verify -q "$BASE^{commit}") || { echo "no $BASE in $SRC"; exit 1; }
+set_hash=$(printf '%s\n%s\n' "$base_commit" "$want" | sha256sum | cut -d' ' -f1)
+STAMP=$BUILD/.opi5-patchset
+# Older runs kept only the patch list: adopt it if the tree is exactly that state
+if [ ! -f "$STAMP" ] && [ "$(cat "$BUILD/.patches-applied" 2>/dev/null)" = "$want" ] &&
+   [ "$(git -C "$SRC" rev-parse HEAD)" = "$base_commit" ] && git -C "$SRC" diff --quiet &&
+   [ "$(git -C "$SRC" write-tree)" != "$(git -C "$SRC" rev-parse "$base_commit^{tree}")" ]; then
+  printf '%s\n%s\n' "$set_hash" "$(git -C "$SRC" write-tree)" > "$STAMP"
+fi
+if [ "$(sed -n 1p "$STAMP" 2>/dev/null)" = "$set_hash" ] &&
+   [ "$(git -C "$SRC" rev-parse HEAD)" = "$base_commit" ] && git -C "$SRC" diff --quiet &&
+   [ "$(git -C "$SRC" write-tree)" = "$(sed -n 2p "$STAMP")" ]; then
+  echo "patches: $(wc -l <<<"$want") patch files already applied on $BASE (stamp matches), source mtimes kept"
+else
+  echo "patches: patch set or source tree changed, resetting src/linux to $BASE and applying"
   git -C "$SRC" diff --binary HEAD > "$BUILD/src-linux-before-patches.diff"
   git -C "$SRC" reset -q --hard "$BASE"
   # a previous run that stopped half-way may have left files its patches created
   git -C "$SRC" clean -fdq
+  rm -f "$STAMP"
   for d in "${PATCH_DIRS[@]}"; do
     for p in "$d"/*.patch; do
       git -C "$SRC" apply --index "$p" || { echo "patch failed: $p"; exit 1; }
     done
   done
+  printf '%s\n%s\n' "$set_hash" "$(git -C "$SRC" write-tree)" > "$STAMP"
   echo "$want" > "$BUILD/.patches-applied"
 fi
 
 mkdir -p "$BUILD" "$OUT/debs"
 cp "$UBUNTU_CONFIG" "$BUILD/.config"
 "$SRC/scripts/kconfig/merge_config.sh" -m -O "$BUILD" "$BUILD/.config" "${CONFIGS[@]}"
-make -C "$SRC" O="$BUILD" CC="$KCC" olddefconfig
+make -C "$SRC" O="$BUILD" CC="$KMAKE_CC" olddefconfig
 # Report fragment options that didn't stick (renamed/missing deps)
 cat "${CONFIGS[@]}" | grep -v '^#' | grep . | while IFS= read -r l; do
   k=${l%%=*}; v=${l#*=}
@@ -109,6 +145,6 @@ done
 # so skip dpkg's build-dep check (-d).
 # Debug info is kept for BTF (eBPF tooling); skip the huge -dbg package
 export DEB_BUILD_PROFILES=pkg.linux-upstream.nokerneldbg
-make -C "$SRC" O="$BUILD" CC="$KCC" -j"$(nproc)" DPKG_FLAGS=-d KDEB_PKGVERSION="$(make -s -C "$SRC" kernelversion)-8" bindeb-pkg
+make -C "$SRC" O="$BUILD" CC="$KMAKE_CC" -j"$(nproc)" DPKG_FLAGS=-d KDEB_PKGVERSION="$(make -s -C "$SRC" kernelversion)-8" bindeb-pkg
 mv "$BUILD"/../linux-*.deb "$OUT/debs/"
 ls -l "$OUT/debs"
