@@ -9,8 +9,6 @@ system depends on it, so the display driver can program it for pixel
 clocks the system PLLs cannot be divided down to. Let it compute its
 settings for rates outside the rate table.
 
-(cherry picked from commit 433d2dbaae934988b25328abcd385cfc66921fb7)
-
 Assisted-by: Claude:claude-opus-5-5
 Signed-off-by: Arun Iyengar <aiyengar1990@gmail.com>
 ---

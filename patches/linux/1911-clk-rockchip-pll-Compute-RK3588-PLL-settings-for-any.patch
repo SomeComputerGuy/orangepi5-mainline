@@ -21,8 +21,6 @@ like the table rounding, so dividers below the PLL keep their ratio.
 
 PLLs without the flag (the system PLLs) keep their table-only behaviour.
 
-(cherry picked from commit 6fd7018c8711c9e69327b17f52e50cafe9c41196)
-
 Assisted-by: Claude:claude-opus-5-5
 Signed-off-by: Arun Iyengar <aiyengar1990@gmail.com>
 ---

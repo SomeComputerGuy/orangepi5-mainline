@@ -1,0 +1,80 @@
+From 1388e1ed7b55690806b724f4f0d26a5f41c5863a Mon Sep 17 00:00:00 2001
+From: Arun Iyengar <aiyengar1990@gmail.com>
+Date: Mon, 2 Nov 2026 10:11:14 +0000
+Subject: [PATCH 1/3] media: rockchip: rga: Don't access a suspended core in
+ the interrupt handler
+
+Each RK3588 RGA3 core shares its interrupt line with its IOMMU, and
+rga_isr() reads the interrupt status of the core whenever the line
+fires. When the IOMMU raises it while the core is runtime suspended, or
+being suspended, the read hits a core whose clocks or power domain are
+off. On an Orange Pi 5 (RK3588S) this happened while genpd was powering
+off RGA31 shortly after a job whose IOMMU had reported a page fault, a
+synchronous external abort (ESR 0x96000010):
+
+  Workqueue: pm pm_runtime_work
+  pc : rga3_handle_irq+0x38/0x2d8 [rockchip_rga]
+  lr : rga_isr+0x38/0x158 [rockchip_rga]
+   ...
+   rockchip_pmu_set_idle_request+0xa8/0x1e0
+   rockchip_pd_power+0x15c/0x668
+   genpd_power_off+0x1bc/0x410
+
+and the kernel panicked.
+
+Only look at a core that is runtime active, as the Rockchip IOMMU driver
+does for the same line, and leave the interrupt to the other handler
+otherwise.
+
+Assisted-by: Claude:claude-opus-5-5
+Signed-off-by: Arun Iyengar <aiyengar1990@gmail.com>
+---
+ drivers/media/platform/rockchip/rga/rga.c | 24 +++++++++++++++++++++--
+ 1 file changed, 22 insertions(+), 2 deletions(-)
+
+diff --git a/drivers/media/platform/rockchip/rga/rga.c b/drivers/media/platform/rockchip/rga/rga.c
+index 26eeee58dbf4..0c367b627858 100644
+--- a/drivers/media/platform/rockchip/rga/rga.c
++++ b/drivers/media/platform/rockchip/rga/rga.c
+@@ -82,9 +82,8 @@ static void device_run(void *prv)
+ 	rga->hw->start(core, vb_to_rga(src), vb_to_rga(dst));
+ }
+ 
+-static irqreturn_t rga_isr(int irq, void *prv)
++static irqreturn_t rga_core_irq(struct rga_core *core)
+ {
+-	struct rga_core *core = prv;
+ 	struct rockchip_rga *rga = core->rga;
+ 
+ 	/* ignore interrupt on an unbound core */
+@@ -119,6 +118,27 @@ static irqreturn_t rga_isr(int irq, void *prv)
+ 	return IRQ_HANDLED;
+ }
+ 
++static irqreturn_t rga_isr(int irq, void *prv)
++{
++	struct rga_core *core = prv;
++	irqreturn_t ret;
++
++	/*
++	 * The interrupt line of an RGA3 core is shared with its IOMMU, which
++	 * can raise it while the core is suspended or being suspended. Reading
++	 * the registers of a core whose clocks or power domain are off ends
++	 * in a synchronous external abort.
++	 */
++	if (!pm_runtime_get_if_active(core->dev))
++		return IRQ_NONE;
++
++	ret = rga_core_irq(core);
++
++	pm_runtime_put_autosuspend(core->dev);
++
++	return ret;
++}
++
+ static const struct v4l2_m2m_ops rga_m2m_ops = {
+ 	.device_run = device_run,
+ };
+-- 
+2.55.0
+

@@ -1,0 +1,121 @@
+From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
+From: Arun Iyengar <aiyengar1990@gmail.com>
+Date: Sun, 1 Nov 2026 22:50:00 +0000
+Subject: [PATCH] media: verisilicon: Don't reset the encoder raw format while
+ OUTPUT buffers exist
+
+For an encoder, hantro_set_fmt_cap() allows S_FMT on the CAPTURE queue
+while the OUTPUT queue has buffers as long as the coded pixel format and
+size don't change, and then unconditionally resets the raw format through
+hantro_reset_raw_fmt(). That helper sets ctx->vpu_src_fmt to the default
+raw format before hantro_set_fmt_out() can refuse the change with -EBUSY
+(the OUTPUT queue is busy), so the ioctl fails but leaves the context
+inconsistent: ctx->src_fmt still describes the negotiated raw format
+(e.g. NM12, two planes) while ctx->vpu_src_fmt describes the default one
+(YM12, three planes).
+
+The next job then programs the hardware with the wrong input format: on
+the RK3588 VEPU121 JPEG encoder the third plane address is never written,
+the encoder reads the V plane from IOVA 0 and the job ends in an IOMMU
+page fault and a watchdog timeout. v4l2-ctl triggers this on every
+--stream-mmap run, because it re-applies the CAPTURE format after the
+OUTPUT queue has been set up:
+
+  rk_iommu fdba0800.iommu: Page fault at 0x0000000000000000 of type read
+  rk_iommu fdba0800.iommu: Page fault at 0x00000000000003c0 of type read
+  ...
+  hantro_watchdog:208: frame processing timed out!
+
+Skip the raw format reset when OUTPUT buffers exist: the coded format is
+unchanged in that case, so the raw format stays valid, and the S_FMT is
+accepted as the busy check intends. Also restore ctx->vpu_src_fmt in
+hantro_reset_raw_fmt() when hantro_set_fmt_out() fails, so that no other
+caller can leave the two descriptors out of sync.
+
+Fixes: 5980d40276b3 ("media: hantro: Cleanup format negotiation helpers")
+Assisted-by: Claude:claude-opus-5-5
+Signed-off-by: Arun Iyengar <aiyengar1990@gmail.com>
+---
+ drivers/media/platform/verisilicon/hantro_v4l2.c | 32 +++++++++++++++++++++-------
+ 1 file changed, 25 insertions(+), 7 deletions(-)
+
+diff --git a/drivers/media/platform/verisilicon/hantro_v4l2.c b/drivers/media/platform/verisilicon/hantro_v4l2.c
+--- a/drivers/media/platform/verisilicon/hantro_v4l2.c
++++ b/drivers/media/platform/verisilicon/hantro_v4l2.c
+@@ -528,7 +528,7 @@
+ int
+ hantro_reset_raw_fmt(struct hantro_ctx *ctx, int bit_depth, bool need_postproc)
+ {
+-	const struct hantro_fmt *raw_vpu_fmt;
++	const struct hantro_fmt *raw_vpu_fmt, *old_vpu_src_fmt = NULL;
+ 	struct v4l2_pix_format_mplane raw_fmt, *encoded_fmt;
+ 	int ret;
+ 
+@@ -538,6 +538,7 @@
+ 
+ 	if (ctx->is_encoder) {
+ 		encoded_fmt = &ctx->dst_fmt;
++		old_vpu_src_fmt = ctx->vpu_src_fmt;
+ 		ctx->vpu_src_fmt = raw_vpu_fmt;
+ 	} else {
+ 		encoded_fmt = &ctx->src_fmt;
+@@ -554,6 +555,12 @@
+ 	if (!ret) {
+ 		ctx->bit_depth = bit_depth;
+ 		ctx->need_postproc = need_postproc;
++	} else if (ctx->is_encoder) {
++		/*
++		 * hantro_set_fmt_out() refused the new raw format, so the
++		 * OUTPUT format is unchanged: keep its descriptor in sync.
++		 */
++		ctx->vpu_src_fmt = old_vpu_src_fmt;
+ 	}
+ 
+ 	return ret;
+@@ -713,6 +720,7 @@
+ static int hantro_set_fmt_cap(struct hantro_ctx *ctx,
+ 			      struct v4l2_pix_format_mplane *pix_mp)
+ {
++	bool reset_raw_fmt = ctx->is_encoder;
+ 	int ret;
+ 
+ 	if (ctx->is_encoder) {
+@@ -725,11 +733,22 @@
+ 		 */
+ 		peer_vq = v4l2_m2m_get_vq(ctx->fh.m2m_ctx,
+ 					  V4L2_BUF_TYPE_VIDEO_OUTPUT_MPLANE);
+-		if (vb2_is_busy(peer_vq) &&
+-		    (pix_mp->pixelformat != ctx->dst_fmt.pixelformat ||
+-		     pix_mp->height != ctx->dst_fmt.height ||
+-		     pix_mp->width != ctx->dst_fmt.width))
+-			return -EBUSY;
++		if (vb2_is_busy(peer_vq)) {
++			if (pix_mp->pixelformat != ctx->dst_fmt.pixelformat ||
++			    pix_mp->height != ctx->dst_fmt.height ||
++			    pix_mp->width != ctx->dst_fmt.width)
++				return -EBUSY;
++
++			/*
++			 * The coded format is unchanged, so the raw format
++			 * stays valid. It couldn't be reset anyway while
++			 * OUTPUT buffers exist (hantro_set_fmt_out() would
++			 * refuse), and failing here after the coded format
++			 * has been updated would leave the context
++			 * inconsistent.
++			 */
++			reset_raw_fmt = false;
++		}
+ 	}
+ 
+ 	ret = hantro_try_fmt(ctx, pix_mp, V4L2_BUF_TYPE_VIDEO_CAPTURE_MPLANE);
+@@ -751,7 +770,7 @@
+ 	 * Note that hantro_reset_raw_fmt() also propagates size
+ 	 * changes to the raw format.
+ 	 */
+-	if (ctx->is_encoder)
++	if (reset_raw_fmt)
+ 		hantro_reset_raw_fmt(ctx, HANTRO_DEFAULT_BIT_DEPTH, HANTRO_AUTO_POSTPROC);
+ 
+ 	/* Colorimetry information are always propagated. */
+-- 
+2.55.0

@@ -1,0 +1,80 @@
+From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
+From: Arun Iyengar <aiyengar1990@gmail.com>
+Date: Mon, 02 Nov 2026 06:21:52 +0000
+Subject: [PATCH] drm/rockchip: vop2: Refuse a DCLK outside the pixel clock tolerance
+
+When neither the CRU nor the video PLL can make a DCLK exactly, VOP2
+refuses the state for HDMI but lets every other output run at the
+closest rate the CRU offers, however far off it is. On an Orange Pi 5
+with HDMI holding V0PLL at 593.407 MHz, a 241.5 MHz DisplayPort mode
+runs at 237.6 MHz (GPLL / 5, 1.6 % slow, measured), and before the VOP
+DCLK dividers rounded to the closest rate 3840x2160@29.97Hz ran at
+262.144 MHz (AUPLL / 3, 11.6 % slow). The DP sink is told the mode
+clock and gets another one.
+
+Sinks accept a pixel clock within 0.5 % of the mode's (CTA-861, VESA
+DMT), the tolerance DRM itself uses to match modes. Accept the closest
+CRU rate for the other outputs only within that tolerance, and refuse
+the state with -EINVAL otherwise, like a mode the hardware cannot
+display, instead of committing it at a wrong rate.
+
+Assisted-by: Claude:claude-opus-5-5
+Signed-off-by: Arun Iyengar <aiyengar1990@gmail.com>
+---
+ drivers/gpu/drm/rockchip/rockchip_drm_vop2.c | 25 +++++++++++++++++++------
+ 1 file changed, 19 insertions(+), 6 deletions(-)
+
+diff --git a/drivers/gpu/drm/rockchip/rockchip_drm_vop2.c b/drivers/gpu/drm/rockchip/rockchip_drm_vop2.c
+index d8541f0a1cfe..2b54e9ecb851 100644
+--- a/drivers/gpu/drm/rockchip/rockchip_drm_vop2.c
++++ b/drivers/gpu/drm/rockchip/rockchip_drm_vop2.c
+@@ -2538,6 +2538,15 @@ static bool vop2_dclk_rate_exact(long rate, unsigned long clock)
+ 	return rate > 0 && abs_diff((unsigned long)rate, clock) < 1000;
+ }
+ 
++/*
++ * Sinks accept a pixel clock within 0.5 % of the mode's (CTA-861, VESA DMT),
++ * the tolerance DRM itself uses to match modes.
++ */
++static bool vop2_dclk_rate_close(long rate, unsigned long clock)
++{
++	return rate > 0 && abs_diff((unsigned long)rate, clock) * 200 <= clock;
++}
++
+ /*
+  * The CRU parents of dclk_vopN_src (GPLL, CPLL, V0PLL, AUPLL) only give
+  * integer fractions of their current rates. If none of them makes the DCLK
+@@ -2602,10 +2611,11 @@ static unsigned long vop2_crtc_dclk_pll_claimed(struct vop2_video_port *vp,
+  * the PHY supports, but when the DCLK has to come from the system CRU (FRL
+  * mode, or rates beyond the PHY PLL), it is derived by integer division
+  * from a few fixed PLLs, and the clock framework silently picks the closest
+- * lower rate: e.g. 3840x2160@59.94Hz (593.407 MHz) would run at 500 MHz.
+- * Use the video PLL for such a rate when it is available (for any output),
+- * and refuse the HDMI configuration otherwise instead of scanning out at a
+- * wrong rate.
++ * rate: e.g. 3840x2160@59.94Hz (593.407 MHz) would run at 594 MHz.
++ * Use the video PLL for such a rate when it is available (for any output).
++ * Otherwise refuse the configuration instead of scanning out at a wrong
++ * rate: HDMI unless the CRU rate is exact, the other outputs unless it is
++ * within the pixel clock tolerance.
+  */
+ static int vop2_crtc_atomic_check_dclk(struct vop2_video_port *vp,
+ 				       struct drm_crtc_state *crtc_state)
+@@ -2692,9 +2702,12 @@ static int vop2_crtc_atomic_check_dclk(struct vop2_video_port *vp,
+ 		return 0;
+ 	}
+ 
+-	/* Other outputs keep running at the closest rate, as before */
+-	if (!hdmi)
++	if (!hdmi && vop2_dclk_rate_close(rate, clock)) {
++		drm_dbg_kms(vop2->drm,
++			    "vp%d: DCLK %lu Hz from the closest CRU rate %ld Hz\n",
++			    vp->id, clock, rate);
+ 		return 0;
++	}
+ 
+ 	drm_dbg_kms(vop2->drm,
+ 		    "vp%d: DCLK %lu Hz not available from the CRU (closest %ld Hz)\n",
+-- 
+2.55.0
+

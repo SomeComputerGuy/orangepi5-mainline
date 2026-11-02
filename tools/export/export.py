@@ -474,8 +474,8 @@ def status_md(topics, repo):
     L += ["", "## Image kernel", "",
           "`patches/linux/` is what `scripts/build-kernel.sh` applies on v7.3 for the image "
           "(recreated as fork branch `opi5/image`, plus tag `image-<kernel package version>` for every "
-          "image kernel, e.g. `image-7.3.0-11` for the current kernel build 11). It is a snapshot of the topics that "
-          "were ready for the image plus the carried fixes added since (kernel builds 9-11); the topic "
+          "image kernel, e.g. `image-7.3.0-14` for kernel build 14, which is in testing). It is a snapshot of the topics that "
+          "were ready for the image plus the carried fixes added since (kernel builds 9-14); the topic "
           "directories are the reference for upstreaming, and the prepared upstream series (not sent) are "
           "listed per patch in docs/image-kernel/MANIFEST.md."
           + (" Range-by-range provenance and test state: [docs/image-kernel/MANIFEST.md](docs/image-kernel/MANIFEST.md)."

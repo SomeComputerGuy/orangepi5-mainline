@@ -1,0 +1,39 @@
+From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
+From: Arun Iyengar <aiyengar1990@gmail.com>
+Date: Mon, 2 Nov 2026 08:31:23 +0000
+Subject: [PATCH] drm/display: hdmi: Force a modeset when the FRL configuration
+ changes
+
+drm_atomic_helper_connector_hdmi_check() forces a modeset when the
+output color depth, format or RGB quantization range changes, but not
+when the FRL configuration does. That one can change on its own, with
+the same mode, depth and format, when the sink's EDID changes its
+maximum TMDS character rate or FRL rate (an EDID override, or another
+sink on the connector). Without a modeset the commit leaves the link
+running with the old configuration, while the connector state
+describes the new one.
+
+Treat a change of the FRL rate or lane count like a change of the
+color depth and set mode_changed on the CRTC.
+
+Assisted-by: Claude:claude-opus-5-5
+Signed-off-by: Arun Iyengar <aiyengar1990@gmail.com>
+---
+ drivers/gpu/drm/display/drm_hdmi_state_helper.c | 4 +++-
+ 1 file changed, 3 insertions(+), 1 deletion(-)
+
+diff --git a/drivers/gpu/drm/display/drm_hdmi_state_helper.c b/drivers/gpu/drm/display/drm_hdmi_state_helper.c
+index 41dcd8b1511f..14e4e9e29fb3 100644
+--- a/drivers/gpu/drm/display/drm_hdmi_state_helper.c
++++ b/drivers/gpu/drm/display/drm_hdmi_state_helper.c
+@@ -977,7 +977,9 @@ int drm_atomic_helper_connector_hdmi_check(struct drm_connector *connector,
+ 
+ 	if (old_conn_state->hdmi.broadcast_rgb != new_conn_state->hdmi.broadcast_rgb ||
+ 	    old_conn_state->hdmi.output_bpc != new_conn_state->hdmi.output_bpc ||
+-	    old_conn_state->hdmi.output_format != new_conn_state->hdmi.output_format) {
++	    old_conn_state->hdmi.output_format != new_conn_state->hdmi.output_format ||
++	    old_conn_state->hdmi.frl_rate_per_lane != new_conn_state->hdmi.frl_rate_per_lane ||
++	    old_conn_state->hdmi.frl_lanes != new_conn_state->hdmi.frl_lanes) {
+ 		struct drm_crtc *crtc = new_conn_state->crtc;
+ 		struct drm_crtc_state *crtc_state;
+ 

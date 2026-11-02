@@ -1,0 +1,75 @@
+From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
+From: Arun Iyengar <aiyengar1990@gmail.com>
+Date: Mon, 02 Nov 2026 06:21:53 +0000
+Subject: [PATCH] drm/display: hdmi: Only check the active lanes for FRL LTP requests
+
+In a 3 lane FRL mode (3 Gbps or 6 Gbps per lane) Ln3_LTP_req carries no
+request, but link training compares it like the other lanes: a sink
+asking for a lower FRL rate (0xF on every active lane) or sending the
+Nyquist clock pattern request (0x3) is not recognised unless it also
+happens to fill in lane 3. The 0xF request then goes to the transmitter
+as a link training pattern, and training never falls back to a lower
+rate.
+
+Ignore Ln3_LTP_req in 3 lane modes.
+
+Assisted-by: Claude:claude-opus-5-5
+Signed-off-by: Arun Iyengar <aiyengar1990@gmail.com>
+---
+ drivers/gpu/drm/display/drm_hdmi_helper.c | 19 ++++++++++++++++---
+ 1 file changed, 16 insertions(+), 3 deletions(-)
+
+diff --git a/drivers/gpu/drm/display/drm_hdmi_helper.c b/drivers/gpu/drm/display/drm_hdmi_helper.c
+index 35cafb878d2d..a5ff6ab09889 100644
+--- a/drivers/gpu/drm/display/drm_hdmi_helper.c
++++ b/drivers/gpu/drm/display/drm_hdmi_helper.c
+@@ -947,6 +947,15 @@ static int drm_connector_hdmi_frl_lts2(struct drm_connector *connector)
+ 	return DRM_HDMI_FRL_LTSL;
+ }
+ 
++/*
++ * Whether the sink requests the same LTP value on every active lane: in 3 lane
++ * FRL modes Ln3_LTP_req carries no request.
++ */
++static bool drm_hdmi_frl_ltp_all(u8 lanes, u8 ln0, u8 ln1, u8 ln2, u8 ln3, u8 ltp)
++{
++	return ln0 == ltp && ln1 == ltp && ln2 == ltp && (lanes < 4 || ln3 == ltp);
++}
++
+ /*
+  * Conduct link training for the specified FRL rate.
+  */
+@@ -1001,6 +1010,7 @@ static int drm_connector_hdmi_frl_lts3(struct drm_connector *connector)
+ 		}
+ 
+ 		if (val & SCDC_FLT_UPDATE) {
++			u8 lanes = hdmi->scdc_work_data.frl_lanes;
+ 			u8 ln0, ln1, ln2, ln3;
+ 
+ 			ret = drm_scdc_get_frl_ltp_request(connector, &ln0, &ln1,
+@@ -1013,7 +1023,10 @@ static int drm_connector_hdmi_frl_lts3(struct drm_connector *connector)
+ 			drm_dbg_kms(dev, "FRL LTS:3 ln0=0x%x ln1=0x%x ln2=0x%x ln3=0x%x\n",
+ 				    ln0, ln1, ln2, ln3);
+ 
+-			if (ln0 == 0xf && ln1 == 0xf && ln2 == 0xf && ln3 == 0xf) {
++			if (lanes < 4)
++				ln3 = 0;
++
++			if (drm_hdmi_frl_ltp_all(lanes, ln0, ln1, ln2, ln3, 0xf)) {
+ 				drm_dbg_kms(dev, "FRL LTS:3 rate change request\n");
+ 				return DRM_HDMI_FRL_LTS4;
+ 			}
+@@ -1038,8 +1051,8 @@ static int drm_connector_hdmi_frl_lts3(struct drm_connector *connector)
+ 					drm_err(dev, "FRL LTS:3 set_ffe_level failed: %d\n", ret);
+ 					return DRM_HDMI_FRL_LTSL;
+ 				}
+-			} else if (ln0 == 0x3 && ln1 == 0x3 && ln2 == 0x3 &&
+-				   ln3 == 0x3 && !hdmi->scdc_work_data.flt_no_timeout) {
++			} else if (drm_hdmi_frl_ltp_all(lanes, ln0, ln1, ln2, ln3, 0x3) &&
++				   !hdmi->scdc_work_data.flt_no_timeout) {
+ 				drm_dbg_kms(dev, "FRL LTS:3 ignore Nyquist clock pattern\n");
+ 			} else {
+ 				ret = hdmi->funcs->frl_set_ltp(connector, ln0,
+-- 
+2.55.0
+

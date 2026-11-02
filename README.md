@@ -21,7 +21,7 @@ This repository has two purposes:
 
 | Component | Version | Where |
 |---|---|---|
-| Kernel | `7.3.0-11` = Linux v7.3 + the 422 patches in `patches/linux` (141 of them ours, signed off by the author; the rest carried from other people's series) | `scripts/build-kernel.sh`; fork tag `image-7.3.0-11` |
+| Kernel | `7.3.0-14` = Linux v7.3 + the 449 patches in `patches/linux` (168 of them ours, signed off by the author; the rest carried from other people's series). Kernel 14 is in testing; the last full hardware queue ran on kernel 12 (kernel 13 boot-checked, partial display run) | `scripts/build-kernel.sh`; fork tag `image-7.3.0-14` (`image-7.3.0-11` is the previous image kernel) |
 | U-Boot | v2026.10 + `patches/u-boot` (three carried fixes 0001-0003 and the board `-u-boot.dtsi` fragments); the 2026-11-01 build is in the test board's SPI flash | `scripts/build-uboot.sh` |
 | TF-A | v2.15.0 + `patches/tf-a` (PHP CRU clock-gate save/restore), BL31 built from source | `scripts/build-uboot.sh` |
 | Image | Ubuntu 26.10 arm64, server and desktop variants | `scripts/build-image.sh` |
@@ -29,7 +29,7 @@ This repository has two purposes:
 ## What works
 
 Tested on an Orange Pi 5 (RK3588S, 8 GB) booting from an M.2 SATA SSD with the image kernel
-`7.3.0-11` unless a row says otherwise. Details for each topic are in its `notes/`; the per-build
+`7.3.0-12` unless a row says otherwise (older rows name the kernel they were measured on; kernels 13 and 14 are listed under Partially). Details for each topic are in its `notes/`; the per-build
 provenance is in [`docs/image-kernel/MANIFEST.md`](docs/image-kernel/MANIFEST.md).
 
 ### Works
@@ -45,7 +45,7 @@ provenance is in [`docs/image-kernel/MANIFEST.md`](docs/image-kernel/MANIFEST.md
 | GPU / NPU | panthor (Mali-G610) at 995-1024 MHz under load, 200 runtime suspend/resume jobs without failure; rocket (NPU) at 1 GHz with DVFS and thermal cooling, Teflon inference matches the CPU |
 | Display | HDMI0 up to 4K60 TMDS, HDMI 2.1 FRL 4K120 and 4K60 10 bpc; exact pixel clocks (VOP2 dividers, sync polarity, video PLL); the "No Signal" wedge after leaving YCbCr 4:2:0 is fixed (VOP2 resets); HDPTX PHY lanes powered down on blank. USB-C DisplayPort alt mode through a dock, including DP-to-HDMI protocol-converter docks (4K30) and pin-assignment re-train. Dual display with 0 VOP2 underflows (AXI port balancing) |
 | Audio | HDMI audio, including across FRL/TMDS mode changes; the EINVAL on open seen on kernel 10 is fixed (PCM registered before the DAI) |
-| USB | Type-A USB3 port: a device present at boot is moved from 480M to SuperSpeed (port pairing + retry). Three SuperSpeed devices at boot on kernel 11 |
+| USB | Type-A USB3 port: a device present at boot is moved from 480M to SuperSpeed (port pairing + retry). Three SuperSpeed devices at boot on kernel 11. **USB-C role switching works again from kernel 12:** the USB side of the USB-C dock (USB 2.0 and USB 3) enumerates, after boot and after every s2idle and deep-suspend resume with every expected dock device present (kernel 12 queue; the kernel 11 regression was the USB2 PHY suspend bit, `patches/linux/2225`). The follow-the-role and host-default patches (`2230`-`2233`) are in kernel 13; kernel 13 boots with all three SuperSpeed devices and no missing USB device. See "Hardware limitation" below |
 | Network | Gigabit Ethernet at line rate (940 Mbit/s, 0 errors) with `rgmii-id` |
 | Suspend (s2idle) | **Works with an RTC wake-up: 47/47 cycles on kernel 10 + the RTC fix, 10/10 on kernel 11.** The earlier "resume hang" was a lost HYM8563 minute-resolution alarm (fixed in the rtc core, `patches/linux/1917`). After every resume: USB3 links, DP, HDMI, SATA and Ethernet checked |
 | Media packages | FFmpeg/mpv V4L2 Request hwaccels, GStreamer v4l2codecs and kmssink fixes (rebuilt Ubuntu packages, in both images); VA-API driver ([libva-v4l2_request fork](https://github.com/SomeComputerGuy/libva-v4l2_request)) in the desktop image |
@@ -59,19 +59,20 @@ provenance is in [`docs/image-kernel/MANIFEST.md`](docs/image-kernel/MANIFEST.md
 | Desktop image | Builds (`--variant desktop`, 2026-11-01, kernel 10). The previous desktop image (kernel 7) booted to the GNOME greeter on HDMI 4K60 10 bpc and on the DP dock; the client test sheet (Firefox, Chrome, Jellyfin MPV Shim with hardware decode) is still open. Browser hardware decode needs the Firefox sandbox / Chromium render-node changes, which are not in the stock builds (`patches/chromium`) |
 | Camera | rkisp2 series plus Orange Pi 5 sensor overlays (`patches/linux-extra`): probing works, no camera module attached yet |
 | MIPI DSI | ili9881c panel driver and LCD overlays (`patches/linux-extra`): no panel attached |
-| Hardware tests of our patches | 100 of our 141 patches have recorded hardware evidence; 32 still need a dedicated test (mostly error paths, bindings and DT-only changes). Those tests are in progress |
+| Kernels 13 and 14 (in testing) | Kernel 13 boots clean (0 WARN, 0 deferred probes, 0 failed units, all USB devices present). Added since kernel 12, in `patches/linux`: video PLL (V0PLL) clock fixes (`1911`-`1918`; the three clock fixes ran on a kernel 12 test build: frlpll A 23/23 and C 10/10 camera GOOD, c4_both DP rate within 17 ppm; the full kernel 13/14 run is pending), HDMI FRL link-training fixes (`1216`-`1222`), RGA3 error recovery (`2239`-`2241`), Rockchip IOMMU page-fault-storm handling (`2234`-`2238`), a VP9 segmentation-map fix for error-resilient and resized frames (`2228`, with the GStreamer v4l2codecs resize patch `patches/gstreamer/0010`; on kernel 12 the resize vectors still mismatched libvpx, so the fix is not confirmed bit-exact), `drm/debugfs` edid_override "reset" with a newline (`2229`), and two GStreamer v4l2 encoder error-handling patches (`patches/gst-plugins-good/0009`, `0010`). The kernel 13 dual-head display matrix stopped part-way (683 of 1635 real cases run, with DP pixel-clock failures in it); kernel 14 has not been run on the board yet |
+| Hardware tests of our patches | Counts below were taken at kernel 11 (141 of our patches then): 100 had recorded hardware evidence; 32 still needed a dedicated test (mostly error paths, bindings and DT-only changes). Those tests are in progress |
 
-### Not working
+### Hardware limitation
 
 | Area | State |
 |---|---|
-| USB-C dock, USB side | On kernel 11 no USB device behind the USB-C dock enumerates, USB 2.0 or USB 3 (the dwc3 controller of the USB-C port never starts; DP alt mode on the same dock works). Regression from kernel 10, fix in progress |
+| USB 2.0 Type-A port next to the USB3 port, and the USB-C port | On the Orange Pi 5 v1.2 the USB 2.0 Type-A port beside the USB3 port is wired in parallel to the USB 2.0 data lines of the USB-C port, with no switch. Only one of the two can use USB 2.0 at a time. The kernel makes the controller a host by default when nothing is attached to the USB-C port (`2233`), so the Type-A port works then; a USB-C partner still gets the role it negotiates. This is board design, not a driver bug |
 
 ### Untested
 
 | Area | State |
 |---|---|
-| Deep suspend (`mem`) | Not run yet. The TF-A fixes and an unattended board test are prepared in the workspace; 1102 (cpufreq on CPU online) is only needed there and is untested |
+| Deep suspend (`mem`) | One real deep cycle on kernel 12 resumed with every dock device back, and the 1102 `pm_test=core` run passed (no BUG/WARN); a longer deep-suspend run is not done yet |
 | Headphone / microphone jack (ES8388) | UCM defaults applied, path opens, not checked by ear |
 | DP 10/12 bpc, HDMI 10 bpc in every mode, HDR, VRR | Need a 4-lane / HBR3 sink or the display-matrix rerun |
 | CEC tunnelling over DP (`1210`) | Builds; needs a CEC-capable USB-C to HDMI adapter |

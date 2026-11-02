@@ -8,8 +8,6 @@ retune it for pixel clocks the HDMI PHY PLL cannot provide (HDMI FRL
 mode) or that are not integer fractions of the system PLLs (DisplayPort,
 eDP, DSI), e.g. 3840x2160@59.94Hz.
 
-(cherry picked from commit 9dda05f40a2db743755d21dfe59160b5dfcdcae1)
-
 Assisted-by: Claude:claude-opus-5-5
 Signed-off-by: Arun Iyengar <aiyengar1990@gmail.com>
 ---

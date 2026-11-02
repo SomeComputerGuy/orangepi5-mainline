@@ -1,9 +1,9 @@
 # dp-altmode: USB-C DisplayPort alt-mode (USBDP PHY, dwc3 glue, dw-dp series) + Orange Pi 5 DT
 
-- Workspace branch: `opi5/dp-altmode-7.3` (exported 2026-11-01)
+- Workspace branch: `opi5/dp-altmode-7.3` (exported 2026-11-02)
 - Kernel fork branch: `opi5/dp-altmode` (see PUBLISH.md)
 - Sits on: `board-sata` (base commit `5e33b74b04cf`)
-- Hardware test: yes: in the image kernel; DP alt mode works through a USB-C dock (DP-1 at boot, 100/100 attach cycles with the tcpm fixes); known issue on kernel 11: the dock's USB 2.0 side does not enumerate (under investigation)
+- Hardware test: yes: in the image kernel; DP alt mode works through a USB-C dock (DP-1 at boot, 100/100 attach cycles with the tcpm fixes); the dock's USB side (USB 2.0 and USB 3) enumerates again on kernel 12 (inno-usb2 PHY fix, patches/linux 2225; boot check and suspend cycles with every dock device present); USB-C role following and host default (patches/linux 2230-2233) are in kernel 13, in testing
 - Next upstream step: send the Orange Pi 5 DT patch 1005 (prepared); the carried series are on the list by their authors
 - Patches: 67 = 2 ours, 65 carried from others, 0 local-only
 

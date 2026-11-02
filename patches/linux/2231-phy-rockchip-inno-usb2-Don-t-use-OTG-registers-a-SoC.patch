@@ -1,0 +1,187 @@
+From f3f6ed5cfeb7fdd1f11cd8a0959e3bdcef925661 Mon Sep 17 00:00:00 2001
+From: Arun Iyengar <aiyengar1990@gmail.com>
+Date: Mon, 2 Nov 2026 07:12:28 +0000
+Subject: [PATCH 2/4] phy: rockchip: inno-usb2: Don't use OTG registers a SoC
+ doesn't have
+
+The register tables leave out what a SoC doesn't have, and a left-out
+entry is all zeroes: offset 0, bit 0. The OTG port code uses the ID pin
+detection registers and the charger detection opmode register without
+checking for that, so on SoCs without them it reads and writes bit 0 of
+the first register of the PHY's GRF instead:
+
+- RK3588 has no ID detection registers described. Initialising the OTG
+  port writes 0 to bit 0 of GRF offset 0, which is the 480 MHz clock
+  output gate (clkout_ctl), and turns the clock output on behind the
+  clock framework's back. The initial ID sync at probe, and the ID IRQ
+  handler on every interrupt of the PHY, read that same clock gate bit
+  as the ID pin level and report the result as EXTCON_USB_HOST, so the
+  OTG state machine's idea of the role depends on whether the 480 MHz
+  clock happened to be gated. The ID IRQ handler also takes the gate bit
+  for a pending ID interrupt and "clears" it by enabling the clock.
+- RK3576 has no ID detection registers either, and offset 0 is its
+  phy_sus field there: initialising the OTG port clears bit 0 of the
+  PHY suspend configuration.
+- RK3562 has the ID interrupt registers but no utmi_id, so its ID
+  interrupt reports bit 0 of offset 0 as the ID level.
+- RK3562, RK3576 and RK3588 have no opmode register, which charger
+  detection writes when VBUS is not valid.
+
+On an Orange Pi 5 (RK3588S), whose USB 3.0 OTG controller gets its role
+from a USB-C port controller, the PHY's extcon reports USB-HOST=1 with
+nothing on the ID pin, only because the 480 MHz clock output was running
+when the port probed. Its OTG state machine went to A_HOST from that,
+which happened to keep charger detection off the lines while the
+controller was the host.
+
+Only set up and handle ID detection when the port has the ID status and
+both ID interrupt registers, only sync the initial ID state when it has
+the ID status register, and only switch the opmode when the SoC has that
+register. Ports without ID detection get their role from the extcon
+given in the device tree, or from the controller through phy_set_mode().
+On the Orange Pi 5 the extcon now reports USB-HOST=0, and the OTG port
+goes to A_HOST when DWC3 sets the host mode.
+
+Assisted-by: Claude:claude-opus-5-5
+Signed-off-by: Arun Iyengar <aiyengar1990@gmail.com>
+---
+ drivers/phy/rockchip/phy-rockchip-inno-usb2.c | 81 ++++++++++++-------
+ 1 file changed, 53 insertions(+), 28 deletions(-)
+
+diff --git a/drivers/phy/rockchip/phy-rockchip-inno-usb2.c b/drivers/phy/rockchip/phy-rockchip-inno-usb2.c
+index 23492ea03df5..49ec64edc4e9 100644
+--- a/drivers/phy/rockchip/phy-rockchip-inno-usb2.c
++++ b/drivers/phy/rockchip/phy-rockchip-inno-usb2.c
+@@ -293,6 +293,24 @@ static inline bool property_enabled(struct regmap *base,
+ 	return tmp != reg->disable;
+ }
+ 
++/*
++ * Not every register is there on every SoC, and an unused entry of the
++ * register tables is all zeroes. Its offset 0 is a real register though,
++ * so it must not be read or written in place of the missing one.
++ */
++static inline bool property_present(const struct usb2phy_reg *reg)
++{
++	return reg->enable || reg->disable;
++}
++
++/* Whether a port can detect and report changes of its ID pin */
++static bool rockchip_usb2phy_id_det_present(const struct rockchip_usb2phy_port_cfg *cfg)
++{
++	return property_present(&cfg->utmi_id) &&
++	       property_present(&cfg->idfall_det_en) &&
++	       property_present(&cfg->idrise_det_en);
++}
++
+ static int rockchip_usb2phy_reset(struct rockchip_usb2phy *rphy)
+ {
+ 	int ret;
+@@ -573,30 +591,32 @@ static int rockchip_usb2phy_init(struct phy *phy)
+ 			if (ret)
+ 				goto out;
+ 
+-			/* clear id status and enable id detect irqs */
+-			ret = property_enable(rphy->grf,
+-					      &rport->port_cfg->idfall_det_clr,
+-					      true);
+-			if (ret)
+-				goto out;
+-
+-			ret = property_enable(rphy->grf,
+-					      &rport->port_cfg->idrise_det_clr,
+-					      true);
+-			if (ret)
+-				goto out;
+-
+-			ret = property_enable(rphy->grf,
+-					      &rport->port_cfg->idfall_det_en,
+-					      true);
+-			if (ret)
+-				goto out;
+-
+-			ret = property_enable(rphy->grf,
+-					      &rport->port_cfg->idrise_det_en,
+-					      true);
+-			if (ret)
+-				goto out;
++			if (rockchip_usb2phy_id_det_present(rport->port_cfg)) {
++				/* clear id status and enable id detect irqs */
++				ret = property_enable(rphy->grf,
++						      &rport->port_cfg->idfall_det_clr,
++						      true);
++				if (ret)
++					goto out;
++
++				ret = property_enable(rphy->grf,
++						      &rport->port_cfg->idrise_det_clr,
++						      true);
++				if (ret)
++					goto out;
++
++				ret = property_enable(rphy->grf,
++						      &rport->port_cfg->idfall_det_en,
++						      true);
++				if (ret)
++					goto out;
++
++				ret = property_enable(rphy->grf,
++						      &rport->port_cfg->idrise_det_en,
++						      true);
++				if (ret)
++					goto out;
++			}
+ 
+ 			schedule_delayed_work(&rport->otg_sm_work,
+ 					      OTG_SCHEDULE_DELAY * 3);
+@@ -981,7 +1001,8 @@ static void rockchip_chg_detect_stop(struct rockchip_usb2phy *rphy,
+ 
+ 	vbus_attach = property_enabled(rphy->grf, &rport->port_cfg->utmi_bvalid);
+ 	if (rphy->chg_state != USB_CHG_STATE_UNDEFINED &&
+-	    rphy->chg_state != USB_CHG_STATE_DETECTED && !vbus_attach)
++	    rphy->chg_state != USB_CHG_STATE_DETECTED && !vbus_attach &&
++	    property_present(&rphy->phy_cfg->chg_det.opmode))
+ 		property_enable(rphy->grf, &rphy->phy_cfg->chg_det.opmode, true);
+ 
+ 	rphy->chg_state = USB_CHG_STATE_UNDEFINED;
+@@ -1023,7 +1044,7 @@ static void rockchip_chg_detect_work(struct work_struct *work)
+ 		if (!rport->suspended && !vbus_attach)
+ 			rockchip_usb2phy_power_off(rport->phy);
+ 		/* put the controller in non-driving mode */
+-		if (!vbus_attach)
++		if (!vbus_attach && property_present(&rphy->phy_cfg->chg_det.opmode))
+ 			property_enable(rphy->grf, &rphy->phy_cfg->chg_det.opmode, false);
+ 		/* Start DCD processing stage 1 */
+ 		rockchip_chg_enable_dcd(rphy, true);
+@@ -1087,7 +1108,7 @@ static void rockchip_chg_detect_work(struct work_struct *work)
+ 		fallthrough;
+ 	case USB_CHG_STATE_DETECTED:
+ 		/* put the controller in normal mode */
+-		if (!vbus_attach)
++		if (!vbus_attach && property_present(&rphy->phy_cfg->chg_det.opmode))
+ 			property_enable(rphy->grf, &rphy->phy_cfg->chg_det.opmode, true);
+ 		rockchip_usb2phy_otg_sm_work(&rport->otg_sm_work.work);
+ 		dev_dbg(&rport->phy->dev, "charger = %s\n",
+@@ -1256,6 +1277,9 @@ static irqreturn_t rockchip_usb2phy_id_irq(int irq, void *data)
+ 	struct rockchip_usb2phy *rphy = dev_get_drvdata(rport->phy->dev.parent);
+ 	bool id;
+ 
++	if (!rockchip_usb2phy_id_det_present(rport->port_cfg))
++		return IRQ_NONE;
++
+ 	if (!property_enabled(rphy->grf, &rport->port_cfg->idfall_det_st) &&
+ 	    !property_enabled(rphy->grf, &rport->port_cfg->idrise_det_st))
+ 		return IRQ_NONE;
+@@ -1515,7 +1539,8 @@ static int rockchip_usb2phy_otg_port_init(struct rockchip_usb2phy *rphy,
+ 			goto out;
+ 		}
+ 
+-		if (!of_property_present(rphy->dev->of_node, "extcon")) {
++		if (!of_property_present(rphy->dev->of_node, "extcon") &&
++		    property_present(&rport->port_cfg->utmi_id)) {
+ 			/* do initial sync of usb state */
+ 			id = property_enabled(rphy->grf, &rport->port_cfg->utmi_id);
+ 			extcon_set_state_sync(rphy->edev, EXTCON_USB_HOST, !id);
+-- 
+2.55.0
+

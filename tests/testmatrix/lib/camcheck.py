@@ -7,6 +7,7 @@
   camcheck.py calib <white> <black> <out.json>   screen quadrilateral + levels from full-white / full-black frames
   camcheck.py classify <calib.json> <img> <pattern> [code]   -> JSON {verdict: GOOD|BLACK|FLAT|SCRAMBLED|WRONGCASE}
   camcheck.py rescore <run dir>            re-classify every saved frame of a display-matrix run (see README)
+  camcheck.py tune <calib.json> <bars img> <code>   set top_ext (screen cut off at the top of the frame)
   camcheck.py selftest                     synthetic frames, incl. a steep perspective view
 Images: .rgb (raw RGB, size inferred) or .jpg (decoded with gst-launch when available).
 
@@ -19,12 +20,15 @@ Patterns: "bars" (kmsctl.py: 8 bars, 16 stripes, 16-bit case code), "smpte" (mod
 """
 import json, os, re, shutil, subprocess, sys, tempfile, time
 
-SIZES = [(192, 108), (384, 216), (320, 180), (640, 360)]
-CAP_W, CAP_H = 384, 216                      # size of new captures
+SIZES = [(192, 108), (384, 216), (320, 180), (640, 360), (960, 540), (1280, 720)]
+# size of new captures; CAM_RGB=1280x720 for a wide view with two screens in one frame (see k12/CAMERA-SETUP.md)
+CAP_W, CAP_H = (int(x) for x in os.environ.get("CAM_RGB", "384x216").split("x"))
 GW, GH = 128, 72                             # canonical (warped) grid
 CAM_NAME = os.environ.get("CAM_NAME", "Aluratek")
 TH = {"bars_min": 0.87, "stripes_min": 0.85, "black_frac": 0.12, "min_contrast": 0.25, "texture_min": 0.08,
-      "gap_min": 0.04}
+      "gap_min": 0.03}
+ASPECT_TOL = 0.10   # detect_crop() reads the box edge off the pattern's bloom and a coarse grid: a 4:3 pillarbox
+                    # (0.75) is measured as 0.81; a stretched 4:3 mode on a 16:9 panel differs by 0.25
 
 
 # ---------------------------------------------------------------- I/O
@@ -377,7 +381,7 @@ def picture_grid(img, cal, mode=None):
         dw, dh = 1.0, 1.0           # nothing to see: judge the whole screen (BLACK/FLAT stay as they were)
     else:
         dw, dh = det
-        if abs(dw - cw) > .05 or abs(dh - ch) > .05:
+        if abs(dw - cw) > ASPECT_TOL or abs(dh - ch) > ASPECT_TOL:
             note = "aspect: TV did not preserve aspect"
             cw, ch = dw, dh
     if cw > .97 and ch > .97:
@@ -388,7 +392,39 @@ def picture_grid(img, cal, mode=None):
     return warp(img, sub), note
 
 
+def with_top_ext(cal):
+    """calibration whose quad is extended upwards by cal["top_ext"] (fraction of the visible height): a screen whose
+    top edge is outside the camera frame (see tune_top) is calibrated on the visible part only"""
+    e = cal.get("top_ext", 0)
+    if not e:
+        return cal
+    tl, tr, br, bl = cal["quad"]
+    c = dict(cal)
+    c["quad"] = [[tl[0] + (tl[0] - bl[0]) * e, tl[1] + (tl[1] - bl[1]) * e],
+                 [tr[0] + (tr[0] - br[0]) * e, tr[1] + (tr[1] - br[1]) * e], br, bl]
+    return c
+
+
+def tune_top(cal, img, code, pattern="bars", steps=15, maxe=0.15):
+    """for a screen cut off by the top of the frame: choose top_ext (0..maxe) that best aligns the known bars
+    layout (bars + stripes + 16-bit code of the frame, which must show `code`). Stores and returns it."""
+    c0 = dict(cal)
+    c0.pop("top_ext", None)
+    best = None
+    for i in range(steps + 1):
+        e = maxe * i / steps
+        c = dict(c0)
+        c["top_ext"] = e
+        r = classify(c, img, pattern, code)
+        sc = (r["verdict"] == "GOOD", r["bars"] + r.get("stripes", 0) + r.get("code_ok", False) * 2, -e)
+        if best is None or sc > best[0]:
+            best = (sc, e, r["verdict"])
+    cal["top_ext"] = round(best[1], 4)
+    return cal["top_ext"], best[2]
+
+
 def classify(cal, img, pattern, code=None, mode=None):
+    cal = with_top_ext(cal)
     th = cal.get("thresholds", TH)
     g, note = picture_grid(img, cal, mode)
     rng = max(cal["white_lum"] - cal["black_lum"], 1)
@@ -579,6 +615,10 @@ def main(a):
     elif a[0] == "classify":
         cal = json.load(open(a[1]))
         print(json.dumps(classify(cal, load(a[2]), a[3], int(a[4]) if len(a) > 4 else None)))
+    elif a[0] == "tune":        # tune <calib.json> <bars img> <code>: set top_ext for a screen cut off at the top
+        cal = json.load(open(a[1]))
+        print(tune_top(cal, load(a[2]), int(a[3], 0)))
+        json.dump(cal, open(a[1], "w"), indent=1)
     elif a[0] == "rescore":
         rescore(a[1])
     elif a[0] == "selftest":

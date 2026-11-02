@@ -1,0 +1,47 @@
+From 2f88eab2b7b0d4a9d435920908151abc773f97eb Mon Sep 17 00:00:00 2001
+From: Arun Iyengar <aiyengar1990@gmail.com>
+Date: Mon, 2 Nov 2026 07:15:35 +0000
+Subject: [PATCH] drm/debugfs: Accept "reset" with a trailing newline in
+ edid_override
+
+Writing "reset" to a connector's edid_override debugfs file removes the
+override, but only when exactly those five bytes are written. The
+obvious
+
+  echo reset > /sys/kernel/debug/dri/0/HDMI-A-1/edid_override
+
+writes "reset\n", which is handed to drm_edid_override_set() as an EDID
+and rejected with -EINVAL, leaving the override in place. A test
+harness that cleared its override this way kept running on the
+overridden EDID until the next reboot.
+
+Accept a single trailing newline as well. An EDID is at least 128
+bytes, so a six-byte "reset\n" can't be a valid override.
+
+Assisted-by: Claude:claude-opus-5-5
+Signed-off-by: Arun Iyengar <aiyengar1990@gmail.com>
+---
+ drivers/gpu/drm/drm_debugfs.c | 7 ++++++-
+ 1 file changed, 6 insertions(+), 1 deletion(-)
+
+diff --git a/drivers/gpu/drm/drm_debugfs.c b/drivers/gpu/drm/drm_debugfs.c
+index ae1c6126c2c5..db6cab6103e6 100644
+--- a/drivers/gpu/drm/drm_debugfs.c
++++ b/drivers/gpu/drm/drm_debugfs.c
+@@ -569,7 +569,12 @@ static ssize_t edid_write(struct file *file, const char __user *ubuf,
+ 	if (IS_ERR(buf))
+ 		return PTR_ERR(buf);
+ 
+-	if (len == 5 && !strncmp(buf, "reset", 5))
++	/*
++	 * An EDID is at least 128 bytes, so "reset" with the trailing newline
++	 * that "echo reset" adds can't be mistaken for one.
++	 */
++	if ((len == 5 || (len == 6 && buf[5] == '\n')) &&
++	    !strncmp(buf, "reset", 5))
+ 		ret = drm_edid_override_reset(connector);
+ 	else
+ 		ret = drm_edid_override_set(connector, buf, len);
+-- 
+2.55.0
+

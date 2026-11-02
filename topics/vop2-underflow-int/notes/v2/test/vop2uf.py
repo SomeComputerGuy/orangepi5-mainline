@@ -120,6 +120,10 @@ class Run:
             self.cam = camcheck.find()
         except Exception:                       # noqa: BLE001
             self.cam = None
+        if not self.cam and os.environ.get("NOCAM") != "1":
+            log(f"ABORT: no webcam matching {camcheck.CAM_NAME!r}: picture verdicts are required "
+                "(NOCAM=1 only for a deliberately camera-less run, whose clean cases then FAIL)")
+            sys.exit(4)
         pl = {p["id"]: p for p in self.info["planes"]}
         hc = self.hdmi["possible_crtcs"][0]
         problems = []
@@ -207,7 +211,7 @@ class Run:
         if expect == "reject":
             verdict = "PASS" if not ok else "FAIL"
         elif expect == "clean":
-            good_pic = cam.startswith("GOOD") or cam in ("-", "no-cam") or not self.cal_trusted()
+            good_pic = cam.startswith("GOOD")      # "-"/no-cam/cam-error/untrusted calibration never pass
             verdict = "PASS" if ok and pbe == 0 and supp == 0 and good_pic else "FAIL"
         else:
             verdict = "INFO"
@@ -228,6 +232,8 @@ class Run:
     def picture(self, d, code, mwh):
         if not self.cam or not self.cal:
             return "no-cam"
+        if not self.cal_trusted():
+            return "untrusted-calibration"
         try:
             img = camcheck.load(camcheck.capture(f"{d}/cam", self.cam))
             r = camcheck.classify(self.cal, img, "bars", code, mwh)

@@ -30,6 +30,59 @@ if [ "$VARIANT" = server ]; then WORK=$TOP/build/image; else WORK=$TOP/build/ima
 [ -z "$ROOTFS_TAR" ] || WORK=$TOP/build/rootfs-tar-$VARIANT
 OUT=$TOP/out
 ROOT=$WORK/rootfs
+
+# The build runs detached from the terminal (its own session, output in
+# build/<work dir>.log) and this shell only follows the log, so a closed or lost
+# terminal does not kill it half-way. The lock (held by the detached build for
+# its whole life) allows one build per work dir; a second start follows the log.
+if [ -z "$ROOTFS_TAR" ] && [ -z "${OPI5_IMAGE_DETACHED:-}" ]; then
+  LOG=$TOP/build/$(basename "$WORK").log
+  exec 9>"$TOP/build/.$(basename "$WORK").lock"
+  if ! flock -n 9; then
+    echo "an image build in $WORK is already running; following $LOG"
+    echo "(Ctrl-C stops following, not the build)"
+    exec 9>&-; exec tail -n 30 -f "$LOG"
+  fi
+  : > "$LOG"
+  [ -z "${SUDO_UID:-}" ] || chown "$SUDO_UID:$SUDO_GID" "$LOG"
+  OPI5_IMAGE_DETACHED=1 setsid nohup "$0" "${args[@]}" >> "$LOG" 2>&1 < /dev/null &
+  pid=$!
+  exec 9>&-
+  echo "build running as pid $pid, log $LOG (Ctrl-C or a lost terminal stops following, not the build)"
+  tail -n +1 --pid="$pid" -f "$LOG" & tp=$!
+  rc=0; wait "$pid" || rc=$?
+  sleep 1; kill "$tp" 2>/dev/null || true
+  echo "build-image.sh: exit $rc"
+  exit "$rc"
+fi
+
+# With the lock held, anything still working in $ROOT or mounted under $WORK is
+# left over from an interrupted run (e.g. an mmdebstrap orphaned when its terminal
+# died): stop it and unmount, instead of failing on its leftovers.
+if [ -n "${OPI5_IMAGE_DETACHED:-}" ]; then
+  # a failing command under set -e would otherwise end the build without a word in the log
+  trap 'echo "build-image.sh: failed (exit $?) at line $LINENO: $BASH_COMMAND"' ERR
+  stale_pids() {
+    local d c
+    for d in /proc/[0-9]*; do
+      [ "${d#/proc/}" = $$ ] && continue
+      if [ "$(readlink "$d/root" 2>/dev/null)" = "$ROOT" ]; then echo "${d#/proc/}"; continue; fi
+      c=$(tr '\0' ' ' 2>/dev/null < "$d/cmdline") || continue
+      case "$c " in *mmdebstrap*" $ROOT "*) echo "${d#/proc/}";; esac
+    done
+  }
+  p=$(stale_pids)
+  if [ -n "$p" ]; then
+    echo "stopping processes left in $ROOT by an interrupted build: $(echo $p)"
+    kill $p 2>/dev/null || true
+    for _ in $(seq 60); do [ -z "$(stale_pids)" ] && break; sleep 1; done
+    p=$(stale_pids); [ -z "$p" ] || kill -9 $p 2>/dev/null || true
+    sleep 2
+  fi
+  { findmnt -rno TARGET | grep "^$WORK/" || true; } | sort -r | while read -r m; do
+    echo "unmounting leftover $m"; umount "$m" || umount -l "$m"
+  done
+fi
 SUITE=stonking
 MIRROR=http://ports.ubuntu.com/ubuntu-ports
 COMPONENTS="main restricted universe multiverse"

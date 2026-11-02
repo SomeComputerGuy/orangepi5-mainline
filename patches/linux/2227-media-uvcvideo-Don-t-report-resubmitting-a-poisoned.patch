@@ -1,0 +1,55 @@
+From: Arun Iyengar <aiyengar1990@gmail.com>
+Date: Mon, 2 Nov 2026 03:00:00 +0000
+Subject: [PATCH] media: uvcvideo: Don't report resubmitting a poisoned URB as
+ an error
+
+uvc_video_stop_transfer() poisons the video URBs, rather than killing
+them, so that the asynchronous copy work cannot resubmit them after the
+completion handler has returned. A URB that completed just before it
+was poisoned is still handed to uvc_video_complete() or to the copy
+work, whose usb_submit_urb() then fails with -EPERM, exactly as
+intended. Both places log that as
+
+  uvcvideo 7-1.4:1.1: Failed to resubmit video URB (-1).
+
+so every stream stop can print an error although nothing went wrong.
+On an RK3588 board capturing short clips from a UVC webcam it shows up
+on the console every few minutes.
+
+-EPERM from usb_submit_urb() only means the URB was poisoned or is being
+killed, which the driver only does when stopping the stream: don't log
+it. Other failures are still reported.
+
+Link: https://bugzilla.kernel.org/show_bug.cgi?id=217924
+Assisted-by: Claude:claude-opus-5-5
+Signed-off-by: Arun Iyengar <aiyengar1990@gmail.com>
+---
+diff --git a/drivers/media/usb/uvc/uvc_video.c b/drivers/media/usb/uvc/uvc_video.c
+--- a/drivers/media/usb/uvc/uvc_video.c
++++ b/drivers/media/usb/uvc/uvc_video.c
+@@ -1351,8 +1351,12 @@
+ 		uvc_queue_buffer_release(op->buf);
+ 	}
+ 
++	/*
++	 * -EPERM means the URB has been poisoned by uvc_video_stop_transfer(),
++	 * which is how stopping the stream keeps this work from resubmitting.
++	 */
+ 	ret = usb_submit_urb(uvc_urb->urb, GFP_KERNEL);
+-	if (ret < 0)
++	if (ret < 0 && ret != -EPERM)
+ 		dev_err(&uvc_urb->stream->intf->dev,
+ 			"Failed to resubmit video URB (%d).\n", ret);
+ }
+@@ -1781,7 +1785,8 @@
+ 	/* If no async work is needed, resubmit the URB immediately. */
+ 	if (!uvc_urb->async_operations) {
+ 		ret = usb_submit_urb(uvc_urb->urb, GFP_ATOMIC);
+-		if (ret < 0)
++		/* -EPERM: poisoned by uvc_video_stop_transfer(), see above. */
++		if (ret < 0 && ret != -EPERM)
+ 			dev_err(&stream->intf->dev,
+ 				"Failed to resubmit video URB (%d).\n", ret);
+ 		return;
+-- 
+2.51.0

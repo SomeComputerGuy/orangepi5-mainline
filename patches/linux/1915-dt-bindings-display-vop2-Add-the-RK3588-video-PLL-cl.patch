@@ -7,14 +7,12 @@ Subject: [PATCH 13/33] dt-bindings: display: vop2: Add the RK3588 video PLL
 On RK3588 the video port pixel clocks are muxed from the HDMI PHY PLLs
 or from the CRU, where they are integer fractions of GPLL, CPLL, AUPLL or
 the video PLL V0PLL. When the HDMI PHY PLL cannot be used (HDMI FRL mode,
-DisplayPort, eDP, DSI), only a retuned V0PLL gives rates such as the
+DisplayPort, eDP, DSI), only a reprogrammed V0PLL gives rates such as the
 1/1.001 ones exactly.
 
 Document an optional "pll_v0" clock for that PLL, after the HDMI PHY PLL
 clocks. RK3588S has no HDMI1 PHY, so there it directly follows
 pll_hdmiphy0.
-
-(cherry picked from commit 713088133f914af5ee6c9720ce8a39617a86a972)
 
 Assisted-by: Claude:claude-opus-5-5
 Signed-off-by: Arun Iyengar <aiyengar1990@gmail.com>

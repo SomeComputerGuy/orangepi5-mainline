@@ -589,6 +589,10 @@ class Runner:
         if os.path.exists(cp):
             self.calib = json.load(open(cp))
         self.cam_dev = camcheck.find() if CAM_CONN else ""
+        if CAM_CONN and not self.cam_dev and os.environ.get("NOCAM") != "1":
+            # A camera-judged run without a camera is not a run: every row on CAM_CONN would be "" and pass.
+            raise SystemExit(f"ABORT: CAM_CONN={CAM_CONN} but no webcam matching {camcheck.CAM_NAME!r} "
+                             "(NOCAM=1 only for a deliberately camera-less run; its CAM_CONN rows then FAIL)")
         self.marks = None                                 # camrec.Marks when --record
         cases = info.get("_cases", [])
         cal = [c for c in cases if c["group"] == "calib"]
@@ -797,8 +801,15 @@ class Runner:
                 row["verdict"] = "FAIL" if fz else "REJECT"
                 row["notes"] = "link budget allows it" if fz else ("not possible on this link" if fz is False else
                                                                    "feasibility not modelled")
+            elif case["group"] == "dual":
+                row["verdict"] = "REJECT"
+            elif case.get("engine") == "modetest" and self.axi_over_budget(case):
+                # modetest -a leaves the console framebuffer on the primary plane, so the case is two full-screen
+                # layers on this VP plus the other VP: refused on purpose by the AXI fetch check (vop2-fixes 1910)
+                row["verdict"] = "REJECT"
+                row["notes"] = "AXI fetch budget: fbcon primary + test plane at this mode (+ other VP) > 4.6 GB/s (1910)"
             else:
-                row["verdict"] = "REJECT" if case["group"] == "dual" else "FAIL"
+                row["verdict"] = "FAIL"
             self.log_kmsg(row, reasons, case)
             if reasons:
                 row["verdict"] = "FAIL"
@@ -822,13 +833,22 @@ class Runner:
                     and self.spans and self.spans[-1].get("end") == case["idx"]:
                 return self.run_case(dict(case, _retry=1))     # recalibrated just now: judge this case again
             if not self.cam_trusted or (self.spans and self.spans[-1].get("end") == case["idx"]):
-                reasons = [r for r in reasons if not r.startswith("webcam:")]
+                # The camera control failed around this case: the picture verdict cannot be trusted, and an
+                # untrusted verdict is not a pass. The row stays FAIL (reason kept) and is marked UNTRUSTED.
                 row["cam"] = "UNTRUSTED:" + row["cam"]
+                reasons = [r + " (camera control failed: untrusted)" if r.startswith("webcam:") else r
+                           for r in reasons]
+        if CAM_CONN in (case["conn"], case.get("conn2")) and "_ctl" not in case and "expect" not in case \
+                and case["group"] != "calib" and not any(r.startswith("webcam") for r in reasons):
+            # Every case on the camera connector needs a trusted GOOD frame: a missing, uncalibrated,
+            # errored or untrusted camera column is a failed case, never a pass.
+            cam = row["cam"]
+            if cam in ("", "-", "uncalibrated", "ERROR") or cam.startswith("UNTRUSTED") or \
+                    not cam.startswith("GOOD"):
+                reasons.append(f"webcam: no trusted GOOD picture ({cam or 'no frame'})")
         row["reasons"] = "; ".join(reasons)
         row["notes"] = "; ".join(notes)
         row["verdict"] = "FAIL" if reasons else "PASS"
-        if row["cam"].startswith("UNTRUSTED") and cam_fail and not reasons:
-            row["verdict"] = "UNTRUSTED"
         if "expect" in case and "_ctl" not in case:
             got = row["cam"].split(":")[0]
             match = (got == "GOOD") == (case["expect"] == "GOOD")
@@ -837,6 +857,19 @@ class Runner:
                 self.calib["trusted"] = False          # camera verdicts are then recorded but never fail a case
                 json.dump(self.calib, open(f"{self.out}/calib.json", "w"))
         return row
+
+    def axi_over_budget(self, case):
+        """1910's model for a modetest case: fbcon (XR24 full screen) + the test plane on this VP, the other
+        connected VP's fbcon layer on the other port; per-line fetch = width*4*clock/htotal; every split of
+        {a, a, b} over two AXI ports leaves max(a, min(2a, a+b)) on one port; > 4.6 GB/s is refused."""
+        m = self.conns[case["conn"]]["modes"][case["mode"]]
+        a = m["hdisplay"] * 4 * m["clock"] * 1000 / max(m["htotal"], 1)
+        b = 0
+        for c in self.conns.values():
+            if c["name"] != case["conn"] and c.get("connected") and c.get("modes"):
+                o = next((x for x in c["modes"] if x["type"] & 8), c["modes"][0])
+                b = max(b, o["hdisplay"] * 4 * o["clock"] * 1000 / max(o["htotal"], 1))
+        return max(a, min(2 * a, a + b)) > 4.6e9
 
     def log_kmsg(self, row, reasons, case=None):
         msgs = self.kmsg.drain()
@@ -974,8 +1007,9 @@ class Runner:
             return
         if not self.cam_trusted:
             row["cam"] = "UNTRUSTED:" + row["cam"]
-        elif r["verdict"] != "GOOD" and self.calib.get("trusted", True):
-            reasons.append(f"webcam: picture {r['verdict']}")
+        if r["verdict"] != "GOOD":
+            reasons.append(f"webcam: picture {r['verdict']}" +
+                           ("" if self.calib.get("trusted", True) else " (calibration mismatch: untrusted)"))
 
 
 COLS = ["idx", "group", "conn", "mode", "bpc", "cf", "plane", "fmt", "mod", "engine", "commit", "output", "link",
@@ -1193,11 +1227,14 @@ def summarize(out, cases):
         if r["cam"] in ("", "-") or r["cam"].startswith("UNTRUSTED") or r["group"] == "calib":
             continue
         if any(s["start"] <= i <= (s["end"] if s["end"] is not None else last) for s in spans):
+            # inside a span where the camera control failed: the camera verdict is untrusted, which is a FAIL
             r["cam"] = "UNTRUSTED:" + r["cam"]
-            rs = [x for x in r["reasons"].split("; ") if x and not x.startswith("webcam:")]
-            if r["verdict"] == "FAIL" and not rs:
-                r["verdict"] = "UNTRUSTED"
+            rs = [x for x in r["reasons"].split("; ") if x]
+            if not any(x.startswith("webcam") for x in rs):
+                rs.append("webcam: verdict untrusted (camera control failed in this span)")
             r["reasons"] = "; ".join(rs)
+            if r["verdict"] in ("PASS", "UNTRUSTED"):
+                r["verdict"] = "FAIL"
     for r in rows:
         if r["idx"] in crc_fail and r["verdict"] == "PASS":
             r["verdict"] = "FAIL"

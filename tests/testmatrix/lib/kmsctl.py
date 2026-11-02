@@ -8,6 +8,7 @@
              [,pattern=bars|white|black|grey][,code=<n>][,prop:<name>=<value>]... [,prop:crtc:<name>=<v>]
              prop value hdr:pq|hlg|sdr|none builds an HDR_OUTPUT_METADATA blob
       Extra planes:  --plane conn=<name>,plane=<id>,fmt=NV12,mod=linear[,x=..,y=..,w=..,h=..]
+  kmsctl.py batch                      long-lived: TAB-separated T/C/OFF lines on stdin (see Shower.batch), JSON line per case
   After the commit it prints one JSON line ({"ok":..}) and keeps the state until SIGTERM/stdin EOF or --hold.
 Linear buffers are dumb buffers filled from Python; non-linear (AFBC) buffers are allocated with GBM and
 drawn by the GPU (EGLImage + FBO + scissored clears). Every head disables all planes and CRTCs it does not use.
@@ -86,7 +87,8 @@ for fn, res, args in [
         ("drmModeCreateDumbBuffer", i32, [i32, u32, u32, u32, u32, P(u32), P(u32), P(u64)]),
         ("drmModeMapDumbBuffer", i32, [i32, u32, P(u64)]),
         ("drmModeAddFB2WithModifiers", i32, [i32, u32, u32, u32, P(u32), P(u32), P(u32), P(u64), P(u32), u32]),
-        ("drmPrimeFDToHandle", i32, [i32, i32, P(u32)])]:
+        ("drmPrimeFDToHandle", i32, [i32, i32, P(u32)]), ("drmModeRmFB", i32, [i32, u32]), ("drmModeAtomicFree", None, [C.c_void_p]),
+        ("drmModeDestroyPropertyBlob", i32, [i32, u32]), ("drmModeDestroyDumbBuffer", i32, [i32, u32])]:
     f = getattr(drm, fn)
     f.restype, f.argtypes = res, args
 
@@ -391,6 +393,10 @@ class Shower:
         self.gpu = None
         self.keep = []
         self.leave_others = False
+        self.test_mode = False      # batch mode: TEST_ONLY buffers are cached per (w,h,fmt,mod), content irrelevant
+        self.cache = {}             # test-only fb cache: key -> fb id
+        self.live = {}              # real commits: key -> (fb id, release fn); reused while still on screen
+        self.pc = {}                # (object, type) -> props() (ids/enums are static; values are not used by add())
 
     @staticmethod
     def mode_index(c, timing):
@@ -409,8 +415,23 @@ class Shower:
                 return c
         raise RuntimeError(f"no connector {ref}")
 
-    def fb(self, w, h, fmt, mod, rects):
+    def fb(self, w, h, fmt, mod, rects, key=None):
+        """key: batch mode only; same key = same buffer content, so the fb is reused"""
+        if key is not None:
+            hit = (self.cache if self.test_mode else self.live).get(key)
+            if hit:
+                self.used[key] = hit
+                return hit[0]
+        fid, rel = self.fb_new(w, h, fmt, mod, rects)
+        if key is not None:
+            self.used[key] = (fid, rel)
+            if self.test_mode:
+                self.cache[key] = (fid, rel)
+        return fid
+
+    def fb_new(self, w, h, fmt, mod, rects):
         h_, p_, o_, m_ = (u32 * 4)(), (u32 * 4)(), (u32 * 4)(), (u64 * 4)()
+        rel = lambda: None  # noqa: E731
         if mod == 0:
             if fmt not in PACK:
                 raise RuntimeError(f"no Python filler for linear {fmt} (use modetest)")
@@ -424,12 +445,21 @@ class Shower:
             fill_dumb(mm, pitch.value, w, h, fmt, rects)
             self.keep.append(mm)
             planes = [(hd.value, pitch.value, 0)]
+
+            def rel(mm=mm, hdl=hd.value):
+                mm.close()
+                self.keep.remove(mm)
+                drm.drmModeDestroyDumbBuffer(self.fd, hdl)
         else:
             if self.gpu is None:
                 self.gpu = Gpu(self.fd)
             bo, planes = self.gpu.bo(w, h, fmt, mod)
             self.keep.append(bo)
             self.gpu.draw(bo, w, h, fmt, mod, planes, rects)
+
+            def rel(bo=bo):
+                self.keep.remove(bo)
+                self.gpu.gbm.gbm_bo_destroy(C.c_void_p(bo))
         for i, (hh, pp, oo) in enumerate(planes):
             h_[i], p_[i], o_[i], m_[i] = hh, pp, oo, mod
         fid = u32()
@@ -437,7 +467,13 @@ class Shower:
                                             2 if mod else 0)
         if rc:
             raise RuntimeError(f"ADDFB2 {fmt} {mod:#x}: " + err(rc))
-        return fid.value
+        fidv = fid.value
+        rel0 = rel
+
+        def rel_all():
+            drm.drmModeRmFB(self.fd, fidv)
+            rel0()
+        return fidv, rel_all
 
     def pick_mod(self, plane, fmt, mod):
         mods = [int(m, 16) for m in plane["formats"].get(fmt, [])]
@@ -454,11 +490,27 @@ class Shower:
         return m
 
     def run(self, heads, extra, test_only, hold):
+        rc, desc = self.commit(heads, extra, test_only)
+        print(json.dumps({"ok": rc == 0, "err": "" if rc == 0 else err(rc), "test_only": test_only, "heads": desc}),
+              flush=True)
+        if rc or test_only:
+            return 1 if rc else 0
+        signal.signal(signal.SIGTERM, lambda *_: sys.exit(0))
+        end = time.time() + hold if hold else None
+        while end is None or time.time() < end:
+            r, _, _ = select.select([sys.stdin], [], [], 0.5)
+            if r and not sys.stdin.buffer.read1(4096):
+                break
+        return 0
+
+    def commit(self, heads, extra, test_only, batch=False):
+        """one atomic commit; returns (rc, desc). rc is 0 or the negative errno / -1 (errno via ctypes)"""
+        self.used = {}
         req = drm.drmModeAtomicAlloc()
         used_crtcs, used_planes, used_conns, desc = set(), set(), set(), []
 
         def add(obj, otype, name, val):
-            p = props(self.fd, obj, otype)
+            p = self.pc.get((obj, otype)) or self.pc.setdefault((obj, otype), props(self.fd, obj, otype))
             if name not in p:
                 raise RuntimeError(f"object {obj} has no property {name}")
             pr = p[name]
@@ -500,7 +552,9 @@ class Shower:
             w, hh = m["hdisplay"], m["vdisplay"]
             fmt = h.get("fmt", "XR24")
             mod = self.pick_mod(planes[pid], fmt, h.get("mod"))
-            fid = self.fb(w, hh, fmt, mod, pattern_rects(h.get("pattern", "bars"), w, hh, int(h.get("code", 0))))
+            pat, code = h.get("pattern", "bars"), int(h.get("code", 0))
+            fid = self.fb(w, hh, fmt, mod, pattern_rects(pat, w, hh, code),
+                          key=((w, hh, fmt, mod) if self.test_mode else (w, hh, fmt, mod, pat, code)) if batch else None)
             self.plane(add, pid, crtc, fid, 0, 0, w, hh, w, hh)
             used_planes.add(pid)
             desc.append({"conn": c["name"], "crtc": crtc, "plane": pid, "fmt": fmt, "mod": hex(mod), "mode": m})
@@ -529,16 +583,48 @@ class Shower:
                 add(crtc, OBJ_CRTC, "ACTIVE", 0)
                 add(crtc, OBJ_CRTC, "MODE_ID", 0)
         rc = drm.drmModeAtomicCommit(self.fd, req, ALLOW_MODESET | (TEST_ONLY if test_only else 0), None)
-        print(json.dumps({"ok": rc == 0, "err": "" if rc == 0 else err(rc), "test_only": test_only, "heads": desc}),
-              flush=True)
-        if rc or test_only:
-            return 1 if rc else 0
+        self.last_errno = C.get_errno() if rc else 0
+        if rc:
+            self.last_errno = -rc if rc < 0 and rc != -1 else C.get_errno()
+        drm.drmModeAtomicFree(req)
+        if batch and not test_only and rc == 0:       # the previous commit's buffers are off screen now
+            for k, (_fid, rel) in self.live.items():
+                if k not in self.used:
+                    rel()
+            self.live = dict(self.used)
+        elif batch and not test_only:                 # failed real commit: drop buffers created only for it
+            for k, (_fid, rel) in self.used.items():
+                if k not in self.live:
+                    rel()
+        return rc, desc
+
+    def batch(self, fin, fout):
+        """stdin protocol, one case per line, TAB separated:
+             T <id> <spec> [<spec>...]   atomic TEST_ONLY of these heads (everything else off), nothing changes
+             C <id> <spec> [<spec>...]   real commit; the state stays until the next C/OFF/EOF
+             OFF <id>                    everything off
+           reply: one JSON line per case {id, ok, errno, err, ms}. EOF or Q exits (state is released with the fd)."""
         signal.signal(signal.SIGTERM, lambda *_: sys.exit(0))
-        end = time.time() + hold if hold else None
-        while end is None or time.time() < end:
-            r, _, _ = select.select([sys.stdin], [], [], 0.5)
-            if r and not sys.stdin.buffer.read1(4096):
+        for line in fin:
+            f = line.rstrip("\n").split("\t")
+            if not f or not f[0]:
+                continue
+            if f[0] == "Q":
                 break
+            t0 = time.time()
+            try:
+                test = f[0] == "T"
+                self.test_mode = test
+                heads = [parse_spec(x) for x in f[2:]]
+                rc, desc = self.commit(heads, [], test, batch=True)
+                out = {"id": f[1], "ok": rc == 0, "errno": 0 if rc == 0 else self.last_errno,
+                       "err": "" if rc == 0 else err(rc)}
+                if not test and rc == 0:
+                    out["heads"] = desc
+            except (RuntimeError, StopIteration, IndexError, KeyError) as e:
+                out = {"id": f[1] if len(f) > 1 else "?", "ok": False, "errno": -1, "err": f"setup: {e!r}"}
+            out["ms"] = round((time.time() - t0) * 1000, 1)
+            print(json.dumps(out), flush=True)
         return 0
 
     def hdr_blob(self, eotf):
@@ -563,12 +649,14 @@ class Shower:
 
 
 def main(argv):
-    if not argv or argv[0] not in ("list", "show"):
+    if not argv or argv[0] not in ("list", "show", "batch"):
         sys.exit(__doc__)
     if argv[0] == "list":
         fd, card = open_card()
         print(json.dumps(enumerate_all(fd) | {"card": card}))
         return 0
+    if argv[0] == "batch":
+        return Shower().batch(sys.stdin, sys.stdout)
     heads, extra, test_only, hold, leave = [], [], False, 0, False
     it = iter(argv[1:])
     for a in it:

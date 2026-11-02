@@ -1,6 +1,6 @@
 # vop2-hdmi-clk: VOP2 HDMI clocking on RK3588: uninitialised dividers, HDMI sync polarity, DCLK source chosen from the FRL state, reject modes the CRU cannot clock exactly
 
-- Workspace branch: `opi5/vop2-hdmi-clk-7.3` (exported 2026-11-01)
+- Workspace branch: `opi5/vop2-hdmi-clk-7.3` (exported 2026-11-02)
 - Kernel fork branch: `opi5/vop2-hdmi-clk` (see PUBLISH.md)
 - Sits on: `hdmi-frl` (base commit `4c18b22e48cf`)
 - Hardware test: yes: pixel clock measured from vblank timestamps (~20 ppm) + camera over TMDS/FRL modes, wedge trigger 10/10; in patches/linux (1211, 1212, 1214, 1215)

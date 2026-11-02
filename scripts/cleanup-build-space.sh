@@ -5,9 +5,10 @@
 #  - kernel O= build directories: deleted unless a git checkout, a kernel
 #    source tree, in use by a running process, or changed in the last 30 min;
 #  - superseded test kernel packages;
-#  - git worktrees whose commits are in patches/linux: removed with
+#  - git worktrees of src/linux under build/ (not wt-upstream-*, wt-k11): removed with
 #    "git worktree remove" (the branch is kept), only if they have no
-#    uncommitted changes and nothing is using them.
+#    uncommitted changes, nothing is using them and they were not touched
+#    in the last 24 hours.
 #   scripts/cleanup-build-space.sh        # shows the plan, asks once, deletes
 #   scripts/cleanup-build-space.sh --yes  # no question
 set -euo pipefail
@@ -15,25 +16,35 @@ TOP=$(cd "$(dirname "$0")/.." && pwd)
 B=$TOP/build
 YES=0; [ "${1:-}" = --yes ] && YES=1
 
-TARGETS=(
-  k9test-out              # k9 test kernel build output (kernel 9 is built in build/linux)
-  hdmi-frl-pll-out        # standalone V0PLL kernel build (patches are 1911-1915)
-)
+# every kernel O= build directory directly under build/ except the shared
+# build/linux (ccache-warm tree all builds use); the checks below skip
+# anything that is not an O= directory, in use, or recently changed
+TARGETS=()
+for d in "$B"/*/; do
+  t=$(basename "$d")
+  [ "$t" = linux ] || TARGETS+=("$t")
+done
 # superseded k9 test kernel packages (kernel 9 = the same tree, in out/debs)
 mapfile -t DEBS < <(ls "$B"/linux-*_7.3.0-9test_arm64.deb "$B"/k9test-noccu/*.deb 2>/dev/null || true)
-# worktrees whose commits are now patches 1901-1916 / 2001-2017
-WORKTREES=(wt-test-k9 wt-usb-resume wt-dw-dp-aux wt-klog-19b wt-hdmi-ddc wt-vop2-uf2
-           wt-hdmi-frl-pll wt-hdmi-10bpc)
+# git worktrees of src/linux directly under build/ or work/ (branches are
+# kept), except the upstream-send series worktrees and the current
+# integration worktree
+WORKTREES=()
+while read -r w; do
+  case $w in "$B"/*|"$TOP"/work/*) ;; *) continue;; esac
+  t=${w#"$TOP"/}                       # build/<name> or work/<name>
+  case $t in */*/*|build/wt-upstream-*|build/wt-k11) continue;; esac
+  WORKTREES+=("$t")
+done < <(git -C "$TOP/src/linux" worktree list --porcelain | sed -n 's/^worktree //p')
 
 # a process has its cwd under the path or names it on its command line
+# (one snapshot of every process's cwd and command line, taken once)
+PROCS=$(for d in /proc/[0-9]*; do
+  [ "$d" = "/proc/$$" ] && continue
+  printf '%s/ %s\n' "$(readlink "$d/cwd" 2>/dev/null)" "$(tr '\0' ' ' 2>/dev/null < "$d/cmdline")"
+done)
 in_use() {
-  local p=$1 d
-  for d in /proc/[0-9]*; do
-    [ "$d" = "/proc/$$" ] && continue
-    case "$(readlink "$d/cwd" 2>/dev/null)" in "$p"|"$p"/*) return 0;; esac
-    tr "\\0" " " 2>/dev/null < "$d/cmdline" | grep -qF -- "$p" && return 0
-  done
-  return 1
+  grep -qF -- "$1" <<<"$PROCS"
 }
 
 ok=(); wts=(); skip=()
@@ -59,7 +70,7 @@ for t in "${TARGETS[@]}"; do
   ok+=("$p")
 done
 for t in "${WORKTREES[@]}"; do
-  p=$B/$t
+  p=$TOP/$t
   [ -e "$p" ] || continue
   if [ "$(git -C "$p" rev-parse --show-toplevel 2>/dev/null)" != "$(realpath "$p")" ]; then
     skip+=("$t: not a git worktree"); continue
@@ -68,6 +79,12 @@ for t in "${WORKTREES[@]}"; do
     skip+=("$t: has uncommitted changes"); continue
   fi
   if in_use "$p"; then skip+=("$t: in use by a running process"); continue; fi
+  # a worktree another job is building from may have no process inside it
+  # (the build runs in src/linux + build/linux): keep anything recent
+  if [ -n "$(find "$p" -maxdepth 3 -newermt '-24 hours' -print -quit 2>/dev/null)" ] ||
+     [ -n "$(find "$(git -C "$p" rev-parse --git-dir)" -maxdepth 1 -newermt '-24 hours' -print -quit 2>/dev/null)" ]; then
+    skip+=("$t: used in the last 24 hours"); continue
+  fi
   wts+=("$p")
 done
 

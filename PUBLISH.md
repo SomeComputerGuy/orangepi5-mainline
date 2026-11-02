@@ -115,8 +115,9 @@ git -C .work/linux -c push.negotiate=true push \
 
 **Tags** (annotated, never moved):
 
-- `image-7.3.0-11` = `opi5/image` (422 patches, the current image kernel, build 11) and
-  `image-7.3.0-11-extra` (+ `patches/linux-extra`); `image-7.3.0-8` (337 patches) and
+- `image-7.3.0-14` = `opi5/image` (449 patches, the current image kernel, build 14, in testing) and
+  `image-7.3.0-14-extra` (+ `patches/linux-extra`); `image-7.3.0-11` (422 patches) and
+  `image-7.3.0-11-extra`; `image-7.3.0-8` (337 patches) and
   `image-7.3.0-8-extra`; `image-7.3.0-7` (321 patches, was branch `opi5/image-k7`);
   `image-7.3.0-6` (314 patches, the base of kernel build 6, was branch `opi5/image-k6`).
   Kernel builds 9 and 10 (370 and 387 patches) were not tagged; their contents are listed in

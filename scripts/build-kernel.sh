@@ -9,10 +9,10 @@ SRC=$OPI5_SRC/linux BUILD=$TOP/build/linux
 # ccache entries and kbuild's incremental state) and only differ in what is
 # checked out and where the debs go:
 #   OPI5_REF=<ref in src/linux>  build that commit's tree instead of v7.3 + patches/linux
-#   OPI5_PKGREV=<rev>           package revision, <kernelversion>-<rev> (default 11)
+#   OPI5_PKGREV=<rev>           package revision, <kernelversion>-<rev> (default 14)
 #   OPI5_OUT=<dir>              output directory (default out; tests: out/test)
 OUT=${OPI5_OUT:-$TOP/out}
-OPI5_REF=${OPI5_REF:-} OPI5_PKGREV=${OPI5_PKGREV:-11}
+OPI5_REF=${OPI5_REF:-} OPI5_PKGREV=${OPI5_PKGREV:-14}
 export ARCH=arm64 CROSS_COMPILE=aarch64-linux-gnu-
 # Two builds in the same O= directory corrupt each other's objects
 mkdir -p "$TOP/build"
@@ -134,17 +134,38 @@ if [ "$(sed -n 1p "$STAMP" 2>/dev/null)" = "$set_hash" ] &&
    [ "$(git -C "$SRC" write-tree)" = "$(sed -n 2p "$STAMP")" ]; then
   echo "patches: $(wc -l <<<"$want") patch files already applied on $BASE (stamp matches), source mtimes kept"
 else
-  echo "patches: patch set or source tree changed, resetting src/linux to $BASE and applying"
+  echo "patches: patch set or source tree changed, applying on $BASE"
   git -C "$SRC" diff --binary HEAD > "$BUILD/src-linux-before-patches.diff"
-  git -C "$SRC" reset -q --hard "$BASE"
-  # a previous run that stopped half-way may have left files its patches created
-  git -C "$SRC" clean -fdq
   rm -f "$STAMP"
+  # Build the patched tree in a scratch index first, without touching src/linux,
+  # then move src/linux to it with read-tree -u: only files whose content differs
+  # are rewritten, so kbuild recompiles what the patch-set change touched instead
+  # of everything the 400-odd patches touch.
+  idx=$(mktemp "$BUILD/.opi5-index.XXXXXX"); rm -f "$idx"
+  GIT_INDEX_FILE=$idx git -C "$SRC" read-tree "$base_commit"
   for d in "${PATCH_DIRS[@]}"; do
     for p in "$d"/*.patch; do
-      git -C "$SRC" apply --index "$p" || { echo "patch failed: $p"; exit 1; }
+      GIT_INDEX_FILE=$idx git -C "$SRC" apply --cached "$p" || { rm -f "$idx"; echo "patch failed: $p"; exit 1; }
     done
   done
+  new_tree=$(GIT_INDEX_FILE=$idx git -C "$SRC" write-tree); rm -f "$idx"
+  # put back worktree edits to tracked files (rewrites only those files), point
+  # HEAD at the base without touching files, drop untracked leftovers of a run
+  # that stopped half-way, then switch index and worktree to the patched tree
+  git -C "$SRC" checkout -q -- . 2>/dev/null || true
+  git -C "$SRC" reset -q --soft "$base_commit"
+  git -C "$SRC" clean -fdq
+  git -C "$SRC" read-tree --reset -u "$new_tree"
+  if [ "$(git -C "$SRC" write-tree)" != "$new_tree" ] || ! git -C "$SRC" diff --quiet "$new_tree" --; then
+    echo "patches: incremental switch did not reach $new_tree, falling back to a full reset"
+    git -C "$SRC" reset -q --hard "$base_commit"
+    git -C "$SRC" clean -fdq
+    for d in "${PATCH_DIRS[@]}"; do
+      for p in "$d"/*.patch; do
+        git -C "$SRC" apply --index "$p" || { echo "patch failed: $p"; exit 1; }
+      done
+    done
+  fi
   printf '%s\n%s\n' "$set_hash" "$(git -C "$SRC" write-tree)" > "$STAMP"
   echo "$want" > "$BUILD/.patches-applied"
 fi
