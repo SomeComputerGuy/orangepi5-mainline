@@ -12,8 +12,9 @@ DCLK dividers rounded to the closest rate 3840x2160@29.97Hz ran at
 262.144 MHz (AUPLL / 3, 11.6 % slow). The DP sink is told the mode
 clock and gets another one.
 
-Sinks accept a pixel clock within 0.5 % of the mode's (CTA-861, VESA
-DMT), the tolerance DRM itself uses to match modes. Accept the closest
+Sinks accept a pixel clock within 0.5 % of the mode's: the CTA-861 and
+VESA DMT timings allow that much deviation (DRM's own mode matching uses
+a fixed 5 kHz, which is no help here). Accept the closest
 CRU rate for the other outputs only within that tolerance, and refuse
 the state with -EINVAL otherwise, like a mode the hardware cannot
 display, instead of committing it at a wrong rate.

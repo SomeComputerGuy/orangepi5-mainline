@@ -1,0 +1,37 @@
+From ad1cb76f1597f65f68f7974085e482e82e6878fd Mon Sep 17 00:00:00 2001
+From: Arun Iyengar <aiyengar1990@gmail.com>
+Date: Wed, 4 Nov 2026 16:31:49 +0000
+Subject: [PATCH 2262/2271] arm64: dts: rockchip: Mark the Orange Pi 5/5B
+ Type-C port self-powered
+
+The board is powered from its separate power-only USB-C input. The
+FUSB302 port's VBUS comes from vcc5v0_sys through a load switch, so the
+board never runs from this port's VBUS.
+
+Without self-powered, tcpm keeps Rp on CC during PORT_RESET (error
+recovery), because opening CC on a port-powered device would remove its
+own supply. With self-powered, the port opens CC for tErrorRecovery
+whenever it resets, including at boot. A partner left in a stale state
+by a warm reboot then sees a real detach.
+
+Assisted-by: Claude:claude-opus-5-5
+Signed-off-by: Arun Iyengar <aiyengar1990@gmail.com>
+---
+ arch/arm64/boot/dts/rockchip/rk3588s-orangepi-5-5b.dtsi | 1 +
+ 1 file changed, 1 insertion(+)
+
+diff --git a/arch/arm64/boot/dts/rockchip/rk3588s-orangepi-5-5b.dtsi b/arch/arm64/boot/dts/rockchip/rk3588s-orangepi-5-5b.dtsi
+index 3a54466387c3..b782c929076e 100644
+--- a/arch/arm64/boot/dts/rockchip/rk3588s-orangepi-5-5b.dtsi
++++ b/arch/arm64/boot/dts/rockchip/rk3588s-orangepi-5-5b.dtsi
+@@ -187,6 +187,7 @@ usb_con: connector {
+ 				<PDO_FIXED(5000, 1000, PDO_FIXED_USB_COMM)>;
+ 			source-pdos =
+ 				<PDO_FIXED(5000, 3000, PDO_FIXED_USB_COMM)>;
++			self-powered;
+ 			try-power-role = "source";
+ 
+ 			altmodes {
+-- 
+2.55.0
+

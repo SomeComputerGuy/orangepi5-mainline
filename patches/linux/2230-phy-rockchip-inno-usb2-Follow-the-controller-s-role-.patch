@@ -36,6 +36,7 @@ Also stop a detection that is underway in phy_exit(): cancelling its
 work left the current stage's sources on D+/D- and the detection state
 stuck, so that it never completed after the next phy_init().
 
+Fixes: 3a7db8e9edef ("phy: phy-rockchip-inno-usb2: add rk3588 support")
 Assisted-by: Claude:claude-opus-5-5
 Signed-off-by: Arun Iyengar <aiyengar1990@gmail.com>
 ---

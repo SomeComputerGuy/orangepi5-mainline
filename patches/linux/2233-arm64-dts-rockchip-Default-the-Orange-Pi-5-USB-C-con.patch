@@ -16,6 +16,7 @@ Make host the default mode, so that the Type-A port works whenever the
 USB-C port is unattached. A USB-C partner still gets the role it
 negotiates: device when the board is the UFP, host when it is the DFP.
 
+Fixes: c57d1a970275 ("arm64: dts: rockchip: add USB-C support to rk3588s-orangepi-5")
 Assisted-by: Claude:claude-opus-5-5
 Signed-off-by: Arun Iyengar <aiyengar1990@gmail.com>
 ---

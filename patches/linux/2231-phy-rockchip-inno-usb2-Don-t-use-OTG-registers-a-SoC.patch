@@ -42,6 +42,9 @@ given in the device tree, or from the controller through phy_set_mode().
 On the Orange Pi 5 the extcon now reports USB-HOST=0, and the OTG port
 goes to A_HOST when DWC3 sets the host mode.
 
+Fixes: 3a7db8e9edef ("phy: phy-rockchip-inno-usb2: add rk3588 support")
+Fixes: 3d7de6e870ec ("phy: rockchip: inno-usb2: Add usb2 phys support for rk3576")
+Fixes: 80edd21db00c ("phy: rockchip: inno-usb2: Add usb2 phy support for rk3562")
 Assisted-by: Claude:claude-opus-5-5
 Signed-off-by: Arun Iyengar <aiyengar1990@gmail.com>
 ---

@@ -1,0 +1,58 @@
+From c8201140f4aafac7717c89cda4c155955c7dafc4 Mon Sep 17 00:00:00 2001
+From: Arun Iyengar <aiyengar1990@gmail.com>
+Date: Tue, 3 Nov 2026 06:07:11 +0000
+Subject: [PATCH 2260/2271] drm/bridge: synopsys: dw-dp: Signal BT.2020
+ colorimetry for the output encoding
+
+The "Colorspace" property documents BT2020_RGB and BT2020_YCC as
+equivalent: the driver picks RGB or YCbCr output, and must then tell
+the sink to expect BT.2020 R'G'B' or BT.2020 non-constant luminance
+Y'C'bC'r respectively.
+
+The VSC SDP colorimetry code is interpreted per pixel encoding, and
+DP_COLORIMETRY_BT2020_RGB has the same value as
+DP_COLORIMETRY_BT2020_CYCC. dw-dp copied the property value through,
+so when it fell back to a YCbCr format (e.g. YCbCr 4:2:0 for 4K60 on a
+link that cannot carry RGB) with Colorspace set to BT2020_RGB, it
+announced constant luminance BT.2020 Y'cC'bcC'rc. A Samsung LU28R55
+behind a DP to HDMI converter then showed a PQ test pattern with its
+mid-grey levels crushed to black.
+
+Pick the BT.2020 code from the output encoding, as the downstream
+Rockchip driver does.
+
+Assisted-by: Claude:claude-opus-5-5
+Signed-off-by: Arun Iyengar <aiyengar1990@gmail.com>
+---
+ drivers/gpu/drm/bridge/synopsys/dw-dp.c | 14 +++++++++++---
+ 1 file changed, 11 insertions(+), 3 deletions(-)
+
+diff --git a/drivers/gpu/drm/bridge/synopsys/dw-dp.c b/drivers/gpu/drm/bridge/synopsys/dw-dp.c
+index 50989fe0ac71..2ed9c78f7ed4 100644
+--- a/drivers/gpu/drm/bridge/synopsys/dw-dp.c
++++ b/drivers/gpu/drm/bridge/synopsys/dw-dp.c
+@@ -1270,10 +1270,18 @@ static int dw_dp_send_vsc_sdp(struct dw_dp *dp)
+ 
+ 	switch (state->colorspace) {
+ 	case DRM_MODE_COLORIMETRY_BT2020_RGB:
+-		vsc.colorimetry = DP_COLORIMETRY_BT2020_RGB;
+-		break;
+ 	case DRM_MODE_COLORIMETRY_BT2020_YCC:
+-		vsc.colorimetry = DP_COLORIMETRY_BT2020_YCC;
++		/*
++		 * The two variants are equivalent: signal the one that matches
++		 * the output encoding. For a YCbCr pixel encoding the value of
++		 * DP_COLORIMETRY_BT2020_RGB means constant luminance
++		 * BT.2020 Y'cC'bcC'rc, not the non-constant luminance Y'C'bC'r
++		 * that is sent.
++		 */
++		if (state->color_format == DRM_OUTPUT_COLOR_FORMAT_RGB444)
++			vsc.colorimetry = DP_COLORIMETRY_BT2020_RGB;
++		else
++			vsc.colorimetry = DP_COLORIMETRY_BT2020_YCC;
+ 		break;
+ 	default:
+ 		if (state->color_format == DRM_OUTPUT_COLOR_FORMAT_RGB444)
+-- 
+2.55.0
+

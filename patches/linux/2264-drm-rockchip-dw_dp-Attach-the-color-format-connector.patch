@@ -1,0 +1,56 @@
+From 259e5a61215dc90c8cdd9269e60abff879d81eeb Mon Sep 17 00:00:00 2001
+From: Arun Iyengar <aiyengar1990@gmail.com>
+Date: Tue, 3 Nov 2026 05:27:26 +0000
+Subject: [PATCH 2264/2271] drm/rockchip: dw_dp: Attach the "color format"
+ connector property
+
+The DW DP bridge offers RGB, YCbCr 4:4:4, 4:2:2 and 4:2:0 output
+(dw_dp_output_formats[]) and the bridge chain bus format negotiation in
+drm_atomic_bridge_chain_select_bus_fmts() already skips every output
+bus format that does not match conn_state->color_format. The connector
+never exposes the "color format" property though, so userspace cannot
+ask for anything but the driver's own choice (RGB, or YCbCr 4:2:0 when
+the link or a downstream TMDS converter cannot carry RGB).
+
+Attach the property with the four formats of the output format table.
+With the default "AUTO" value the negotiation is unchanged. A format
+the sink, the link bandwidth or a protocol converter cannot carry is
+rejected by the existing checks in
+dw_dp_bridge_atomic_get_output_bus_fmts(), as for every other
+unsupported configuration.
+
+Assisted-by: Claude:claude-opus-5-5
+Signed-off-by: Arun Iyengar <aiyengar1990@gmail.com>
+---
+ drivers/gpu/drm/rockchip/dw_dp-rockchip.c | 15 +++++++++++++++
+ 1 file changed, 15 insertions(+)
+
+diff --git a/drivers/gpu/drm/rockchip/dw_dp-rockchip.c b/drivers/gpu/drm/rockchip/dw_dp-rockchip.c
+index 636d921f4877..fe3eed1c06b6 100644
+--- a/drivers/gpu/drm/rockchip/dw_dp-rockchip.c
++++ b/drivers/gpu/drm/rockchip/dw_dp-rockchip.c
+@@ -223,6 +223,21 @@ static int dw_dp_rockchip_bind(struct device *dev, struct device *master, void *
+ 		return ret;
+ 	}
+ 
++	/*
++	 * The bridge chain bus format negotiation already honours the
++	 * requested color format; these are the formats the DW DP output
++	 * format table offers.
++	 */
++	ret = drm_connector_attach_color_format_property(connector,
++							 BIT(DRM_OUTPUT_COLOR_FORMAT_RGB444) |
++							 BIT(DRM_OUTPUT_COLOR_FORMAT_YCBCR444) |
++							 BIT(DRM_OUTPUT_COLOR_FORMAT_YCBCR422) |
++							 BIT(DRM_OUTPUT_COLOR_FORMAT_YCBCR420));
++	if (ret) {
++		dw_dp_unbind(dp->base);
++		return ret;
++	}
++
+ 	drm_connector_attach_hdr_output_metadata_property(connector);
+ 
+ 	ret = drm_mode_create_dp_colorspace_property(connector,
+-- 
+2.55.0
+

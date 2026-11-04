@@ -1,6 +1,6 @@
 # rkvdec-ccu: IN THE IMAGE since kernel build 9 (patches/linux 2001-2017): rkvdec decodes one stream on both RK3588 cores through the CCU, including VP9 (hardware probability adaptation) and field/MBAFF H.264 (field pairs on both cores), on top of the rkvdec-reset timeout recovery
 
-- Workspace branch: `opi5/rkvdec-reset-ccu-7.3` (exported 2026-11-02)
+- Workspace branch: `opi5/rkvdec-reset-ccu-7.3` (exported 2026-11-04)
 - Kernel fork branch: `opi5/rkvdec-ccu` (see PUBLISH.md)
 - Sits on: `rkvdec-reset` (base commit `eaa2ac11332a`)
 - Hardware test: yes: bit-exact (fluster identical to single-core, 600/600; HEVC 4K 130->227 fps, H.264 67->121 fps), KASAN recovery stress clean; only the binding (2004) and DT (2006) entries still lack a dedicated check

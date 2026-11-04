@@ -1,4 +1,4 @@
-# Status (generated 2026-11-02 by tools/export-from-workspace.sh)
+# Status (generated 2026-11-04 by tools/export-from-workspace.sh)
 
 Every kernel topic, the branch it lives on, how far it got, and the next upstream step.
 `Ours/Carried/Local` count the patches in each category (see the topic README).
@@ -62,7 +62,7 @@ Nothing here has been sent upstream yet.
 
 `patches/linux/` is what `scripts/build-kernel.sh` applies on v7.3 for the image (recreated as fork branch `opi5/image`, plus tag `image-<kernel package version>` for every image kernel, e.g. `image-7.3.0-14` for kernel build 14, which is in testing). It is a snapshot of the topics that were ready for the image plus the carried fixes added since (kernel builds 9-14); the topic directories are the reference for upstreaming, and the prepared upstream series (not sent) are listed per patch in docs/image-kernel/MANIFEST.md. Range-by-range provenance and test state: [docs/image-kernel/MANIFEST.md](docs/image-kernel/MANIFEST.md).
 
-Patches in patches/linux: 449; other patch directories: alsa-ucm-conf, chromium, ffmpeg, firefox, gst-plugins-good, gstreamer, jellyfin-desktop, linux-extra, linux-hold, mpv, tf-a, u-boot, upstream, weston.
+Patches in patches/linux: 479; other patch directories: alsa-ucm-conf, chromium, ffmpeg, firefox, gst-plugins-good, gstreamer, jellyfin-desktop, linux-extra, linux-hold, mpv, tf-a, u-boot, upstream, weston.
 
 ## U-Boot and TF-A
 

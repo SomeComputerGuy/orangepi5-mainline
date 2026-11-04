@@ -83,7 +83,7 @@ declare -A VERSION=(
   [gst-plugins-good1.0]=1.28.7-1build1
   [alsa-ucm-conf]=1.2.16.1-1ubuntu1
 )
-declare -A REV=([ffmpeg]=2 [mpv]=2 [gst-plugins-bad1.0]=4 [gst-plugins-good1.0]=1 [alsa-ucm-conf]=1)
+declare -A REV=([ffmpeg]=2 [mpv]=2 [gst-plugins-bad1.0]=5 [gst-plugins-good1.0]=2 [alsa-ucm-conf]=1)
 declare -A PDIR=([ffmpeg]=ffmpeg [mpv]=mpv [gst-plugins-bad1.0]=gstreamer [gst-plugins-good1.0]=gst-plugins-good [alsa-ucm-conf]=alsa-ucm-conf)
 # Architecture: all sources (built with -A); the rest build their arm64 packages
 declare -A BUILD=([alsa-ucm-conf]=all)

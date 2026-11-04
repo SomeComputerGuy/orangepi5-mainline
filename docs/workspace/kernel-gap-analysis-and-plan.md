@@ -1,5 +1,8 @@
 # Orange Pi 5 (RK3588S) on mainline Linux 7.3 — gap analysis & plan
 
+> Current open work list (2026-11-03): ~/orangepi5/work/_out/TODO.md (numbered, kept up to date; this file is the original Oct 29 plan).
+
+
 Audit date: 2026-10-29. Trees examined (all fetched into `src/linux`, shallow):
 
 | Ref | What | Commit |

@@ -1,0 +1,86 @@
+From bb1a61971a2698299b5044a8db8889e58854b1c6 Mon Sep 17 00:00:00 2001
+From: Arun Iyengar <aiyengar1990@gmail.com>
+Date: Wed, 4 Nov 2026 19:05:40 +0000
+Subject: [PATCH 2271/2271] arm64: dts: rockchip: Add the VOP DCLK sources and
+ their parents to RK3588
+
+Give the VOP the CRU dividers of video ports 0-2 and the fixed parents
+of all DCLK sources, so that it can choose the parent of each DCLK and
+plan the video PLL for all video ports.
+
+Assisted-by: Claude:claude-opus-5-5
+Signed-off-by: Arun Iyengar <aiyengar1990@gmail.com>
+---
+ arch/arm64/boot/dts/rockchip/rk3588-base.dtsi  | 16 ++++++++++++++--
+ arch/arm64/boot/dts/rockchip/rk3588-extra.dtsi | 16 ++++++++++++++--
+ 2 files changed, 28 insertions(+), 4 deletions(-)
+
+diff --git a/arch/arm64/boot/dts/rockchip/rk3588-base.dtsi b/arch/arm64/boot/dts/rockchip/rk3588-base.dtsi
+index 28bc5ef106e4..1d5035b47ffa 100644
+--- a/arch/arm64/boot/dts/rockchip/rk3588-base.dtsi
++++ b/arch/arm64/boot/dts/rockchip/rk3588-base.dtsi
+@@ -1782,7 +1782,13 @@ vop: vop@fdd90000 {
+ 			 <&cru DCLK_VOP3>,
+ 			 <&cru PCLK_VOP_ROOT>,
+ 			 <&hdptxphy0>,
+-			 <&cru PLL_V0PLL>;
++			 <&cru PLL_V0PLL>,
++			 <&cru DCLK_VOP0_SRC>,
++			 <&cru DCLK_VOP1_SRC>,
++			 <&cru DCLK_VOP2_SRC>,
++			 <&cru PLL_GPLL>,
++			 <&cru PLL_CPLL>,
++			 <&cru PLL_AUPLL>;
+ 		clock-names = "aclk",
+ 			      "hclk",
+ 			      "dclk_vp0",
+@@ -1791,7 +1797,13 @@ vop: vop@fdd90000 {
+ 			      "dclk_vp3",
+ 			      "pclk_vop",
+ 			      "pll_hdmiphy0",
+-			      "pll_v0";
++			      "pll_v0",
++			      "dclk_src_vp0",
++			      "dclk_src_vp1",
++			      "dclk_src_vp2",
++			      "pll_gpll",
++			      "pll_cpll",
++			      "pll_aupll";
+ 		iommus = <&vop_mmu>;
+ 		power-domains = <&power RK3588_PD_VOP>;
+ 		resets = <&cru SRST_A_VOP>,
+diff --git a/arch/arm64/boot/dts/rockchip/rk3588-extra.dtsi b/arch/arm64/boot/dts/rockchip/rk3588-extra.dtsi
+index a8affc1cb49b..84fbd168692a 100644
+--- a/arch/arm64/boot/dts/rockchip/rk3588-extra.dtsi
++++ b/arch/arm64/boot/dts/rockchip/rk3588-extra.dtsi
+@@ -683,7 +683,13 @@ &vop {
+ 		 <&cru PCLK_VOP_ROOT>,
+ 		 <&hdptxphy0>,
+ 		 <&hdptxphy1>,
+-		 <&cru PLL_V0PLL>;
++		 <&cru PLL_V0PLL>,
++		 <&cru DCLK_VOP0_SRC>,
++		 <&cru DCLK_VOP1_SRC>,
++		 <&cru DCLK_VOP2_SRC>,
++		 <&cru PLL_GPLL>,
++		 <&cru PLL_CPLL>,
++		 <&cru PLL_AUPLL>;
+ 	clock-names = "aclk",
+ 		      "hclk",
+ 		      "dclk_vp0",
+@@ -693,5 +699,11 @@ &vop {
+ 		      "pclk_vop",
+ 		      "pll_hdmiphy0",
+ 		      "pll_hdmiphy1",
+-		      "pll_v0";
++		      "pll_v0",
++		      "dclk_src_vp0",
++		      "dclk_src_vp1",
++		      "dclk_src_vp2",
++		      "pll_gpll",
++		      "pll_cpll",
++		      "pll_aupll";
+ };
+-- 
+2.55.0
+

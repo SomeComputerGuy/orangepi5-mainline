@@ -1,6 +1,6 @@
 # hdmi-10bpc: dw_hdmi_qp: pass the colour depth to the HDPTX PHY in FRL mode (fix for the carried FRL glue)
 
-- Workspace branch: `opi5/hdmi-10bpc-topic-7.3` (exported 2026-11-02)
+- Workspace branch: `opi5/hdmi-10bpc-topic-7.3` (exported 2026-11-04)
 - Kernel fork branch: `opi5/hdmi-10bpc` (see PUBLISH.md)
 - Sits on: `hdmi-frl` (base commit `4c18b22e48cf`)
 - Hardware test: partly: in the image (patches/linux 1203); 4K60 10 bpc RGB over FRL shows correctly on the TCL TV with and without it, so it is a consistency fix, not a fix for an observed failure

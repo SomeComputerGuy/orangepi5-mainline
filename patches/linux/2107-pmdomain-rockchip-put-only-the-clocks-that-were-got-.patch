@@ -1,6 +1,6 @@
 From e186fa6eb2f88731ec223ea0a9b93c4316ef3339 Mon Sep 17 00:00:00 2001
-From: Arun Iyengar <aiyengar1990@gmail.com>
-Date: Sun, 1 Nov 2026 09:29:01 +0000
+From: Igor Pecovnik <igor@armbian.com>
+Date: Sat, 24 Oct 2026 10:30:43 +0200
 Subject: [PATCH 2107/2117] pmdomain: rockchip: put only the clocks that were
  got on error
 
@@ -18,8 +18,9 @@ deferral reason.
 Put only the i clocks that were obtained, and report the failure with
 dev_err_probe().
 
-Based on Armbian patch patch/kernel/archive/rockchip64-7.3/general-pmdomain-rockchip-put-only-the-clocks-that-were-got.patch by Igor Pecovnik, https://github.com/armbian/build/blob/fb22cb0f1940bfeaabdfefd5a05a3ccb70087734/patch/kernel/archive/rockchip64-7.3/general-pmdomain-rockchip-put-only-the-clocks-that-were-got.patch
-
+Link: https://github.com/armbian/build/commit/814ab46114eb18832e18d1f94f2d279680a308d7
+Signed-off-by: Igor Pecovnik <igor@armbian.com>
+[arun: rewrote the commit message for upstream]
 Assisted-by: Claude:claude-opus-5-5
 Signed-off-by: Arun Iyengar <aiyengar1990@gmail.com>
 ---

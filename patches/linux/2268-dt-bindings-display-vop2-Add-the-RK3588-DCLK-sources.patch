@@ -1,0 +1,91 @@
+From dfeae4d21233111ef3d5da207ee24a86b39349a2 Mon Sep 17 00:00:00 2001
+From: Arun Iyengar <aiyengar1990@gmail.com>
+Date: Wed, 4 Nov 2026 19:05:11 +0000
+Subject: [PATCH 2268/2271] dt-bindings: display: vop2: Add the RK3588 DCLK
+ sources and their parents
+
+On RK3588 the pixel clock of video ports 0-2 is a mux between the HDMI
+PHY PLLs and a CRU divider (dclk_vopN_src); video port 3 has the CRU
+divider only. Each divider can run from GPLL, CPLL, AUPLL or the video
+PLL (V0PLL). The fixed PLLs only give integer fractions of their rates,
+and V0PLL is the one clock that can be set for a pixel clock, but all
+video ports share it.
+
+To decide which parent each video port uses, and run every video port
+that shares V0PLL from one rate, the display controller has to select
+the parent of each divider itself. Describe the dividers of video ports
+0-2 (dclk_src_vp0..2) and the fixed parents (pll_gpll, pll_cpll,
+pll_aupll) as optional clocks after the video PLL.
+
+Assisted-by: Claude:claude-opus-5-5
+Signed-off-by: Arun Iyengar <aiyengar1990@gmail.com>
+---
+ .../display/rockchip/rockchip-vop2.yaml       | 31 +++++++++++++++++--
+ 1 file changed, 29 insertions(+), 2 deletions(-)
+
+diff --git a/Documentation/devicetree/bindings/display/rockchip/rockchip-vop2.yaml b/Documentation/devicetree/bindings/display/rockchip/rockchip-vop2.yaml
+index 8ab78b17cd3f..eff3b779b473 100644
+--- a/Documentation/devicetree/bindings/display/rockchip/rockchip-vop2.yaml
++++ b/Documentation/devicetree/bindings/display/rockchip/rockchip-vop2.yaml
+@@ -69,6 +69,12 @@ properties:
+       - {}
+       - {}
+       - {}
++      - {}
++      - {}
++      - {}
++      - {}
++      - {}
++      - {}
+ 
+   clock-names:
+     minItems: 5
+@@ -83,6 +89,12 @@ properties:
+       - {}
+       - {}
+       - {}
++      - {}
++      - {}
++      - {}
++      - {}
++      - {}
++      - {}
+ 
+   resets:
+     minItems: 5
+@@ -262,7 +274,16 @@ allOf:
+             - description: Alternative pixel clock provided by HDMI1 PHY PLL,
+                 or the video PLL if there is no HDMI1 PHY.
+             - description: Video PLL (V0PLL) the video ports may retune for
+-                pixel clocks the system PLLs cannot divide down exactly.
++                pixel clocks the system PLLs cannot divide down exactly,
++                or the CRU pixel clock divider of video port 0.
++            - description: CRU pixel clock divider of video port 0 or 1, in
++                front of the HDMI PHY PLL mux.
++            - description: CRU pixel clock divider of video port 1 or 2.
++            - description: CRU pixel clock divider of video port 2, or GPLL.
++            - description: GPLL or CPLL, fixed parents of the CRU pixel clock
++                dividers.
++            - description: CPLL or AUPLL.
++            - description: AUPLL.
+ 
+         clock-names:
+           minItems: 7
+@@ -276,7 +297,13 @@ allOf:
+             - const: pclk_vop
+             - const: pll_hdmiphy0
+             - enum: [pll_hdmiphy1, pll_v0]
+-            - const: pll_v0
++            - enum: [pll_v0, dclk_src_vp0]
++            - enum: [dclk_src_vp0, dclk_src_vp1]
++            - enum: [dclk_src_vp1, dclk_src_vp2]
++            - enum: [dclk_src_vp2, pll_gpll]
++            - enum: [pll_gpll, pll_cpll]
++            - enum: [pll_cpll, pll_aupll]
++            - const: pll_aupll
+ 
+         resets:
+           minItems: 6
+-- 
+2.55.0
+

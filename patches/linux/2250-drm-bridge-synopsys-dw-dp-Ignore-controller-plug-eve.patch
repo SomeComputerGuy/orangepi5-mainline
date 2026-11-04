@@ -1,0 +1,166 @@
+From 2cd5f580a126731381b44cfac7546dcd4d2fed05 Mon Sep 17 00:00:00 2001
+From: Arun Iyengar <aiyengar1990@gmail.com>
+Date: Mon, 2 Nov 2026 18:53:17 +0000
+Subject: [PATCH 2250/2271] drm/bridge: synopsys: dw-dp: Ignore controller plug
+ events with OOB HPD
+
+With USB-C DP Alt Mode the HPD level reaches the controller only through
+dw_dp_bridge_oob_notify(), which forces it with the platform hook, and
+the bridge connector reports each out-of-band event to DRM itself. The
+plug and unplug interrupts of the controller then carry no information
+of their own, but are still handled as long HPD pulses, which call
+drm_helper_hpd_irq_event() and so probe every connector of the device.
+
+They fire on every runtime resume with a sink attached once the power
+domain of the controller has been off: the HPD state machine restarts
+and reports the forced-high HPD level as a new plug about 100 ms later.
+The controller is resumed by each modeset that enables the DP output and
+each time userspace opens the DP audio PCM, and every one of these then
+probes all connectors again. On RK3588 that includes the HDMI connector:
+a commit that enables both DP and HDMI reads the HDMI EDID over DDC
+(about 300 ms) while the HDMI output is just starting FRL.
+
+Don't handle controller plug and unplug events as long pulses with
+out-of-band HPD. In that mode they used to also cover for detection
+that runs right after an out-of-band plug while the controller is
+already active, when the state machine has not reported the sink yet:
+let the HPD state settle in dw_dp_bridge_oob_notify() instead, before
+the connector reports the event, as runtime resume already does.
+
+Assisted-by: Claude:claude-opus-5-5
+Signed-off-by: Arun Iyengar <aiyengar1990@gmail.com>
+---
+ drivers/gpu/drm/bridge/synopsys/dw-dp.c | 63 +++++++++++++++++++------
+ 1 file changed, 49 insertions(+), 14 deletions(-)
+
+diff --git a/drivers/gpu/drm/bridge/synopsys/dw-dp.c b/drivers/gpu/drm/bridge/synopsys/dw-dp.c
+index 696b7c3466e5..2ca1cafa2a99 100644
+--- a/drivers/gpu/drm/bridge/synopsys/dw-dp.c
++++ b/drivers/gpu/drm/bridge/synopsys/dw-dp.c
+@@ -589,6 +589,21 @@ static bool dw_dp_hpd_detect(struct dw_dp *dp)
+ 	return FIELD_GET(HPD_STATE, value) == DW_DP_HPD_STATE_PLUG;
+ }
+ 
++/*
++ * The HPD state machine reports the sink as plugged only after HPD has been
++ * high for at least 100 ms. Wait for it to agree with the HPD level it is
++ * given, so that AUX transfers and detection that follow see the sink (or
++ * its absence).
++ */
++static void dw_dp_wait_hpd_state(struct dw_dp *dp, bool plugged)
++{
++	u32 value;
++
++	regmap_read_poll_timeout(dp->regmap, DW_DP_HPD_STATUS, value,
++				 (FIELD_GET(HPD_STATE, value) == DW_DP_HPD_STATE_PLUG) == plugged,
++				 5000, 200000);
++}
++
+ /* Start from the highest rate and lane count both ends support */
+ static void dw_dp_link_set_max(struct dw_dp *dp, struct dw_dp_link *link)
+ {
+@@ -2521,10 +2536,19 @@ static void dw_dp_bridge_oob_notify(struct drm_bridge *bridge,
+ 	if (ret)
+ 		return;
+ 
+-	if (dp->plat_data.hpd_sw_cfg)
++	if (dp->plat_data.hpd_sw_cfg) {
+ 		dp->plat_data.hpd_sw_cfg(dp->plat_data.data, hpd_high);
+-	else
++
++		/*
++		 * The connector reports this event once this returns. The
++		 * controller does not report a plug or unplug of its own in
++		 * this mode (see dw_dp_handle_hpd_event()), so let its HPD
++		 * state settle first, for the detection that follows.
++		 */
++		dw_dp_wait_hpd_state(dp, hpd_high);
++	} else {
+ 		dev_err_once(dp->dev, "Missing platform handler for OOB HPD handling\n");
++	}
+ 
+ 	/*
+ 	 * Forcing the HPD level only lets the controller see plug and unplug
+@@ -2672,6 +2696,7 @@ static void dw_dp_hpd_work(struct work_struct *work)
+ 
+ static void dw_dp_handle_hpd_event(struct dw_dp *dp)
+ {
++	bool pending = false;
+ 	u32 value;
+ 
+ 	mutex_lock(&dp->irq_lock);
+@@ -2681,22 +2706,36 @@ static void dw_dp_handle_hpd_event(struct dw_dp *dp)
+ 		dev_dbg(dp->dev, "IRQ from the HPD\n");
+ 		dp->hotplug.long_hpd = false;
+ 		regmap_write(dp->regmap, DW_DP_HPD_STATUS, HPD_IRQ);
++		pending = true;
+ 	}
+ 
+ 	if (value & HPD_HOT_PLUG) {
+ 		dev_dbg(dp->dev, "Hot plug detected\n");
+-		dp->hotplug.long_hpd = true;
+ 		regmap_write(dp->regmap, DW_DP_HPD_STATUS, HPD_HOT_PLUG);
+ 	}
+ 
+ 	if (value & HPD_HOT_UNPLUG) {
+ 		dev_dbg(dp->dev, "Unplug detected\n");
+-		dp->hotplug.long_hpd = true;
+ 		regmap_write(dp->regmap, DW_DP_HPD_STATUS, HPD_HOT_UNPLUG);
+ 	}
++
++	/*
++	 * With out-of-band HPD (USB-C DP Alt Mode) the controller only sees
++	 * the HPD level that dw_dp_bridge_oob_notify() forces, and the
++	 * connector reports every out-of-band event to DRM itself. A plug or
++	 * unplug the controller reports then only echoes that level, or the
++	 * restart of the HPD state machine after the controller lost its
++	 * state in runtime suspend: don't handle it as a long pulse, which
++	 * would probe every connector of the device.
++	 */
++	if ((value & (HPD_HOT_PLUG | HPD_HOT_UNPLUG)) && !dp->usbc_mode) {
++		dp->hotplug.long_hpd = true;
++		pending = true;
++	}
+ 	mutex_unlock(&dp->irq_lock);
+ 
+-	schedule_work(&dp->hpd_work);
++	if (pending)
++		schedule_work(&dp->hpd_work);
+ }
+ 
+ static irqreturn_t dw_dp_irq(int irq, void *data)
+@@ -2982,7 +3021,6 @@ EXPORT_SYMBOL_GPL(dw_dp_runtime_suspend);
+ 
+ int dw_dp_runtime_resume(struct dw_dp *dp)
+ {
+-	u32 value;
+ 	int ret;
+ 
+ 	ret = clk_prepare_enable(dp->apb_clk);
+@@ -3005,18 +3043,15 @@ int dw_dp_runtime_resume(struct dw_dp *dp)
+ 	enable_irq(dp->irq);
+ 
+ 	/*
+-	 * The HPD state machine restarts with the controller, and reports
+-	 * the sink as plugged only after it has held HPD high for at least
+-	 * 100 ms. Wait for that, so that the AUX transfers, detection or
+-	 * short pulse handling that resumed the controller see the sink.
+-	 * Nothing to wait for if the Type-C side reports HPD low.
++	 * The HPD state machine restarts with the controller. Wait for it to
++	 * report the sink, so that the AUX transfers, detection or short
++	 * pulse handling that resumed the controller see it. Nothing to wait
++	 * for if the Type-C side reports HPD low.
+ 	 */
+ 	if (dp->usbc_mode && !dp->usbc_hpd)
+ 		return 0;
+ 
+-	regmap_read_poll_timeout(dp->regmap, DW_DP_HPD_STATUS, value,
+-				 FIELD_GET(HPD_STATE, value) == DW_DP_HPD_STATE_PLUG,
+-				 5000, 200000);
++	dw_dp_wait_hpd_state(dp, true);
+ 
+ 	return 0;
+ }
+-- 
+2.55.0
+

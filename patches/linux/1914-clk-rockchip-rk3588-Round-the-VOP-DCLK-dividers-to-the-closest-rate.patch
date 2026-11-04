@@ -22,7 +22,10 @@ lot:
 
 A pixel clock's tolerance is symmetric (sinks accept +/- 0.5 %), so the
 closest rate is the right one. Round these four dividers to the closest
-rate; nothing but the VOP uses them.
+rate; nothing but the VOP uses them. The dividers are 7 bits wide on
+dclk_vop0_src and dclk_vop3 (up to 128) and 5 bits on dclk_vop1_src and
+dclk_vop2_src (up to 32), which limits how far below a parent's rate
+each video port can go.
 
 Assisted-by: Claude:claude-opus-5-5
 Signed-off-by: Arun Iyengar <aiyengar1990@gmail.com>
