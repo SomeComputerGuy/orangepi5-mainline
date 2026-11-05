@@ -8,12 +8,12 @@ When of_clk_get() fails for clock i of a power domain,
 rockchip_pm_add_one_domain() jumps to err_put_clocks, which calls
 clk_bulk_put() on all pd->num_clks entries. That includes the
 ERR_PTR() just stored in pd->clks[i] (clk_put() warns on it) and
-the NULL entries after it.
+the NULL entries after it (harmless, clk_put(NULL) is a no-op).
 
-This is hit whenever a domain clock is not yet available and probe is
-deferred, so every deferral leaves a warning in the log and the error
-itself is reported with dev_err() instead of being recorded as a
-deferral reason.
+This is hit when a domain clock is not available yet and the probe is
+deferred: the first deferral triggers the WARN_ON_ONCE() in __clk_put(),
+and the failure is reported with dev_err() instead of being recorded as
+the deferral reason shown in devices_deferred.
 
 Put only the i clocks that were obtained, and report the failure with
 dev_err_probe().

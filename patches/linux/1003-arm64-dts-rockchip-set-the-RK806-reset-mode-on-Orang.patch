@@ -15,9 +15,10 @@ a reset request on RESETB or on a PWRCTRL pin configured as reset:
   2 (RK806_RESET_NOTIFY)  as 1, and pull RESETB low for 5 ms
 
 On a running Orange Pi 5, SYS_CFG3 reads 0x02, i.e. mode 0. Make that
-explicit instead of relying on the firmware (mainline U-Boot's rk8xx
-driver reads the same property and programs mode 2 when it is absent):
-mode 0 is the only one that returns the whole board, including the
+explicit instead of relying on the boot firmware, whose choice depends
+on its build: mainline U-Boot's rk8xx driver, when it probes the PMIC,
+programs the value of this same property and mode 2 when it is absent.
+Mode 0 is the only one that returns the whole board, including the
 PMU1 (always-on) domain of the SoC, to its power-on state when the PMIC
 is asked to reset. It is also what other RK806 boards that care about
 a full reset use (Jaguar, Tiger). The vendor kernel programs mode 1 from
