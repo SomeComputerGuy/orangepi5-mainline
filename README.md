@@ -28,6 +28,8 @@ This repository has two purposes:
 
 ## What works
 
+The full display and video support chart (every resolution, refresh rate and colour format on HDMI and DP, verified / not tested / driver limit / hardware limit) is [`docs/video-support-chart.pdf`](docs/video-support-chart.pdf).
+
 Tested on an Orange Pi 5 (RK3588S, 8 GB) booting from an M.2 SATA SSD with the image kernel
 `7.3.0-12` unless a row says otherwise (older rows name the kernel they were measured on; kernels 13 and 14 are listed under Partially). Details for each topic are in its `notes/`; the per-build
 provenance is in [`docs/image-kernel/MANIFEST.md`](docs/image-kernel/MANIFEST.md).

@@ -2,7 +2,7 @@
 # Rebuild Ubuntu's media packages for arm64 with the patches in patches/<source>/:
 #   ffmpeg              V4L2 Request API (stateless decoder) hwaccels
 #   mpv                 v4l2request hwdec + DRM PRIME interop; needs our ffmpeg
-#   gst-plugins-bad1.0  v4l2codecs and kmssink fixes (patches/gstreamer)
+#   gst-plugins-bad1.0  v4l2codecs fixes and stateless H.264/H.265 encoders, kmssink fixes (patches/gstreamer)
 #   gst-plugins-good1.0 v4l2transform colorimetry, souphttpsrc HEAD race (patches/gst-plugins-good)
 #   alsa-ucm-conf       UCM for the RK3588 HDMI/DP and ES8388 sound cards (Architecture: all)
 # Rootless: mmdebstrap --mode=unshare + qemu-user binfmt, no sudo.
@@ -83,7 +83,7 @@ declare -A VERSION=(
   [gst-plugins-good1.0]=1.28.7-1build1
   [alsa-ucm-conf]=1.2.16.1-1ubuntu1
 )
-declare -A REV=([ffmpeg]=2 [mpv]=2 [gst-plugins-bad1.0]=5 [gst-plugins-good1.0]=2 [alsa-ucm-conf]=1)
+declare -A REV=([ffmpeg]=2 [mpv]=2 [gst-plugins-bad1.0]=6 [gst-plugins-good1.0]=2 [alsa-ucm-conf]=1)
 declare -A PDIR=([ffmpeg]=ffmpeg [mpv]=mpv [gst-plugins-bad1.0]=gstreamer [gst-plugins-good1.0]=gst-plugins-good [alsa-ucm-conf]=alsa-ucm-conf)
 # Architecture: all sources (built with -A); the rest build their arm64 packages
 declare -A BUILD=([alsa-ucm-conf]=all)
