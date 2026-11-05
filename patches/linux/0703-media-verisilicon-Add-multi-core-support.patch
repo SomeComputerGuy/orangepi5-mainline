@@ -27,7 +27,7 @@ allow sharing the mappings is left unused.
 Variants without the multi_core flag keep using only the first core.
 Enable multi-core support for the RK3588 VEPU121.
 
-Assisted-by: Claude:claude-opus-5-5
+Assisted-by: LLM
 Signed-off-by: Arun Iyengar <aiyengar1990@gmail.com>
 ---
  drivers/media/platform/verisilicon/hantro.h   |  23 ++

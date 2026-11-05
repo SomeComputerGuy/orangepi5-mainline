@@ -9,7 +9,7 @@ share GIC SPI 117 and sit in the VDPU power domain.
 Addresses, clocks, resets and the interrupt are taken from the Rockchip
 BSP rk3588s.dtsi (develop-6.1).
 
-Assisted-by: Claude:claude-opus-5-5
+Assisted-by: LLM
 ---
  arch/arm64/boot/dts/rockchip/rk3588-base.dtsi | 22 +++++++++++++++++++
  1 file changed, 22 insertions(+)

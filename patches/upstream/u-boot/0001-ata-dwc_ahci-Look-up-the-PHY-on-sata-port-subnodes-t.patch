@@ -29,7 +29,7 @@ uses.
 Tested on an Orange Pi 5 (RK3588S) with an M.2 SATA SSD, with sata0
 enabled and pcie2x1l2 disabled: U-Boot finds the disk and boots from it.
 
-Assisted-by: Claude:claude-opus-5-5
+Assisted-by: LLM
 ---
 Assisted-by follows Documentation/process/coding-assistants.rst in
 Linux; U-Boot's checkpatch.pl doesn't know the tag yet.

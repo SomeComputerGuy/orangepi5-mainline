@@ -22,7 +22,7 @@ after:
 The pm_runtime_resume_and_get() failure path is already balanced, as the
 helper drops the reference itself when it fails.
 
-Assisted-by: Claude:claude-opus-5-5
+Assisted-by: LLM
 ---
  drivers/media/platform/verisilicon/hantro_drv.c | 4 +++-
  1 file changed, 3 insertions(+), 1 deletion(-)

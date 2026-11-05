@@ -22,7 +22,7 @@ stream in the format the sink receives.
 Tested with a USB-C dock whose branch device is a DP 1.4 HDMI PCON
 (extended DPCD revision 1.4; it reports 1.2 at 0x000).
 
-Assisted-by: Claude:claude-opus-5-5
+Assisted-by: LLM
 ---
  drivers/gpu/drm/bridge/synopsys/dw-dp.c | 43 +++++++++++++++++++++++++
  1 file changed, 43 insertions(+)

@@ -27,7 +27,7 @@ after taking it, which leaked the reference before.
 
 (cherry picked from commit 7710e0ef512c3ace8189d2547395fef1dc05d0de)
 
-Assisted-by: Claude:claude-opus-5-5
+Assisted-by: LLM
 Signed-off-by: Arun Iyengar <aiyengar1990@gmail.com>
 ---
  drivers/gpu/drm/rockchip/rockchip_drm_vop2.c | 67 +++++++++++++++-----

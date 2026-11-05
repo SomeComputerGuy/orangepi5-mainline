@@ -18,7 +18,7 @@ The register layout comes from the Rockchip BSP kernel (mpp_rkvdec2_link.c,
 develop-6.1), whose rk3588s.dtsi describes the same block as
 rkvdec-ccu@fdc30000.
 
-Assisted-by: Claude:claude-opus-5-5
+Assisted-by: LLM
 ---
  .../media/rockchip,rk3588-vdec-ccu.yaml       | 62 +++++++++++++++++++
  .../bindings/media/rockchip,vdec.yaml         | 19 ++++++

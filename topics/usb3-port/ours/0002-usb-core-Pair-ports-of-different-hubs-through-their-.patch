@@ -27,7 +27,7 @@ DWC3, keep the default pairing.
 This lets the runtime PM rules for peers (keep the SuperSpeed port
 powered while its USB 2.0 peer is) apply to such connectors too.
 
-Assisted-by: Claude:claude-opus-5-5
+Assisted-by: LLM
 ---
  drivers/usb/core/hub.h  |   2 +
  drivers/usb/core/of.c   | 101 ++++++++++++++++++++++++++++++++++++++++

@@ -15,7 +15,7 @@ signal, as v4l2videodec already does, and keep the processing loop
 running when the pool hands back a corrupted buffer, so the frames
 queued after the failed one still come out.
 
-Assisted-by: Claude:claude-opus-5-5
+Assisted-by: LLM
 Signed-off-by: Arun Iyengar <aiyengar1990@gmail.com>
 ---
  sys/v4l2/gstv4l2videoenc.c | 29 +++++++++++++++++++++++++++++

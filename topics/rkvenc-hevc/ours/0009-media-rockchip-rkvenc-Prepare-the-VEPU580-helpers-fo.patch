@@ -19,7 +19,7 @@ backend, without changing the H.264 programming:
   per block size and the lowest and highest QP of the 8x8 block QP
   histogram, for the per-frame statistics.
 
-Assisted-by: Claude:claude-opus-5-5
+Assisted-by: LLM
 ---
  .../platform/rockchip/rkvenc/rkvenc-h264.c    | 18 +++-----
  .../platform/rockchip/rkvenc/rkvenc-regs.h    |  7 ++++

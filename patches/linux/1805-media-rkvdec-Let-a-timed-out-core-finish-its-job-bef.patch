@@ -23,7 +23,7 @@ was started, and if it didn't, wait up to 100 ms for VDPU381 to report
 before resetting it. A core that still doesn't is stuck, and is reset
 anyway.
 
-Assisted-by: Claude:claude-opus-5-5
+Assisted-by: LLM
 Signed-off-by: Arun Iyengar <aiyengar1990@gmail.com>
 ---
  .../media/platform/rockchip/rkvdec/rkvdec.c   | 27 ++++++++++++++++++-

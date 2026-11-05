@@ -23,7 +23,7 @@ Only walk the directory if the register holds the address of memory, and
 say that the page table was lost to a reset otherwise. The fault is
 still acknowledged (zap, PAGE_FAULT_DONE, INT_CLEAR) as before.
 
-Assisted-by: Claude:claude-opus-5-5
+Assisted-by: LLM
 ---
  drivers/iommu/rockchip-iommu.c | 11 +++++++++++
  1 file changed, 11 insertions(+)

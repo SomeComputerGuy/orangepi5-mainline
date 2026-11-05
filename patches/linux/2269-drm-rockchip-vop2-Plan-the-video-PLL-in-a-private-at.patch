@@ -50,7 +50,7 @@ holds its rate and the video ports that use it:
 Without the new clocks in the device tree (and on other SoCs) the DCLK
 is checked against the CRU as before.
 
-Assisted-by: Claude:claude-opus-5-5
+Assisted-by: LLM
 Signed-off-by: Arun Iyengar <aiyengar1990@gmail.com>
 ---
  drivers/gpu/drm/rockchip/rockchip_drm_drv.h  |  17 +-

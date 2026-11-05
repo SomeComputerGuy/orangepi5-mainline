@@ -26,7 +26,7 @@ m2m queue if the hold isn't released yet. Jobs are now registered under
 the lock that completes them, so a completing job sees every job that
 writes its CAPTURE buffer.
 
-Assisted-by: Claude:claude-opus-5-5
+Assisted-by: LLM
 ---
  .../media/platform/rockchip/rkvdec/rkvdec.c   | 86 +++++++++++++++----
  .../media/platform/rockchip/rkvdec/rkvdec.h   |  8 +-

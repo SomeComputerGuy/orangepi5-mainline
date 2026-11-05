@@ -21,7 +21,7 @@ primaries and transfer function with full range BT.601 Y'CbCr on both
 queues, as the mediatek and imx JPEG encoders do, and ignore what the
 application asks for.
 
-Assisted-by: Claude:claude-opus-5-5
+Assisted-by: LLM
 ---
  drivers/media/platform/verisilicon/hantro_v4l2.c | 13 +++++++++++++
  1 file changed, 13 insertions(+)

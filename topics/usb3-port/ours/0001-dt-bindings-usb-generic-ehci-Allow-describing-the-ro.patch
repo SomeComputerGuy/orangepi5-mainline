@@ -15,7 +15,7 @@ downstream port, and uses it for the port connect type. Allow the same
 "ports" node on EHCI controllers, so that a root hub port can be linked
 to its usb-connector node.
 
-Assisted-by: Claude:claude-opus-5-5
+Assisted-by: LLM
 ---
  .../devicetree/bindings/usb/generic-ehci.yaml       | 13 +++++++++++++
  1 file changed, 13 insertions(+)

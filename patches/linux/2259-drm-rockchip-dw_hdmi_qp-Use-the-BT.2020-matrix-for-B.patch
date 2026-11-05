@@ -16,7 +16,7 @@ BT.2020 constant luminance YCbCr for YCbCr output, which the VOP2 has
 no encoder for, instead of signalling it on a non-constant luminance
 picture.
 
-Assisted-by: Claude:claude-opus-5-5
+Assisted-by: LLM
 Signed-off-by: Arun Iyengar <aiyengar1990@gmail.com>
 ---
  .../gpu/drm/rockchip/dw_hdmi_qp-rockchip.c    | 36 +++++++++++++++++++

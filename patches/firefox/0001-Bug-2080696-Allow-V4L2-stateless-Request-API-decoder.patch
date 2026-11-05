@@ -33,7 +33,7 @@ Based on attachment 9657436 by Christian Bartels; this version narrows
 the seccomp rule to the individual commands and also admits the canonical
 sysfs path.
 
-Assisted-by: Claude:claude-opus-5-5
+Assisted-by: LLM
 ---
  security/sandbox/linux/SandboxFilter.cpp      | 16 ++++
  .../broker/SandboxBrokerPolicyFactory.cpp     | 89 +++++++++++++++++++

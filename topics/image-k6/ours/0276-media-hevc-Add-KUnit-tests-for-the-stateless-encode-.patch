@@ -22,7 +22,7 @@ with a real control handler and a fake CAPTURE buffer, and check:
 - the control validation of the encode parameters, including its default
   value.
 
-Assisted-by: Claude:claude-opus-5-5
+Assisted-by: LLM
 ---
  drivers/media/v4l2-core/.kunitconfig          |   1 +
  drivers/media/v4l2-core/Kconfig               |  14 +

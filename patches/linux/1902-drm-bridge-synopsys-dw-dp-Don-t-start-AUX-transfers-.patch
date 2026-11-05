@@ -26,7 +26,7 @@ than -ETIMEDOUT with a delay, which still covers an HPD IRQ pulse.
 Fixes: 86eecc3a9c2e ("drm/bridge: synopsys: Add DW DPTX Controller support library")
 (cherry picked from commit e39ebf6d951bf214a161eba30ecdf31e22e529b1)
 
-Assisted-by: Claude:claude-opus-5-5
+Assisted-by: LLM
 Signed-off-by: Arun Iyengar <aiyengar1990@gmail.com>
 ---
  drivers/gpu/drm/bridge/synopsys/dw-dp.c | 12 ++++++++++++

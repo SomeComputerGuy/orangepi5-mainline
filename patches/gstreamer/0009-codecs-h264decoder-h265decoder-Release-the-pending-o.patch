@@ -22,7 +22,7 @@ process exits, don't show it, since the queue is drained or freed then.
 Clear the output queue in stop(), as the VP8, VP9, AV1 and MPEG-2 base
 classes already do.
 
-Assisted-by: Claude:claude-opus-5-5
+Assisted-by: LLM
 ---
  gst-libs/gst/codecs/gsth264decoder.c | 3 +++
  gst-libs/gst/codecs/gsth265decoder.c | 4 ++++

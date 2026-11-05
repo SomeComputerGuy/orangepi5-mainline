@@ -15,7 +15,7 @@ in the blocking DQBUF test, VIDIOC_STREAMON and the wait itself.
 
 Make 4:2:0 the default chroma_format_idc of the SPS control.
 
-Assisted-by: Claude:claude-opus-5-5
+Assisted-by: LLM
 ---
  drivers/media/platform/rockchip/rkvdec/rkvdec.c | 12 ++++++++++++
  1 file changed, 12 insertions(+)

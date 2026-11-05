@@ -1,6 +1,6 @@
 # hdmi-wedge: dw-hdmi-qp: wait for the video input clock to stop on a modeset (HDMI0 "No Signal" wedge after leaving YCbCr 4:2:0)
 
-- Workspace branch: `opi5/hdmi-wedge-7.3` (exported 2026-11-04)
+- Workspace branch: `opi5/hdmi-wedge-7.3` (exported 2026-11-05)
 - Kernel fork branch: `opi5/hdmi-wedge` (see PUBLISH.md)
 - Sits on: `hdmi-frl` (base commit `4c18b22e48cf`)
 - Hardware test: yes: trigger 10/10, 4:2:0->1080p 5/5, run-2 order 13/13, regressions good (camera + IPI lock bit); in patches/linux (1208-1209)

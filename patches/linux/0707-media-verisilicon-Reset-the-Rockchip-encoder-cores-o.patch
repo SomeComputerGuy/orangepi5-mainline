@@ -24,7 +24,7 @@ describe the resets, which is the case for all of them so far.
 The Rockchip BSP MPP driver resets these cores the same way, through
 their AXI and AHB reset lines.
 
-Assisted-by: Claude:claude-opus-5-5
+Assisted-by: LLM
 Signed-off-by: Arun Iyengar <aiyengar1990@gmail.com>
 ---
  .../platform/verisilicon/rockchip_vpu_hw.c    | 30 +++++++++++++++++++

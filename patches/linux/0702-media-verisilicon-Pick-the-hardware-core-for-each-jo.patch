@@ -18,7 +18,7 @@ running the job.
 For now the core list only contains the device itself, so no functional
 change intended.
 
-Assisted-by: Claude:claude-opus-5-5
+Assisted-by: LLM
 Signed-off-by: Arun Iyengar <aiyengar1990@gmail.com>
 ---
  drivers/media/platform/verisilicon/hantro.h   | 18 +++++

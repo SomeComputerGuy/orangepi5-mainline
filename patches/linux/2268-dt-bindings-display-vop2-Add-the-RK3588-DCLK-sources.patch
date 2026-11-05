@@ -17,7 +17,7 @@ the parent of each divider itself. Describe the dividers of video ports
 0-2 (dclk_src_vp0..2) and the fixed parents (pll_gpll, pll_cpll,
 pll_aupll) as optional clocks after the video PLL.
 
-Assisted-by: Claude:claude-opus-5-5
+Assisted-by: LLM
 Signed-off-by: Arun Iyengar <aiyengar1990@gmail.com>
 ---
  .../display/rockchip/rockchip-vop2.yaml       | 31 +++++++++++++++++--

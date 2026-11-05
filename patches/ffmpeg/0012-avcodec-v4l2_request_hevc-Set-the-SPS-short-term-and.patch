@@ -34,7 +34,7 @@ controls, validated and rebuilt the way v4l2-ctrls and rkvdec do, and
 compared with FFmpeg's own sets (1510 short-term sets, 1106 of them
 inter-predicted, and 8 long-term candidates), without a difference.
 
-Assisted-by: Claude:claude-opus-5-5
+Assisted-by: LLM
 ---
  libavcodec/v4l2_request_hevc.c | 137 ++++++++++++++++++++++++++++++++-
  1 file changed, 134 insertions(+), 3 deletions(-)

@@ -14,7 +14,7 @@ well. This relies on the driver not leaving a VPU behind an IOMMU in
 reset after remove ("media: verisilicon: Don't hold a VPU behind an
 IOMMU in reset after remove").
 
-Assisted-by: Claude:claude-opus-5-5
+Assisted-by: LLM
 Signed-off-by: Arun Iyengar <aiyengar1990@gmail.com>
 ---
  arch/arm64/boot/dts/rockchip/rk3588-base.dtsi | 8 ++++++++

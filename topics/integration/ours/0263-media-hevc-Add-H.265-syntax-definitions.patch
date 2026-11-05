@@ -16,7 +16,7 @@ picture set and picture order count rules depend on them.
 These are kernel-internal definitions: the uAPI carries nal_unit_type as
 the raw H.265 value, like the HEVC decoding controls already do.
 
-Assisted-by: Claude:claude-opus-5-5
+Assisted-by: LLM
 ---
  include/media/v4l2-hevc.h | 132 +++++++++++++++++++++++++++++++++++++-
  1 file changed, 131 insertions(+), 1 deletion(-)

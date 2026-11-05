@@ -8,7 +8,8 @@ retune it for pixel clocks the HDMI PHY PLL cannot provide (HDMI FRL
 mode) or that are not integer fractions of the system PLLs (DisplayPort,
 eDP, DSI), e.g. 3840x2160@59.94Hz.
 
-Assisted-by: Claude:claude-opus-5-5
+
+Assisted-by: LLM
 Signed-off-by: Arun Iyengar <aiyengar1990@gmail.com>
 ---
  arch/arm64/boot/dts/rockchip/rk3588-base.dtsi  | 6 ++++--

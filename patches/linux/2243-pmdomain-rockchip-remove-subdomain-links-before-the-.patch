@@ -31,7 +31,7 @@ does not.
 
 Fixes: 79d12b7a7f22 ("soc: rockchip: power-domain: use pm_genpd_remove in error cleanup")
 Cc: stable@vger.kernel.org
-Assisted-by: Claude:claude-opus-5-5
+Assisted-by: LLM
 Signed-off-by: Arun Iyengar <aiyengar1990@gmail.com>
 ---
  drivers/pmdomain/rockchip/pm-domains.c | 46 ++++++++++++++++++++++++++

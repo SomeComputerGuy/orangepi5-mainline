@@ -31,7 +31,7 @@ busier than it already is.
 
 (cherry picked from commit bd80e85de63a523759a6bb6972b41bf6bb567e6c)
 
-Assisted-by: Claude:claude-opus-5-5
+Assisted-by: LLM
 Signed-off-by: Arun Iyengar <aiyengar1990@gmail.com>
 ---
  drivers/gpu/drm/rockchip/rockchip_drm_vop2.c | 227 ++++++++++++++++++-

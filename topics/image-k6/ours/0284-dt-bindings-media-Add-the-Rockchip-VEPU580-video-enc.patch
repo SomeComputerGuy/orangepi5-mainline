@@ -12,7 +12,7 @@ groups the cores under software-only "mpp-service" and "ccu" nodes, nothing
 in the hardware ties the cores together, so how they are used (one job per
 core, or both cores on one stream) is left to the operating system.
 
-Assisted-by: Claude:claude-opus-5-5
+Assisted-by: LLM
 ---
  .../media/rockchip,rk3588-vepu580.yaml        | 93 +++++++++++++++++++
  1 file changed, 93 insertions(+)

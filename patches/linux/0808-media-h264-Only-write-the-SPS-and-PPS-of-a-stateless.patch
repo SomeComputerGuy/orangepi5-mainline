@@ -19,7 +19,7 @@ IDR pictures.
 To be squashed into "media: h264: Add stateless encode core" from
 https://patch.msgid.link/20260522101653.2565125-5-paulk@sys-base.io
 
-Assisted-by: Claude:claude-opus-5-5
+Assisted-by: LLM
 Signed-off-by: Arun Iyengar <aiyengar1990@gmail.com>
 ---
  drivers/media/v4l2-core/v4l2-h264-enc.c | 11 +++++++----

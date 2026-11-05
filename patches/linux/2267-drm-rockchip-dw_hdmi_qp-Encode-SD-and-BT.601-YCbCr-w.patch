@@ -18,7 +18,7 @@ carries the colorimetry of the Colorspace property:
 Pick the BT.601 matrix in both cases, as the vendor kernel does for the
 SD video formats.
 
-Assisted-by: Claude:claude-opus-5-5
+Assisted-by: LLM
 Signed-off-by: Arun Iyengar <aiyengar1990@gmail.com>
 ---
  drivers/gpu/drm/rockchip/dw_hdmi_qp-rockchip.c | 17 +++++++++++++++--

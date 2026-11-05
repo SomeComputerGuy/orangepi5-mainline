@@ -16,7 +16,7 @@ describes the new one.
 Treat a change of the FRL rate or lane count like a change of the
 color depth and set mode_changed on the CRTC.
 
-Assisted-by: Claude:claude-opus-5-5
+Assisted-by: LLM
 Signed-off-by: Arun Iyengar <aiyengar1990@gmail.com>
 ---
  drivers/gpu/drm/display/drm_hdmi_state_helper.c | 4 +++-

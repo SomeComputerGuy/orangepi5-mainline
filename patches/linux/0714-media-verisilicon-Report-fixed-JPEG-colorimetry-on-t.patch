@@ -22,7 +22,7 @@ mediatek and imx JPEG encoders do, and ignore what the application
 asks for. Other coded formats keep propagating the colorimetry set by
 the application, which they signal in the bitstream.
 
-Assisted-by: Claude:claude-opus-5-5
+Assisted-by: LLM
 Signed-off-by: Arun Iyengar <aiyengar1990@gmail.com>
 ---
  drivers/media/platform/verisilicon/hantro_v4l2.c | 13 +++++++++++++

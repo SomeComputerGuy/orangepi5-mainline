@@ -46,7 +46,7 @@ PLL is set to the new rate before the port's DCLK, so that the CRU does
 not pick the old one. Otherwise it is only accepted with the PLL at its
 current rate.
 
-Assisted-by: Claude:claude-opus-5-5
+Assisted-by: LLM
 Signed-off-by: Arun Iyengar <aiyengar1990@gmail.com>
 ---
  drivers/gpu/drm/rockchip/rockchip_drm_vop2.c | 435 +++++++++++++++----

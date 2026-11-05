@@ -7,7 +7,7 @@ Add an output_count member to struct compositor_setup, defaulting to 1,
 and pass it to the compositor as --output-count when a fixture asks for
 more than one output on the headless backend.
 
-Assisted-by: Claude:claude-opus-5-5
+Assisted-by: LLM
 ---
  tests/harness/weston-test-fixture-compositor.c | 7 +++++++
  tests/harness/weston-test-fixture-compositor.h | 3 +++

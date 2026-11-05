@@ -12,7 +12,7 @@ On RK3588, a 24 Mbit/s 3840x2160 HEVC stream (240 frames, x265
 ultrafast) decodes at 104.6 fps instead of 98.6-102.8 fps, and the
 decoded frames are identical.
 
-Assisted-by: Claude:claude-opus-5-5
+Assisted-by: LLM
 ---
  drivers/media/platform/rockchip/rkvdec/rkvdec-vdpu381-hevc.c | 3 +++
  1 file changed, 3 insertions(+)

@@ -21,7 +21,7 @@ The vendor driver toggles an "enable" GPIO before reset; on the boards
 it is the LCD power enable, which is described here as the panel's
 power-supply regulator.
 
-Assisted-by: Claude:claude-opus-5-5
+Assisted-by: LLM
 ---
  drivers/gpu/drm/panel/panel-ilitek-ili9881c.c | 221 ++++++++++++++++++
  1 file changed, 221 insertions(+)

@@ -11,7 +11,7 @@ libudev to find the media and video device, so add libudev-dev to
 Build-Depends and pass --enable-libudev, which makes configure fail
 instead of silently dropping the hwaccels if it is missing.
 
-Assisted-by: Claude:claude-opus-5-5
+Assisted-by: LLM
 ---
  debian/control | 1 +
  debian/rules   | 4 +++-

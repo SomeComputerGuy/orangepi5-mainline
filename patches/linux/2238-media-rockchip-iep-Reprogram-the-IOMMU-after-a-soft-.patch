@@ -21,7 +21,7 @@ read back the same way, keeps its IOMMU state across its soft reset.)
 
 Fold into "media: rockchip: add IEP2 deinterlacer driver".
 
-Assisted-by: Claude:claude-opus-5-5
+Assisted-by: LLM
 Signed-off-by: Arun Iyengar <aiyengar1990@gmail.com>
 ---
  drivers/media/platform/rockchip/iep/iep.c | 24 +++++++++++------------

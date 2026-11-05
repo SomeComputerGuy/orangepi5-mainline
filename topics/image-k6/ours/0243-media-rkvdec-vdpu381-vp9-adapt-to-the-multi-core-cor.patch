@@ -15,7 +15,7 @@ open-coding the watchdog.
 
 Local integration patch for running both series together; not posted.
 
-Assisted-by: Claude:claude-opus-5-5
+Assisted-by: LLM
 ---
  .../rockchip/rkvdec/rkvdec-vdpu381-vp9.c      | 38 +++++++------------
  1 file changed, 14 insertions(+), 24 deletions(-)

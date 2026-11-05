@@ -16,7 +16,7 @@ BSP uses SPDIF_TX2 for DP0 audio as well.
 Enable the card and SPDIF_TX2 on the Orange Pi 5 and 5B, which route DP0
 to the USB-C connector in DisplayPort alternate mode.
 
-Assisted-by: Claude:claude-opus-5-5
+Assisted-by: LLM
 ---
  arch/arm64/boot/dts/rockchip/rk3588-base.dtsi     | 15 +++++++++++++++
  .../boot/dts/rockchip/rk3588s-orangepi-5-5b.dtsi  |  8 ++++++++

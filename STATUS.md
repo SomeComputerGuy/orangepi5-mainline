@@ -1,4 +1,4 @@
-# Status (generated 2026-11-04 by tools/export-from-workspace.sh)
+# Status (generated 2026-11-05 by tools/export-from-workspace.sh)
 
 Every kernel topic, the branch it lives on, how far it got, and the next upstream step.
 `Ours/Carried/Local` count the patches in each category (see the topic README).

@@ -21,7 +21,7 @@ functionally; the flash just gets its real supply instead of a dummy
 one. Only the Orange Pi 5 enables the flash: on the 5B and 5 Pro the
 FSPI M0 pins are used by the eMMC.
 
-Assisted-by: Claude:claude-opus-5-5
+Assisted-by: LLM
 ---
  arch/arm64/boot/dts/rockchip/rk3588s-orangepi-5.dts | 4 ++++
  1 file changed, 4 insertions(+)

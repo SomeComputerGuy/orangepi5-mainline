@@ -16,7 +16,8 @@ in a composite clock whose determine_rate() asks every parent. Return
 the smallest usable divider for such a rate, like rounding up does.
 
 Fixes: 9315514252a9 ("clk: divider: fix calculation of initial best divider when rounding to closest")
-Assisted-by: Claude:claude-opus-5-5
+
+Assisted-by: LLM
 Signed-off-by: Arun Iyengar <aiyengar1990@gmail.com>
 ---
  drivers/clk/clk-divider.c | 7 +++++++

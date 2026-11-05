@@ -15,7 +15,7 @@ of them, and use the one of the job being set up. The tables cache what
 they hold to skip unchanged scaling lists and RPS, so the caches move
 with them. There's still one slot per context, so nothing changes yet.
 
-Assisted-by: Claude:claude-opus-5-5
+Assisted-by: LLM
 Signed-off-by: Arun Iyengar <aiyengar1990@gmail.com>
 ---
  .../rockchip/rkvdec/rkvdec-vdpu381-h264.c     | 61 +++++++++++-----

@@ -18,7 +18,7 @@ overridden EDID until the next reboot.
 Accept a single trailing newline as well. An EDID is at least 128
 bytes, so a six-byte "reset\n" can't be a valid override.
 
-Assisted-by: Claude:claude-opus-5-5
+Assisted-by: LLM
 Signed-off-by: Arun Iyengar <aiyengar1990@gmail.com>
 ---
  drivers/gpu/drm/drm_debugfs.c | 7 ++++++-

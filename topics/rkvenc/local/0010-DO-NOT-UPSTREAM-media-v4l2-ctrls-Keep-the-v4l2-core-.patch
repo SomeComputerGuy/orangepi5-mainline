@@ -21,7 +21,7 @@ v4l2-core exports stay those of the running kernel, so that only
 videodev.ko, the new v4l2-h264-enc modules and hantro-vpu.ko need to be
 replaced.
 
-Assisted-by: Claude:claude-opus-5-5
+Assisted-by: LLM
 ---
  drivers/media/v4l2-core/v4l2-ctrls-core.c | 2 +-
  drivers/media/v4l2-core/v4l2-h264-enc.c   | 2 +-

@@ -25,7 +25,7 @@ chrome://gpu lists the VA decode profiles and chrome://media-internals
 shows VaapiVideoDecoder with no command-line switch.
 
 Bug: TBD
-Assisted-by: Claude:claude-opus-5-5
+Assisted-by: LLM
 ---
  media/gpu/vaapi/vaapi_wrapper.cc | 33 ++++++++++++++++++++++++++++++++
  1 file changed, 33 insertions(+)

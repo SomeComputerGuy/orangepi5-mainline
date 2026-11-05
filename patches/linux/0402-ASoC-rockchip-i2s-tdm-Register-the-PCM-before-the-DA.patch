@@ -21,7 +21,7 @@ Register the dmaengine PCM first, as rockchip_spdif already does, so the
 card finds both components when the DAI appears.
 
 Fixes: 081068fd6414 ("ASoC: rockchip: add support for i2s-tdm controller")
-Assisted-by: Claude:claude-opus-5-5
+Assisted-by: LLM
 Signed-off-by: Arun Iyengar <aiyengar1990@gmail.com>
 ---
  sound/soc/rockchip/rockchip_i2s_tdm.c | 13 +++++++++----

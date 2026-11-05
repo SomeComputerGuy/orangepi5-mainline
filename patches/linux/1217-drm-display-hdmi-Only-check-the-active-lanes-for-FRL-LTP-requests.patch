@@ -13,7 +13,7 @@ rate.
 
 Ignore Ln3_LTP_req in 3 lane modes.
 
-Assisted-by: Claude:claude-opus-5-5
+Assisted-by: LLM
 Signed-off-by: Arun Iyengar <aiyengar1990@gmail.com>
 ---
  drivers/gpu/drm/display/drm_hdmi_helper.c | 19 ++++++++++++++++---

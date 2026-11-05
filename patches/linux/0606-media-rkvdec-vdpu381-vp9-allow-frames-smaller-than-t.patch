@@ -22,7 +22,7 @@ Frames larger than the CAPTURE buffers are still rejected.
 Userspace must also keep the queue across such a change: GStreamer's
 v4l2slvp9dec currently drops frames on non-keyframe size changes.
 
-Assisted-by: Claude:claude-opus-5-5
+Assisted-by: LLM
 Signed-off-by: Arun Iyengar <aiyengar1990@gmail.com>
 ---
  .../rockchip/rkvdec/rkvdec-vdpu381-vp9.c      | 19 +++++++++++++------

@@ -31,7 +31,7 @@ and maps one fullscreen surface on each through set_fullscreen(output),
 checking the wl_surface.enter output. Without this change the surface
 that asks for "headless-1" enters "headless".
 
-Assisted-by: Claude:claude-opus-5-5
+Assisted-by: LLM
 ---
  kiosk-shell/kiosk-shell.c             |  10 ++-
  kiosk-shell/kiosk-shell.h             |   2 +

@@ -20,7 +20,7 @@ as getting this wrong takes down the whole encoder, check the geometry
 and the CAPTURE buffer size before programming the hardware and fail
 the job instead.
 
-Assisted-by: Claude:claude-opus-5-5
+Assisted-by: LLM
 ---
  .../platform/verisilicon/hantro_h1_jpeg_enc.c |  5 +++
  .../media/platform/verisilicon/hantro_jpeg.c  | 37 +++++++++++++++++++

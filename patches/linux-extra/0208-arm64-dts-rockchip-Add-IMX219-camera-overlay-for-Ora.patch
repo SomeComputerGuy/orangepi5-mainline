@@ -20,7 +20,7 @@ driver drives XCLR with inverted logic, hence GPIO_ACTIVE_HIGH.
 ISP0 is enabled as well, for the rkisp2 memory-to-memory path on frames
 captured by VICAP. This needs the rkisp2 ISP nodes in rk3588-base.dtsi.
 
-Assisted-by: Claude:claude-opus-5-5
+Assisted-by: LLM
 ---
  arch/arm64/boot/dts/rockchip/Makefile         |   9 ++
  .../rk3588s-orangepi-5-cam1-imx219.dtso       | 144 ++++++++++++++++++

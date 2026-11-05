@@ -5,8 +5,9 @@ enablement: our kernel, rebuilt FFmpeg, mpv, GStreamer and alsa-ucm-conf package
 versions), and a VA-API driver for the RK3588 video decoders (`v4l2-request-va-driver`).
 Install apps the way their vendors document. Nothing board-specific is needed.
 
-The RK3588 decoders handle H.264 and HEVC up to 4K (8-bit), VP9 up to 4K, AV1 up to 4K,
-and VP8 and MPEG-2 up to 1080p.
+The RK3588 decoders handle H.264, HEVC (8- and 10-bit) and VP9 up to 8K, AV1 up to 4K,
+and VP8 and MPEG-2 up to 1080p (all checked bit-exact on the board). 8K plays smoothly
+only at lower frame rates (see Limits).
 
 ## What works
 
@@ -90,7 +91,9 @@ Until these are merged, the image carries them as `+opi5` rebuilds of Ubuntu's p
 - 10-bit HEVC (Main10) and VP9 Profile 2: hardware-decoded in mpv/libmpv apps and GStreamer.
   The VA-API driver doesn't offer them yet (the decoder writes a packed 10-bit format that
   browsers can't take), so in browsers they play in software.
-- 8K and VP8/MPEG-2 above 1080p: software (hardware limit).
+- 8K: hardware-decoded in mpv/libmpv apps and GStreamer. Measured lower bounds (GStreamer,
+  including a CPU copy per frame): HEVC 58 fps, HEVC 10-bit 38, H.264 25, VP9 18.
+- VP8 and MPEG-2 above 1080p: software (hardware limit).
 
 ## Server image
 The Server image is Ubuntu Server plus the same kernel and the same package source. Nothing

@@ -15,7 +15,7 @@ userspace can force full or limited range as on other HDMI drivers.
 RK3576 keeps its behaviour: its HDMI video port does post-processing in
 a different block that the VOP2 driver does not program yet.
 
-Assisted-by: Claude:claude-opus-5-5
+Assisted-by: LLM
 Signed-off-by: Arun Iyengar <aiyengar1990@gmail.com>
 ---
  drivers/gpu/drm/rockchip/dw_hdmi_qp-rockchip.c | 14 ++++++++++++++

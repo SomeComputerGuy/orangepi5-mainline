@@ -24,7 +24,7 @@ the less specific "failed to handle node power-domain".
 
 Fixes: 7c696693a4f5 ("soc: rockchip: power-domain: Add power domain driver")
 Fixes: 6be05b5ec161 ("soc: rockchip: power-domain: add support for sub-power domains")
-Assisted-by: Claude:claude-opus-5-5
+Assisted-by: LLM
 Signed-off-by: Arun Iyengar <aiyengar1990@gmail.com>
 ---
  drivers/pmdomain/rockchip/pm-domains.c | 15 +++++++++------

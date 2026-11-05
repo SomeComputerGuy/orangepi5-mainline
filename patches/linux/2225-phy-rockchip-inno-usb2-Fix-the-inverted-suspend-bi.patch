@@ -28,7 +28,7 @@ hubs, the webcam and the SuperSpeed devices behind them again, the EHCI
 controller sees its device, and they all survive a suspend/resume cycle.
 
 Fixes: "phy: rockchip: inno-usb2: move suspend handling into new function" (v2 3/4, <20261001-phy-rockchip-inno-usb2-clock-fix-v2-3-e01bf509359e@collabora.com>)
-Assisted-by: Claude:claude-opus-5-5
+Assisted-by: LLM
 Signed-off-by: Arun Iyengar <aiyengar1990@gmail.com>
 ---
  drivers/phy/rockchip/phy-rockchip-inno-usb2.c | 2 +-

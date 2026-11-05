@@ -42,7 +42,7 @@ from the vendor kernel driver mpp_jpgdec.c (rockchip-linux/kernel,
 GPL-2.0+ OR MIT). No code was copied from either; this is an
 independent implementation using only the hardware facts.
 
-Assisted-by: Claude:claude-opus-5-5
+Assisted-by: LLM
 Signed-off-by: Arun Iyengar <aiyengar1990@gmail.com>
 ---
  MAINTAINERS                                   |    1 +

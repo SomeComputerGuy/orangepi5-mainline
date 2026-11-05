@@ -18,7 +18,7 @@ VDPU381/VDPU383 backends test the resulting pointers instead of
 has_sps_st_rps/has_sps_lt_rps, so that a short control is handled like
 a missing one: a warning on VDPU381, a rejected job on VDPU383.
 
-Assisted-by: Claude:claude-opus-5-5
+Assisted-by: LLM
 ---
  .../rockchip/rkvdec/rkvdec-hevc-common.c       | 18 ++++++++++++------
  .../rockchip/rkvdec/rkvdec-vdpu381-hevc.c      |  4 ++--

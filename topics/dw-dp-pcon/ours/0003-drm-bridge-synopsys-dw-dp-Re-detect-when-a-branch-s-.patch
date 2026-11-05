@@ -16,7 +16,7 @@ full hotplug detection when either changed, like i915 does for
 SINK_COUNT changes. Detection already reports a branch with
 SINK_COUNT == 0 as disconnected.
 
-Assisted-by: Claude:claude-opus-5-5
+Assisted-by: LLM
 ---
  drivers/gpu/drm/bridge/synopsys/dw-dp.c | 28 +++++++++++++++++++++++++
  1 file changed, 28 insertions(+)

@@ -19,7 +19,7 @@ rejected by the existing checks in
 dw_dp_bridge_atomic_get_output_bus_fmts(), as for every other
 unsupported configuration.
 
-Assisted-by: Claude:claude-opus-5-5
+Assisted-by: LLM
 Signed-off-by: Arun Iyengar <aiyengar1990@gmail.com>
 ---
  drivers/gpu/drm/rockchip/dw_dp-rockchip.c | 15 +++++++++++++++

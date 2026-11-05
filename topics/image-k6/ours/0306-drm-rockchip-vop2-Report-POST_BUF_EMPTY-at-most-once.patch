@@ -19,7 +19,7 @@ re-armed. A new per video port lock serialises the interrupt enable
 bookkeeping between the interrupt handler and the vblank callbacks.
 The error is still reported, now at most once per frame and video port.
 
-Assisted-by: Claude:claude-opus-5-5
+Assisted-by: LLM
 ---
  drivers/gpu/drm/rockchip/rockchip_drm_vop2.c | 63 +++++++++++++++++++-
  drivers/gpu/drm/rockchip/rockchip_drm_vop2.h | 10 ++++

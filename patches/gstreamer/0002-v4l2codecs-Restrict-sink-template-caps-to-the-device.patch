@@ -22,7 +22,7 @@ and the accept-caps query rejects out of range sizes before the format
 is set. If the driver does not implement frame size enumeration, the
 unrestricted caps are kept.
 
-Assisted-by: Claude:claude-opus-5-5
+Assisted-by: LLM
 ---
  sys/v4l2codecs/gstv4l2codecav1dec.c   | 18 ++++--
  sys/v4l2codecs/gstv4l2codech264dec.c  | 22 ++++---

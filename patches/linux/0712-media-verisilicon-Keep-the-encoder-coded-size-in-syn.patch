@@ -34,7 +34,7 @@ With this, the coded size can only differ from the OUTPUT size by the
 crop set through VIDIOC_S_SELECTION, which is restricted to the last
 macroblock.
 
-Assisted-by: Claude:claude-opus-5-5
+Assisted-by: LLM
 Signed-off-by: Arun Iyengar <aiyengar1990@gmail.com>
 ---
  .../media/platform/verisilicon/hantro_v4l2.c  | 26 +++++++++++++++++++

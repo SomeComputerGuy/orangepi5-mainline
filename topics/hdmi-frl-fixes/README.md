@@ -1,6 +1,6 @@
 # hdmi-frl-fixes: Fixes for the carried HDMI 2.1 FRL series: drm/display hdmi helper no longer resets an active FRL link on every connector probe (1207); dw-hdmi-qp clears the FRL link state on TMDS fallback and disable (1213)
 
-- Workspace branch: `opi5/hdmi-frl-fixes-7.3` (exported 2026-11-04)
+- Workspace branch: `opi5/hdmi-frl-fixes-7.3` (exported 2026-11-05)
 - Kernel fork branch: `opi5/hdmi-frl-fixes` (see PUBLISH.md)
 - Sits on: `hdmi-frl` (base commit `4c18b22e48cf`)
 - Hardware test: yes: connector probes no longer force a modeset + FRL re-train; TMDS modes after FRL clean (see topics/hdmi-wedge and topics/vop2-hdmi-clk notes); in patches/linux (1207, 1213)

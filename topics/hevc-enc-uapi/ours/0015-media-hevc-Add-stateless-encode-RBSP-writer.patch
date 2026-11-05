@@ -32,7 +32,7 @@ that the syntax writers read like the syntax tables of the
 specification. The H.264 writer keeps its own bit writer for now; both
 could share one later.
 
-Assisted-by: Claude:claude-opus-5-5
+Assisted-by: LLM
 ---
  drivers/media/v4l2-core/Kconfig              |   4 +
  drivers/media/v4l2-core/Makefile             |   1 +

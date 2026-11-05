@@ -19,7 +19,7 @@ the VOP has stopped and before it takes its DCLK from the PHY again.
 Every change of the link setup is a modeset: the mode, the color depth,
 the output format and the FRL configuration all force one.
 
-Assisted-by: Claude:claude-opus-5-5
+Assisted-by: LLM
 Signed-off-by: Arun Iyengar <aiyengar1990@gmail.com>
 ---
  .../gpu/drm/rockchip/dw_hdmi_qp-rockchip.c    | 93 ++++++++++++-------

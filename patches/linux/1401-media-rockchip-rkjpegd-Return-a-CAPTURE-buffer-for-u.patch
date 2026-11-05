@@ -23,7 +23,7 @@ a job only when the CAPTURE queue is already streaming; otherwise there
 is no CAPTURE buffer to return and the OUTPUT buffer is given back at
 once, as before.
 
-Assisted-by: Claude:claude-opus-5-5
+Assisted-by: LLM
 Signed-off-by: Arun Iyengar <aiyengar1990@gmail.com>
 ---
  .../media/platform/rockchip/rkjpegd/rkjpegd.c | 53 ++++++++++++++-----

@@ -41,7 +41,7 @@ after it is queued, reset included (0.90 to 1.04 ms measured).
 A job whose destination size doesn't match its window size raises no
 error interrupt and completes with wrong output, so it isn't detected.
 
-Assisted-by: Claude:claude-opus-5-5
+Assisted-by: LLM
 Signed-off-by: Arun Iyengar <aiyengar1990@gmail.com>
 ---
  drivers/media/platform/rockchip/rga/rga.c     |  2 +

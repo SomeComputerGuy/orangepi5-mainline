@@ -19,7 +19,7 @@ Unattached sources may advertise any Rp level, and tcpm sets the
 configured level through set_cc() once the port is attached, so always
 toggle with the default current.
 
-Assisted-by: Claude:claude-opus-5-5
+Assisted-by: LLM
 Signed-off-by: Arun Iyengar <aiyengar1990@gmail.com>
 ---
  drivers/usb/typec/tcpm/fusb302.c | 13 +++++++++++--

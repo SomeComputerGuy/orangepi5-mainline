@@ -20,7 +20,7 @@ With this, all 339 exports shared with the installed v4l2-core modules
 keep their versions, so only videodev.ko and the new v4l2-hevc-enc and
 v4l2-hevc-enc-rbsp modules need to be added to the board.
 
-Assisted-by: Claude:claude-opus-5-5
+Assisted-by: LLM
 ---
  drivers/media/v4l2-core/v4l2-hevc-enc-kunit.c | 4 ++--
  drivers/media/v4l2-core/v4l2-hevc-enc.c       | 2 +-

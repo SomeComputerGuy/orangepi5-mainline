@@ -18,7 +18,7 @@ Clear both FRL operation mode bits and FLT_CONFIG1 when falling back to
 TMDS and when the output is disabled. The vendor kernel likewise clears
 OPMODE_FRL and OPMODE_FRL_4LANES whenever it sets up TMDS mode.
 
-Assisted-by: Claude:claude-opus-5-5
+Assisted-by: LLM
 Signed-off-by: Arun Iyengar <aiyengar1990@gmail.com>
 ---
  drivers/gpu/drm/bridge/synopsys/dw-hdmi-qp.c | 14 +++++++++++++-

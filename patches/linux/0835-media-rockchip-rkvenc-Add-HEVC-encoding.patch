@@ -53,7 +53,7 @@ MPP library (hal_h265e_vepu580.c, hal_h265e_vepu580_reg.h,
 hal_h265e_vepu580_tune.c, vepu5xx_common.c, h265e_ps.c, h265e_api.c,
 Apache-2.0), read as documentation; no code was copied.
 
-Assisted-by: Claude:claude-opus-5-5
+Assisted-by: LLM
 Signed-off-by: Arun Iyengar <aiyengar1990@gmail.com>
 ---
  .../media/platform/rockchip/rkvenc/Kconfig    |   5 +-

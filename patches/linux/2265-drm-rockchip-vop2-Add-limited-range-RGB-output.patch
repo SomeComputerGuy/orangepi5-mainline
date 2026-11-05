@@ -28,7 +28,7 @@ The flag is cleared when the CRTC state is duplicated, as the encoder's
 atomic_check sets it again on every modeset, and a video port that moves
 to another encoder must not keep it.
 
-Assisted-by: Claude:claude-opus-5-5
+Assisted-by: LLM
 Signed-off-by: Arun Iyengar <aiyengar1990@gmail.com>
 ---
  drivers/gpu/drm/rockchip/rockchip_drm_drv.h  |  2 +

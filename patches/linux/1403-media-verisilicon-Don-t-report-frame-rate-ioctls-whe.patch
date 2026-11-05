@@ -20,7 +20,7 @@ buffer type. On encoders that also do video, like the RK3588 VPU121,
 return -ENOTTY from them while the CAPTURE format is JPEG.
 
 Fixes: ced67ee1fffe ("media: verisilicon: Add common encoder parm and frameintervals ioctls")
-Assisted-by: Claude:claude-opus-5-5
+Assisted-by: LLM
 Signed-off-by: Arun Iyengar <aiyengar1990@gmail.com>
 ---
  .../media/platform/verisilicon/hantro_drv.c   | 21 +++++++++++++++++++

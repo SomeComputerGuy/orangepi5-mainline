@@ -19,7 +19,7 @@ CRU rate for the other outputs only within that tolerance, and refuse
 the state with -EINVAL otherwise, like a mode the hardware cannot
 display, instead of committing it at a wrong rate.
 
-Assisted-by: Claude:claude-opus-5-5
+Assisted-by: LLM
 Signed-off-by: Arun Iyengar <aiyengar1990@gmail.com>
 ---
  drivers/gpu/drm/rockchip/rockchip_drm_vop2.c | 25 +++++++++++++++++++------

@@ -23,7 +23,7 @@ Besides being the correct description, this removes the MAC from the
 timing path for both directions, so no board-specific delay-line value
 is needed any more.
 
-Assisted-by: Claude:claude-opus-5-5
+Assisted-by: LLM
 Signed-off-by: Arun Iyengar <aiyengar1990@gmail.com>
 ---
  arch/arm64/boot/dts/rockchip/rk3588s-orangepi-5-5b.dtsi | 3 +--

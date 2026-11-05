@@ -13,7 +13,7 @@ complete state and userspace waiting on the request fd waits forever.
 
 Call rkvdec_run_postamble() before returning the error.
 
-Assisted-by: Claude:claude-opus-5-5
+Assisted-by: LLM
 ---
  drivers/media/platform/rockchip/rkvdec/rkvdec-vdpu383-hevc.c | 2 ++
  1 file changed, 2 insertions(+)

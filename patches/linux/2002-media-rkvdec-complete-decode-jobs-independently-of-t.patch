@@ -29,7 +29,7 @@ The interrupt handlers and the watchdog now work on the core they were
 called for rather than on ctx->core, which is only valid while a job is
 being set up.
 
-Assisted-by: Claude:claude-opus-5-5
+Assisted-by: LLM
 Signed-off-by: Arun Iyengar <aiyengar1990@gmail.com>
 ---
  .../media/platform/rockchip/rkvdec/rkvdec.c   | 307 ++++++++++++++----

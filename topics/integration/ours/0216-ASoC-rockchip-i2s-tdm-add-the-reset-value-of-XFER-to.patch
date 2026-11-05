@@ -19,7 +19,7 @@ Add XFER with its reset value of 0 (TX and RX stopped), which is also
 what the zero-initialised cache assumed so far, so no register value
 written to the hardware changes.
 
-Assisted-by: Claude:claude-opus-5-5
+Assisted-by: LLM
 ---
  sound/soc/rockchip/rockchip_i2s_tdm.c | 1 +
  1 file changed, 1 insertion(+)

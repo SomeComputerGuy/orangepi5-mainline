@@ -30,7 +30,7 @@ sizes together with the buffers.
 Fixes: 727a400686a2 ("media: verisilicon: Add Rockchip AV1 decoder")
 (cherry picked from commit e762ac80417fa7ab3f8dec77e84e67293f8d103e)
 
-Assisted-by: Claude:claude-opus-5-5
+Assisted-by: LLM
 Signed-off-by: Arun Iyengar <aiyengar1990@gmail.com>
 ---
  .../verisilicon/rockchip_vpu981_hw_av1_dec.c  | 34 +++++++++++++++----

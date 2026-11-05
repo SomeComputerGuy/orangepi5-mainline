@@ -39,7 +39,7 @@ before suspend.
 Tested on Orange Pi 5 (RK3588S): build-tested only so far (needs a new
 kernel image; not installed on the board).
 
-Assisted-by: Claude:claude-opus-5-5
+Assisted-by: LLM
 Signed-off-by: Arun Iyengar <aiyengar1990@gmail.com>
 ---
  drivers/cpufreq/cpufreq.c | 92 ++++++++++++++++++++++++---------------

@@ -17,7 +17,7 @@ Use the DRM downstream port helpers the way i915 does:
 - drop output bus formats above the DFP max bpc or the TMDS clock limit
 - allow YCbCr 4:2:0 only when a TMDS converter passes it through
 
-Assisted-by: Claude:claude-opus-5-5
+Assisted-by: LLM
 Signed-off-by: Arun Iyengar <aiyengar1990@gmail.com>
 ---
  drivers/gpu/drm/bridge/synopsys/dw-dp.c | 93 +++++++++++++++++++++++--

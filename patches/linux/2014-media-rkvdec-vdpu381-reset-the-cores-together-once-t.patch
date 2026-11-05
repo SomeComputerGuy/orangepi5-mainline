@@ -26,7 +26,7 @@ decoding into their buffers, or hold a bus transaction in its IOMMU, and
 their runtime PM references keep the IOMMUs from being suspended (which
 disables paging) under them.
 
-Assisted-by: Claude:claude-opus-5-5
+Assisted-by: LLM
 Signed-off-by: Arun Iyengar <aiyengar1990@gmail.com>
 ---
  .../rockchip/rkvdec/rkvdec-vdpu381-h264.c     |   5 +-

@@ -14,7 +14,7 @@ decoders are V4L2 stateless devices the VA-API driver over V4L2
 (what libmpv front ends such as Jellyfin Desktop ask for) reach
 v4l2request through the auto-probe whitelist patch.
 
-Assisted-by: Claude:claude-opus-5-5
+Assisted-by: LLM
 ---
  debian/rules | 1 +
  1 file changed, 1 insertion(+)

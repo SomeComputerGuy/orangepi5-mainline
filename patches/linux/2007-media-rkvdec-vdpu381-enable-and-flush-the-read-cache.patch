@@ -14,7 +14,7 @@ Do the same. Flushing matters once a stream is decoded on both cores:
 a reference frame may have been rewritten by the other core, or as the
 destination of an earlier frame, since this core last cached it.
 
-Assisted-by: Claude:claude-opus-5-5
+Assisted-by: LLM
 Signed-off-by: Arun Iyengar <aiyengar1990@gmail.com>
 ---
  .../rockchip/rkvdec/rkvdec-vdpu381-regs.h     |  9 ++++++

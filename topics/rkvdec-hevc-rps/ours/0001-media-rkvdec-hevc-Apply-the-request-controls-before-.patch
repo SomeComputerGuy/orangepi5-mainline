@@ -29,7 +29,7 @@ setup before the codec code reads them. It is wrong for the rest:
 Apply the request first, as cedrus and hantro do, then read the
 controls.
 
-Assisted-by: Claude:claude-opus-5-5
+Assisted-by: LLM
 ---
  .../media/platform/rockchip/rkvdec/rkvdec-hevc-common.c  | 9 +++++++--
  1 file changed, 7 insertions(+), 2 deletions(-)

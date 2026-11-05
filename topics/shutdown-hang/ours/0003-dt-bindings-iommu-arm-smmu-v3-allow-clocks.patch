@@ -12,7 +12,7 @@ longer be accessed.
 Allow up to four clocks, so that such a clock can be described and held
 by the SMMU driver.
 
-Assisted-by: Claude:claude-opus-5-5
+Assisted-by: LLM
 ---
  Documentation/devicetree/bindings/iommu/arm,smmu-v3.yaml | 7 +++++++
  1 file changed, 7 insertions(+)

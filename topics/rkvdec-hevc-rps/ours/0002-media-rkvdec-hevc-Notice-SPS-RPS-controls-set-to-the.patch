@@ -25,7 +25,7 @@ v4l2_ctrl_new_custom() takes the flags of a standard control from
 v4l2_ctrl_fill() and drops cfg->flags, so add EXECUTE_ON_WRITE to the
 control once it is created.
 
-Assisted-by: Claude:claude-opus-5-5
+Assisted-by: LLM
 ---
  .../media/platform/rockchip/rkvdec/rkvdec.c    | 18 +++++++++++++++++-
  1 file changed, 17 insertions(+), 1 deletion(-)

@@ -27,7 +27,7 @@ at the end, which reinitializes its IOMMU with the shared mappings.
 Devices without an IOMMU, and IOMMUs that can't allocate a paging
 domain, are left alone.
 
-Assisted-by: Claude:claude-opus-5-5
+Assisted-by: LLM
 ---
  drivers/media/platform/verisilicon/hantro.h   |  3 +
  .../media/platform/verisilicon/hantro_drv.c   | 66 +++++++++++++++++++

@@ -44,7 +44,7 @@ as before.
 Signed-off-by: Igor Paunovic <royalnet026@gmail.com>
 [Arun: the HDMI 2.0 series in this tree drops drm_connector.max_bpc, so
  take the default from the "max bpc" property's range maximum instead]
-Assisted-by: Claude:claude-opus-5-5
+Assisted-by: LLM
 Signed-off-by: Arun Iyengar <aiyengar1990@gmail.com>
 ---
  drivers/gpu/drm/display/drm_bridge_connector.c | 9 ++++++++-

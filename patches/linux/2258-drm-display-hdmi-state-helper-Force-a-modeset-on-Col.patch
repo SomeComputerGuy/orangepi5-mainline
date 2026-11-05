@@ -20,7 +20,7 @@ old one doesn't count as a change.
 
 Add KUnit coverage for both cases.
 
-Assisted-by: Claude:claude-opus-5-5
+Assisted-by: LLM
 Signed-off-by: Arun Iyengar <aiyengar1990@gmail.com>
 ---
  .../gpu/drm/display/drm_hdmi_state_helper.c   |   8 +-

@@ -35,7 +35,7 @@ The DP mode is left untouched: its PLL is not exposed as a clock and
 the lanes are torn down by rk_hdptx_dp_reset() from the usage count.
 
 Fixes: c4b09c562086 ("phy: phy-rockchip-samsung-hdptx: Add clock provider support")
-Assisted-by: Claude:claude-opus-5-5
+Assisted-by: LLM
 Signed-off-by: Arun Iyengar <aiyengar1990@gmail.com>
 ---
  drivers/phy/rockchip/phy-rockchip-samsung-hdptx.c | 15 +++++++++++++++

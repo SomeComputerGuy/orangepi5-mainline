@@ -61,9 +61,10 @@ def run(*args, cwd=None, check=True):
 
 # AI-assistance attribution for our own patches, per the kernel's
 # Documentation/process/coding-assistants.rst ("Assisted-by: LLM [TOOL1] ...";
-# the model as one token, no tools: only basic tools were used). Other
+# literally "LLM", plus any specialised analysis tools; user 2026-11-05: "switch to what the kernel wants"). Other
 # people's patches keep whatever tags their authors posted.
-ASSISTED_BY = "Assisted-by: Claude:claude-opus-5-5"
+ASSISTED_BY = "Assisted-by: LLM"
+LLM_TAG_RE = re.compile(r"(?m)^Assisted-by: LLM\b[^\n]*$")
 CLAUDE_TRAILER_RE = re.compile(r"(?im)^(Co-Authored-By|Co-developed-by|Assisted-by):[^\n]*(claude|anthropic)[^\n]*\n")
 
 
@@ -93,7 +94,9 @@ def tag_assisted(text):
     had_sob = re.search(r"(?m)^" + re.escape(sob) + "$", body) is not None
     body = re.sub(r"(?m)^" + re.escape(sob) + r"\n?", "", body + "\n").rstrip("\n")
     last = body.rsplit("\n\n", 1)[-1] if body else ""
-    if body and "\n\n" in body and all(re.match(r"^[A-Za-z-]+: \S", l) for l in last.splitlines()):
+    if LLM_TAG_RE.search(body):
+        pass  # already tagged (possibly with a tool list): keep it as is
+    elif body and "\n\n" in body and all(re.match(r"^[A-Za-z-]+: \S", l) for l in last.splitlines()):
         body += "\n" + ASSISTED_BY
     else:
         body += ("\n\n" if body else "") + ASSISTED_BY

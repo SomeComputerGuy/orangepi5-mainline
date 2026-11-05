@@ -40,7 +40,7 @@ clusters settle at ~1.41 GHz:
 With this, the initramfs (84 MB) is unpacked 2.2 s into boot and the
 kernel reaches userspace ~5 s after "Starting kernel".
 
-Assisted-by: Claude:claude-opus-5-5
+Assisted-by: LLM
 ---
 RFC because the safe rate depends on the voltage each board's big-core
 regulators power up at, which I could only measure on the Orange Pi 5

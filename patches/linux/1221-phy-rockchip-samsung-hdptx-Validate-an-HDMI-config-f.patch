@@ -15,7 +15,7 @@ Pass the HDMI mode to rk_hdptx_phy_verify_hdmi_config() explicitly:
 the submode for phy_validate(), the current mode for phy_configure().
 Reject an unknown PHY mode or HDMI submode in phy_validate().
 
-Assisted-by: Claude:claude-opus-5-5
+Assisted-by: LLM
 Signed-off-by: Arun Iyengar <aiyengar1990@gmail.com>
 ---
  .../phy/rockchip/phy-rockchip-samsung-hdptx.c | 21 ++++++++++++++-----

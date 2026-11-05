@@ -27,7 +27,7 @@ hal_vp9d_vdpu34x.c) and let VP9 frames run in CCU mode and overlap:
    job_ready() doesn't start a frame in a buffer that is still read.
  - Set RKVDEC_FMT_FLAG_PIPELINE for VP9.
 
-Assisted-by: Claude:claude-opus-5-5
+Assisted-by: LLM
 ---
  .../platform/rockchip/rkvdec/rkvdec-ccu.c     |  7 +-
  .../rockchip/rkvdec/rkvdec-vdpu381-vp9.c      | 67 +++++++++++++++++++

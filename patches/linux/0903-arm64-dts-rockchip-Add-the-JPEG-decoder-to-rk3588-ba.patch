@@ -11,7 +11,7 @@ The interrupts, clocks, resets and power domain come from the Rockchip
 vendor kernel rk3588s.dtsi, as does the 600 MHz AXI clock rate, set on
 the clock root that only feeds this block.
 
-Assisted-by: Claude:claude-opus-5-5
+Assisted-by: LLM
 Signed-off-by: Arun Iyengar <aiyengar1990@gmail.com>
 ---
  arch/arm64/boot/dts/rockchip/rk3588-base.dtsi | 24 +++++++++++++++++++

@@ -18,7 +18,7 @@ tracked for every picture, reference or not.
 Type 2 implies that the output order is the decoding order, which is
 always the case without B frames. Type 1 is still rejected.
 
-Assisted-by: Claude:claude-opus-5-5
+Assisted-by: LLM
 ---
  drivers/media/v4l2-core/v4l2-h264-enc.c | 51 +++++++++++++++++++++++--
  include/media/v4l2-h264-enc.h           |  3 ++

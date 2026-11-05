@@ -31,7 +31,7 @@ reset, the PWRCTRL pins are configured as "pin_fun0" (no function) and
 the TSADC uses CRU mode for its over-temperature reset. This property
 only fixes the behaviour for the cases where the PMIC is reset.
 
-Assisted-by: Claude:claude-opus-5-5
+Assisted-by: LLM
 Signed-off-by: Arun Iyengar <aiyengar1990@gmail.com>
 ---
  arch/arm64/boot/dts/rockchip/rk3588s-orangepi-5.dtsi | 2 ++

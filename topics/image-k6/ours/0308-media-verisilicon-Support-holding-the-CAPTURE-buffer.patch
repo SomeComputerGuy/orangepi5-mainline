@@ -23,7 +23,7 @@ Allow holding the CAPTURE buffer for MPEG-2 too. Job completion goes
 through v4l2_m2m_buf_done_and_job_finish(), which already keeps a held
 CAPTURE buffer queued until the last field has been decoded.
 
-Assisted-by: Claude:claude-opus-5-5
+Assisted-by: LLM
 ---
  drivers/media/platform/verisilicon/hantro_v4l2.c | 2 +-
  1 file changed, 1 insertion(+), 1 deletion(-)

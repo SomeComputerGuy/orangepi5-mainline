@@ -33,7 +33,7 @@ hantro_reset_raw_fmt() when hantro_set_fmt_out() fails, so that no other
 caller can leave the two descriptors out of sync.
 
 Fixes: 5980d40276b3 ("media: hantro: Cleanup format negotiation helpers")
-Assisted-by: Claude:claude-opus-5-5
+Assisted-by: LLM
 Signed-off-by: Arun Iyengar <aiyengar1990@gmail.com>
 ---
  drivers/media/platform/verisilicon/hantro_v4l2.c | 32 +++++++++++++++++++++-------

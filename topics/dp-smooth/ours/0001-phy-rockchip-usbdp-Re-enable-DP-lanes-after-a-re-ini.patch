@@ -16,7 +16,7 @@ again by a full modeset.
 Re-apply the DP bus width, lane enables and lane selection for the new
 configuration after a re-init when DP is in use.
 
-Assisted-by: Claude:claude-opus-5-5
+Assisted-by: LLM
 ---
  drivers/phy/rockchip/phy-rockchip-usbdp.c | 13 +++++++++++++
  1 file changed, 13 insertions(+)

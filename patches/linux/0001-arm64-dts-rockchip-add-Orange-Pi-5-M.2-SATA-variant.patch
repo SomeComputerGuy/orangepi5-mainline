@@ -6,7 +6,7 @@ Subject: [PATCH] arm64: dts: rockchip: add Orange Pi 5 M.2 SATA variant
 Local board patch (patches/linux/0001), carried here so the branch builds
 the DTB the board actually boots.
 
-Assisted-by: Claude:claude-opus-5-5
+Assisted-by: LLM
 Signed-off-by: Arun Iyengar <aiyengar1990@gmail.com>
 ---
  arch/arm64/boot/dts/rockchip/Makefile         |  1 +

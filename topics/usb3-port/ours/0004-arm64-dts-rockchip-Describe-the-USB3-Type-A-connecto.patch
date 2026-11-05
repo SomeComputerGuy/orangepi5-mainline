@@ -18,7 +18,7 @@ speed.
 VBUS of the port is not switched (the vendor DT has it on an always-on
 5 V rail), so it is described as coming from vcc5v0_sys.
 
-Assisted-by: Claude:claude-opus-5-5
+Assisted-by: LLM
 ---
  .../dts/rockchip/rk3588s-orangepi-5-5b.dtsi   | 60 +++++++++++++++++++
  1 file changed, 60 insertions(+)

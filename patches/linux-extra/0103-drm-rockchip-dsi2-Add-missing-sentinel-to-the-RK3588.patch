@@ -17,7 +17,7 @@ before the end, so this does not change behaviour for them.
 (Fixes: the commit that added the RK3588 DSI2 glue driver; this shallow
 tree cannot resolve its hash.)
 
-Assisted-by: Claude:claude-opus-5-5
+Assisted-by: LLM
 ---
  drivers/gpu/drm/rockchip/dw-mipi-dsi2-rockchip.c | 3 ++-
  1 file changed, 2 insertions(+), 1 deletion(-)

@@ -17,7 +17,7 @@ Use kcalloc() for the array while at it, and also fail the job, with
 -EINVAL, in the case the SPS has more sets than the table holds, which
 the SPS control's validation rules out.
 
-Assisted-by: Claude:claude-opus-5-5
+Assisted-by: LLM
 ---
  .../rockchip/rkvdec/rkvdec-hevc-common.c      | 39 +++++++++++++------
  .../rockchip/rkvdec/rkvdec-hevc-common.h      |  4 +-

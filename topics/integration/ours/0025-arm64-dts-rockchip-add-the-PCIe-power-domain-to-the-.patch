@@ -21,7 +21,7 @@ Describe the power domain, so genpd keeps it on for as long as the SMMU
 is bound.
 
 Fixes: da92d3dfc871 ("arm64: dts: rockchip: enable the mmu600_pcie IOMMU on the rk3588 SoC")
-Assisted-by: Claude:claude-opus-5-5
+Assisted-by: LLM
 ---
  arch/arm64/boot/dts/rockchip/rk3588-base.dtsi | 1 +
  1 file changed, 1 insertion(+)

@@ -15,7 +15,7 @@ and flags, and the codec-agnostic struct v4l2_stateless_encode_stats, and
 add the new control types to the VIDIOC_QUERYCTRL and VIDIOC_G_EXT_CTRLS
 references.
 
-Assisted-by: Claude:claude-opus-5-5
+Assisted-by: LLM
 ---
  .../media/v4l/ext-ctrls-codec-stateless.rst   | 411 ++++++++++++++++++
  .../media/v4l/pixfmt-compressed.rst           |   3 +

@@ -29,7 +29,7 @@ Also add overlay application tests. They make kbuild build
 rk3588s-orangepi-5.dtb and rk3588s-orangepi-5-sata.dtb with -@, so
 that the overlays can be applied to them by the boot loader.
 
-Assisted-by: Claude:claude-opus-5-5
+Assisted-by: LLM
 ---
  arch/arm64/boot/dts/rockchip/Makefile         |  14 ++
  .../dts/rockchip/rk3588s-orangepi-5-lcd1.dtso | 131 ++++++++++++++++++

@@ -36,7 +36,7 @@ The DCLK rate depends on the SoC specific interface clocking, so add a
 implement it for RK3588 by letting rk3588_calc_cru_cfg() work on that
 state. Without the callback nothing changes.
 
-Assisted-by: Claude:claude-opus-5-5
+Assisted-by: LLM
 Signed-off-by: Arun Iyengar <aiyengar1990@gmail.com>
 ---
  drivers/gpu/drm/rockchip/rockchip_drm_vop2.c | 66 ++++++++++++++++++++

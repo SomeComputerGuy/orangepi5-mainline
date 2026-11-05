@@ -21,7 +21,7 @@ dev_err_probe().
 Link: https://github.com/armbian/build/commit/814ab46114eb18832e18d1f94f2d279680a308d7
 Signed-off-by: Igor Pecovnik <igor@armbian.com>
 [arun: rewrote the commit message for upstream]
-Assisted-by: Claude:claude-opus-5-5
+Assisted-by: LLM
 Signed-off-by: Arun Iyengar <aiyengar1990@gmail.com>
 ---
  drivers/pmdomain/rockchip/pm-domains.c | 12 +++++++-----

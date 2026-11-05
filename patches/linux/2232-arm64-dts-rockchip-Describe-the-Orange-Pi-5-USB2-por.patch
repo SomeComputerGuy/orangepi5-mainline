@@ -16,7 +16,7 @@ visible in the device tree, and say in a comment what follows from the
 wiring: a device in the Type-A port only works while the controller is
 the host on those lines and nothing uses them on the USB-C side.
 
-Assisted-by: Claude:claude-opus-5-5
+Assisted-by: LLM
 Signed-off-by: Arun Iyengar <aiyengar1990@gmail.com>
 ---
  .../dts/rockchip/rk3588s-orangepi-5-5b.dtsi   | 29 ++++++++++++++++++-

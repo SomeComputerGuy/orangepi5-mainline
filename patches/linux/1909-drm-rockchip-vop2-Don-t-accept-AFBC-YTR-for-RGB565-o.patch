@@ -27,7 +27,7 @@ for both formats, apart from the R/B swap after decoding.
 
 (cherry picked from commit fd527a25fc45d393c0d2bf6a321da2e82e90a7f3)
 
-Assisted-by: Claude:claude-opus-5-5
+Assisted-by: LLM
 Signed-off-by: Arun Iyengar <aiyengar1990@gmail.com>
 ---
  drivers/gpu/drm/rockchip/rockchip_drm_vop2.c | 12 ++++++++++++

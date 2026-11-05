@@ -21,7 +21,7 @@ synchronized, and a stream mixing field and frame pictures
   held back. Don't start a frame picture while a field picture of the
   stream is being decoded, or the other way round.
 
-Assisted-by: Claude:claude-opus-5-5
+Assisted-by: LLM
 ---
  .../rockchip/rkvdec/rkvdec-vdpu381-h264.c     | 21 +++++++++++++++----
  .../media/platform/rockchip/rkvdec/rkvdec.c   |  9 ++++++++

@@ -21,7 +21,7 @@ killed, which the driver only does when stopping the stream: don't log
 it. Other failures are still reported.
 
 Link: https://bugzilla.kernel.org/show_bug.cgi?id=217924
-Assisted-by: Claude:claude-opus-5-5
+Assisted-by: LLM
 Signed-off-by: Arun Iyengar <aiyengar1990@gmail.com>
 ---
 diff --git a/drivers/media/usb/uvc/uvc_video.c b/drivers/media/usb/uvc/uvc_video.c

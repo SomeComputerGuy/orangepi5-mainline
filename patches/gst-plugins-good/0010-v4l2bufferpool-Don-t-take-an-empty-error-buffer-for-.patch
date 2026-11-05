@@ -27,7 +27,7 @@ already handle by moving on to the next buffer.
 With this and the previous change, the same runs end with EOS and 29 of
 30 frames: only the failed frame is missing.
 
-Assisted-by: Claude:claude-opus-5-5
+Assisted-by: LLM
 Signed-off-by: Arun Iyengar <aiyengar1990@gmail.com>
 ---
  sys/v4l2/gstv4l2bufferpool.c | 15 +++++++++++++++

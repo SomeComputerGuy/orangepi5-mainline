@@ -18,7 +18,7 @@ Index the partner's SVIDs with the partner's index and the cable's SVIDs
 with the cable's index.
 
 Fixes: 205dc9cb39f5 ("usb: typec: tcpm: implement retry mechanism for Discover Identity VDMs")
-Assisted-by: Claude:claude-opus-5-5
+Assisted-by: LLM
 ---
  drivers/usb/typec/tcpm/tcpm.c | 4 ++--
  1 file changed, 2 insertions(+), 2 deletions(-)
