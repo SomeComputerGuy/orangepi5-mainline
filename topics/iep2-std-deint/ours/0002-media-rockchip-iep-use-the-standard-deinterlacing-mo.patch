@@ -1,0 +1,347 @@
+From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
+From: Arun Iyengar <aiyengar1990@gmail.com>
+Date: Thu, 5 Nov 2026 10:41:40 +0000
+Subject: [PATCH] media: rockchip: iep: use the standard deinterlacing mode
+ control
+
+The driver selected its algorithm with the private
+V4L2_CID_ROCKCHIP_IEP_DEINT_MODE menu and the output rate with the
+private V4L2_CID_ROCKCHIP_IEP_FIELD_RATE boolean, in a new uAPI header
+and a reserved user control range.
+
+V4L2_CID_DEINTERLACING_MODE is the standard control for this, with a
+driver-defined menu (rcar_fdp1 and the Allwinner DI300 driver use it
+the same way). Use it, and fold the output rate into the menu items:
+
+  0 "Bob, Frame Rate"              (default, the old default)
+  1 "Bob, Field Rate"
+  2 "Motion Adaptive, Frame Rate"
+  3 "Motion Adaptive, Field Rate"
+
+Frame rate produces one CAPTURE buffer per OUTPUT buffer, field rate
+two (e.g. 50i to 50p), with the second timestamp half a frame period
+after the first, as before. The hardware modes for each item are
+unchanged (I1O1T/B, I2O2, I5O1T/B, I5O2; the first frame of a
+motion-adaptive stream still uses the bob mode).
+
+The number of CAPTURE buffers per job depends on the rate, which
+job_ready() and device_run() must agree on, so a change of rate while
+either queue is streaming returns -EBUSY. The old driver grabbed the
+FIELD_RATE control for this. A change of algorithm at the same rate
+is still accepted while streaming, as with the old DEINT_MODE control.
+Ioctls are serialised by the device mutex (vfd.lock), so the check
+cannot race with STREAMON.
+
+This drops include/uapi/linux/rockchip-iep.h and the
+V4L2_CID_USER_ROCKCHIP_IEP_BASE range, which have no other users.
+
+Assisted-by: LLM checkpatch
+Signed-off-by: Arun Iyengar <aiyengar1990@gmail.com>
+---
+ MAINTAINERS                               |  1 -
+ drivers/media/platform/rockchip/iep/iep.c | 94 +++++++++--------------
+ drivers/media/platform/rockchip/iep/iep.h | 17 +++-
+ include/uapi/linux/rockchip-iep.h         | 43 -----------
+ include/uapi/linux/v4l2-controls.h        |  6 --
+ 5 files changed, 51 insertions(+), 110 deletions(-)
+ delete mode 100644 include/uapi/linux/rockchip-iep.h
+
+diff --git a/MAINTAINERS b/MAINTAINERS
+index 36c7e64e3a64..af0e189dbbfa 100644
+--- a/MAINTAINERS
++++ b/MAINTAINERS
+@@ -23709,7 +23709,6 @@ L:	linux-rockchip@lists.infradead.org
+ S:	Maintained
+ F:	Documentation/devicetree/bindings/media/rockchip,rk3568-iep.yaml
+ F:	drivers/media/platform/rockchip/iep/
+-F:	include/uapi/linux/rockchip-iep.h
+ 
+ ROCKCHIP ISP V1 DRIVER
+ M:	Dafna Hirschfeld <dafna@fastmail.com>
+diff --git a/drivers/media/platform/rockchip/iep/iep.c b/drivers/media/platform/rockchip/iep/iep.c
+index d64019e101e4..0598d0d2f6aa 100644
+--- a/drivers/media/platform/rockchip/iep/iep.c
++++ b/drivers/media/platform/rockchip/iep/iep.c
+@@ -25,7 +25,6 @@
+ #include <linux/of.h>
+ #include <linux/platform_device.h>
+ #include <linux/pm_runtime.h>
+-#include <linux/rockchip-iep.h>
+ 
+ #include <media/v4l2-common.h>
+ #include <media/v4l2-event.h>
+@@ -340,7 +339,7 @@ static void iep_device_run(void *priv)
+ 	struct vb2_v4l2_buffer *src, *dst0, *dst1 = NULL;
+ 	dma_addr_t src_addr, prv_addr, dst_top, dst_bot;
+ 	enum v4l2_field field;
+-	u32 deint_mode = READ_ONCE(ctx->deint_mode);
++	bool motion_adaptive = READ_ONCE(ctx->motion_adaptive);
+ 	bool field_rate = READ_ONCE(ctx->field_rate);
+ 	bool bff, first_frame;
+ 	u64 half_period = 0;
+@@ -356,8 +355,8 @@ static void iep_device_run(void *priv)
+ 	}
+ 
+ 	/*
+-	 * The FIELD_RATE control is grabbed while streaming, so job_ready()
+-	 * has seen the same value. Be defensive anyway.
++	 * The output rate cannot change while streaming (iep_s_ctrl()), so
++	 * job_ready() has seen the same value. Be defensive anyway.
+ 	 */
+ 	if (field_rate && v4l2_m2m_num_dst_bufs_ready(ctx->fh.m2m_ctx) < 2)
+ 		field_rate = false;
+@@ -378,8 +377,7 @@ static void iep_device_run(void *priv)
+ 		/* Progressive frame: copy it through */
+ 		mode = IEP2_DIL_MODE_BYPASS;
+ 		field_rate = false;
+-	} else if (deint_mode == V4L2_ROCKCHIP_IEP_DEINT_MODE_BOB ||
+-		   first_frame) {
++	} else if (!motion_adaptive || first_frame) {
+ 		if (field_rate)
+ 			mode = IEP2_DIL_MODE_I2O2;
+ 		else
+@@ -394,8 +392,7 @@ static void iep_device_run(void *priv)
+ 	ctx->job_src = src;
+ 	ctx->job_dst[0] = dst0;
+ 	ctx->job_ndst = 1;
+-	ctx->job_keep_src = field != V4L2_FIELD_NONE &&
+-		deint_mode == V4L2_ROCKCHIP_IEP_DEINT_MODE_MOTION_ADAPTIVE;
++	ctx->job_keep_src = field != V4L2_FIELD_NONE && motion_adaptive;
+ 
+ 	if (field_rate) {
+ 		dst1 = v4l2_m2m_dst_buf_remove(ctx->fh.m2m_ctx);
+@@ -684,9 +681,6 @@ static int iep_start_streaming(struct vb2_queue *vq, unsigned int count)
+ 	struct iep_ctx *ctx = vb2_get_drv_priv(vq);
+ 	struct device *dev = ctx->iep->dev;
+ 
+-	/* job_ready() and device_run() must agree on the CAPTURE count */
+-	v4l2_ctrl_grab(ctx->field_rate_ctrl, true);
+-
+ 	if (!V4L2_TYPE_IS_OUTPUT(vq->type)) {
+ 		ctx->cap_sequence = 0;
+ 		return 0;
+@@ -702,8 +696,6 @@ static int iep_start_streaming(struct vb2_queue *vq, unsigned int count)
+ 	if (!ctx->md_cpu || !ctx->mv_cpu) {
+ 		iep_free_ctx_bufs(ctx);
+ 		iep_return_bufs(vq, VB2_BUF_STATE_QUEUED);
+-		if (!vb2_is_streaming(v4l2_m2m_get_dst_vq(ctx->fh.m2m_ctx)))
+-			v4l2_ctrl_grab(ctx->field_rate_ctrl, false);
+ 		return -ENOMEM;
+ 	}
+ 
+@@ -713,19 +705,11 @@ static int iep_start_streaming(struct vb2_queue *vq, unsigned int count)
+ static void iep_stop_streaming(struct vb2_queue *vq)
+ {
+ 	struct iep_ctx *ctx = vb2_get_drv_priv(vq);
+-	struct vb2_queue *other;
+ 
+ 	iep_return_bufs(vq, VB2_BUF_STATE_ERROR);
+ 
+-	if (V4L2_TYPE_IS_OUTPUT(vq->type)) {
++	if (V4L2_TYPE_IS_OUTPUT(vq->type))
+ 		iep_free_ctx_bufs(ctx);
+-		other = v4l2_m2m_get_dst_vq(ctx->fh.m2m_ctx);
+-	} else {
+-		other = v4l2_m2m_get_src_vq(ctx->fh.m2m_ctx);
+-	}
+-
+-	if (!vb2_is_streaming(other))
+-		v4l2_ctrl_grab(ctx->field_rate_ctrl, false);
+ }
+ 
+ static const struct vb2_ops iep_qops = {
+@@ -1017,13 +1001,26 @@ static int iep_s_ctrl(struct v4l2_ctrl *ctrl)
+ {
+ 	struct iep_ctx *ctx = container_of(ctrl->handler, struct iep_ctx,
+ 					   ctrl_handler);
++	bool field_rate;
+ 
+ 	switch (ctrl->id) {
+-	case V4L2_CID_ROCKCHIP_IEP_DEINT_MODE:
+-		WRITE_ONCE(ctx->deint_mode, ctrl->val);
+-		return 0;
+-	case V4L2_CID_ROCKCHIP_IEP_FIELD_RATE:
+-		WRITE_ONCE(ctx->field_rate, !!ctrl->val);
++	case V4L2_CID_DEINTERLACING_MODE:
++		field_rate = ctrl->val == IEP_DEINT_BOB_FIELD ||
++			     ctrl->val == IEP_DEINT_MA_FIELD;
++		/*
++		 * The output rate sets how many CAPTURE buffers a job takes,
++		 * which job_ready() and device_run() must agree on, so it is
++		 * fixed while streaming. The algorithm can change at any
++		 * time. Ioctls are serialised by iep->mutex.
++		 */
++		if (field_rate != ctx->field_rate &&
++		    (vb2_is_streaming(v4l2_m2m_get_src_vq(ctx->fh.m2m_ctx)) ||
++		     vb2_is_streaming(v4l2_m2m_get_dst_vq(ctx->fh.m2m_ctx))))
++			return -EBUSY;
++		WRITE_ONCE(ctx->motion_adaptive,
++			   ctrl->val == IEP_DEINT_MA_FRAME ||
++			   ctrl->val == IEP_DEINT_MA_FIELD);
++		WRITE_ONCE(ctx->field_rate, field_rate);
+ 		return 0;
+ 	}
+ 
+@@ -1035,43 +1032,26 @@ static const struct v4l2_ctrl_ops iep_ctrl_ops = {
+ };
+ 
+ static const char * const iep_deint_mode_menu[] = {
+-	"Bob",
+-	"Motion Adaptive",
++	[IEP_DEINT_BOB_FRAME]	= "Bob, Frame Rate",
++	[IEP_DEINT_BOB_FIELD]	= "Bob, Field Rate",
++	[IEP_DEINT_MA_FRAME]	= "Motion Adaptive, Frame Rate",
++	[IEP_DEINT_MA_FIELD]	= "Motion Adaptive, Field Rate",
+ 	NULL,
+ };
+ 
+-static const struct v4l2_ctrl_config iep_ctrl_deint_mode = {
+-	.ops = &iep_ctrl_ops,
+-	.id = V4L2_CID_ROCKCHIP_IEP_DEINT_MODE,
+-	.name = "Deinterlacing Mode",
+-	.type = V4L2_CTRL_TYPE_MENU,
+-	.max = V4L2_ROCKCHIP_IEP_DEINT_MODE_MOTION_ADAPTIVE,
+-	/*
+-	 * Without look-ahead (the current frame doubles as the next one) the
+-	 * motion-adaptive modes are not reliably better than bob.
+-	 */
+-	.def = V4L2_ROCKCHIP_IEP_DEINT_MODE_BOB,
+-	.qmenu = iep_deint_mode_menu,
+-};
+-
+-static const struct v4l2_ctrl_config iep_ctrl_field_rate = {
+-	.ops = &iep_ctrl_ops,
+-	.id = V4L2_CID_ROCKCHIP_IEP_FIELD_RATE,
+-	.name = "Output One Frame Per Field",
+-	.type = V4L2_CTRL_TYPE_BOOLEAN,
+-	.max = 1,
+-	.step = 1,
+-	.def = 0,
+-};
+-
+ static int iep_ctrls_init(struct iep_ctx *ctx)
+ {
+ 	struct v4l2_ctrl_handler *hdl = &ctx->ctrl_handler;
+ 
+-	v4l2_ctrl_handler_init(hdl, 2);
+-	v4l2_ctrl_new_custom(hdl, &iep_ctrl_deint_mode, NULL);
+-	ctx->field_rate_ctrl = v4l2_ctrl_new_custom(hdl, &iep_ctrl_field_rate,
+-						    NULL);
++	v4l2_ctrl_handler_init(hdl, 1);
++	/*
++	 * Without look-ahead (the current frame doubles as the next one) the
++	 * motion-adaptive modes are not reliably better than bob.
++	 */
++	v4l2_ctrl_new_std_menu_items(hdl, &iep_ctrl_ops,
++				     V4L2_CID_DEINTERLACING_MODE,
++				     IEP_DEINT_MA_FIELD, 0, IEP_DEINT_BOB_FRAME,
++				     iep_deint_mode_menu);
+ 
+ 	if (hdl->error) {
+ 		int ret = hdl->error;
+diff --git a/drivers/media/platform/rockchip/iep/iep.h b/drivers/media/platform/rockchip/iep/iep.h
+index b788a98370cb..488be95a494f 100644
+--- a/drivers/media/platform/rockchip/iep/iep.h
++++ b/drivers/media/platform/rockchip/iep/iep.h
+@@ -33,6 +33,18 @@
+ #define IEP_MAX_STRIDE		(0xffff * 4)
+ #define IEP_STRIDE_ALIGN	16
+ 
++/*
++ * V4L2_CID_DEINTERLACING_MODE menu items. The algorithm and the output rate
++ * are one menu, as in other deinterlacers: frame rate outputs one CAPTURE
++ * buffer per OUTPUT buffer, field rate two (e.g. 50i to 50p).
++ */
++enum iep_deint_mode {
++	IEP_DEINT_BOB_FRAME,
++	IEP_DEINT_BOB_FIELD,
++	IEP_DEINT_MA_FRAME,
++	IEP_DEINT_MA_FIELD,
++};
++
+ /* Context buffers, sizes as allocated by the Rockchip BSP / MPP */
+ #define IEP_MD_BUF_SIZE		(IEP_MAX_WIDTH * IEP_MAX_HEIGHT)
+ #define IEP_MV_BUF_SIZE		(120 * 480)
+@@ -77,14 +89,13 @@ struct iep_ctx {
+ 	struct v4l2_fh fh;
+ 	struct iep_dev *iep;
+ 	struct v4l2_ctrl_handler ctrl_handler;
+-	struct v4l2_ctrl *field_rate_ctrl;
+ 
+ 	const struct iep_fmt *fmt;
+ 	struct v4l2_pix_format_mplane src_fmt;
+ 	struct v4l2_pix_format_mplane dst_fmt;
+ 
+-	/* V4L2_CID_ROCKCHIP_IEP_* control values */
+-	u32 deint_mode;
++	/* from V4L2_CID_DEINTERLACING_MODE */
++	bool motion_adaptive;
+ 	bool field_rate;
+ 
+ 	/* motion detection / motion vector history, per context */
+diff --git a/include/uapi/linux/rockchip-iep.h b/include/uapi/linux/rockchip-iep.h
+deleted file mode 100644
+index 2be3fb3ea0af..000000000000
+--- a/include/uapi/linux/rockchip-iep.h
++++ /dev/null
+@@ -1,43 +0,0 @@
+-/* SPDX-License-Identifier: ((GPL-2.0+ WITH Linux-syscall-note) OR MIT) */
+-/*
+- * Rockchip IEP (image enhancement processor) deinterlacer controls
+- */
+-
+-#ifndef _UAPI_LINUX_ROCKCHIP_IEP_H
+-#define _UAPI_LINUX_ROCKCHIP_IEP_H
+-
+-#include <linux/v4l2-controls.h>
+-
+-/**
+- * V4L2_CID_ROCKCHIP_IEP_DEINT_MODE - deinterlacing algorithm
+- *
+- * Menu control, values from &enum v4l2_rockchip_iep_deint_mode.
+- */
+-#define V4L2_CID_ROCKCHIP_IEP_DEINT_MODE	(V4L2_CID_USER_ROCKCHIP_IEP_BASE + 0)
+-
+-/**
+- * enum v4l2_rockchip_iep_deint_mode - deinterlacing algorithm
+- *
+- * @V4L2_ROCKCHIP_IEP_DEINT_MODE_BOB: intra-field interpolation (bob). Each
+- *	output frame is built from a single field.
+- * @V4L2_ROCKCHIP_IEP_DEINT_MODE_MOTION_ADAPTIVE: motion-adaptive and
+- *	motion-compensated interpolation using the previous and current
+- *	frames. The previous OUTPUT buffer is held by the driver until the
+- *	next one has been processed.
+- */
+-enum v4l2_rockchip_iep_deint_mode {
+-	V4L2_ROCKCHIP_IEP_DEINT_MODE_BOB = 0,
+-	V4L2_ROCKCHIP_IEP_DEINT_MODE_MOTION_ADAPTIVE = 1,
+-};
+-
+-/**
+- * V4L2_CID_ROCKCHIP_IEP_FIELD_RATE - output one frame per field
+- *
+- * Boolean control. When set, every interlaced OUTPUT buffer produces two
+- * progressive CAPTURE buffers (doubled frame rate, e.g. 50i to 50p). The
+- * second CAPTURE buffer gets a timestamp half a frame period after the
+- * first one. When clear, one CAPTURE buffer is produced per OUTPUT buffer.
+- */
+-#define V4L2_CID_ROCKCHIP_IEP_FIELD_RATE	(V4L2_CID_USER_ROCKCHIP_IEP_BASE + 1)
+-
+-#endif /* _UAPI_LINUX_ROCKCHIP_IEP_H */
+diff --git a/include/uapi/linux/v4l2-controls.h b/include/uapi/linux/v4l2-controls.h
+index a8d4738b0a72..a6bc3ca9742b 100644
+--- a/include/uapi/linux/v4l2-controls.h
++++ b/include/uapi/linux/v4l2-controls.h
+@@ -234,12 +234,6 @@ enum v4l2_colorfx {
+  */
+ #define V4L2_CID_USER_MALI_C55_BASE		(V4L2_CID_USER_BASE + 0x1230)
+ 
+-/*
+- * The base for the Rockchip IEP (image enhancement processor) driver controls.
+- * We reserve 16 controls for this driver.
+- */
+-#define V4L2_CID_USER_ROCKCHIP_IEP_BASE		(V4L2_CID_USER_BASE + 0x1260)
+-
+ /* MPEG-class control IDs */
+ /* The MPEG controls are applicable to all codec controls
+  * and the 'MPEG' part of the define is historical */

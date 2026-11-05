@@ -1,0 +1,7 @@
+# Apply in this order on top of the parent topic (see topic.env):
+#   while read -r p sha; do git am "$p"; done < <(grep -v '^#' series)
+# Second column: the original commit in the workspace clone (for reference).
+ours/0001-media-h264-Write-the-stateless-encode-SPS-and-PPS-wi.patch 63456407b1d93189adec9e91ccb84b0efb5f4be0
+ours/0002-media-rockchip-rkvenc-Add-a-CBR-frame-rate-control-f.patch 14dd4e9e5012a9281fdc6f6e6c4ee58a3fd8d1a0
+ours/0003-media-rockchip-rkvenc-Don-t-enable-adaptive-QP-with-.patch df84e10bb46f3c6b5f55e1bcb2624a45c1156b01
+ours/0004-media-rockchip-rkvenc-Use-MPP-s-moving-scene-H.264-R.patch 338d22cfaaf5dbd3e3ed21a777e6a4719eb6589b

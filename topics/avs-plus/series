@@ -1,0 +1,8 @@
+# Apply in this order on top of the parent topic (see topic.env):
+#   while read -r p sha; do git am "$p"; done < <(grep -v '^#' series)
+# Second column: the original commit in the workspace clone (for reference).
+ours/0001-media-uapi-add-AVS-stateless-decoder-pixel-format-an.patch ec947883d89e82ef29a08f6520b3f9dd98ec3272
+ours/0002-media-v4l2-ctrls-give-the-AVS-sequence-control-a-val.patch 057146d2bdf85a1fb392dd6dfef0bb1569326cff
+ours/0003-dt-bindings-media-rockchip-vpu-add-the-RK3588-AVS-de.patch e1f09150b44a1f98d7c4d1180fb9b8ce3cfdca44
+ours/0004-media-verisilicon-add-AVS1-and-AVS-decoding-on-the-R.patch a36cff59ba16c0013ad981c36bd2aadc00d19022
+ours/0005-arm64-dts-rockchip-describe-the-AVS-decoder-of-the-R.patch fb2b5b9bd9cecad0eba9b03742a232fba3174a0f

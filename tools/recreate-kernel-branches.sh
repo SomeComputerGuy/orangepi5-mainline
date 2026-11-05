@@ -110,12 +110,18 @@ mktag() { # tag commit message
 conf_lines() { grep -vE '^\s*(#|$|BOARDBASE=)' "$REPO/tools/export/topics.conf"; }
 mapfile -t TOPICS < <(conf_lines | awk -F' [|] ' '{print $1}')
 made=()
+# run_topics 0: topics on v7.3 / c339f4010; run_topics 1: topics that sit on the image kernel
+# (UPSTREAM_BASE=image, e.g. the k15 feature branches), made after opi5/image exists.
+run_topics() {
+local want=$1 ub
 for t in "${TOPICS[@]}"; do
   tag=$(conf_lines | awk -F' [|] ' -v t="$t" '$1 == t && $8 ~ /^tag:/ {sub(/^tag:/, "", $8); print $8}')
   if [ ${#ONLY[@]} -gt 0 ] && [[ ! " ${ONLY[*]} " == *" $t "* ]]; then continue; fi
   env=$REPO/topics/$t/topic.env
   [ -f "$env" ] || { echo "skip $t (not exported)"; continue; }
   # shellcheck disable=SC1090
+  ub=$(sed -n 's/^UPSTREAM_BASE=//p' "$env")
+  [ "$([ "$ub" = image ] && echo 1 || echo 0)" = "$want" ] || continue
   (. "$env"; [ "$COMMITS" -gt 0 ]) || { echo "skip $t (no commits)"; continue; }
   BASE_ORIG=$(sed -n 's/^BASE_ORIG=//p' "$env")
   TIP_TREE=$(sed -n 's/^TIP_TREE=//p' "$env")
@@ -153,6 +159,8 @@ for t in "${TOPICS[@]}"; do
   fi
   echo "$n commits, $([ $VERIFY = 1 ] && echo 'tree verified' || echo 'not verified')${tag:+, tag $tag}"
 done
+}
+run_topics 0
 
 # --- image kernel: v7.3 + patches/linux (what scripts/build-kernel.sh builds) --
 # branch opi5/image + tag image-<version>; tag image-<version>-extra = that +
@@ -199,6 +207,16 @@ if [ ${#ONLY[@]} -eq 0 ] || [[ " ${ONLY[*]} " == *" image "* ]]; then
     mktag "image-$ver-extra" "$(g rev-parse HEAD)" "Image kernel $ver with OPI5_EXTRA=1: + patches/linux-extra ($(ls "$REPO"/patches/linux-extra/*.patch | wc -l) patches, not tested on hardware)"
   fi
 fi
+
+# Topics on the image kernel: their base is the workspace image-kernel branch (IMAGE_BRANCH in
+# tools/export/export.py), which has the same tree as v7.3 + patches/linux = opi5/image.
+for t in "${TOPICS[@]}"; do
+  env=$REPO/topics/$t/topic.env
+  [ -f "$env" ] && [ "$(sed -n 's/^PARENT=//p' "$env")" = image ] || continue
+  [ ${#ONLY[@]} -eq 0 ] || [[ " ${ONLY[*]} " == *" $t "* ]] || continue
+  echo "$(sed -n 's/^BASE_ORIG=//p' "$env") $(g rev-parse opi5/image)" >> "$MAP"
+done
+run_topics 1
 
 # A full run mirrors topics.conf: drop local opi5/* branches that were not made
 # (retired topics). Only this scratch repository; the fork is never pruned here.

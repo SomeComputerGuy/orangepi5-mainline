@@ -1,0 +1,106 @@
+From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
+From: Arun Iyengar <aiyengar1990@gmail.com>
+Date: Thu, 5 Nov 2026 18:33:45 +0000
+Subject: [PATCH] media: uapi: add the MPEG-1 parsed slice format
+
+The MPEG-1 flags of the stateless MPEG-2 controls cannot tell
+applications whether a decoder decodes MPEG-1: the control framework
+does not check the flags of compound controls, and the existing MPEG-2
+drivers silently decode a sequence with V4L2_MPEG2_SEQ_FLAG_MPEG1 or
+the full pel flags as MPEG-2, which gives wrong pictures instead of an
+error that would let the application fall back to software decoding.
+
+Add V4L2_PIX_FMT_MPEG1_SLICE ('MG1S') for MPEG-1 parsed slice data, so
+that MPEG-1 support is discovered with VIDIOC_ENUM_FMT like every other
+coded format, and so that kernels and drivers without it fail at
+VIDIOC_S_FMT. The format reuses the MPEG-2 sequence, picture and
+quantisation controls unchanged; V4L2_MPEG2_SEQ_FLAG_MPEG1 is set with
+the new format and only with it, so that the controls keep describing
+the bitstream on their own.
+
+Assisted-by: LLM
+Signed-off-by: Arun Iyengar <aiyengar1990@gmail.com>
+---
+ .../media/v4l/ext-ctrls-codec-stateless.rst   |  8 ++++---
+ .../media/v4l/pixfmt-compressed.rst           | 23 +++++++++++++++++++
+ drivers/media/v4l2-core/v4l2-ioctl.c          |  1 +
+ include/uapi/linux/videodev2.h                |  1 +
+ 4 files changed, 30 insertions(+), 3 deletions(-)
+
+diff --git a/Documentation/userspace-api/media/v4l/ext-ctrls-codec-stateless.rst b/Documentation/userspace-api/media/v4l/ext-ctrls-codec-stateless.rst
+index c9be893a1899..3ec092d8fe01 100644
+--- a/Documentation/userspace-api/media/v4l/ext-ctrls-codec-stateless.rst
++++ b/Documentation/userspace-api/media/v4l/ext-ctrls-codec-stateless.rst
+@@ -1321,9 +1321,11 @@ FWHT Flags
+       - 0x02
+       - The sequence is an ISO/IEC 11172-2 (MPEG-1) sequence: the inverse
+ 	quantisation uses the MPEG-1 mismatch control, motion vectors may be
+-	full pel and pictures may be D-pictures. MPEG-1 has no sequence or
+-	picture extensions: applications set the fields as ISO/IEC 13818-2
+-	defines them for MPEG-1 bitstreams (chroma_format 1,
++	full pel and pictures may be D-pictures. Applications set this flag
++	if and only if the coded format is ``V4L2_PIX_FMT_MPEG1_SLICE``;
++	drivers reject it with ``V4L2_PIX_FMT_MPEG2_SLICE``. MPEG-1 has no
++	sequence or picture extensions: applications set the fields as
++	ISO/IEC 13818-2 defines them for MPEG-1 bitstreams (chroma_format 1,
+ 	V4L2_MPEG2_SEQ_FLAG_PROGRESSIVE, frame pictures with
+ 	V4L2_MPEG2_PIC_FLAG_FRAME_PRED_DCT and V4L2_MPEG2_PIC_FLAG_PROGRESSIVE,
+ 	intra_dc_precision 0, both components of ``f_code[0]`` set to
+diff --git a/Documentation/userspace-api/media/v4l/pixfmt-compressed.rst b/Documentation/userspace-api/media/v4l/pixfmt-compressed.rst
+index 7483444ec823..d51fefd6a085 100644
+--- a/Documentation/userspace-api/media/v4l/pixfmt-compressed.rst
++++ b/Documentation/userspace-api/media/v4l/pixfmt-compressed.rst
+@@ -129,6 +129,29 @@ Compressed Formats
+ 	this pixel format. The output buffer must contain the appropriate number
+ 	of macroblocks to decode a full corresponding frame to the matching
+ 	capture buffer.
++    * .. _V4L2-PIX-FMT-MPEG1-SLICE:
++
++      - ``V4L2_PIX_FMT_MPEG1_SLICE``
++      - 'MG1S'
++      - MPEG-1 parsed slice data, as extracted from the MPEG-1
++	(ISO/IEC 11172-2) bitstream. This format is adapted for stateless
++	video decoders that implement a MPEG-1 pipeline with the
++	:ref:`stateless_decoder`. It uses the controls of
++	``V4L2_PIX_FMT_MPEG2_SLICE``: metadata associated with the frame to
++	decode is required to be passed through the
++	``V4L2_CID_STATELESS_MPEG2_SEQUENCE`` and
++	``V4L2_CID_STATELESS_MPEG2_PICTURE`` controls, with
++	``V4L2_MPEG2_SEQ_FLAG_MPEG1`` set in the sequence control and the
++	fields that come from the MPEG-2 extensions filled as described for
++	that flag. Quantisation matrices can optionally be specified through
++	the ``V4L2_CID_STATELESS_MPEG2_QUANTISATION`` control.
++	See the :ref:`associated Codec Control IDs <v4l2-codec-stateless-mpeg2>`.
++	Exactly one output and one capture buffer must be provided for use with
++	this pixel format. The output buffer must contain the appropriate number
++	of macroblocks to decode a full corresponding frame to the matching
++	capture buffer. Decoders that enumerate this format decode MPEG-1
++	sequences; decoders that only enumerate ``V4L2_PIX_FMT_MPEG2_SLICE``
++	do not.
+     * .. _V4L2-PIX-FMT-MPEG4:
+ 
+       - ``V4L2_PIX_FMT_MPEG4``
+diff --git a/drivers/media/v4l2-core/v4l2-ioctl.c b/drivers/media/v4l2-core/v4l2-ioctl.c
+index 17ba1ae70735..34f158e7045f 100644
+--- a/drivers/media/v4l2-core/v4l2-ioctl.c
++++ b/drivers/media/v4l2-core/v4l2-ioctl.c
+@@ -1507,6 +1507,7 @@ static void v4l_fill_fmtdesc(struct v4l2_fmtdesc *fmt)
+ 		case V4L2_PIX_FMT_H263:		descr = "H.263"; break;
+ 		case V4L2_PIX_FMT_MPEG1:	descr = "MPEG-1 ES"; break;
+ 		case V4L2_PIX_FMT_MPEG2:	descr = "MPEG-2 ES"; break;
++		case V4L2_PIX_FMT_MPEG1_SLICE:	descr = "MPEG-1 Parsed Slice Data"; break;
+ 		case V4L2_PIX_FMT_MPEG2_SLICE:	descr = "MPEG-2 Parsed Slice Data"; break;
+ 		case V4L2_PIX_FMT_MPEG4:	descr = "MPEG-4 Part 2 ES"; break;
+ 		case V4L2_PIX_FMT_XVID:		descr = "Xvid"; break;
+diff --git a/include/uapi/linux/videodev2.h b/include/uapi/linux/videodev2.h
+index a5673254e315..b66eb1442cd0 100644
+--- a/include/uapi/linux/videodev2.h
++++ b/include/uapi/linux/videodev2.h
+@@ -761,6 +761,7 @@ struct v4l2_pix_format {
+ #define V4L2_PIX_FMT_MPEG1    v4l2_fourcc('M', 'P', 'G', '1') /* MPEG-1 ES     */
+ #define V4L2_PIX_FMT_MPEG2    v4l2_fourcc('M', 'P', 'G', '2') /* MPEG-2 ES     */
+ #define V4L2_PIX_FMT_MPEG2_SLICE v4l2_fourcc('M', 'G', '2', 'S') /* MPEG-2 parsed slice data */
++#define V4L2_PIX_FMT_MPEG1_SLICE v4l2_fourcc('M', 'G', '1', 'S') /* MPEG-1 parsed slice data */
+ #define V4L2_PIX_FMT_MPEG4    v4l2_fourcc('M', 'P', 'G', '4') /* MPEG-4 part 2 ES */
+ #define V4L2_PIX_FMT_XVID     v4l2_fourcc('X', 'V', 'I', 'D') /* Xvid           */
+ #define V4L2_PIX_FMT_VC1_ANNEX_G v4l2_fourcc('V', 'C', '1', 'G') /* SMPTE 421M Annex G compliant stream */

@@ -1,0 +1,113 @@
+From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
+From: Arun Iyengar <aiyengar1990@gmail.com>
+Date: Tue, 3 Nov 2026 04:07:08 +0000
+Subject: [PATCH] media: uapi: mpeg2: add MPEG-1 sequence and full pel flags
+
+MPEG-1 (ISO/IEC 11172-2) is the base of MPEG-2 and stateless MPEG-2
+decoders can decode it, but the uAPI could not say that a bitstream is
+MPEG-1. Decoding it as MPEG-2 is not correct: MPEG-1 has a different
+inverse quantisation mismatch control (each coefficient made odd
+instead of the parity of the sum), full pel motion vectors, and
+D-pictures.
+
+Add V4L2_MPEG2_SEQ_FLAG_MPEG1 for MPEG-1 sequences and the picture
+header flags V4L2_MPEG2_PIC_FLAG_FULL_PEL_FORWARD/BACKWARD, and accept
+the already defined V4L2_MPEG2_PIC_CODING_TYPE_D. Applications fill the
+fields which come from the MPEG-2 extensions as ISO/IEC 13818-2 defines
+them for MPEG-1 streams. Existing applications never set the new flags
+and never had a way to send D-pictures, which only MPEG-1 streams have,
+so nothing changes for them. Drivers without an MPEG-1 mode have to
+reject the flag.
+
+Assisted-by: LLM
+Signed-off-by: Arun Iyengar <aiyengar1990@gmail.com>
+---
+ .../media/v4l/ext-ctrls-codec-stateless.rst   | 26 +++++++++++++++++--
+ drivers/media/v4l2-core/v4l2-ctrls-core.c     |  1 +
+ include/uapi/linux/v4l2-controls.h            |  3 +++
+ 3 files changed, 28 insertions(+), 2 deletions(-)
+
+diff --git a/Documentation/userspace-api/media/v4l/ext-ctrls-codec-stateless.rst b/Documentation/userspace-api/media/v4l/ext-ctrls-codec-stateless.rst
+index 177940a6f987..c9be893a1899 100644
+--- a/Documentation/userspace-api/media/v4l/ext-ctrls-codec-stateless.rst
++++ b/Documentation/userspace-api/media/v4l/ext-ctrls-codec-stateless.rst
+@@ -1317,6 +1317,17 @@ FWHT Flags
+       - 0x01
+       - Indication that all the frames for the sequence are progressive instead
+ 	of interlaced.
++    * - ``V4L2_MPEG2_SEQ_FLAG_MPEG1``
++      - 0x02
++      - The sequence is an ISO/IEC 11172-2 (MPEG-1) sequence: the inverse
++	quantisation uses the MPEG-1 mismatch control, motion vectors may be
++	full pel and pictures may be D-pictures. MPEG-1 has no sequence or
++	picture extensions: applications set the fields as ISO/IEC 13818-2
++	defines them for MPEG-1 bitstreams (chroma_format 1,
++	V4L2_MPEG2_SEQ_FLAG_PROGRESSIVE, frame pictures with
++	V4L2_MPEG2_PIC_FLAG_FRAME_PRED_DCT and V4L2_MPEG2_PIC_FLAG_PROGRESSIVE,
++	intra_dc_precision 0, both components of ``f_code[0]`` set to
++	forward_f_code and of ``f_code[1]`` to backward_f_code).
+ 
+ .. raw:: latex
+ 
+@@ -1366,8 +1377,9 @@ FWHT Flags
+     * - __u8
+       - ``picture_coding_type``
+       - Picture coding type for the frame covered by the current slice
+-	(V4L2_MPEG2_PIC_CODING_TYPE_I, V4L2_MPEG2_PIC_CODING_TYPE_P or
+-	V4L2_MPEG2_PIC_CODING_TYPE_B).
++	(V4L2_MPEG2_PIC_CODING_TYPE_I, V4L2_MPEG2_PIC_CODING_TYPE_P,
++	V4L2_MPEG2_PIC_CODING_TYPE_B, or V4L2_MPEG2_PIC_CODING_TYPE_D in MPEG-1
++	sequences).
+     * - __u8
+       - ``picture_structure``
+       - Picture structure (1: interlaced top field, 2: interlaced bottom field,
+@@ -1415,6 +1427,16 @@ FWHT Flags
+     * - ``V4L2_MPEG2_PIC_FLAG_PROGRESSIVE``
+       - 0x00000080
+       - Indicates whether the current frame is progressive.
++    * - ``V4L2_MPEG2_PIC_FLAG_FULL_PEL_FORWARD``
++      - 0x00000100
++      - full_pel_forward_vector of an MPEG-1 picture header: the forward
++	motion vectors are in full pel units. Only valid with
++	V4L2_MPEG2_SEQ_FLAG_MPEG1.
++    * - ``V4L2_MPEG2_PIC_FLAG_FULL_PEL_BACKWARD``
++      - 0x00000200
++      - full_pel_backward_vector of an MPEG-1 picture header: the backward
++	motion vectors are in full pel units. Only valid with
++	V4L2_MPEG2_SEQ_FLAG_MPEG1.
+ 
+ .. raw:: latex
+ 
+diff --git a/drivers/media/v4l2-core/v4l2-ctrls-core.c b/drivers/media/v4l2-core/v4l2-ctrls-core.c
+index 27eeb9ecfd82..0ee6040064cb 100644
+--- a/drivers/media/v4l2-core/v4l2-ctrls-core.c
++++ b/drivers/media/v4l2-core/v4l2-ctrls-core.c
+@@ -1226,6 +1226,7 @@ static int std_validate_compound(const struct v4l2_ctrl *ctrl, u32 idx,
+ 		case V4L2_MPEG2_PIC_CODING_TYPE_I:
+ 		case V4L2_MPEG2_PIC_CODING_TYPE_P:
+ 		case V4L2_MPEG2_PIC_CODING_TYPE_B:
++		case V4L2_MPEG2_PIC_CODING_TYPE_D:
+ 			break;
+ 		default:
+ 			return -EINVAL;
+diff --git a/include/uapi/linux/v4l2-controls.h b/include/uapi/linux/v4l2-controls.h
+index a8d4738b0a72..07e974271900 100644
+--- a/include/uapi/linux/v4l2-controls.h
++++ b/include/uapi/linux/v4l2-controls.h
+@@ -2025,6 +2025,7 @@ struct v4l2_ctrl_vp8_frame {
+ /* Stateless MPEG-2 controls */
+ 
+ #define V4L2_MPEG2_SEQ_FLAG_PROGRESSIVE	0x01
++#define V4L2_MPEG2_SEQ_FLAG_MPEG1	0x02
+ 
+ #define V4L2_CID_STATELESS_MPEG2_SEQUENCE (V4L2_CID_CODEC_STATELESS_BASE+220)
+ /**
+@@ -2073,6 +2074,8 @@ struct v4l2_ctrl_mpeg2_sequence {
+ #define V4L2_MPEG2_PIC_FLAG_ALT_SCAN			0x0020
+ #define V4L2_MPEG2_PIC_FLAG_REPEAT_FIRST		0x0040
+ #define V4L2_MPEG2_PIC_FLAG_PROGRESSIVE			0x0080
++#define V4L2_MPEG2_PIC_FLAG_FULL_PEL_FORWARD		0x0100
++#define V4L2_MPEG2_PIC_FLAG_FULL_PEL_BACKWARD		0x0200
+ 
+ #define V4L2_CID_STATELESS_MPEG2_PICTURE (V4L2_CID_CODEC_STATELESS_BASE+221)
+ /**

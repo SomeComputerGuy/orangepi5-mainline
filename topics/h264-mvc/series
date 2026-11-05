@@ -1,0 +1,6 @@
+# Apply in this order on top of the parent topic (see topic.env):
+#   while read -r p sha; do git am "$p"; done < <(grep -v '^#' series)
+# Second column: the original commit in the workspace clone (for reference).
+ours/0001-media-uapi-h264-add-stateless-MVC-decoding-controls.patch 50b95a50970da6d1fc1b9bc9932972824a8d238e
+ours/0002-media-v4l2-h264-Leave-MVC-inter-view-references-out-.patch 348f6ca5abe5f365100d6b95f8431d146c4799c7
+ours/0003-media-rkvdec-vdpu381-Add-H.264-MVC-Stereo-High-decod.patch 30db007e3383b38c93e701582efdc138936df731

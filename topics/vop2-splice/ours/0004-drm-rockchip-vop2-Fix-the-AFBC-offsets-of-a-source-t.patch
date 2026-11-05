@@ -1,0 +1,60 @@
+From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
+From: Arun Iyengar <aiyengar1990@gmail.com>
+Date: Thu, 5 Nov 2026 11:45:43 +0000
+Subject: [PATCH] drm/rockchip: vop2: Fix the AFBC offsets of a source that
+ starts inside a superblock
+
+The AFBC decoder of a window takes the position of the source in the
+framebuffer (AFBC_PIC_OFFSET), the number of superblock columns to
+decode (AFBC_TILE_NUM) and the offset of the first pixel inside its
+superblock (the transform offset). For a source that doesn't start at
+x = 0:
+
+- The tile number only counts the superblocks of the source width, one
+  short when the source starts inside a superblock and ends inside
+  another one.
+- The transform offset is the whole x position, truncated to the 8 bit
+  field, instead of the position in the 16 pixel wide superblock.
+
+Count the superblock columns from the first one the source touches, and
+take the x offset in the superblock, like the vendor kernel does for the
+not mirrored cases. The X mirrored and rotated cases are left as they are.
+
+Assisted-by: LLM
+Signed-off-by: Arun Iyengar <aiyengar1990@gmail.com>
+---
+ drivers/gpu/drm/rockchip/rockchip_drm_vop2.c | 7 ++++---
+ 1 file changed, 4 insertions(+), 3 deletions(-)
+
+diff --git a/drivers/gpu/drm/rockchip/rockchip_drm_vop2.c b/drivers/gpu/drm/rockchip/rockchip_drm_vop2.c
+index f513f9b572c8..fbda6a42d01b 100644
+--- a/drivers/gpu/drm/rockchip/rockchip_drm_vop2.c
++++ b/drivers/gpu/drm/rockchip/rockchip_drm_vop2.c
+@@ -490,7 +490,7 @@ static u32 vop2_afbc_transform_offset(struct drm_plane_state *pstate,
+ 		ty = act_yoffset;
+ 		break;
+ 	case DRM_MODE_REFLECT_Y:
+-		tx = act_xoffset;
++		tx = act_xoffset & 0xf;
+ 		ty = bottom_crop_line_num - act_yoffset;
+ 		break;
+ 	case DRM_MODE_ROTATE_90:
+@@ -502,7 +502,7 @@ static u32 vop2_afbc_transform_offset(struct drm_plane_state *pstate,
+ 		ty = vir_width - width - act_xoffset;
+ 		break;
+ 	case 0:
+-		tx = act_xoffset;
++		tx = act_xoffset & 0xf;
+ 		ty = act_yoffset;
+ 		break;
+ 	}
+@@ -1836,7 +1836,8 @@ static void vop2_win_update(struct vop2_win *win, struct vop2_video_port *vp,
+ 		if (fb->modifier & AFBC_FORMAT_MOD_YTR)
+ 			afbc_format |= (1 << 4);
+ 
+-		afbc_tile_num = ALIGN(src_w, block_w) / block_w;
++		/* Superblock columns the source covers, the first one partly */
++		afbc_tile_num = ALIGN(src_w + (src->x1 >> 16) % block_w, block_w) / block_w;
+ 
+ 		/*
+ 		 * AFBC pic_vir_width is count by pixel, this is different

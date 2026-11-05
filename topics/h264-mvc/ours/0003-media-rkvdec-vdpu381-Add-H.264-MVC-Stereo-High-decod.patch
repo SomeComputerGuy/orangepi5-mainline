@@ -1,0 +1,435 @@
+From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
+From: Arun Iyengar <aiyengar1990@gmail.com>
+Date: Thu, 5 Nov 2026 10:52:51 +0000
+Subject: [PATCH] media: rkvdec: vdpu381: Add H.264 MVC (Stereo High) decoding
+
+The VDPU381 decodes the two views of an MVC stereo stream. It needs:
+
+- in the SPS packet, the view_id of both views and the inter-view
+  references of the second view, at most one per list;
+- a view bit for each DPB entry, in the PPS packet and in the RPS, and
+  one for each reference list entry in the RPS;
+- the inter-view references at the end of the initial reference lists.
+
+It reads the view of the picture from the NAL unit header of its slices
+(NAL unit type 20 for the second view), so the slices go to it as they
+are.
+
+Implement V4L2_CID_STATELESS_H264_MVC_VIEWS (up to 2 views, one
+inter-view reference per list) and
+V4L2_CID_STATELESS_H264_MVC_DECODE_PARAMS for the VDPU381, and advertise
+the Stereo High and Multiview High profiles. Streams with more views, or
+with more inter-view references, are refused when the controls are set.
+Pictures of streams without MVC are programmed as before.
+
+The hardware IDR bit is only set for IDR pictures of the base view: with
+it, the hardware uses no references, but an IDR view component of the
+non-base view still predicts from the base view.
+
+Assisted-by: LLM
+Signed-off-by: Arun Iyengar <aiyengar1990@gmail.com>
+---
+ .../rockchip/rkvdec/rkvdec-h264-common.c      | 131 +++++++++++++++++-
+ .../rockchip/rkvdec/rkvdec-h264-common.h      |  12 ++
+ .../rockchip/rkvdec/rkvdec-vdpu381-h264.c     |  56 +++++++-
+ .../media/platform/rockchip/rkvdec/rkvdec.c   |  63 ++++++++-
+ 4 files changed, 256 insertions(+), 6 deletions(-)
+
+diff --git a/drivers/media/platform/rockchip/rkvdec/rkvdec-h264-common.c b/drivers/media/platform/rockchip/rkvdec/rkvdec-h264-common.c
+index 54639512e456..78485204e5ae 100644
+--- a/drivers/media/platform/rockchip/rkvdec/rkvdec-h264-common.c
++++ b/drivers/media/platform/rockchip/rkvdec/rkvdec-h264-common.c
+@@ -67,10 +67,13 @@ void assemble_hw_rps(struct v4l2_h264_reflist_builder *builder,
+ 			continue;
+ 
+ 		rkvdec_set_bw_field(hw_rps->info, RPS_FRAME_NUM(i), builder->refs[i].frame_num);
++		/* MVC: the view of the entry, 0 for the base view. */
++		rkvdec_set_bw_field(hw_rps->info, RPS_VIEW_INDEX(i),
++				    !!dpb[i].view_order_idx);
+ 	}
+ 
+ 	for (j = 0; j < RKVDEC_NUM_REFLIST; j++) {
+-		for (i = 0; i < builder->num_valid; i++) {
++		for (i = 0; i < builder->num_valid + reflists->num_inter_view[j]; i++) {
+ 			struct v4l2_h264_reference *ref;
+ 			bool dpb_valid;
+ 			bool bottom;
+@@ -96,10 +99,129 @@ void assemble_hw_rps(struct v4l2_h264_reflist_builder *builder,
+ 			rkvdec_set_bw_field(hw_rps->info, RPS_ENTRY_DPB_INFO(j, i),
+ 					    ref->index | (dpb_valid << 4));
+ 			rkvdec_set_bw_field(hw_rps->info, RPS_ENTRY_BOTTOM_FLAG(j, i), bottom);
++			rkvdec_set_bw_field(hw_rps->info, RPS_ENTRY_VIEW_INDEX_OFF(j, i),
++					    !!dpb[ref->index].view_order_idx);
+ 		}
+ 	}
+ }
+ 
++/* Is the picture of @run a picture of an MVC stream? */
++bool rkvdec_h264_is_mvc(const struct rkvdec_h264_run *run)
++{
++	return run->mvc_views && run->num_mvc_views > 1 && run->mvc_decode_params;
++}
++
++/*
++ * Appends the MVC inter-view references of a non-base view component to
++ * the initial reference lists, after the temporal references, in the order
++ * in which the subset SPS lists their views (H.8.2.1). The P list and B
++ * list 0 take the list 0 references, B list 1 the list 1 references.
++ */
++int rkvdec_h264_append_inter_view_refs(struct v4l2_h264_reflist_builder *builder,
++				       struct rkvdec_h264_run *run,
++				       struct rkvdec_h264_reflists *reflists)
++{
++	const struct v4l2_ctrl_h264_decode_params *dec_params = run->decode_params;
++	const struct v4l2_ctrl_h264_mvc_decode_params *mvc = run->mvc_decode_params;
++	const struct v4l2_h264_dpb_entry *dpb = dec_params->dpb;
++	int max_frame_num = 1 << (run->sps->log2_max_frame_num_minus4 + 4);
++	const struct v4l2_h264_mvc_view *view;
++	unsigned int list, j, i;
++
++	memset(reflists->num_inter_view, 0, sizeof(reflists->num_inter_view));
++
++	if (!rkvdec_h264_is_mvc(run) || !mvc->view_order_idx)
++		return 0;
++	if (mvc->view_order_idx >= run->num_mvc_views)
++		return -EINVAL;
++
++	view = &run->mvc_views[mvc->view_order_idx];
++
++	for (list = 0; list < 2; list++) {
++		bool anchor = mvc->flags & V4L2_H264_MVC_DECODE_PARAM_FLAG_ANCHOR_PIC;
++		const u16 *ref_view_ids;
++		unsigned int num_refs;
++
++		if (anchor) {
++			num_refs = list ? view->num_anchor_refs_l1 : view->num_anchor_refs_l0;
++			ref_view_ids = list ? view->anchor_ref_l1 : view->anchor_ref_l0;
++		} else {
++			num_refs = list ? view->num_non_anchor_refs_l1 :
++					  view->num_non_anchor_refs_l0;
++			ref_view_ids = list ? view->non_anchor_ref_l1 :
++					      view->non_anchor_ref_l0;
++		}
++
++		for (j = 0; j < num_refs; j++) {
++			unsigned int n = builder->num_valid +
++					 reflists->num_inter_view[list ? 2 : 1];
++			struct v4l2_h264_reference ref;
++
++			for (i = 0; i < ARRAY_SIZE(dec_params->dpb); i++) {
++				u16 voidx = dpb[i].view_order_idx;
++
++				if ((dpb[i].flags & (V4L2_H264_DPB_ENTRY_FLAG_ACTIVE |
++						     V4L2_H264_DPB_ENTRY_FLAG_INTER_VIEW)) !=
++				    (V4L2_H264_DPB_ENTRY_FLAG_ACTIVE |
++				     V4L2_H264_DPB_ENTRY_FLAG_INTER_VIEW))
++					continue;
++				if (voidx < run->num_mvc_views &&
++				    run->mvc_views[voidx].view_id == ref_view_ids[j])
++					break;
++			}
++
++			/* Not an inter-view reference of this view component. */
++			if (i == ARRAY_SIZE(dec_params->dpb))
++				continue;
++			if (n >= V4L2_H264_REF_LIST_LEN)
++				return -EINVAL;
++
++			builder->refs[i].longterm = false;
++			builder->refs[i].frame_num = dpb[i].frame_num > dec_params->frame_num ?
++						     (int)dpb[i].frame_num - max_frame_num :
++						     dpb[i].frame_num;
++			builder->refs[i].top_field_order_cnt = dpb[i].top_field_order_cnt;
++			builder->refs[i].bottom_field_order_cnt = dpb[i].bottom_field_order_cnt;
++
++			ref.index = i;
++			ref.fields = builder->cur_pic_fields;
++
++			if (list) {
++				reflists->b1[n] = ref;
++				reflists->num_inter_view[2]++;
++			} else {
++				reflists->p[n] = ref;
++				reflists->b0[n] = ref;
++				reflists->num_inter_view[0]++;
++				reflists->num_inter_view[1]++;
++			}
++		}
++	}
++
++	return 0;
++}
++
++int rkvdec_h264_validate_mvc_views(const struct v4l2_h264_mvc_view *views,
++				   unsigned int num_views)
++{
++	unsigned int i;
++
++	/*
++	 * The hardware takes the view_id of two views and at most one
++	 * inter-view reference per list (Stereo High).
++	 */
++	for (i = 0; i < num_views; i++) {
++		if (views[i].view_id > 1023 ||
++		    views[i].num_anchor_refs_l0 > 1 ||
++		    views[i].num_anchor_refs_l1 > 1 ||
++		    views[i].num_non_anchor_refs_l0 > 1 ||
++		    views[i].num_non_anchor_refs_l1 > 1)
++			return -EINVAL;
++	}
++
++	return 0;
++}
++
+ void assemble_hw_scaling_list(struct rkvdec_h264_run *run,
+ 			      struct rkvdec_h264_scaling_list *scaling_list)
+ {
+@@ -210,6 +332,13 @@ void rkvdec_h264_run_preamble(struct rkvdec_ctx *ctx,
+ 	ctrl = v4l2_ctrl_find(&ctx->ctrl_hdl,
+ 			      V4L2_CID_STATELESS_H264_SCALING_MATRIX);
+ 	run->scaling_matrix = ctrl ? ctrl->p_cur.p : NULL;
++	ctrl = v4l2_ctrl_find(&ctx->ctrl_hdl,
++			      V4L2_CID_STATELESS_H264_MVC_VIEWS);
++	run->mvc_views = ctrl ? ctrl->p_cur.p : NULL;
++	run->num_mvc_views = ctrl ? ctrl->elems : 0;
++	ctrl = v4l2_ctrl_find(&ctx->ctrl_hdl,
++			      V4L2_CID_STATELESS_H264_MVC_DECODE_PARAMS);
++	run->mvc_decode_params = ctrl ? ctrl->p_cur.p : NULL;
+ 
+ 	rkvdec_run_preamble(ctx, &run->base);
+ }
+diff --git a/drivers/media/platform/rockchip/rkvdec/rkvdec-h264-common.h b/drivers/media/platform/rockchip/rkvdec/rkvdec-h264-common.h
+index f04b700b863c..815ba71e0813 100644
+--- a/drivers/media/platform/rockchip/rkvdec/rkvdec-h264-common.h
++++ b/drivers/media/platform/rockchip/rkvdec/rkvdec-h264-common.h
+@@ -28,6 +28,8 @@ struct rkvdec_h264_reflists {
+ 	struct v4l2_h264_reference p[V4L2_H264_REF_LIST_LEN];
+ 	struct v4l2_h264_reference b0[V4L2_H264_REF_LIST_LEN];
+ 	struct v4l2_h264_reference b1[V4L2_H264_REF_LIST_LEN];
++	/* MVC inter-view references after the temporal ones, per list. */
++	u8 num_inter_view[3];
+ };
+ 
+ struct rkvdec_h264_run {
+@@ -36,10 +38,14 @@ struct rkvdec_h264_run {
+ 	const struct v4l2_ctrl_h264_sps *sps;
+ 	const struct v4l2_ctrl_h264_pps *pps;
+ 	const struct v4l2_ctrl_h264_scaling_matrix *scaling_matrix;
++	const struct v4l2_h264_mvc_view *mvc_views;
++	unsigned int num_mvc_views;
++	const struct v4l2_ctrl_h264_mvc_decode_params *mvc_decode_params;
+ 	struct vb2_buffer *ref_buf[V4L2_H264_NUM_DPB_ENTRIES];
+ };
+ 
+ #define RPS_FRAME_NUM(i)		BW_FIELD((i) * 16, 16)
++#define RPS_VIEW_INDEX(i)		BW_FIELD(272 + (i), 1)
+ #define RPS_ENTRY_DPB_INFO(l, e)	BW_FIELD(288 + (l) * 7 * 32 + (e) * 7, 5) //l: 0-2, e: 0-31
+ #define RPS_ENTRY_BOTTOM_FLAG(l, e)	BW_FIELD(293 + (l) * 7 * 32 + (e) * 7, 1) //l: 0-2, e: 0-31
+ #define RPS_ENTRY_VIEW_INDEX_OFF(l, e)	BW_FIELD(294 + (l) * 7 * 32 + (e) * 7, 1) //l: 0-2, e: 0-31
+@@ -55,6 +61,12 @@ void assemble_hw_rps(struct v4l2_h264_reflist_builder *builder,
+ 		     struct rkvdec_h264_run *run,
+ 		     struct rkvdec_h264_reflists *reflists,
+ 		     struct rkvdec_rps *hw_rps);
++bool rkvdec_h264_is_mvc(const struct rkvdec_h264_run *run);
++int rkvdec_h264_append_inter_view_refs(struct v4l2_h264_reflist_builder *builder,
++				       struct rkvdec_h264_run *run,
++				       struct rkvdec_h264_reflists *reflists);
++int rkvdec_h264_validate_mvc_views(const struct v4l2_h264_mvc_view *views,
++				   unsigned int num_views);
+ void assemble_hw_scaling_list(struct rkvdec_h264_run *run,
+ 			      struct rkvdec_h264_scaling_list *scaling_list);
+ int rkvdec_h264_adjust_fmt(struct rkvdec_ctx *ctx, struct v4l2_format *f);
+diff --git a/drivers/media/platform/rockchip/rkvdec/rkvdec-vdpu381-h264.c b/drivers/media/platform/rockchip/rkvdec/rkvdec-vdpu381-h264.c
+index 30afa8f84074..8acfc0e8ece8 100644
+--- a/drivers/media/platform/rockchip/rkvdec/rkvdec-vdpu381-h264.c
++++ b/drivers/media/platform/rockchip/rkvdec/rkvdec-vdpu381-h264.c
+@@ -36,9 +36,19 @@ struct rkvdec_sps {
+ 	u16 direct_8x8_inference_flag:			1;
+ 	u16 mvc_extension_enable:			1;
+ 	u16 num_views:					2;
++	u16 view_id0:					10;
++	u16 view_id1:					10;
++	u16 num_anchor_refs_l0:				1;
++	u16 anchor_ref_l0:				10;
++	u16 num_anchor_refs_l1:				1;
++	u16 anchor_ref_l1:				10;
++	u16 num_non_anchor_refs_l0:			1;
++	u16 non_anchor_ref_l0:				10;
++	u16 num_non_anchor_refs_l1:			1;
++	u16 non_anchor_ref_l1:				10;
+ 
+ 	u16 reserved_bits:				12;
+-	u16 reserved[11];
++	u16 reserved[7];
+ } __packed;
+ 
+ struct rkvdec_pps {
+@@ -61,8 +71,9 @@ struct rkvdec_pps {
+ 	u16 scaling_list_enable_flag:				1;
+ 	u32 scaling_list_address;
+ 	u16 is_longterm;
++	u16 view_index;
+ 
+-	u8 reserved[3];
++	u8 reserved[1];
+ } __packed;
+ 
+ struct rkvdec_sps_pps {
+@@ -133,6 +144,26 @@ static void assemble_hw_pps(struct rkvdec_ctx *ctx,
+ 		!!(sps->flags & V4L2_H264_SPS_FLAG_DELTA_PIC_ORDER_ALWAYS_ZERO);
+ 	hw_ps->sps.mvc_extension_enable = 1;
+ 	hw_ps->sps.num_views = 1;
++	if (rkvdec_h264_is_mvc(run)) {
++		/*
++		 * Stereo: the hardware takes the two views and the inter-view
++		 * references of the second one. It reads the view of the
++		 * picture from the NAL unit header of its slices.
++		 */
++		const struct v4l2_h264_mvc_view *view = &run->mvc_views[1];
++
++		hw_ps->sps.num_views = 2;
++		hw_ps->sps.view_id0 = run->mvc_views[0].view_id;
++		hw_ps->sps.view_id1 = view->view_id;
++		hw_ps->sps.num_anchor_refs_l0 = view->num_anchor_refs_l0;
++		hw_ps->sps.anchor_ref_l0 = view->anchor_ref_l0[0];
++		hw_ps->sps.num_anchor_refs_l1 = view->num_anchor_refs_l1;
++		hw_ps->sps.anchor_ref_l1 = view->anchor_ref_l1[0];
++		hw_ps->sps.num_non_anchor_refs_l0 = view->num_non_anchor_refs_l0;
++		hw_ps->sps.non_anchor_ref_l0 = view->non_anchor_ref_l0[0];
++		hw_ps->sps.num_non_anchor_refs_l1 = view->num_non_anchor_refs_l1;
++		hw_ps->sps.non_anchor_ref_l1 = view->non_anchor_ref_l1[0];
++	}
+ 
+ 	/*
+ 	 * Use the SPS values since they are already in macroblocks
+@@ -189,6 +220,10 @@ static void assemble_hw_pps(struct rkvdec_ctx *ctx,
+ 	for (i = 0; i < ARRAY_SIZE(dec_params->dpb); i++) {
+ 		if (dpb[i].flags & V4L2_H264_DPB_ENTRY_FLAG_LONG_TERM)
+ 			hw_ps->pps.is_longterm |= (1 << i);
++		/* MVC: the view of the entry, 0 for the base view. */
++		if ((dpb[i].flags & V4L2_H264_DPB_ENTRY_FLAG_ACTIVE) &&
++		    dpb[i].view_order_idx)
++			hw_ps->pps.view_index |= (1 << i);
+ 	}
+ }
+ 
+@@ -264,9 +299,15 @@ static void config_registers(struct rkvdec_ctx *ctx,
+ 	 */
+ 	regs->common.reg012_secondary_en.scanlist_addr_valid_en = 1;
+ 
+-	/* Set IDR flag */
++	/*
++	 * Set IDR flag. The hardware only takes it for an IDR picture of the
++	 * base view (NAL unit type 5): with it set, it uses no references, but
++	 * an IDR view component of a non-base view (H.7.4.1.1, non_idr_flag 0)
++	 * may still use inter-view references.
++	 */
+ 	regs->common.reg013_en_mode_set.cur_pic_is_idr =
+-		!!(dec_params->flags & V4L2_H264_DECODE_PARAM_FLAG_IDR_PIC);
++		!!(dec_params->flags & V4L2_H264_DECODE_PARAM_FLAG_IDR_PIC) &&
++		!(rkvdec_h264_is_mvc(run) && run->mvc_decode_params->view_order_idx);
+ 
+ 	/* Set input stream length */
+ 	regs->common.reg016_stream_len = vb2_get_plane_payload(&src_buf->vb2_buf, 0);
+@@ -504,6 +545,10 @@ static int rkvdec_h264_run(struct rkvdec_ctx *ctx)
+ 	v4l2_h264_build_p_ref_list(&reflist_builder, h264_ctx->reflists.p);
+ 	v4l2_h264_build_b_ref_lists(&reflist_builder, h264_ctx->reflists.b0,
+ 				    h264_ctx->reflists.b1);
++	ret = rkvdec_h264_append_inter_view_refs(&reflist_builder, &run,
++						 &h264_ctx->reflists);
++	if (ret)
++		return ret;
+ 
+ 	assemble_hw_scaling_list(&run, &tbl->scaling_list);
+ 	assemble_hw_pps(ctx, &run);
+@@ -532,6 +577,9 @@ static int rkvdec_h264_try_ctrl(struct rkvdec_ctx *ctx, struct v4l2_ctrl *ctrl)
+ {
+ 	if (ctrl->id == V4L2_CID_STATELESS_H264_SPS)
+ 		return rkvdec_h264_validate_sps(ctx, ctrl->p_new.p_h264_sps);
++	if (ctrl->id == V4L2_CID_STATELESS_H264_MVC_VIEWS)
++		return rkvdec_h264_validate_mvc_views(ctrl->p_new.p_h264_mvc_view,
++						      ctrl->new_elems);
+ 
+ 	return 0;
+ }
+diff --git a/drivers/media/platform/rockchip/rkvdec/rkvdec.c b/drivers/media/platform/rockchip/rkvdec/rkvdec.c
+index 85a0e3bb8a0c..2bc98de4250c 100644
+--- a/drivers/media/platform/rockchip/rkvdec/rkvdec.c
++++ b/drivers/media/platform/rockchip/rkvdec/rkvdec.c
+@@ -426,6 +426,67 @@ static const struct rkvdec_ctrls vdpu38x_h264_ctrls = {
+ 	.num_ctrls = ARRAY_SIZE(vdpu38x_h264_ctrl_descs),
+ };
+ 
++static const struct rkvdec_ctrl_desc vdpu381_h264_ctrl_descs[] = {
++	{
++		.cfg.id = V4L2_CID_STATELESS_H264_DECODE_PARAMS,
++	},
++	{
++		.cfg.id = V4L2_CID_STATELESS_H264_SPS,
++		.cfg.ops = &rkvdec_ctrl_ops,
++	},
++	{
++		.cfg.id = V4L2_CID_STATELESS_H264_PPS,
++	},
++	{
++		.cfg.id = V4L2_CID_STATELESS_H264_SCALING_MATRIX,
++	},
++	{
++		.cfg.id = V4L2_CID_STATELESS_H264_DECODE_MODE,
++		.cfg.min = V4L2_STATELESS_H264_DECODE_MODE_FRAME_BASED,
++		.cfg.max = V4L2_STATELESS_H264_DECODE_MODE_FRAME_BASED,
++		.cfg.def = V4L2_STATELESS_H264_DECODE_MODE_FRAME_BASED,
++	},
++	{
++		.cfg.id = V4L2_CID_STATELESS_H264_START_CODE,
++		.cfg.min = V4L2_STATELESS_H264_START_CODE_ANNEX_B,
++		.cfg.def = V4L2_STATELESS_H264_START_CODE_ANNEX_B,
++		.cfg.max = V4L2_STATELESS_H264_START_CODE_ANNEX_B,
++	},
++	{
++		.cfg.id = V4L2_CID_MPEG_VIDEO_H264_PROFILE,
++		.cfg.min = V4L2_MPEG_VIDEO_H264_PROFILE_CONSTRAINED_BASELINE,
++		.cfg.max = V4L2_MPEG_VIDEO_H264_PROFILE_MULTIVIEW_HIGH,
++		.cfg.menu_skip_mask =
++			BIT(V4L2_MPEG_VIDEO_H264_PROFILE_EXTENDED) |
++			BIT(V4L2_MPEG_VIDEO_H264_PROFILE_HIGH_444_PREDICTIVE) |
++			BIT(V4L2_MPEG_VIDEO_H264_PROFILE_HIGH_444_INTRA) |
++			BIT(V4L2_MPEG_VIDEO_H264_PROFILE_CAVLC_444_INTRA) |
++			BIT(V4L2_MPEG_VIDEO_H264_PROFILE_SCALABLE_BASELINE) |
++			BIT(V4L2_MPEG_VIDEO_H264_PROFILE_SCALABLE_HIGH) |
++			BIT(V4L2_MPEG_VIDEO_H264_PROFILE_SCALABLE_HIGH_INTRA),
++		.cfg.def = V4L2_MPEG_VIDEO_H264_PROFILE_MAIN,
++	},
++	{
++		.cfg.id = V4L2_CID_MPEG_VIDEO_H264_LEVEL,
++		.cfg.min = V4L2_MPEG_VIDEO_H264_LEVEL_1_0,
++		.cfg.max = V4L2_MPEG_VIDEO_H264_LEVEL_6_0,
++	},
++	{
++		/* Stereo: two views. */
++		.cfg.id = V4L2_CID_STATELESS_H264_MVC_VIEWS,
++		.cfg.ops = &rkvdec_ctrl_ops,
++		.cfg.dims = { 2 },
++	},
++	{
++		.cfg.id = V4L2_CID_STATELESS_H264_MVC_DECODE_PARAMS,
++	},
++};
++
++static const struct rkvdec_ctrls vdpu381_h264_ctrls = {
++	.ctrls = vdpu381_h264_ctrl_descs,
++	.num_ctrls = ARRAY_SIZE(vdpu381_h264_ctrl_descs),
++};
++
+ static const struct rkvdec_decoded_fmt_desc rkvdec_h264_decoded_fmts[] = {
+ 	{
+ 		.fourcc = V4L2_PIX_FMT_NV12,
+@@ -638,7 +699,7 @@ static const struct rkvdec_coded_fmt_desc vdpu381_coded_fmts[] = {
+ 			.max_height =  65520,
+ 			.step_height = 16,
+ 		},
+-		.ctrls = &vdpu38x_h264_ctrls,
++		.ctrls = &vdpu381_h264_ctrls,
+ 		.ops = &rkvdec_vdpu381_h264_fmt_ops,
+ 		.num_decoded_fmts = ARRAY_SIZE(rkvdec_h264_decoded_fmts),
+ 		.decoded_fmts = rkvdec_h264_decoded_fmts,

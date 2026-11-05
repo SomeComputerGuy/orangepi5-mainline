@@ -1,0 +1,5 @@
+# Apply in this order on top of the parent topic (see topic.env):
+#   while read -r p sha; do git am "$p"; done < <(grep -v '^#' series)
+# Second column: the original commit in the workspace clone (for reference).
+ours/0001-media-uapi-add-AVS2-stateless-decoder-pixel-format-a.patch bd5e43d621931cfd44610678ed4986c568ca0ba2
+ours/0002-media-rkvdec-add-AVS2-decoding-on-VDPU381.patch ae151227ff1a48adc9a771800c632d51fe8f720b

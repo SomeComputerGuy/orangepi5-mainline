@@ -1,0 +1,8 @@
+# Apply in this order on top of the parent topic (see topic.env):
+#   while read -r p sha; do git am "$p"; done < <(grep -v '^#' series)
+# Second column: the original commit in the workspace clone (for reference).
+ours/0001-media-uapi-mpeg2-add-MPEG-1-sequence-and-full-pel-fl.patch 21d0963e021eb720bbbc7a041f109218a0d2d86b
+ours/0002-media-verisilicon-mpeg2-reject-the-MPEG-1-extensions.patch 52ba823b4cc92a195b189a6346b46249b5e1d1a0
+ours/0003-media-verisilicon-rockchip-vpu2-decode-MPEG-1.patch a1840a55a3269638716840992568dc965d041d9c
+ours/0004-media-uapi-add-the-MPEG-1-parsed-slice-format.patch f22ca213f036f166a08b35b150b780a3d08d7cd3
+ours/0005-media-verisilicon-rockchip-vpu2-advertise-MPEG-1-as-.patch 091166b16f0840b32b6b3d5553ea41c0e4ffbc92

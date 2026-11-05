@@ -1,0 +1,6 @@
+# Apply in this order on top of the parent topic (see topic.env):
+#   while read -r p sha; do git am "$p"; done < <(grep -v '^#' series)
+# Second column: the original commit in the workspace clone (for reference).
+carried/0001-media-Documentation-biblio-add-ISO-IEC-14496-2-and-I.patch 72672f5dbf419d02bdc06638e635366736432f82
+carried/0002-media-uapi-add-MPEG-4-Part-2-H.263-and-Sorenson-Spar.patch 1c80fb1ac74c8f4dc83991c11125c14c29862f05
+ours/0003-media-verisilicon-rockchip-vpu2-decode-MPEG-4-Part-2.patch b25ac3d17a19edfd27cfa8c3e17a8f9a41aa6572

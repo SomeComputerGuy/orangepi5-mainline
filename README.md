@@ -17,12 +17,12 @@ This repository has two purposes:
 **Nothing in here has been sent upstream yet.** The series are prepared (see
 "Upstream status" below), not posted.
 
-## Current versions (2026-11-01)
+## Current versions (2026-11-05)
 
 | Component | Version | Where |
 |---|---|---|
-| Kernel | `7.3.0-14` = Linux v7.3 + the 449 patches in `patches/linux` (168 of them ours, signed off by the author; the rest carried from other people's series). Kernel 14 is in testing; the last full hardware queue ran on kernel 12 (kernel 13 boot-checked, partial display run) | `scripts/build-kernel.sh`; fork tag `image-7.3.0-14` (`image-7.3.0-11` is the previous image kernel) |
-| U-Boot | v2026.10 + `patches/u-boot` (three carried fixes 0001-0003 and the board `-u-boot.dtsi` fragments); the 2026-11-01 build is in the test board's SPI flash | `scripts/build-uboot.sh` |
+| Kernel | `7.3.0-15` = Linux v7.3 + the 479 patches in `patches/linux`. This is the stock kernel of the image and has been regression-tested on the board (see "Kernel 7.3.0-15 regression run" below). The feature branches listed under "Work on top of 7.3.0-15" are not part of it | `scripts/build-kernel.sh`; fork tag `image-7.3.0-15` and branch `opi5/image` (`image-7.3.0-14` is the previous image kernel) |
+| U-Boot | v2026.10 + `patches/u-boot` (three carried fixes 0001-0003 and the board `-u-boot.dtsi` fragments); the 2026-11-01 build is in the test board's SPI flash and is what the 7.3.0-15 regression run used | `scripts/build-uboot.sh` |
 | TF-A | v2.15.0 + `patches/tf-a` (PHP CRU clock-gate save/restore), BL31 built from source | `scripts/build-uboot.sh` |
 | Image | Ubuntu 26.10 arm64, server and desktop variants | `scripts/build-image.sh` |
 
@@ -31,7 +31,7 @@ This repository has two purposes:
 The full display and video support chart (every resolution, refresh rate and colour format on HDMI and DP, verified / not tested / driver limit / hardware limit) is [`docs/video-support-chart.pdf`](docs/video-support-chart.pdf).
 
 Tested on an Orange Pi 5 (RK3588S, 8 GB) booting from an M.2 SATA SSD with the image kernel
-`7.3.0-12` unless a row says otherwise (older rows name the kernel they were measured on; kernels 13 and 14 are listed under Partially). Details for each topic are in its `notes/`; the per-build
+`7.3.0-15` for the regression run below; older rows name the kernel they were measured on (mostly 7.3.0-10 to 7.3.0-12, not re-measured one by one). Details for each topic are in its `notes/`; the per-build
 provenance is in [`docs/image-kernel/MANIFEST.md`](docs/image-kernel/MANIFEST.md).
 
 ### Works
@@ -41,7 +41,7 @@ provenance is in [`docs/image-kernel/MANIFEST.md`](docs/image-kernel/MANIFEST.md
 | Boot | Mainline U-Boot from SPI flash or SD. TF-A BL31 from source. Big cores clocked up before Linux (boot time from 100 s down to normal). M.2 slot auto-detects NVMe or SATA and picks the matching DTB. Kernel 11 boots with no kernel warnings, 0 deferred probes and 0 failed units |
 | Storage | M.2 SATA root (new `rk3588s-orangepi-5-sata` DTB). The SATA-root reboot hang is fixed (arm-smmu-v3 power domain and clock); reboots take under 1 s |
 | Video decode | rkvdec (VDPU381) H.264/HEVC/VP9 on both cores, including **one stream on both cores through the CCU** (HEVC 4K 130 -> 227 fps, H.264 4K 67 -> 121 fps, bit-exact; in the image since kernel 9). Hantro G1 (H.264, VP8, MPEG-2), AV1. All decoders bit-exact in the codec sweep. Timeout recovery (core reset, IOMMU) proven on a KASAN kernel |
-| Video encode | VEPU580 H.264 and HEVC stateless encoder driver (new; 38-42 dB at QP 26, 4K at 39-54 fps). VPU121 H.264 encode (hantro). VEPU121 JPEG on 4 cores |
+| Video encode | VEPU580 H.264 and HEVC stateless encoder driver (new; 38-42 dB at QP 26, 4K at 39-54 fps). VPU121 H.264 encode (hantro). VEPU121 JPEG on 4 cores. **GStreamer `v4l2slh264enc` and `v4l2slh265enc` are tested on the board** (stock 7.3.0-15 and one test kernel, GStreamer patches `patches/gstreamer/0001-0014`): VEPU580 H.264 and H.265 and Hantro H1 H.264 encode, hardware and software decode of the output are bit-identical, 4K60 HEVC to H.264/H.265 transcode with zero copies, about 250 fps per stream at 1080p and 68 fps at 4K (VEPU580). Known: H.264 constant bitrate undershoots 5-10% on the stock kernel (fixed on a feature branch, below) |
 | JPEG decode | New VDPU720 (rkjpegd) driver |
 | Deinterlace | New IEP2 driver (v4l2-compliance 57/57) |
 | GPU / NPU | panthor (Mali-G610) at 995-1024 MHz under load, 200 runtime suspend/resume jobs without failure; rocket (NPU) at 1 GHz with DVFS and thermal cooling, Teflon inference matches the CPU |
@@ -61,7 +61,7 @@ provenance is in [`docs/image-kernel/MANIFEST.md`](docs/image-kernel/MANIFEST.md
 | Desktop image | Builds (`--variant desktop`, 2026-11-01, kernel 10). The previous desktop image (kernel 7) booted to the GNOME greeter on HDMI 4K60 10 bpc and on the DP dock; the client test sheet (Firefox, Chrome, Jellyfin MPV Shim with hardware decode) is still open. Browser hardware decode needs the Firefox sandbox / Chromium render-node changes, which are not in the stock builds (`patches/chromium`) |
 | Camera | rkisp2 series plus Orange Pi 5 sensor overlays (`patches/linux-extra`): probing works, no camera module attached yet |
 | MIPI DSI | ili9881c panel driver and LCD overlays (`patches/linux-extra`): no panel attached |
-| Kernels 13 and 14 (in testing) | Kernel 13 boots clean (0 WARN, 0 deferred probes, 0 failed units, all USB devices present). Added since kernel 12, in `patches/linux`: video PLL (V0PLL) clock fixes (`1911`-`1918`; the three clock fixes ran on a kernel 12 test build: frlpll A 23/23 and C 10/10 camera GOOD, c4_both DP rate within 17 ppm; the full kernel 13/14 run is pending), HDMI FRL link-training fixes (`1216`-`1222`), RGA3 error recovery (`2239`-`2241`), Rockchip IOMMU page-fault-storm handling (`2234`-`2238`), a VP9 segmentation-map fix for error-resilient and resized frames (`2228`, with the GStreamer v4l2codecs resize patch `patches/gstreamer/0010`; on a kernel 12 test build all resize_inter vectors decode bit-exact against libvpx, 0 mismatching frames, and the fluster VP9 suite went from 232 to 256 of 305), `drm/debugfs` edid_override "reset" with a newline (`2229`), and two GStreamer v4l2 encoder error-handling patches (`patches/gst-plugins-good/0009`, `0010`). The dual-head display matrix (every HDMI mode, depth and format against every DP mode) is running on kernel 13: low-clock DP modes (27 to 65 MHz) set at the wrong pixel clock with a black DP screen while HDMI is active, which is being fixed; kernel 14 has not been run on the board yet |
+| Kernel 7.3.0-15 regression run | Run on stock 7.3.0-15 on 2026-11-05: RGA2 and RGA3 regression pass (copies bit-exact, v4l2-compliance 48/48 on both); HDR on the HDMI TV (1080p60, 2160p60) and on the DP monitor (1080p60 to 2160p60, native 4-lane cable) switches SDR/PQ/SDR correctly with the right infoframes; mixed HDR/SDR on two heads 16/16 steps (1080p) and 10/10 (4K60) without disturbing the unchanged head; fluster identical to the earlier baseline (HEVC 146/147, AVC 129/135, FR-EXT 65/69, VP9 230/305); s2idle 15/15 cycles; **deep suspend 10/10 cycles** (resume 3.1 s, 0 warnings); dual-head matrix subset: DP good in all 166 committed cases. Known issues on this kernel: the HDMI "No Signal" after an FRL mode change still happens in 4 of 150 trials (2.7%, same as before); HDMI 3840x2160@59.94 10 bpc with DP 1280x800@59.81 at the same time gives a black TV (2 of 2 tries, not yet analysed; each alone is good); 7 dual-head commits were refused with EINVAL; a VP-swapped test DTB refused DP 4K60 (probably that old DTB). Not run: Hantro VP8/AV1 fluster suites |
 | Hardware tests of our patches | Counts below were taken at kernel 11 (141 of our patches then): 100 had recorded hardware evidence; 32 still needed a dedicated test (mostly error paths, bindings and DT-only changes). Those tests are in progress |
 
 ### Hardware limitation
@@ -74,7 +74,7 @@ provenance is in [`docs/image-kernel/MANIFEST.md`](docs/image-kernel/MANIFEST.md
 
 | Area | State |
 |---|---|
-| Deep suspend (`mem`) | One real deep cycle on kernel 12 resumed with every dock device back, and the 1102 `pm_test=core` run passed (no BUG/WARN); a longer deep-suspend run is not done yet |
+| Longer deep-suspend soak | Deep suspend passed 10/10 cycles on kernel 15 (see the regression run); an hours-long soak is not done |
 | Headphone / microphone jack (ES8388) | UCM defaults applied, path opens, not checked by ear |
 | DP 10/12 bpc, HDMI 10 bpc in every mode, HDR, VRR | Need a 4-lane / HBR3 sink or the display-matrix rerun |
 | CEC tunnelling over DP (`1210`) | Builds; needs a CEC-capable USB-C to HDMI adapter |
@@ -83,6 +83,35 @@ provenance is in [`docs/image-kernel/MANIFEST.md`](docs/image-kernel/MANIFEST.md
 The authoritative per-topic list is [`STATUS.md`](STATUS.md), generated from the workspace together
 with the topics. Open items are tracked in the workspace; the numbers above come from the notes
 exported under `topics/*/notes/` and `docs/image-kernel/`.
+
+## Work on top of 7.3.0-15 (not in the image)
+
+These are kernel feature branches on top of the 7.3.0-15 image kernel. None is in `patches/linux`
+or in the stock image. Each is a topic under [`topics/`](topics/) and a branch `opi5/<topic>` in the
+[kernel fork](https://github.com/SomeComputerGuy/linux), based on `opi5/image`. The hardware status
+is taken from each branch's own results file; "built" means it compiles and boots as a test kernel
+but was not exercised.
+
+| Topic | What it is | Hardware status |
+|---|---|---|
+| `rkvenc-h264-rc` | VEPU580 H.264: SPS/PPS `nal_ref_idc` fix (the old value 0 is forbidden by the standard; FFmpeg's raw H.264 probe rejected the files), a frame-level constant-bitrate control modelled on Rockchip MPP's behaviour, no adaptive QP together with the row rate control, MPP's moving-scene RDO tuning | Tested on the board with `v4l2slh264enc`: bitrate error went from -2.8..-9.4% to -0.6..+2.5%, PSNR-Y +0.7 to +3.6 dB at 1080p. HEVC rate control (a separate branch) is built, not yet tested |
+| `h1-h264-rc` | The shared H.264 constant-bitrate helper reworked; Hantro H1 and VEPU580 use it | Tested on the board (1080p, 2-16 Mbit/s): H1 mean absolute bitrate error 4.3% -> 1.1% (worst 8.2% -> 2.3%); VEPU580 mean 1.6% |
+| `iep2-std-deint` | IEP2 uses the standard deinterlacing mode control; also carries Jernej Skrabec's drm/gem check of AFBC framebuffer size | Tested: IEP2 output identical to before in 72 of 72 cases, v4l2-compliance 57/57. The AFBC check rejects 696 of 696 buffers with an undersized offset (687 were accepted before), and Mesa AFBC scanout still works. A reference leak in the carried patch was found in review and is not fixed here |
+| `iep2-first-ts` | IEP2 field-rate mode: the first frame's second field gets its timestamp from the next input buffer instead of equalling the first field's | Tested: output identical in 72 of 72 cases, timestamps exact once two buffers are queued before STREAMON, v4l2-compliance 57/57. Without the second buffer the first pair still has equal timestamps (documented fallback) |
+| `vop2-splice` | VOP2 drives modes wider than 4096 pixels by splicing video ports 0 and 1; includes four small fixes it needs (Esmart3 mixer lookup, LUT port select, AFBC offsets of a source inside a superblock, window rectangles) | Tested on the board, camera-checked on HDMI and DP: 4K60, 4096-wide and 1080p spliced modes good; SDR/HDR10 switching good with identical HDR infoframes; 200 spliced mode transitions with 0 POST_BUF_EMPTY; 0 kernel warnings. A later commit that raises ACLK for wide modes is built, not tested, and left out. The `splice_force` test parameter is not published |
+| `avs2` | AVS2 (GB/T 33475.2) stateless decoding on the RK3588 rkvdec: new pixel format and controls, driver | Per the commit message, bit-exact on the 12 PKU conformance streams (416x240 to 1080p) and 5 xavs2 streams (1080p, 2160p). v4l2-compliance 56/57 (one failure in the VIDIOC_DECODER_CMD test, stock 57/57; not yet investigated). No userspace hwaccel yet |
+| `avs-plus` | AVS1 and AVS+ decoding on the RK3588 AVS+ decoder (hantro): AVS uAPI, binding, driver, DT node | Tested on the board: AVS+ 1080i test card 5/5 bit-exact in 3 of 3 runs, AVS 720p 60/60 bit-exact; runs alongside H.264 decode and encode; corrupt streams recover. The hardware timeout reset path was not exercised |
+| `h264-mvc` | H.264 MVC (Stereo High, two views) decoding on rkvdec VDPU381: new MVC controls, driver | Tested on the board: 15 of 15 two-view JVT-MVC streams bit-exact on both views against JM 19; 20 of 20 base views in base-only mode. Only our own test client drives it |
+| `mpeg1` | MPEG-1 decoding on the RK3588 VPU121 (hantro), plus a coded format `V4L2_PIX_FMT_MPEG1_SLICE` so userspace can discover it | The decoder was verified on the board (all 5 hardware-decodable ISO/IEC 13818-4 vectors and a 1080p30 stream). The MPEG1_SLICE format patches are built, not yet tested on hardware |
+| `mpeg4` | MPEG-4 Part 2, H.263 and Sorenson Spark decoding on the same hantro decoder (uAPI from Jernej Skrabec's H616 series) | Built, not yet tested on hardware |
+
+Userspace work from the same period:
+
+- The GStreamer encoders above are in `patches/gstreamer` and tested (see "Video encode").
+- A merged FFmpeg V4L2 request series (ours plus the H616 project's, 35 patches, with AVS2,
+  MPEG-1 and others) exists in the workspace as a proposal; `patches/ffmpeg` is unchanged. It
+  applies cleanly, builds natively and cross-builds, and the full FATE run (5343 tests) has no
+  failures, plus 807 arm64 FATE tests under qemu. It has not been run on the board.
 
 ## Upstream status
 
@@ -116,7 +145,7 @@ install-deps.sh           host packages (Ubuntu 26.10 x86_64 build host)
 local.env.example         site settings (board address, network ports, identity)
 scripts/                  build, flash, board-update and lab-network scripts
   opi5.config             kernel config fragment on top of Ubuntu's arm64 config
-patches/linux/            image kernel: applied in order on v7.3 by build-kernel.sh (422 patches)
+patches/linux/            image kernel: applied in order on v7.3 by build-kernel.sh (479 patches)
 patches/linux-extra/      optional, untested-on-hardware extras (OPI5_EXTRA=1 build-kernel.sh)
 patches/linux-hold/       patches taken out of the image kernel (currently none; see its README)
 patches/u-boot/           U-Boot patches 0001-0003 and -u-boot.dtsi fragments used by build-uboot.sh
@@ -162,7 +191,7 @@ scripts/flash-sd.sh /dev/sdX [desktop]    # 8. write it to an SD card (sudo, ask
 | Step | Output (in `out/` unless noted) |
 |---|---|
 | 2. `fetch-sources.sh` | `src/linux` (v7.3 `c03c1a14`), `src/u-boot` (v2026.10), `src/tf-a` (v2.15.0), `src/rkbin` (pinned commit), `src/libva-v4l2-request` (pinned commit). Prints `<name>: <commit> OK` for each |
-| 3. `build-kernel.sh` | `debs/linux-image-7.3.0-opi5_7.3.0-<n>_arm64.deb` (currently `7.3.0-11`), `linux-headers-…`, `linux-libc-dev_…` |
+| 3. `build-kernel.sh` | `debs/linux-image-7.3.0-opi5_7.3.0-<n>_arm64.deb` (currently `7.3.0-15`), `linux-headers-…`, `linux-libc-dev_…` |
 | 4. `build-uboot.sh` | `u-boot-rockchip.bin` (SD/eMMC, sector 64) and `u-boot-rockchip-spi.bin` (SPI NOR) |
 | 5. `build-media-debs.sh` | `debs-media/`: `ffmpeg`/`libav*` `7:8.1.2-2ubuntu2+opi5.2`, `mpv` `0.41.0-2ubuntu5+opi5.2`, `gstreamer1.0-plugins-bad` and friends `1.28.6-1ubuntu1+opi5.4`, `gst-plugins-good` `1.28.7-1build1+opi5.1`, `alsa-ucm-conf` `1.2.16.1-1ubuntu1+opi5.1`, plus a signed `Packages` index. Logs: `build/media/<source>.*/build.log` |
 | 6. `build-va-driver.sh` | `debs-media/v4l2-request-va-driver_1.2+opi5.2-1_arm64.deb` |
@@ -184,8 +213,8 @@ What each step does:
   private arm64 sysroot. The module-signing key is generated in `build/linux/certs/` and must
   stay private. It is never part of this repository or of any package. The same tree is
   branch `opi5/image` in the [kernel fork](https://github.com/SomeComputerGuy/linux), and every
-  image kernel has a tag named after its package version (`image-7.3.0-11`, `image-7.3.0-8`,
-  `image-7.3.0-7`, `image-7.3.0-6`).
+  image kernel has a tag named after its package version (`image-7.3.0-15`, `image-7.3.0-14`,
+  `image-7.3.0-11`, `image-7.3.0-8`, `image-7.3.0-7`, `image-7.3.0-6`).
 - **`build-uboot.sh`** builds TF-A BL31 from source (`BL31_SRC=rkbin` uses Rockchip's binary
   instead), resetting `src/tf-a` to v2.15.0 and applying `patches/tf-a/*.patch`. It patches
   a copy of the rkbin DDR blob to print at 115200 baud, resets `src/u-boot` to v2026.10, applies

@@ -1,0 +1,9 @@
+# Apply in this order on top of the parent topic (see topic.env):
+#   while read -r p sha; do git am "$p"; done < <(grep -v '^#' series)
+# Second column: the original commit in the workspace clone (for reference).
+ours/0001-drm-rockchip-vop2-Find-the-first-mixer-of-a-video-po.patch 17a6ad7873b6a695301e83d086d46f3ff3b5e418
+ours/0002-drm-rockchip-vop2-Keep-the-other-LUT_PORT_SEL-fields.patch 06f6a5e26e1ded7b86db2b788168ec6753717438
+ours/0003-drm-rockchip-vop2-Program-a-window-from-given-rectan.patch 81693313e1e2b08dbe4abff19b2abd7850374e40
+ours/0004-drm-rockchip-vop2-Fix-the-AFBC-offsets-of-a-source-t.patch 186ae60c655dee8babc2432161c17dcc039a55f0
+ours/0005-drm-rockchip-vop2-Set-up-the-overlay-from-a-list-of-.patch c118cb4966925d294e3683cf2a4fb9fca93f126b
+ours/0006-drm-rockchip-vop2-Splice-video-ports-0-and-1-for-mod.patch 1536d8b5657e464130843fc22c51ea08a265443a

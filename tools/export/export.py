@@ -8,6 +8,7 @@ tools/, ...) are never touched. See tools/export/README.md.
 import argparse, datetime, os, re, shutil, subprocess, sys
 from pathlib import Path
 
+IMAGE_BRANCH = "k15-v4"   # workspace branch whose tree is v7.3 + patches/linux (update with the image kernel)
 REPO = Path(__file__).resolve().parents[2]
 CONF = REPO / "tools/export/topics.conf"
 EXCLUDE_FILE = REPO / "tools/export/exclude.conf"
@@ -160,6 +161,8 @@ class Topics:
     def rev(self, spec):
         if spec == "@boardbase":
             return self.git("merge-base", "--octopus", *self.boardbase_refs).strip()
+        if spec == "image":   # the image kernel (v7.3 + patches/linux) as a workspace branch
+            return self.git("rev-parse", "--verify", "-q", IMAGE_BRANCH + "^{commit}").strip()
         if spec in self.byname:
             return self.byname[spec]["tip"]
         return self.git("rev-parse", "--verify", "-q", spec + "^{commit}").strip()

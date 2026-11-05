@@ -1,0 +1,66 @@
+From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
+From: Arun Iyengar <aiyengar1990@gmail.com>
+Date: Thu, 5 Nov 2026 10:53:49 +0000
+Subject: [PATCH] dt-bindings: media: rockchip-vpu: add the RK3588 AVS+ decoder
+ registers
+
+The VPU121 of the RK3588 has an AVS+ (GY/T 257.1) decoder next to it, at
+0xfdb51000. It has the register layout of a Hantro G1 decoder and shares
+the interrupt line, clocks, power domain, resets and IOMMU of the VPU121
+decoder. The vendor kernel describes it as a separate device that shares
+the task queue and reset group of the VPU121, so the hardware is never
+used by both at the same time.
+
+Describe it as a second, optional register range of the VPU121 node,
+named "avsd", rather than as a node of its own: the driver then runs it
+as one more function of that device, in the same job queue. The RK3328
+has the same block at 0xff351000, next to its VPU.
+
+Assisted-by: LLM
+Signed-off-by: Arun Iyengar <aiyengar1990@gmail.com>
+---
+ .../bindings/media/rockchip-vpu.yaml          | 24 ++++++++++++++++++-
+ 1 file changed, 23 insertions(+), 1 deletion(-)
+
+diff --git a/Documentation/devicetree/bindings/media/rockchip-vpu.yaml b/Documentation/devicetree/bindings/media/rockchip-vpu.yaml
+index 8c2501634080..4ab9e340ac76 100644
+--- a/Documentation/devicetree/bindings/media/rockchip-vpu.yaml
++++ b/Documentation/devicetree/bindings/media/rockchip-vpu.yaml
+@@ -37,7 +37,16 @@ properties:
+           - const: rockchip,rk3568-vpu
+ 
+   reg:
+-    maxItems: 1
++    minItems: 1
++    items:
++      - description: VPU registers
++      - description: AVS+ decoder registers
++
++  reg-names:
++    minItems: 1
++    items:
++      - const: vpu
++      - const: avsd
+ 
+   interrupts:
+     minItems: 1
+@@ -87,6 +96,19 @@ required:
+   - clocks
+   - clock-names
+ 
++allOf:
++  - if:
++      not:
++        properties:
++          compatible:
++            contains:
++              const: rockchip,rk3588-vpu121
++    then:
++      properties:
++        reg:
++          maxItems: 1
++        reg-names: false
++
+ additionalProperties: false
+ 
+ examples:

@@ -1,0 +1,5 @@
+# Apply in this order on top of the parent topic (see topic.env):
+#   while read -r p sha; do git am "$p"; done < <(grep -v '^#' series)
+# Second column: the original commit in the workspace clone (for reference).
+carried/0001-drm-gem-Validate-AFBC-framebuffer-size-with-its-spar.patch fe0f8481ab04e671cc9bd960e48ab3b80655612b
+ours/0002-media-rockchip-iep-use-the-standard-deinterlacing-mo.patch 6e3ad41adda3ffbd6d37a5de3ed685d637393fa9
