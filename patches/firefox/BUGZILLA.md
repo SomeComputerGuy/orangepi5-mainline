@@ -72,5 +72,7 @@ No DMA-heap, udev socket or other device is involved.
 4. `./mach gtest 'SandboxBroker*'` and `./mach test security/sandbox` still pass. The new code is
    a no-op on hosts without V4L2 M2M devices.
 
-Test status: the broker helper was compile-checked in isolation on the host. The full Firefox
-build and the board run in step 3 are still to be done (test results to be attached to the bug).
+Test status (2026-11-05): Firefox 159.0.1 with this patch builds for linux-aarch64 against
+Mozilla's bootstrapped sysroot (its 4.19 uapi headers needed the Request API fallback defines now in
+the patch). The board run of step 3 is queued (work/_out/browser-hwdec/hwdec-1); results to be
+attached to the bug.

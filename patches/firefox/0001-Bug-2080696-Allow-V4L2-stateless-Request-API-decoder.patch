@@ -1,4 +1,4 @@
-From 3655ff619decf70963b92487d30c22dca4bdde1d Mon Sep 17 00:00:00 2001
+From 83197bebec426d8f275453452e7906125c3d4ed4 Mon Sep 17 00:00:00 2001
 From: Arun Iyengar <aiyengar1990@gmail.com>
 Date: Fri, 30 Oct 2026 21:30:00 +0000
 Subject: [PATCH] Bug 2080696 - Allow V4L2 stateless (Request API) decoders in
@@ -29,31 +29,45 @@ MEDIA_REQUEST_IOC_QUEUE, MEDIA_REQUEST_IOC_REINIT), not the whole '|'
 ioctl type: MEDIA_IOC_SETUP_LINK, which reconfigures a device's pipeline,
 stays blocked.
 
+Define the three Request API ioctls when the uapi headers predate Linux
+4.20 (the Linux build sysroot has 4.19 headers).
+
 Based on attachment 9657436 by Christian Bartels; this version narrows
 the seccomp rule to the individual commands and also admits the canonical
 sysfs path.
 
 Assisted-by: LLM
+Signed-off-by: Arun Iyengar <aiyengar1990@gmail.com>
 ---
- security/sandbox/linux/SandboxFilter.cpp      | 16 ++++
+ security/sandbox/linux/SandboxFilter.cpp      | 26 ++++++
  .../broker/SandboxBrokerPolicyFactory.cpp     | 89 +++++++++++++++++++
- 2 files changed, 105 insertions(+)
+ 2 files changed, 115 insertions(+)
 
 diff --git a/security/sandbox/linux/SandboxFilter.cpp b/security/sandbox/linux/SandboxFilter.cpp
-index c12e0de..9021c70 100644
+index 337bce4..4142d8a 100644
 --- a/security/sandbox/linux/SandboxFilter.cpp
 +++ b/security/sandbox/linux/SandboxFilter.cpp
-@@ -10,6 +10,9 @@
+@@ -10,6 +10,19 @@
  #include <fcntl.h>
  #include <linux/ioctl.h>
  #include <linux/ipc.h>
 +#ifdef MOZ_ENABLE_V4L2
 +#  include <linux/media.h>
++// The Request API is in Linux 4.20; older uapi headers (e.g. the build sysroot) lack it.
++#  ifndef MEDIA_IOC_REQUEST_ALLOC
++#    define MEDIA_IOC_REQUEST_ALLOC _IOR('|', 0x05, int)
++#  endif
++#  ifndef MEDIA_REQUEST_IOC_QUEUE
++#    define MEDIA_REQUEST_IOC_QUEUE _IO('|', 0x80)
++#  endif
++#  ifndef MEDIA_REQUEST_IOC_REINIT
++#    define MEDIA_REQUEST_IOC_REINIT _IO('|', 0x81)
++#  endif
 +#endif
  #include <linux/memfd.h>
  #include <linux/mman.h>
  #include <linux/net.h>
-@@ -2176,6 +2179,19 @@ class RDDSandboxPolicy final : public SandboxPolicyCommon {
+@@ -2176,6 +2189,19 @@ class RDDSandboxPolicy final : public SandboxPolicyCommon {
  #endif
  #ifdef MOZ_ENABLE_V4L2
              .ElseIf(shifted_type == kVideoType, Allow())
@@ -74,7 +88,7 @@ index c12e0de..9021c70 100644
          // NVIDIA decoder from Linux4Tegra, this is specific to Tegra ARM64 SoC
  #if defined(__aarch64__)
 diff --git a/security/sandbox/linux/broker/SandboxBrokerPolicyFactory.cpp b/security/sandbox/linux/broker/SandboxBrokerPolicyFactory.cpp
-index da9fc8d..a01d888 100644
+index ad29a05..9804c9f 100644
 --- a/security/sandbox/linux/broker/SandboxBrokerPolicyFactory.cpp
 +++ b/security/sandbox/linux/broker/SandboxBrokerPolicyFactory.cpp
 @@ -17,6 +17,8 @@
@@ -94,7 +108,7 @@ index da9fc8d..a01d888 100644
  #include "mozilla/StaticMutex.h"
  #include "mozilla/StaticPrefs_security.h"
  #include "mozilla/UniquePtr.h"
-@@ -884,6 +887,85 @@ UniquePtr<SandboxBroker::Policy> SandboxBrokerPolicyFactory::GetContentPolicy(
+@@ -883,6 +886,85 @@ UniquePtr<SandboxBroker::Policy> SandboxBrokerPolicyFactory::GetContentPolicy(
  }
  
  #ifdef MOZ_ENABLE_V4L2
@@ -180,7 +194,7 @@ index da9fc8d..a01d888 100644
  static void AddV4l2Dependencies(SandboxBroker::Policy* policy) {
    // For V4L2 hardware-accelerated video decode, RDD needs access to certain
    // /dev/video* devices but don't want to allow it access to webcams etc.
-@@ -894,6 +976,7 @@ static void AddV4l2Dependencies(SandboxBroker::Policy* policy) {
+@@ -893,6 +975,7 @@ static void AddV4l2Dependencies(SandboxBroker::Policy* policy) {
      return;
    }
  
@@ -188,7 +202,7 @@ index da9fc8d..a01d888 100644
    struct dirent* dir_entry;
    while ((dir_entry = readdir(dir))) {
      if (strncmp(dir_entry->d_name, "video", 5)) {
-@@ -925,6 +1008,10 @@ static void AddV4l2Dependencies(SandboxBroker::Policy* policy) {
+@@ -924,6 +1007,10 @@ static void AddV4l2Dependencies(SandboxBroker::Policy* policy) {
          (cap.device_caps & V4L2_CAP_VIDEO_M2M_MPLANE)) {
        // This is an M2M device (i.e. not a webcam), so allow access
        policy->AddPath(rdwr, path.get());
@@ -199,7 +213,7 @@ index da9fc8d..a01d888 100644
      }
  
      close(fd);
-@@ -933,6 +1020,8 @@ static void AddV4l2Dependencies(SandboxBroker::Policy* policy) {
+@@ -932,6 +1019,8 @@ static void AddV4l2Dependencies(SandboxBroker::Policy* policy) {
  
    // FFmpeg V4L2 needs to list /dev to find V4L2 devices.
    policy->AddPath(rdonly, "/dev");

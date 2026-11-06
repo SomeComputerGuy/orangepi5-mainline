@@ -1,0 +1,39 @@
+From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
+From: Arun Iyengar <aiyengar1990@gmail.com>
+Date: Thu, 5 Nov 2026 11:55:49 +0000
+Subject: [PATCH] TEST: drm/rockchip: vop2: Add a splice_force module parameter
+
+Not for upstream: makes the CRTC of video port 0 splice every mode at
+the next modeset, so the splice path can be tested on a 4K sink.
+
+Assisted-by: LLM
+Signed-off-by: Arun Iyengar <aiyengar1990@gmail.com>
+---
+ drivers/gpu/drm/rockchip/rockchip_drm_vop2.c | 8 ++++++++
+ 1 file changed, 8 insertions(+)
+
+diff --git a/drivers/gpu/drm/rockchip/rockchip_drm_vop2.c b/drivers/gpu/drm/rockchip/rockchip_drm_vop2.c
+index fdcb674f23fe..ca7a331eabda 100644
+--- a/drivers/gpu/drm/rockchip/rockchip_drm_vop2.c
++++ b/drivers/gpu/drm/rockchip/rockchip_drm_vop2.c
+@@ -1278,12 +1278,20 @@ static void vop2_crtc_atomic_disable(struct drm_crtc *crtc,
+  * video port shows the left half of the active area, its splice video
+  * port the right half, both on the timing of the first one.
+  */
++/* TEST: splice every mode of the splice video port at the next modeset */
++static bool splice_force;
++module_param(splice_force, bool, 0644);
++MODULE_PARM_DESC(splice_force, "TEST: splice VP0 on every modeset");
++
+ static bool vop2_crtc_wants_splice(struct vop2_video_port *vp,
+ 				   const struct drm_crtc_state *crtc_state)
+ {
+ 	if (vp->vop2->splice_master != vp || !crtc_state->enable)
+ 		return false;
+ 
++	if (READ_ONCE(splice_force) && !(crtc_state->adjusted_mode.hdisplay % 8))
++		return true;
++
+ 	return crtc_state->adjusted_mode.hdisplay > vp->data->max_output.width;
+ }
+ 

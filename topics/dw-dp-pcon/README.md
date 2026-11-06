@@ -1,6 +1,6 @@
 # dw-dp-pcon: dw-dp: DP branch device / protocol converter (PCON) support as in i915 (HDMI/DVI output, downstream port limits, re-detect on downstream port changes) + CEC-Tunneling-over-AUX
 
-- Workspace branch: `opi5/dw-dp-pcon-7.3` (exported 2026-11-05)
+- Workspace branch: `opi5/dw-dp-pcon-7.3` (exported 2026-11-06)
 - Kernel fork branch: `opi5/dw-dp-pcon` (see PUBLISH.md)
 - Sits on: `dp-altmode` (base commit `ed5f4cb40a40`)
 - Hardware test: partly: 1204-1206 verified through a USB-C dock PCON (1080p/1440p/4K30 bars by camera, sink CRCs unchanged); dock replug, audio by ear and the Zerlon 4K30 batch pending; 1210 (CEC) builds W=1 clean, board check pending (needs a CEC-tunnelling adapter); in patches/linux (1204-1206, 1210)

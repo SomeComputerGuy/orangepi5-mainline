@@ -1,6 +1,6 @@
 # integration: Integration branch on v7.3: the image-kernel stack before the 2026-10-29 evening fixes (all topics above, rebased; patches/linux is this plus the topics below)
 
-- Workspace branch: `opi5/integration-7.3` (exported 2026-11-05)
+- Workspace branch: `opi5/integration-7.3` (exported 2026-11-06)
 - Kernel fork: tag `archive/integration` (retired branch `opi5/integration`; see PUBLISH.md)
 - Sits on: `v7.3` (base commit `c03c1a14507d`)
 - Hardware test: yes: kernel #3 on the board

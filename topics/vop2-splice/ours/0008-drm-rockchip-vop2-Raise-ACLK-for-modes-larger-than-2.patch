@@ -1,0 +1,49 @@
+From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
+From: Arun Iyengar <aiyengar1990@gmail.com>
+Date: Thu, 5 Nov 2026 20:06:26 +0000
+Subject: [PATCH] drm/rockchip: vop2: Raise ACLK for modes larger than 2560
+ pixels
+
+The VOP2 runs ACLK at 500 MHz and only raises it to 750 MHz for FRL
+links or pixel rates above 600 MHz. Rockchip's own kernel raises it for
+every mode wider or taller than 2560 pixels as well. Without that, a
+spliced 4096x2160 or 3840x2160 mode at 60 Hz runs on the default rate,
+where VP0 reports POST_BUF_EMPTY on some of the modesets between
+spliced modes.
+
+Raise ACLK for those modes too.
+
+Assisted-by: LLM
+Signed-off-by: Arun Iyengar <aiyengar1990@gmail.com>
+---
+ drivers/gpu/drm/rockchip/rockchip_drm_vop2.c | 11 ++++++++++-
+ 1 file changed, 10 insertions(+), 1 deletion(-)
+
+diff --git a/drivers/gpu/drm/rockchip/rockchip_drm_vop2.c b/drivers/gpu/drm/rockchip/rockchip_drm_vop2.c
+index ca7a331eabda..96539d61b0f4 100644
+--- a/drivers/gpu/drm/rockchip/rockchip_drm_vop2.c
++++ b/drivers/gpu/drm/rockchip/rockchip_drm_vop2.c
+@@ -1112,13 +1112,22 @@ static bool vop2_gamma_lut_in_use(struct vop2 *vop2, struct vop2_video_port *vp)
+  * TMDS character rate), and the VOP still fetches and blends 1188 Mpixel/s.
+  * Keep the FRL condition too, FRL modes below that rate have always used the
+  * raised rate.
++ *
++ * Rockchip's own kernel also raises ACLK for every mode wider or taller than
++ * 2560 pixels: a 4096 or 3840 wide line fetched at 60 Hz, and every spliced
++ * mode, leaves too little ACLK margin at the default rate.
+  */
++#define VOP2_ACLK_BOOST_MIN_SIZE	2560
++
+ static bool vop2_crtc_needs_aclk_boost(struct drm_crtc_state *crtc_state)
+ {
+ 	struct rockchip_crtc_state *vcstate = to_rockchip_crtc_state(crtc_state);
++	const struct drm_display_mode *mode = &crtc_state->adjusted_mode;
+ 
+ 	return vcstate->frl_enabled ||
+-	       crtc_state->adjusted_mode.crtc_clock * 1000ULL > VOP2_MAX_DCLK_RATE;
++	       mode->crtc_clock * 1000ULL > VOP2_MAX_DCLK_RATE ||
++	       mode->crtc_hdisplay > VOP2_ACLK_BOOST_MIN_SIZE ||
++	       mode->crtc_vdisplay > VOP2_ACLK_BOOST_MIN_SIZE;
+ }
+ 
+ static void vop2_crtc_get_aclk_boost(struct vop2_video_port *vp)

@@ -1,0 +1,6 @@
+# Apply in this order on top of the parent topic (see topic.env):
+#   while read -r p sha; do git am "$p"; done < <(grep -v '^#' series)
+# Second column: the original commit in the workspace clone (for reference).
+ours/0001-media-v4l2-core-Move-the-H.264-encode-CBR-rate-contr.patch b5540f8ce451a3fadfee4d978cdb37f6ec0ff91b
+ours/0002-media-v4l2-hevc-enc-Add-a-constant-bitrate-mode.patch cc6bc918fe2d0d5a84b5e00bec6bce67ce6abb92
+ours/0003-media-rockchip-rkvenc-Use-the-CBR-mode-of-the-HEVC-e.patch 4a63c9b2349288d800cac7e9d496eef238265daa

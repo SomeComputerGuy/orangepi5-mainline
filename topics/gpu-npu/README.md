@@ -1,6 +1,6 @@
 # gpu-npu: panthor bus clock / suspend clock fix, rocket NPU DVFS + cooling, devfreq resume
 
-- Workspace branch: `opi5/gpu-npu-7.3` (exported 2026-11-05)
+- Workspace branch: `opi5/gpu-npu-7.3` (exported 2026-11-06)
 - Kernel fork branch: `opi5/gpu-npu` (see PUBLISH.md)
 - Sits on: `board-sata` (base commit `5e33b74b04cf`)
 - Hardware test: yes: in the image kernel since build 2 (patches/linux 0501-0514); GPU 995-1024 MHz under load, NPU 1 GHz DVFS, 200 GPU runtime suspend/resume jobs, devfreq resumes at the remembered OPP

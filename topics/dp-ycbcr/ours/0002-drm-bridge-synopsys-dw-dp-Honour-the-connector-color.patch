@@ -1,0 +1,88 @@
+From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
+From: Arun Iyengar <aiyengar1990@gmail.com>
+Date: Thu, 5 Nov 2026 06:33:15 +0000
+Subject: [PATCH] drm/bridge: synopsys: dw-dp: Honour the connector color
+ format
+
+drm_atomic_bridge_chain_select_bus_fmts() applies the connector "color
+format" only to the output bus formats of the last bridge in the chain.
+On RK3588 the DW DP controller is followed by bridges that do not take
+part in bus format negotiation (the USB-DP PHY's AUX bridge and the
+USB-C connector's AUX HPD bridge for DP alt mode, or a dp-connector).
+The last of them has no atomic_get_output_bus_fmts(), so the chain ends
+in MEDIA_BUS_FMT_FIXED,
+which matches every color format, and dw-dp gets FIXED as its output
+format and picks the first entry of its own list. With the "color
+format" property attached to the connector, every YCbCr 4:4:4, 4:2:2
+and 4:2:0 request was accepted by the atomic check and then sent as RGB:
+on a DP monitor with RGB, 4:4:4 and 4:2:2 support all 222 YCbCr test
+cases came out as RGB888 or RGB101010, and 4:2:0 was accepted although
+the sink has no 4:2:0 support at all. The property documentation
+promises the opposite: a commit that succeeds outputs the requested
+format, one that cannot be met fails.
+
+Filter the DP output formats by the requested color format in
+dw_dp_bridge_atomic_get_output_bus_fmts(), which also serves as the
+input format list when the next bridge reports FIXED. A request the
+sink, the link or a protocol converter cannot carry now leaves no format
+and fails the atomic check. With "AUTO" nothing changes. When dw-dp is
+the last bridge, the core filter becomes redundant but agrees.
+
+The downstream Rockchip driver filters its output format list by its
+own "color_format" connector property the same way.
+
+Assisted-by: LLM
+Signed-off-by: Arun Iyengar <aiyengar1990@gmail.com>
+---
+ drivers/gpu/drm/bridge/synopsys/dw-dp.c | 31 +++++++++++++++++++++++++
+ 1 file changed, 31 insertions(+)
+
+diff --git a/drivers/gpu/drm/bridge/synopsys/dw-dp.c b/drivers/gpu/drm/bridge/synopsys/dw-dp.c
+index a1fb0565a813..69b7ea3cdca8 100644
+--- a/drivers/gpu/drm/bridge/synopsys/dw-dp.c
++++ b/drivers/gpu/drm/bridge/synopsys/dw-dp.c
+@@ -2411,6 +2411,34 @@ static const struct drm_edid *dw_dp_bridge_edid_read(struct drm_bridge *bridge,
+ 	return edid;
+ }
+ 
++/*
++ * The bridge chain bus format negotiation matches the connector "color
++ * format" against the output formats of the last bridge only. When the DP
++ * controller is followed by a bridge without bus format support (a DP or
++ * USB-C connector, an AUX HPD bridge), that bridge reports
++ * MEDIA_BUS_FMT_FIXED and the request would never be checked. Apply it to the
++ * DP output formats directly, which is correct for either position in the
++ * chain.
++ */
++static bool dw_dp_color_format_requested(const struct drm_connector_state *conn_state,
++					 enum drm_output_color_format color_format)
++{
++	switch (drm_connector_get_color_format(conn_state)) {
++	case DRM_CONNECTOR_COLOR_FORMAT_AUTO:
++		return true;
++	case DRM_CONNECTOR_COLOR_FORMAT_RGB444:
++		return color_format == DRM_OUTPUT_COLOR_FORMAT_RGB444;
++	case DRM_CONNECTOR_COLOR_FORMAT_YCBCR444:
++		return color_format == DRM_OUTPUT_COLOR_FORMAT_YCBCR444;
++	case DRM_CONNECTOR_COLOR_FORMAT_YCBCR422:
++		return color_format == DRM_OUTPUT_COLOR_FORMAT_YCBCR422;
++	case DRM_CONNECTOR_COLOR_FORMAT_YCBCR420:
++		return color_format == DRM_OUTPUT_COLOR_FORMAT_YCBCR420;
++	default:
++		return false;
++	}
++}
++
+ static u32 *dw_dp_bridge_atomic_get_output_bus_fmts(struct drm_bridge *bridge,
+ 						    struct drm_bridge_state *bridge_state,
+ 						    struct drm_crtc_state *crtc_state,
+@@ -2434,6 +2462,9 @@ static u32 *dw_dp_bridge_atomic_get_output_bus_fmts(struct drm_bridge *bridge,
+ 	for (i = 0; i < ARRAY_SIZE(dw_dp_output_formats); i++) {
+ 		fmt = &dw_dp_output_formats[i];
+ 
++		if (!dw_dp_color_format_requested(conn_state, fmt->color_format))
++			continue;
++
+ 		if (fmt->bpc > conn_state->max_bpc)
+ 			continue;
+ 

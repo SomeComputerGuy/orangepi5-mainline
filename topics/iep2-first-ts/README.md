@@ -1,6 +1,6 @@
 # iep2-first-ts: IEP2 field-rate mode: time the second field of the first frame from the next input buffer
 
-- Workspace branch: `k15-iepts` (exported 2026-11-05)
+- Workspace branch: `k15-iepts` (exported 2026-11-06)
 - Kernel fork branch: `opi5/iep2-first-ts` (see PUBLISH.md)
 - Sits on: `iep2-std-deint` (base commit `6e3ad41adda3`)
 - Hardware test: tested on the board (kernel 7.3.0-15x2): output identical in 72 of 72 cases, timestamps exact when two buffers are queued before STREAMON, v4l2-compliance 57/57

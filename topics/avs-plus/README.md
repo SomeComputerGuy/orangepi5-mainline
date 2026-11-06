@@ -1,6 +1,6 @@
 # avs-plus: AVS1 and AVS+ decoding on the RK3588 AVS+ decoder (hantro): AVS stateless uAPI, binding, driver and DT node
 
-- Workspace branch: `k15-avsp` (exported 2026-11-05)
+- Workspace branch: `k15-avsp` (exported 2026-11-06)
 - Kernel fork branch: `opi5/avs-plus` (see PUBLISH.md)
 - Sits on: `avs2` (base commit `ae151227ff1a`)
 - Hardware test: tested on the board (kernel 7.3.0-15avsp): AVS+ 1080i test card 5/5 bit-exact on 3 of 3 runs, JiZhun AVS 720p 60/60 bit-exact, runs concurrently with VDPU2 H.264 decode and VEPU2 encode, corrupt streams recover. The hardware watchdog reset path has not been run on hardware

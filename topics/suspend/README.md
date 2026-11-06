@@ -1,6 +1,6 @@
 # suspend: System suspend: analysis, TF-A PHP CRU gate fix, s2idle root cause (RTC minute alarm, patches/linux 1917)
 
-- Workspace branch: `opi5/suspend-7.3` (exported 2026-11-05)
+- Workspace branch: `opi5/suspend-7.3` (exported 2026-11-06)
 - Kernel fork branch: `opi5/suspend` (see PUBLISH.md)
 - Sits on: `board-sata` (base commit `5e33b74b04cf`)
 - Hardware test: s2idle works: 47/47 cycles on kernel 10 + 1917, 10/10 on kernel 11 and 10/10 on kernel 12, with the TF-A fix in SPI NOR; one deep (mem) cycle on kernel 12 resumed with every dock device back; more deep cycles pending

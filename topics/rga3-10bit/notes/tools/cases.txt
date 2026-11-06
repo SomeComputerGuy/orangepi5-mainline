@@ -1,0 +1,51 @@
+# id|node|input|src|dst|tool args|frames|check|reference
+# node: rga2/rga3. check (judge.py): 10to8 p010 exact8 exact10 8to10 rgb709 rgb2020 scale xform xform10 reject info-xform dmabuf same-as
+c-hevc-nv12|rga3|hevc10.nv15|1920x1080:NV15|1920x1080:NV12||4|10to8|hevc10.ref10
+c-hevc-p010|rga3|hevc10.nv15|1920x1080:NV15|1920x1080:P010||4|p010|hevc10.ref10
+c-vp9-nv12|rga3|vp92.nv15|1920x1080:NV15|1920x1080:NV12||4|10to8|vp92.ref10
+c-vp9-p010|rga3|vp92.nv15|1920x1080:NV15|1920x1080:P010||4|p010|vp92.ref10
+c-conf-nv12|rga3|conf.nv15|416x240:NV15|416x240:NV12||4|10to8|conf.ref10
+c-conf-p010|rga3|conf.nv15|416x240:NV15|416x240:P010||4|p010|conf.ref10
+c-hevc-nv15|rga3|hevc10.nv15|1920x1080:NV15|1920x1080:NV15||4|exact10|hevc10.nv15
+c-p010-nv15|rga3|hevc10.p010|1920x1080:P010|1920x1080:NV15||4|exact10|hevc10.nv15
+c-p010-nv12|rga3|hevc10.p010|1920x1080:P010|1920x1080:NV12||4|10to8|hevc10.ref10
+c-nv12-p010|rga3|hevc10.nv12|1920x1080:NV12|1920x1080:P010||4|8to10|hevc10.nv12
+c-hevc-xr24-709|rga3|hevc10.nv15|1920x1080:NV15|1920x1080:XR24|-e 709 -q lim|2|rgb709|hevc10.ref10
+c-hevc-xr24-2020|rga3|hevc10.nv15|1920x1080:NV15|1920x1080:XR24|-e 2020 -q lim|2|rgb2020|hevc10.ref10
+c-hevc-scale720|rga3|hevc10.nv15|1920x1080:NV15|1280x720:NV12||4|scale|hevc10-720.nv12ref
+r-xr24-r90|rga3|rgb.xr24|1920x1080:XR24|1080x1920:XR24|-r 90|1|xform|rgb.xr24
+r-xr24-r180|rga3|rgb.xr24|1920x1080:XR24|1920x1080:XR24|-r 180|1|xform|rgb.xr24
+r-xr24-r270|rga3|rgb.xr24|1920x1080:XR24|1080x1920:XR24|-r 270|1|xform|rgb.xr24
+r-xr24-h|rga3|rgb.xr24|1920x1080:XR24|1920x1080:XR24|-H|1|xform|rgb.xr24
+r-xr24-v|rga3|rgb.xr24|1920x1080:XR24|1920x1080:XR24|-V|1|xform|rgb.xr24
+r-xr24-hv|rga3|rgb.xr24|1920x1080:XR24|1920x1080:XR24|-H -V|1|xform|rgb.xr24
+r-xr24-h-r90|rga3|rgb.xr24|1920x1080:XR24|1080x1920:XR24|-H -r 90|1|xform|rgb.xr24
+r-xr24-v-r90|rga3|rgb.xr24|1920x1080:XR24|1080x1920:XR24|-V -r 90|1|xform|rgb.xr24
+r-xr24-h-r270|rga3|rgb.xr24|1920x1080:XR24|1080x1920:XR24|-H -r 270|1|xform|rgb.xr24
+r-xr24-v-r270|rga3|rgb.xr24|1920x1080:XR24|1080x1920:XR24|-V -r 270|1|xform|rgb.xr24
+r-xr24-h-r180|rga3|rgb.xr24|1920x1080:XR24|1920x1080:XR24|-H -r 180|1|xform|rgb.xr24
+r-xr24-v-r180|rga3|rgb.xr24|1920x1080:XR24|1920x1080:XR24|-V -r 180|1|xform|rgb.xr24
+r-xr24-hv-r90|rga3|rgb.xr24|1920x1080:XR24|1080x1920:XR24|-H -V -r 90|1|xform|rgb.xr24
+r-xr24-hv-r180|rga3|rgb.xr24|1920x1080:XR24|1920x1080:XR24|-H -V -r 180|1|xform|rgb.xr24
+r-xr24-hv-r270|rga3|rgb.xr24|1920x1080:XR24|1080x1920:XR24|-H -V -r 270|1|xform|rgb.xr24
+r-nv12-h-r90|rga3|pic.nv12|1920x1080:NV12|1080x1920:NV12|-H -r 90|1|xform|pic.nv12
+r-nv12-v-r270|rga3|pic.nv12|1920x1080:NV12|1080x1920:NV12|-V -r 270|1|xform|pic.nv12
+r-nv15-h-r90|rga3|hevc10-f0.nv15|1920x1080:NV15|1080x1920:P010|-H -r 90|1|xform10|hevc10-f0.ref10
+r-nv12-r90|rga3|pic.nv12|1920x1080:NV12|1080x1920:NV12|-r 90|1|xform|pic.nv12
+r-nv12-r270|rga3|pic.nv12|1920x1080:NV12|1080x1920:NV12|-r 270|1|xform|pic.nv12
+r-nv12-r180|rga3|pic.nv12|1920x1080:NV12|1920x1080:NV12|-r 180|1|xform|pic.nv12
+r-nv12-h|rga3|pic.nv12|1920x1080:NV12|1920x1080:NV12|-H|1|xform|pic.nv12
+r-nv15-r90|rga3|hevc10-f0.nv15|1920x1080:NV15|1080x1920:P010|-r 90|1|xform10|hevc10-f0.ref10
+r-nv15-v|rga3|hevc10-f0.nv15|1920x1080:NV15|1920x1080:NV15|-V|1|xform10|hevc10-f0.ref10
+r-nv12-r90-scale|rga3|pic.nv12|1920x1080:NV12|540x960:NV12|-r 90|1|scale|pic-r90-540.nv12ref
+r-nv16-h|rga3|pic.nv16|1920x1080:NV16|1920x1080:NV16|-H|1|xform|pic.nv16
+r-nv16-r90|rga3|pic.nv16|1920x1080:NV16|1080x1920:NV16|-r 90|1|reject|-
+r2-xr24-r90|rga2|rgb.xr24|1920x1080:XR24|1080x1920:XR24|-r 90|1|info-xform|rgb.xr24
+r2-xr24-h|rga2|rgb.xr24|1920x1080:XR24|1920x1080:XR24|-H|1|info-xform|rgb.xr24
+r2-xr24-h-r90|rga2|rgb.xr24|1920x1080:XR24|1080x1920:XR24|-H -r 90|1|info-xform|rgb.xr24
+d2-xr24-exact|rga2|rgb720.xr24|1280x720:XR24|1280x720:XR24|-D 0 -h HEAP|2|dmabuf|rgb720.xr24
+d2-xr24-over|rga2|rgb720.xr24|1280x720:XR24|1280x720:XR24|-D 1048576 -h HEAP|2|dmabuf|rgb720.xr24
+d3-xr24-over|rga3|rgb720.xr24|1280x720:XR24|1280x720:XR24|-D 4194304 -h HEAP|2|dmabuf|rgb720.xr24
+d3-nv15-over|rga3|hevc10-f0.nv15|1920x1080:NV15|1920x1080:NV12|-D 1048576 -h HEAP|1|10to8|hevc10-f0.ref10
+m2-nv12|rga2|pic.nv12|1920x1080:NV12|1920x1080:XR24||1|info|-
+m2-nm12|rga2|pic.nv12|1920x1080:NM12|1920x1080:XR24||1|same-as|m2-nv12

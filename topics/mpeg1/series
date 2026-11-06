@@ -6,3 +6,4 @@ ours/0002-media-verisilicon-mpeg2-reject-the-MPEG-1-extensions.patch 52ba823b4cc
 ours/0003-media-verisilicon-rockchip-vpu2-decode-MPEG-1.patch a1840a55a3269638716840992568dc965d041d9c
 ours/0004-media-uapi-add-the-MPEG-1-parsed-slice-format.patch f22ca213f036f166a08b35b150b780a3d08d7cd3
 ours/0005-media-verisilicon-rockchip-vpu2-advertise-MPEG-1-as-.patch 091166b16f0840b32b6b3d5553ea41c0e4ffbc92
+ours/0006-media-uapi-mpeg2-document-that-D-pictures-are-option.patch f89a5beffc2e9f1ba6cc30da03ab8744ef366f54

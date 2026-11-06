@@ -7,3 +7,5 @@ ours/0003-drm-rockchip-vop2-Program-a-window-from-given-rectan.patch 81693313e1e
 ours/0004-drm-rockchip-vop2-Fix-the-AFBC-offsets-of-a-source-t.patch 186ae60c655dee8babc2432161c17dcc039a55f0
 ours/0005-drm-rockchip-vop2-Set-up-the-overlay-from-a-list-of-.patch c118cb4966925d294e3683cf2a4fb9fca93f126b
 ours/0006-drm-rockchip-vop2-Splice-video-ports-0-and-1-for-mod.patch 1536d8b5657e464130843fc22c51ea08a265443a
+local/0007-TEST-drm-rockchip-vop2-Add-a-splice_force-module-par.patch fc511cdc2adfc2530d7d71087b050d3e07d46d7c
+ours/0008-drm-rockchip-vop2-Raise-ACLK-for-modes-larger-than-2.patch e8bad16014dcb7dc70e49fd5af0636decf2a8923

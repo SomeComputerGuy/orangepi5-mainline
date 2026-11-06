@@ -1,0 +1,163 @@
+From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
+From: Arun Iyengar <aiyengar1990@gmail.com>
+Date: Thu, 5 Nov 2026 19:48:33 +0000
+Subject: [PATCH] media: v4l2-hevc-enc: Add a constant bitrate mode
+
+The HEVC encode core leaves the constant bitrate mode to the drivers, so
+each driver needs its own frame rate control.
+
+Provide the mode in the core with the codec independent rate control of
+the H.264 encode core (v4l2-enc-cbr): one QP state for the stream, I
+pictures 4 QP below the P pictures (the default of the Rockchip MPP
+library for HEVC), picture size targets from a GOP plan with the I/P
+size ratio and IDR period measured on the stream, and the deviation from
+that plan spread over the next pictures. The size target of the current
+picture is available to drivers whose hardware also controls the rate
+within a picture.
+
+A driver rate control with an estimate callback still replaces the mode.
+
+Assisted-by: LLM
+Signed-off-by: Arun Iyengar <aiyengar1990@gmail.com>
+---
+ drivers/media/v4l2-core/Kconfig         |  1 +
+ drivers/media/v4l2-core/v4l2-hevc-enc.c | 35 +++++++++++++++++++++++++
+ include/media/v4l2-hevc-enc.h           | 11 ++++++--
+ 3 files changed, 45 insertions(+), 2 deletions(-)
+
+diff --git a/drivers/media/v4l2-core/Kconfig b/drivers/media/v4l2-core/Kconfig
+index eb245deb4622..0de0bad58791 100644
+--- a/drivers/media/v4l2-core/Kconfig
++++ b/drivers/media/v4l2-core/Kconfig
+@@ -60,6 +60,7 @@ config V4L2_HEVC_ENC_RBSP
+ # Used by drivers that need v4l2-hevc-enc.ko
+ config V4L2_HEVC_ENC
+ 	tristate
++	select V4L2_ENC_CBR
+ 	select V4L2_HEVC_ENC_RBSP
+ 
+ config V4L2_HEVC_ENC_RBSP_KUNIT_TEST
+diff --git a/drivers/media/v4l2-core/v4l2-hevc-enc.c b/drivers/media/v4l2-core/v4l2-hevc-enc.c
+index e2aa7d2da96c..a167c4af6288 100644
+--- a/drivers/media/v4l2-core/v4l2-hevc-enc.c
++++ b/drivers/media/v4l2-core/v4l2-hevc-enc.c
+@@ -18,6 +18,7 @@
+ #include <linux/sort.h>
+ #include <linux/v4l2-controls.h>
+ #include <media/v4l2-ctrls.h>
++#include <media/v4l2-enc-cbr.h>
+ #include <media/v4l2-hevc.h>
+ #include <media/v4l2-hevc-enc.h>
+ #include <media/v4l2-hevc-enc-rbsp.h>
+@@ -26,6 +27,12 @@
+ #define RBSP_UPDATE_AUD			BIT(0)
+ #define RBSP_UPDATE_PARAMETER_SETS	BIT(1)
+ 
++/*
++ * Constant bitrate mode: I pictures 4 QP below the P pictures, the default
++ * of the Rockchip MPP library for HEVC.
++ */
++#define RC_CBR_QP_DELTA_INTRA		4
++
+ /* Table A.8: MaxLumaPs and MaxLumaSr (main tier is enough to pick a level) */
+ static const struct {
+ 	u8 level_idc;
+@@ -150,6 +157,7 @@ int v4l2_hevc_enc_init(struct v4l2_hevc_enc *enc)
+ 	memset(&enc->state_next, 0, sizeof(enc->state_next));
+ 	memset(&enc->ref, 0, sizeof(enc->ref));
+ 	enc->state_serial = 0;
++	v4l2_enc_cbr_reset(&enc->cbr, RC_CBR_QP_DELTA_INTRA);
+ 
+ 	if (!enc->max_l0_refs)
+ 		enc->max_l0_refs = 1;
+@@ -1052,6 +1060,18 @@ static int ref_step(struct v4l2_hevc_enc *enc)
+ 	return 0;
+ }
+ 
++/*
++ * The core provides the constant bitrate mode unless the driver has its own
++ * rate control.
++ */
++static bool rc_core_cbr(const struct v4l2_hevc_enc *enc,
++			const struct v4l2_hevc_enc_state *state)
++{
++	return state->frame_rc_enable &&
++	       state->bitrate_mode == V4L2_MPEG_VIDEO_BITRATE_MODE_CBR &&
++	       !(enc->rc_ops && enc->rc_ops->estimate);
++}
++
+ static int rc_step(struct v4l2_hevc_enc *enc)
+ {
+ 	struct v4l2_hevc_enc_state *state = &enc->state_active;
+@@ -1074,6 +1094,17 @@ static int rc_step(struct v4l2_hevc_enc *enc)
+ 		if (range)
+ 			qp -= (state->quality - state->quality_min) *
+ 			      (state->qp_max - state->qp_min) / range;
++	} else if (rc_core_cbr(enc, state)) {
++		ret = v4l2_enc_cbr_begin(&enc->cbr, state->bitrate,
++					 &state->timeperframe,
++					 state->sps.pic_width_in_luma_samples *
++					 state->sps.pic_height_in_luma_samples,
++					 slice_type == V4L2_HEVC_SLICE_TYPE_I,
++					 state->qp_min, state->qp_max);
++		if (ret)
++			return ret;
++
++		qp = v4l2_enc_cbr_qp(&enc->cbr);
+ 	} else {
+ 		if (!enc->rc_ops || !enc->rc_ops->estimate)
+ 			return -EOPNOTSUPP;
+@@ -1382,6 +1413,10 @@ int v4l2_hevc_enc_complete(struct v4l2_hevc_enc *enc,
+ 	    !v4l2_hevc_nal_is_sub_layer_non_ref(nal_unit_type))
+ 		enc->ref.prev_tid0_poc = encode->pic_order_cnt_val;
+ 
++	if (rc_core_cbr(enc, state))
++		v4l2_enc_cbr_end(&enc->cbr, (u64)bytesused * 8,
++				 &state->timeperframe, state->qp_min,
++				 state->qp_max);
+ 	if (enc->rc_ops && enc->rc_ops->complete)
+ 		enc->rc_ops->complete(enc, state, bytesused, stats);
+ 
+diff --git a/include/media/v4l2-hevc-enc.h b/include/media/v4l2-hevc-enc.h
+index 4797102e34b3..3db131370c56 100644
+--- a/include/media/v4l2-hevc-enc.h
++++ b/include/media/v4l2-hevc-enc.h
+@@ -9,6 +9,7 @@
+ #include <linux/types.h>
+ #include <linux/v4l2-controls.h>
+ #include <linux/videodev2.h>
++#include <media/v4l2-enc-cbr.h>
+ #include <media/v4l2-hevc-enc-rbsp.h>
+ 
+ struct v4l2_ctrl_handler;
+@@ -186,8 +187,10 @@ struct v4l2_hevc_enc_ops {
+ /**
+  * struct v4l2_hevc_enc_rc_ops - driver rate control
+  *
+- * The core selects the QP itself for the direct QP and constant quality
+- * modes. These callbacks provide the constant and variable bitrate modes.
++ * The core selects the QP itself for the direct QP, constant quality and
++ * constant bitrate modes. These callbacks replace the constant bitrate
++ * mode of the core (if @estimate is set) and provide the variable bitrate
++ * mode.
+  *
+  * @estimate: return the QP of the next picture in @qp
+  * @complete: account for a completed picture
+@@ -231,6 +234,9 @@ struct v4l2_hevc_enc_rc_ops {
+  * @rbsp: NAL unit writer
+  * @slice: slice segment header of the current picture
+  * @qp: SliceQpY of the current picture
++ * @cbr: constant bitrate rate control of the core. In that mode,
++ *	 @cbr.target_bits is the size target of the current picture in bits,
++ *	 for hardware with a rate control within the picture.
+  * @header_size: number of bytes the core wrote at the start of the
+  *		 CAPTURE buffer. The hardware writes from that offset.
+  * @parameter_sets_pending: parameter sets were written for a picture that
+@@ -261,6 +267,7 @@ struct v4l2_hevc_enc {
+ 	struct v4l2_hevc_enc_rbsp rbsp;
+ 	struct v4l2_hevc_slice_header slice;
+ 	int qp;
++	struct v4l2_enc_cbr cbr;
+ 	unsigned int header_size;
+ 	bool parameter_sets_pending;
+ 

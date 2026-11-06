@@ -1,6 +1,6 @@
 # mpeg4: MPEG-4 Part 2, H.263 and Sorenson Spark decoding on the RK3588 VPU121 (VDPU2); uAPI from Jernej Skrabec's H616 series
 
-- Workspace branch: `k15-mpeg4` (exported 2026-11-05)
+- Workspace branch: `k15-mpeg4` (exported 2026-11-06)
 - Kernel fork branch: `opi5/mpeg4` (see PUBLISH.md)
 - Sits on: `mpeg1` (base commit `091166b16f08`)
 - Hardware test: built (kernel 7.3.0-15m4v1), NOT yet tested on hardware

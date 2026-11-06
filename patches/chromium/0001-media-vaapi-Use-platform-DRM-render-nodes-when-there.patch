@@ -26,6 +26,7 @@ shows VaapiVideoDecoder with no command-line switch.
 
 Bug: TBD
 Assisted-by: LLM
+Signed-off-by: Arun Iyengar <aiyengar1990@gmail.com>
 ---
  media/gpu/vaapi/vaapi_wrapper.cc | 33 ++++++++++++++++++++++++++++++++
  1 file changed, 33 insertions(+)

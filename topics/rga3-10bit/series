@@ -1,0 +1,7 @@
+# Apply in this order on top of the parent topic (see topic.env):
+#   while read -r p sha; do git am "$p"; done < <(grep -v '^#' series)
+# Second column: the original commit in the workspace clone (for reference).
+ours/0001-media-rockchip-rga-Don-t-write-past-the-end-of-the-d.patch 6353623e4706c0a44ddd771f4f5d4f63dc1dd131
+ours/0002-media-rockchip-rga-Accept-imported-DMA-BUFs-larger-t.patch 0966a746166a784a71e49f7ea5d67e75a619b7df
+ours/0003-media-rockchip-rga-Support-NV15-and-P010-on-the-RGA3.patch 03972a029a2755789136151b63d5ecc7d7d74aa3
+ours/0004-media-rockchip-rga-Support-rotation-and-flipping-on-.patch 75a7d381d88cac53d02513a642bce7eea7a88c3e

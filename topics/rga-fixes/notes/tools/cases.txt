@@ -1,0 +1,103 @@
+# id|node|input|src|dst|tool args|frames|check|reference
+# node: rga2/rga3. check = KIND[@MOD...] (judge.py). KIND: 10to8 p010 exact10 8to10 rgb709 rgb2020 scale xform xform10
+#   reject info info-xform dmabuf same-as up422 rect; MOD: crop= compose= obpl= cbpl= ref= (see judge.py)
+# --- regression: the rga3-nv15 cases (r2-* replaced by the f2-* checks below)
+c-hevc-nv12|rga3|hevc10.nv15|1920x1080:NV15|1920x1080:NV12||4|10to8|hevc10.ref10
+c-hevc-p010|rga3|hevc10.nv15|1920x1080:NV15|1920x1080:P010||4|p010|hevc10.ref10
+c-vp9-nv12|rga3|vp92.nv15|1920x1080:NV15|1920x1080:NV12||4|10to8|vp92.ref10
+c-vp9-p010|rga3|vp92.nv15|1920x1080:NV15|1920x1080:P010||4|p010|vp92.ref10
+c-conf-nv12|rga3|conf.nv15|416x240:NV15|416x240:NV12||4|10to8|conf.ref10
+c-conf-p010|rga3|conf.nv15|416x240:NV15|416x240:P010||4|p010|conf.ref10
+c-hevc-nv15|rga3|hevc10.nv15|1920x1080:NV15|1920x1080:NV15||4|exact10|hevc10.nv15
+c-p010-nv15|rga3|hevc10.p010|1920x1080:P010|1920x1080:NV15||4|exact10|hevc10.nv15
+c-p010-nv12|rga3|hevc10.p010|1920x1080:P010|1920x1080:NV12||4|10to8|hevc10.ref10
+c-nv12-p010|rga3|hevc10.nv12|1920x1080:NV12|1920x1080:P010||4|8to10|hevc10.nv12
+c-hevc-xr24-709|rga3|hevc10.nv15|1920x1080:NV15|1920x1080:XR24|-e 709 -q lim|2|rgb709|hevc10.ref10
+c-hevc-xr24-2020|rga3|hevc10.nv15|1920x1080:NV15|1920x1080:XR24|-e 2020 -q lim|2|rgb2020|hevc10.ref10
+c-hevc-scale720|rga3|hevc10.nv15|1920x1080:NV15|1280x720:NV12||4|scale|hevc10-720.nv12ref
+r-xr24-r90|rga3|rgb.xr24|1920x1080:XR24|1080x1920:XR24|-r 90|1|xform|rgb.xr24
+r-xr24-r180|rga3|rgb.xr24|1920x1080:XR24|1920x1080:XR24|-r 180|1|xform|rgb.xr24
+r-xr24-r270|rga3|rgb.xr24|1920x1080:XR24|1080x1920:XR24|-r 270|1|xform|rgb.xr24
+r-xr24-h|rga3|rgb.xr24|1920x1080:XR24|1920x1080:XR24|-H|1|xform|rgb.xr24
+r-xr24-v|rga3|rgb.xr24|1920x1080:XR24|1920x1080:XR24|-V|1|xform|rgb.xr24
+r-xr24-hv|rga3|rgb.xr24|1920x1080:XR24|1920x1080:XR24|-H -V|1|xform|rgb.xr24
+r-xr24-h-r90|rga3|rgb.xr24|1920x1080:XR24|1080x1920:XR24|-H -r 90|1|xform|rgb.xr24
+r-xr24-v-r90|rga3|rgb.xr24|1920x1080:XR24|1080x1920:XR24|-V -r 90|1|xform|rgb.xr24
+r-xr24-h-r270|rga3|rgb.xr24|1920x1080:XR24|1080x1920:XR24|-H -r 270|1|xform|rgb.xr24
+r-xr24-v-r270|rga3|rgb.xr24|1920x1080:XR24|1080x1920:XR24|-V -r 270|1|xform|rgb.xr24
+r-xr24-h-r180|rga3|rgb.xr24|1920x1080:XR24|1920x1080:XR24|-H -r 180|1|xform|rgb.xr24
+r-xr24-v-r180|rga3|rgb.xr24|1920x1080:XR24|1920x1080:XR24|-V -r 180|1|xform|rgb.xr24
+r-xr24-hv-r90|rga3|rgb.xr24|1920x1080:XR24|1080x1920:XR24|-H -V -r 90|1|xform|rgb.xr24
+r-xr24-hv-r180|rga3|rgb.xr24|1920x1080:XR24|1920x1080:XR24|-H -V -r 180|1|xform|rgb.xr24
+r-xr24-hv-r270|rga3|rgb.xr24|1920x1080:XR24|1080x1920:XR24|-H -V -r 270|1|xform|rgb.xr24
+r-nv12-h-r90|rga3|pic.nv12|1920x1080:NV12|1080x1920:NV12|-H -r 90|1|xform|pic.nv12
+r-nv12-v-r270|rga3|pic.nv12|1920x1080:NV12|1080x1920:NV12|-V -r 270|1|xform|pic.nv12
+r-nv15-h-r90|rga3|hevc10-f0.nv15|1920x1080:NV15|1080x1920:P010|-H -r 90|1|xform10|hevc10-f0.ref10
+r-nv12-r90|rga3|pic.nv12|1920x1080:NV12|1080x1920:NV12|-r 90|1|xform|pic.nv12
+r-nv12-r270|rga3|pic.nv12|1920x1080:NV12|1080x1920:NV12|-r 270|1|xform|pic.nv12
+r-nv12-r180|rga3|pic.nv12|1920x1080:NV12|1920x1080:NV12|-r 180|1|xform|pic.nv12
+r-nv12-h|rga3|pic.nv12|1920x1080:NV12|1920x1080:NV12|-H|1|xform|pic.nv12
+r-nv15-r90|rga3|hevc10-f0.nv15|1920x1080:NV15|1080x1920:P010|-r 90|1|xform10|hevc10-f0.ref10
+r-nv15-v|rga3|hevc10-f0.nv15|1920x1080:NV15|1920x1080:NV15|-V|1|xform10|hevc10-f0.ref10
+r-nv12-r90-scale|rga3|pic.nv12|1920x1080:NV12|540x960:NV12|-r 90|1|scale|pic-r90-540.nv12ref
+r-nv16-h|rga3|pic.nv16|1920x1080:NV16|1920x1080:NV16|-H|1|xform|pic.nv16
+r-nv16-r90|rga3|pic.nv16|1920x1080:NV16|1080x1920:NV16|-r 90|1|reject|-
+d2-xr24-exact|rga2|rgb720.xr24|1280x720:XR24|1280x720:XR24|-D 0 -h HEAP|2|dmabuf|rgb720.xr24
+d2-xr24-over|rga2|rgb720.xr24|1280x720:XR24|1280x720:XR24|-D 1048576 -h HEAP|2|dmabuf|rgb720.xr24
+d3-xr24-over|rga3|rgb720.xr24|1280x720:XR24|1280x720:XR24|-D 4194304 -h HEAP|2|dmabuf|rgb720.xr24
+d3-nv15-over|rga3|hevc10-f0.nv15|1920x1080:NV15|1920x1080:NV12|-D 1048576 -h HEAP|1|10to8|hevc10-f0.ref10
+m2-nv12|rga2|pic.nv12|1920x1080:NV12|1920x1080:XR24||1|info|-
+m2-nm12|rga2|pic.nv12|1920x1080:NM12|1920x1080:XR24||1|same-as|m2-nv12
+# --- fix 1: RGA2 flips (V4L2: flips on the source, then the clockwise rotation)
+f2-xr24-h|rga2|rgb.xr24|1920x1080:XR24|1920x1080:XR24|-H|1|xform|rgb.xr24
+f2-xr24-v|rga2|rgb.xr24|1920x1080:XR24|1920x1080:XR24|-V|1|xform|rgb.xr24
+f2-xr24-hv|rga2|rgb.xr24|1920x1080:XR24|1920x1080:XR24|-H -V|1|xform|rgb.xr24
+f2-xr24-r90|rga2|rgb.xr24|1920x1080:XR24|1080x1920:XR24|-r 90|1|xform|rgb.xr24
+f2-xr24-r180|rga2|rgb.xr24|1920x1080:XR24|1920x1080:XR24|-r 180|1|xform|rgb.xr24
+f2-xr24-r270|rga2|rgb.xr24|1920x1080:XR24|1080x1920:XR24|-r 270|1|xform|rgb.xr24
+f2-xr24-h-r90|rga2|rgb.xr24|1920x1080:XR24|1080x1920:XR24|-H -r 90|1|xform|rgb.xr24
+f2-xr24-v-r90|rga2|rgb.xr24|1920x1080:XR24|1080x1920:XR24|-V -r 90|1|xform|rgb.xr24
+f2-xr24-h-r180|rga2|rgb.xr24|1920x1080:XR24|1920x1080:XR24|-H -r 180|1|xform|rgb.xr24
+f2-xr24-v-r180|rga2|rgb.xr24|1920x1080:XR24|1920x1080:XR24|-V -r 180|1|xform|rgb.xr24
+f2-xr24-h-r270|rga2|rgb.xr24|1920x1080:XR24|1080x1920:XR24|-H -r 270|1|xform|rgb.xr24
+f2-xr24-v-r270|rga2|rgb.xr24|1920x1080:XR24|1080x1920:XR24|-V -r 270|1|xform|rgb.xr24
+f2-xr24-hv-r90|rga2|rgb.xr24|1920x1080:XR24|1080x1920:XR24|-H -V -r 90|1|xform|rgb.xr24
+f2-xr24-hv-r270|rga2|rgb.xr24|1920x1080:XR24|1080x1920:XR24|-H -V -r 270|1|xform|rgb.xr24
+f2-nv12-h|rga2|pic.nv12|1920x1080:NV12|1920x1080:NV12|-H|1|info-xform|pic.nv12
+f2-nv12-v-r90|rga2|pic.nv12|1920x1080:NV12|1080x1920:NV12|-V -r 90|1|info-xform|pic.nv12
+# --- fix 2: crop (offset) and compose on the RGA3, rectangle alignment on both
+k3-xr24-crop|rga3|rgb.xr24|1920x1080:XR24|1280x720:XR24|-c 320,180,1280,720|1|xform@crop=320,180,1280,720|rgb.xr24
+k3-xr24-crop-odd|rga3|rgb.xr24|1920x1080:XR24|1280x720:XR24|-c 321,181,1280,720|1|xform@crop=321,181,1280,720|rgb.xr24
+k3-nv12-crop|rga3|pic.nv12|1920x1080:NV12|1280x720:NV12|-c 322,182,1280,720|1|xform@crop=322,182,1280,720|pic.nv12
+k3-nv12-unal|rga3|pic.nv12|1920x1080:NV12|1280x720:NV12|-c 321,181,1281,721|1|xform@crop=320,180,1280,720|pic.nv12
+k3-nv15-crop|rga3|hevc10-f0.nv15|1920x1080:NV15|1280x720:NV15|-c 324,180,1280,720|1|exact10@crop=324,180,1280,720|hevc10-f0.nv15
+k3-nv15-unal|rga3|hevc10-f0.nv15|1920x1080:NV15|1280x720:P010|-c 323,181,1282,721|1|xform10@crop=320,180,1280,720|hevc10-f0.ref10
+k3-xr24-crop-r90|rga3|rgb.xr24|1920x1080:XR24|720x1280:XR24|-c 320,180,1280,720 -r 90|1|xform@crop=320,180,1280,720|rgb.xr24
+k3-nv12-crop-h-r270|rga3|pic.nv12|1920x1080:NV12|720x1280:NV12|-c 322,182,1280,720 -H -r 270|1|xform@crop=322,182,1280,720|pic.nv12
+k3-xr24-compose|rga3|rgb720.xr24|1280x720:XR24|1920x1080:XR24|-C 100,50,1280,720|1|xform@compose=0,0,1280,720|rgb720.xr24
+k2-xr24-compose|rga2|rgb720.xr24|1280x720:XR24|1920x1080:XR24|-C 100,50,1280,720|1|xform@compose=100,50,1280,720|rgb720.xr24
+k2-xr24-crop|rga2|rgb.xr24|1920x1080:XR24|1280x720:XR24|-c 321,181,1280,720|1|xform@crop=321,181,1280,720|rgb.xr24
+k2-nv12-unal|rga2|pic.nv12|1920x1080:NV12|1280x720:XR24|-c 321,181,1281,721|1|rect@crop=320,180,1280,720|-
+# --- fix 3: a larger bytesperline of userspace (416 wide like rkvdec frames), -b OUTPUT / -B CAPTURE
+s3-nv12-416|rga3|conf.nv12|416x240:NV12|416x240:NV12|-b 448|1|xform@obpl=448@cbpl=416|conf.nv12
+s3-nv12-416-cap|rga3|conf.nv12|416x240:NV12|416x240:NV12|-b 448 -B 512|1|xform@obpl=448@cbpl=512|conf.nv12
+s3-nv12-416-unal|rga3|conf.nv12|416x240:NV12|416x240:NV12|-b 450|1|xform@obpl=464|conf.nv12
+s3-nv12-416-small|rga3|conf.nv12|416x240:NV12|416x240:NV12|-b 100|1|xform@obpl=416|conf.nv12
+s3-nv12-416-huge|rga3|conf.nv12|416x240:NV12|416x240:NV12|-b 200000|1|xform@obpl=416|conf.nv12
+s3-nm12-416|rga3|conf.nv12|416x240:NM12|416x240:NV12|-b 448,512|1|xform@obpl=448,512|conf.nv12
+s3-nv15-416|rga3|conf.nv15|416x240:NV15|416x240:NV15|-b 576 -B 640|1|exact10@obpl=576@cbpl=640|conf.nv15
+s3-nv15-416-dmabuf|rga3|conf.nv15|416x240:NV15|416x240:P010|-b 576 -D 0 -h HEAP|1|p010@obpl=576|conf.ref10
+s2-nv12-ref|rga2|conf.nv12|416x240:NV12|416x240:XR24||1|info|-
+s2-nv12-416|rga2|conf.nv12|416x240:NV12|416x240:XR24|-b 448|1|same-as@obpl=448|s2-nv12-ref
+s2-nm12-416|rga2|conf.nv12|416x240:NM12|416x240:XR24|-b 448,512|1|same-as@obpl=448,448|s2-nv12-ref
+s2-xr24-stride|rga2|rgb720.xr24|1280x720:XR24|1280x720:XR24|-b 5376 -B 5632|1|xform@obpl=5376@cbpl=5632|rgb720.xr24
+s2-xr24-stride-dmabuf|rga2|rgb720.xr24|1280x720:XR24|1280x720:XR24|-b 5376 -B 5632 -D 0 -h HEAP|1|xform@obpl=5376@cbpl=5632|rgb720.xr24
+# --- fix 4: NV20 (10-bit 4:2:2 packed) on the RGA3; pic10 = hevc10 frame 0 with doubled chroma rows
+n3-nv20-nv20|rga3|pic10.nv20|1920x1080:NV20|1920x1080:NV20||1|exact10|pic10.nv20
+n3-nv20-p010|rga3|pic10.nv20|1920x1080:NV20|1920x1080:P010||1|p010|hevc10-f0.ref10
+n3-nv20-nv12|rga3|pic10.nv20|1920x1080:NV20|1920x1080:NV12||1|10to8|hevc10-f0.ref10
+n3-nv20-nv16|rga3|pic10.nv20|1920x1080:NV20|1920x1080:NV16||1|10to8@ref=REF422|pic10.ref422
+n3-nv20-h|rga3|pic10.nv20|1920x1080:NV20|1920x1080:NV20|-H|1|xform10@ref=REF422|pic10.ref422
+n3-nv20-crop|rga3|pic10.nv20|1920x1080:NV20|1280x720:NV20|-c 323,181,1282,721|1|exact10@crop=320,180,1280,720|pic10.nv20
+n3-nv15-nv20|rga3|hevc10-f0.nv15|1920x1080:NV15|1920x1080:NV20||1|up422|hevc10-f0.ref10
+n3-nv20-r90|rga3|pic10.nv20|1920x1080:NV20|1080x1920:NV20|-r 90|1|reject|-

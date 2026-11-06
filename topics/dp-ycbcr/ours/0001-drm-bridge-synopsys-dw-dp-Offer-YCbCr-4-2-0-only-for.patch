@@ -1,0 +1,37 @@
+From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
+From: Arun Iyengar <aiyengar1990@gmail.com>
+Date: Thu, 5 Nov 2026 06:32:49 +0000
+Subject: [PATCH] drm/bridge: synopsys: dw-dp: Offer YCbCr 4:2:0 only for 4:2:0
+ capable modes
+
+dw_dp_bridge_atomic_get_output_bus_fmts() lists the YCbCr 4:2:0 bus
+formats whenever the sink declares YCbCr 4:2:0 support for any mode and
+the link can carry the VSC SDP. A sink only accepts YCbCr 4:2:0 for the
+modes listed in its YCbCr 4:2:0 Video Data Block or Capability Map Data
+Block, so a mode outside those lists (e.g. 1920x1080 on a TV that does
+4:2:0 at 3840x2160 only) could be driven as YCbCr 4:2:0 and show no
+picture.
+
+Skip the 4:2:0 formats for modes that are neither 4:2:0-only nor
+4:2:0-also, as dw_dp_bridge_mode_valid() already does when it sizes the
+minimum bandwidth, and as the downstream Rockchip driver and i915 do.
+
+Assisted-by: LLM
+Signed-off-by: Arun Iyengar <aiyengar1990@gmail.com>
+---
+ drivers/gpu/drm/bridge/synopsys/dw-dp.c | 2 +-
+ 1 file changed, 1 insertion(+), 1 deletion(-)
+
+diff --git a/drivers/gpu/drm/bridge/synopsys/dw-dp.c b/drivers/gpu/drm/bridge/synopsys/dw-dp.c
+index 2ed9c78f7ed4..a1fb0565a813 100644
+--- a/drivers/gpu/drm/bridge/synopsys/dw-dp.c
++++ b/drivers/gpu/drm/bridge/synopsys/dw-dp.c
+@@ -2444,7 +2444,7 @@ static u32 *dw_dp_bridge_atomic_get_output_bus_fmts(struct drm_bridge *bridge,
+ 			continue;
+ 
+ 		if (fmt->color_format == DRM_OUTPUT_COLOR_FORMAT_YCBCR420 &&
+-		    !dw_dp_ycbcr_420_ok(dp))
++		    (!dw_dp_ycbcr_420_ok(dp) || !drm_mode_is_420(di, &mode)))
+ 			continue;
+ 
+ 		if (fmt->color_format != DRM_OUTPUT_COLOR_FORMAT_YCBCR420 &&

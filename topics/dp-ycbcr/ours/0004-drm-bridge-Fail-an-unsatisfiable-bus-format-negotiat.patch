@@ -1,0 +1,50 @@
+From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
+From: Arun Iyengar <aiyengar1990@gmail.com>
+Date: Thu, 5 Nov 2026 06:34:19 +0000
+Subject: [PATCH] drm/bridge: Fail an unsatisfiable bus format negotiation with
+ -EINVAL
+
+drm_atomic_bridge_chain_select_bus_fmts() reports that no chain of bus
+formats fits with -ENOTSUPP, and drm_atomic_bridge_chain_check() passes
+that straight back through drm_atomic_helper_check_modeset() to the
+atomic and legacy modeset ioctls. -ENOTSUPP (524) is a kernel-internal
+code that userspace does not know; for a configuration the hardware
+cannot do the atomic API returns -EINVAL. Since the connector "color
+format" property makes the negotiation fail for any requested format a
+bridge chain cannot output, userspace now hits this routinely: a DW DP
+connector asked for YCbCr 4:2:0 on a sink without 4:2:0 support gets
+here with no matching format and would fail the atomic commit with
+errno 524, where an HDMI connector asked for the same returns EINVAL
+from the HDMI state helper.
+
+Return -EINVAL when the negotiation finds no chain, with a debug
+message naming the encoder.
+
+Assisted-by: LLM
+Signed-off-by: Arun Iyengar <aiyengar1990@gmail.com>
+---
+ drivers/gpu/drm/drm_bridge.c | 11 +++++++++++
+ 1 file changed, 11 insertions(+)
+
+diff --git a/drivers/gpu/drm/drm_bridge.c b/drivers/gpu/drm/drm_bridge.c
+index 10dde3600c70..bd5374b5edf7 100644
+--- a/drivers/gpu/drm/drm_bridge.c
++++ b/drivers/gpu/drm/drm_bridge.c
+@@ -1422,6 +1422,17 @@ int drm_atomic_bridge_chain_check(struct drm_bridge *bridge,
+ 
+ 	ret = drm_atomic_bridge_chain_select_bus_fmts(bridge, crtc_state,
+ 						      conn_state);
++	/*
++	 * -ENOTSUPP is the internal "no bus format chain" code of the
++	 * negotiation. It is not a valid userspace error code; an atomic
++	 * check that cannot be satisfied fails with -EINVAL.
++	 */
++	if (ret == -ENOTSUPP) {
++		drm_dbg_atomic(bridge->dev,
++			       "[ENCODER:%d:%s] no bus format chain found\n",
++			       bridge->encoder->base.id, bridge->encoder->name);
++		return -EINVAL;
++	}
+ 	if (ret)
+ 		return ret;
+ 

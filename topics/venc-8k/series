@@ -1,0 +1,4 @@
+# Apply in this order on top of the parent topic (see topic.env):
+#   while read -r p sha; do git am "$p"; done < <(grep -v '^#' series)
+# Second column: the original commit in the workspace clone (for reference).
+ours/0001-media-rockchip-rkvenc-Encode-pictures-wider-than-409.patch aaf886407cf44795548a74747563fae853bcfed6
