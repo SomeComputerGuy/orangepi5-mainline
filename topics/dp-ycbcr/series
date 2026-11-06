@@ -1,7 +1,7 @@
 # Apply in this order on top of the parent topic (see topic.env):
 #   while read -r p sha; do git am "$p"; done < <(grep -v '^#' series)
 # Second column: the original commit in the workspace clone (for reference).
-ours/0001-drm-bridge-synopsys-dw-dp-Offer-YCbCr-4-2-0-only-for.patch a04ebe94084d5713bcd47eb51d616553a4a390a9
-ours/0002-drm-bridge-synopsys-dw-dp-Honour-the-connector-color.patch 8b152cd24ba2e12e2230dc042c00308fc0869051
-ours/0003-fixup-drm-rockchip-dw_dp-Attach-the-color-format-con.patch 96e4535c33b525a9c24dc8838c5fd1f92c870afc
-ours/0004-drm-bridge-Fail-an-unsatisfiable-bus-format-negotiat.patch 1e1a1d2bf7125c5b3cd8cf72e869d03f0b6bd2d6
+ours/0001-drm-bridge-synopsys-dw-dp-Offer-YCbCr-4-2-0-only-for.patch bee9b643f0736c7a7754292dd7c1c553e8488366
+ours/0002-drm-bridge-synopsys-dw-dp-Honour-the-connector-color.patch 87bd9354dc7f7c51613ea36a5c894d85df3a588c
+ours/0003-fixup-drm-rockchip-dw_dp-Attach-the-color-format-con.patch 950372cb5aaf60be5ff136e07239454698926253
+ours/0004-drm-bridge-Fail-an-unsatisfiable-bus-format-negotiat.patch a875690f77eaeb3a5450b25a350e401e295a87fb

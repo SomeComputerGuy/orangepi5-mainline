@@ -10,16 +10,15 @@ On RK3588 the DW DP controller is followed by bridges that do not take
 part in bus format negotiation (the USB-DP PHY's AUX bridge and the
 USB-C connector's AUX HPD bridge for DP alt mode, or a dp-connector).
 The last of them has no atomic_get_output_bus_fmts(), so the chain ends
-in MEDIA_BUS_FMT_FIXED,
-which matches every color format, and dw-dp gets FIXED as its output
-format and picks the first entry of its own list. With the "color
-format" property attached to the connector, every YCbCr 4:4:4, 4:2:2
-and 4:2:0 request was accepted by the atomic check and then sent as RGB:
-on a DP monitor with RGB, 4:4:4 and 4:2:2 support all 222 YCbCr test
-cases came out as RGB888 or RGB101010, and 4:2:0 was accepted although
-the sink has no 4:2:0 support at all. The property documentation
-promises the opposite: a commit that succeeds outputs the requested
-format, one that cannot be met fails.
+in MEDIA_BUS_FMT_FIXED, which matches every color format, and dw-dp gets
+FIXED as its output format and picks the first entry of its own list.
+With the "color format" property attached to the connector, every YCbCr
+4:4:4, 4:2:2 and 4:2:0 request was accepted by the atomic check and then
+sent as RGB: on a DP monitor with RGB, 4:4:4 and 4:2:2 support all 222
+YCbCr test cases came out as RGB888 or RGB101010, and 4:2:0 was accepted
+although the sink has no 4:2:0 support at all. The property
+documentation promises the opposite: a commit that succeeds outputs the
+requested format, one that cannot be met fails.
 
 Filter the DP output formats by the requested color format in
 dw_dp_bridge_atomic_get_output_bus_fmts(), which also serves as the
