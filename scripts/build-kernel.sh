@@ -187,6 +187,14 @@ done
 # so skip dpkg's build-dep check (-d).
 # Debug info is kept for BTF (eBPF tooling); skip the huge -dbg package
 export DEB_BUILD_PROFILES=pkg.linux-upstream.nokerneldbg
-make -C "$SRC" O="$BUILD" CC="$KMAKE_CC" -j"$(nproc)" DPKG_FLAGS=-d KDEB_PKGVERSION="$(make -s -C "$SRC" kernelversion)-$OPI5_PKGREV" bindeb-pkg
+# Release kernels (a plain number) are versioned <kernelversion>+opi5.<rev>, e.g. 7.3.0+opi5.16;
+# test kernels (e.g. 16frl2) keep <kernelversion>-<rev>, which the test harnesses match on.
+case $OPI5_PKGREV in
+  *[!0-9]*) OPI5_PKGSUFFIX=-$OPI5_PKGREV ;;
+  *) OPI5_PKGSUFFIX=+opi5.$OPI5_PKGREV
+     # Without a "-" debian/rules finds no revision for the build number: keep uname -v at #<rev>
+     export KBUILD_BUILD_VERSION=$OPI5_PKGREV ;;
+esac
+make -C "$SRC" O="$BUILD" CC="$KMAKE_CC" -j"$(nproc)" DPKG_FLAGS=-d KDEB_PKGVERSION="$(make -s -C "$SRC" kernelversion)$OPI5_PKGSUFFIX" bindeb-pkg
 mv "$BUILD"/../linux-*.deb "$OUT/debs/"
 ls -l "$OUT/debs"

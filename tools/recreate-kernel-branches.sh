@@ -18,7 +18,7 @@
 # that has commits (a topic with "tag:<tag>" as 8th field gets that annotated
 # tag instead of a branch), plus the image kernel: branch opi5/image (v7.3 +
 # patches/linux, what scripts/build-kernel.sh builds) and annotated tag
-# image-<version> (KDEB_PKGVERSION of scripts/build-kernel.sh, e.g. 7.3.0-8),
+# image-<version> (KDEB_PKGVERSION of scripts/build-kernel.sh, e.g. 7.3.0+opi5.15),
 # and tag image-<version>-extra (+ patches/linux-extra). Tags are never moved:
 # an existing tag that points elsewhere is reported (bump the package version).
 # A full run (no topic arguments) removes local opi5/* branches it did not
@@ -190,7 +190,12 @@ if [ ${#ONLY[@]} -eq 0 ] || [[ " ${ONLY[*]} " == *" image "* ]]; then
   # Package version as scripts/build-kernel.sh sets it: <kernelversion><suffix>
   suffix=$(sed -n 's/.*KDEB_PKGVERSION="$(make -s -C "$SRC" kernelversion)\([^"]*\)".*/\1/p' "$REPO/scripts/build-kernel.sh")
   # The revision may be a variable with a default: OPI5_PKGREV=${OPI5_PKGREV:-<n>}
-  if [[ $suffix == *'$OPI5_PKGREV'* ]]; then
+  # Release revisions are <kernelversion>+opi5.<rev> (OPI5_PKGSUFFIX in build-kernel.sh)
+  if [[ $suffix == '$OPI5_PKGSUFFIX' ]]; then
+    rev=$(sed -n 's/.*OPI5_PKGREV=\${OPI5_PKGREV:-\([0-9][0-9]*\)}.*/\1/p' "$REPO/scripts/build-kernel.sh" | head -1)
+    [ -n "$rev" ] || { echo "no OPI5_PKGREV=\${OPI5_PKGREV:-<n>} default in scripts/build-kernel.sh"; exit 1; }
+    suffix=+opi5.$rev
+  elif [[ $suffix == *'$OPI5_PKGREV'* ]]; then
     rev=$(sed -n 's/.*OPI5_PKGREV=\${OPI5_PKGREV:-\([0-9][0-9]*\)}.*/\1/p' "$REPO/scripts/build-kernel.sh" | head -1)
     [ -n "$rev" ] || { echo "no OPI5_PKGREV=\${OPI5_PKGREV:-<n>} default in scripts/build-kernel.sh"; exit 1; }
     suffix=${suffix//'$OPI5_PKGREV'/$rev}

@@ -74,7 +74,7 @@ creates `<you>/orangepi5-mainline` (`--name` to change it), adds it as `origin` 
 People who want `git` history rather than patch files get one branch per topic,
 `opi5/<topic>`, plus `opi5/image` (exactly v7.3 + `patches/linux`, the current image kernel)
 and an annotated tag per image kernel, `image-<package version>` (the version is
-`KDEB_PKGVERSION` in `scripts/build-kernel.sh`, e.g. `image-7.3.0-15`), plus
+`KDEB_PKGVERSION` in `scripts/build-kernel.sh`, e.g. `image-7.3.0+opi5.15`), plus
 `image-<version>-extra` for the `OPI5_EXTRA=1` build (+ `patches/linux-extra`).
 
 ```sh

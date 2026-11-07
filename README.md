@@ -209,7 +209,7 @@ What each step does:
   private arm64 sysroot. The module-signing key is generated in `build/linux/certs/` and must
   stay private. It is never part of this repository or of any package. The same tree is
   branch `opi5/image` in the [kernel fork](https://github.com/SomeComputerGuy/linux), and every
-  image kernel has a tag `image-<package version>` (the current one is `image-7.3.0-15`).
+  image kernel has a tag `image-<package version>` (the current one is `image-7.3.0+opi5.15`; older kernels kept their old `image-7.3.0-<n>` tags).
 - **`build-uboot.sh`** builds TF-A BL31 from source (`BL31_SRC=rkbin` uses Rockchip's binary
   instead), resetting `src/tf-a` to v2.15.0 and applying `patches/tf-a/*.patch`. It patches
   a copy of the rkbin DDR blob to print at 115200 baud, resets `src/u-boot` to v2026.10, applies
