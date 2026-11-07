@@ -1,7 +1,7 @@
 From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
 From: Jonas Karlman <jonas@kwiboo.se>
 Date: Tue, 6 Aug 2024 09:06:02 +0000
-Subject: [PATCH 02/11] avutil/hwcontext_v4l2request: Probe for a capable media
+Subject: [PATCH 02/13] avutil/hwcontext_v4l2request: Probe for a capable media
  and video device
 
 Probe all media devices and its linked video devices to locate a video
@@ -29,7 +29,7 @@ Link: https://github.com/Kwiboo/FFmpeg/tree/v4l2-request-n8.1
  2 files changed, 517 insertions(+), 5 deletions(-)
 
 diff --git a/configure b/configure
-index 7d851aa..d6dbe37 100755
+index 7d851aa13d..d6dbe3734e 100755
 --- a/configure
 +++ b/configure
 @@ -2098,6 +2098,7 @@ EXTERNAL_LIBRARY_LIST="
@@ -70,7 +70,7 @@ index 7d851aa..d6dbe37 100755
  
  check_headers sys/videoio.h
 diff --git a/libavutil/hwcontext_v4l2request.c b/libavutil/hwcontext_v4l2request.c
-index 3d92b63..f99eea6 100644
+index 3d92b63367..f99eea6eae 100644
 --- a/libavutil/hwcontext_v4l2request.c
 +++ b/libavutil/hwcontext_v4l2request.c
 @@ -26,6 +26,7 @@

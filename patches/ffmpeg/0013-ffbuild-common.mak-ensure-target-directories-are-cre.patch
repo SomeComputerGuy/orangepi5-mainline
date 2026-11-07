@@ -1,8 +1,8 @@
-From 95799831978b3cda47ce51722f8d8a980423e546 Mon Sep 17 00:00:00 2001
+From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
 From: Alexander Kanavin <alex@linutronix.de>
 Date: Thu, 11 Dec 2025 20:14:25 +0100
-Subject: [PATCH] ffbuild/common.mak: ensure target directories are created
- before running shell redirects into them
+Subject: [PATCH 13/13] ffbuild/common.mak: ensure target directories are
+ created before running shell redirects into them
 
 Otherwise, occasional build races have been observed:
 https://autobuilder.yoctoproject.org/valkyrie/#/builders/37/builds/3001/steps/13/logs/stdio
@@ -27,10 +27,10 @@ Signed-off-by: Alexander Kanavin <alex@linutronix.de>
  1 file changed, 2 insertions(+), 2 deletions(-)
 
 diff --git a/ffbuild/common.mak b/ffbuild/common.mak
-index 059de5abf3..328d6df8d6 100644
+index 06d6f39715..49950a7d01 100644
 --- a/ffbuild/common.mak
 +++ b/ffbuild/common.mak
-@@ -114,8 +114,8 @@ $(BIN2CEXE): ffbuild/bin2c_host.o
+@@ -126,8 +126,8 @@ $(BIN2CEXE): ffbuild/bin2c_host.o
  	$(HOSTLD) $(HOSTLDFLAGS) $(HOSTLD_O) $^ $(HOSTEXTRALIBS)
  
  RUN_BIN2C = $(BIN2C) $(patsubst $(SRC_PATH)/%,$(SRC_LINK)/%,$<) $@ $(subst .,_,$(basename $(notdir $@)))
@@ -41,6 +41,3 @@ index 059de5abf3..328d6df8d6 100644
  %.gz: TAG = GZIP
  %.min: TAG = MINIFY
  
--- 
-2.55.0
-

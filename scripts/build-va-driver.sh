@@ -29,7 +29,7 @@ fi
 # Source: https://github.com/SomeComputerGuy/libva-v4l2_request, branch opi5/main
 # (base: https://xff.cz/git/libva-v4l2_request cac6ece + three of sofus13's HEVC fixes)
 URL=https://github.com/SomeComputerGuy/libva-v4l2_request.git
-COMMIT=${VA_DRIVER_COMMIT:-069af0906f8803047457309d8e1d46f861a1c0d0}
+COMMIT=${VA_DRIVER_COMMIT:-e912dc47684e32276b9594c593855a79fae474f6}
 
 [ "$(id -u)" -ne 0 ] || { echo "run as your normal user (rootless build)"; exit 1; }
 SELF=$(readlink -f "$0")

@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-# SPDX-License-Identifier: GPL-2.0
+# SPDX-License-Identifier: GPL-2.0-only
 """Lighting-invariant webcam classifier for the kmsctl "bars" test pattern (pure Python, no numpy).
 
 Shared by the FRL trials, the VOP2 checks and the display-matrix harnesses. The camera, its exposure and the
@@ -21,6 +21,9 @@ room light may change between frames, so nothing is judged against absolute leve
     when the white reference clips, the region median (a highlight is a small spot) excludes them.
  4. Bars: per channel, the bars with that channel on must all read brighter than those with it off (a rank
     test inside the frame, no level threshold); a channel whose on/off boundary is clipped is skipped.
+ 5. "Is the pattern there" gate: the layout fit must score >= 3.0, either raw or after dividing the panel's
+    smooth brightness falloff out of the white regions (_flat_score; a dark room shows a 3x falloff that the
+    raw score would count as noise).
 
 classify(cal, img, code) -> dict with verdict:
     GOOD       pattern fitted, stripes right, all 16 code cells = code, bars consistent
@@ -197,6 +200,51 @@ def _fit_score(T, fit, pw, ph, bits=None):
     return (mo - mf) / (sd + 0.05 * abs(mo - mf) + 1.0)
 
 
+def _flat_score(T, fit, pw, ph, bits=None):
+    """_fit_score() of the fitted layout after dividing out the panel's smooth shading, for the "is the
+    pattern there" gate. The raw score counts the spread of the white regions as noise; but a panel's
+    brightness falls off smoothly and multiplicatively towards its edges (viewing angle, backlight), and in a
+    dark room nothing hides that (no ambient light on the black, no clipped white): the white stripes/cells of
+    a correct picture then read 39..120 for black 1, and the raw score stays under the gate. Per frame, the
+    white readings are fitted with a smooth shading s(x, y) = a + b x + c x^2 + d y (4 terms for ~17 regions,
+    across the whole width and three heights: it cannot follow a stripe-to-stripe pattern, only a gradient)
+    and each is divided by s / mean(s); black readings are left as they are (shading scales the light, black
+    has little). A wrong picture or geometry does not gain: its "white" regions are a mix of light and dark,
+    which no smooth shading explains, and the separation stays small."""
+    bars, stripes, cells = layout()
+    regs = [(s, s[4]) for s in stripes] + [(bars[0], True), (bars[7], False)]
+    if bits:
+        regs += [(c, bool(b)) for c, b in zip(cells, bits)]
+    on, off = [], []
+    for r, want in regs:
+        x0, y0, x1, y1 = _rect(fit, r)
+        if x0 < 0 or y0 < 0 or x1 > pw or y1 > ph:
+            continue
+        s, n = _box(T, x0, y0, x1, y1)
+        if n:
+            if want:
+                on.append((s / n, (r[0] + r[2]) - 1, (r[1] + r[3]) - 1))   # centre in -1..1
+            else:
+                off.append(s / n)
+    if len(on) < 8 or len(off) < 5:
+        return -1.0
+    rows = [[1.0, x, x * x, y] for _, x, y in on]
+    a = [[sum(r[i] * r[j] for r in rows) + (1e-3 if i == j else 0) for j in range(4)] for i in range(4)]
+    y = [sum(r[i] * v for r, (v, _, _) in zip(rows, on)) for i in range(4)]
+    try:
+        k = _solve(a, y)
+    except ZeroDivisionError:
+        return -1.0
+    sh = [sum(ki * ri for ki, ri in zip(k, r)) for r in rows]
+    ms = sum(sh) / len(sh)
+    if ms <= 0 or min(sh) < 0.25 * ms:         # not a plausible shading (no positive smooth white level)
+        return -1.0
+    onv = [v * ms / s for (v, _, _), s in zip(on, sh)]
+    mo, mf = sum(onv) / len(onv), sum(off) / len(off)
+    sd = (sum((v - mo) ** 2 for v in onv) / len(onv) + sum((v - mf) ** 2 for v in off) / len(off)) ** .5
+    return (mo - mf) / (sd + 0.05 * abs(mo - mf) + 1.0)
+
+
 STD_SCALES = [(sx, sy) for sx in (0.94, 0.97, 1.0, 1.03, 1.06) for sy in (0.94, 0.97, 1.0, 1.03, 1.06)]
 # Display aspect ratios of the modes under test. A sink that keeps the aspect of a mode whose ratio differs from
 # the mode the screen was calibrated with shows it pillarboxed (narrower, centred) or letterboxed (lower,
@@ -294,19 +342,19 @@ def classify(cal, img, code=None):
     T = _sat(L, pw, ph)
     bits = code_bits(code) if code is not None else None
     score, fit = fit_screen(T, pw, ph, bits)
-    r = _judge_fit(g, pw, ph, L, score, fit, code)
+    r = _judge_fit(g, pw, ph, L, score, fit, code, _flat_score(T, fit, pw, ph, bits) if fit else -1.0)
     if r["verdict"] != "GOOD":
         s2, f2 = fit_screen(T, pw, ph, bits, BOXED_SCALES)
         if f2 and s2 > score:
-            r2 = _judge_fit(g, pw, ph, L, s2, f2, code)
+            r2 = _judge_fit(g, pw, ph, L, s2, f2, code, _flat_score(T, f2, pw, ph, bits))
             r2["boxed"] = [round(f2[2] / GW, 3), round(f2[3] / GH, 3)]
             r = r2
     return r
 
 
-def _judge_fit(g, pw, ph, L, score, fit, code):
+def _judge_fit(g, pw, ph, L, score, fit, code, flat=-1.0):
     bars, stripes, cells = layout()
-    r = {"fit": round(score, 2)}
+    r = {"fit": round(score, 2), "fit_flat": round(flat, 2)}
     # screen statistics inside the calibrated screen area (not the padded search area: bezel and wall stay
     # out), for the no-pattern verdicts; surroundings brightness = everything outside it
     x0, y0 = int(PAD * GW), int(PAD * GH)
@@ -326,7 +374,8 @@ def _judge_fit(g, pw, ph, L, score, fit, code):
     r["white"], r["black"] = round(white), round(black)
     rng = white - black
     # no pattern: dark screen = NOSIGNAL, anything else = SCRAMBLED
-    if not fit or score < 3.0 or rng < 25:
+    # gate: the layout fit, raw or with the panel's smooth shading divided out (_flat_score), must reach 3.0
+    if not fit or max(score, flat) < 3.0 or rng < 25:
         # dark screen: 3/4 of the screen area is near black, whatever the room light. Glare spots and the
         # TV's own "No Signal" box are small and stay above that quantile; noise or something in front of the
         # screen (cat, person) lifts it -> SCRAMBLED

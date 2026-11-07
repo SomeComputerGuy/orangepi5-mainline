@@ -18,7 +18,17 @@ Apply with `git am` in the order listed in [`series`](series), on top of the par
 ## Notes, results and test tools
 
 - [notes/HANDOFF.md](notes/HANDOFF.md)
+- [notes/RUNNER-SUMMARY.md](notes/RUNNER-SUMMARY.md)
 - [notes/STATE.md](notes/STATE.md)
+- [notes/b2/HANDOFF.md](notes/b2/HANDOFF.md)
+- [notes/b2/tools/camcal.sh](notes/b2/tools/camcal.sh)
+- [notes/b2/tools/camverdict.py](notes/b2/tools/camverdict.py)
+- [notes/b2/tools/check-dpb2.sh](notes/b2/tools/check-dpb2.sh)
+- [notes/b2/tools/dpblack-board.sh](notes/b2/tools/dpblack-board.sh)
+- [notes/b2/tools/kmsctl.py](notes/b2/tools/kmsctl.py)
+- [notes/b2/tools/run-dpb2.sh](notes/b2/tools/run-dpb2.sh)
+- [notes/b2/tools/run.sh](notes/b2/tools/run.sh)
+- [notes/check.txt](notes/check.txt)
 - [notes/tools/camcal.sh](notes/tools/camcal.sh)
 - [notes/tools/camverdict.py](notes/tools/camverdict.py)
 - [notes/tools/check-dpblack.sh](notes/tools/check-dpblack.sh)

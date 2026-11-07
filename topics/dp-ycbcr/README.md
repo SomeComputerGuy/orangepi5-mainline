@@ -21,6 +21,7 @@ Apply with `git am` in the order listed in [`series`](series), on top of the par
 ## Notes, results and test tools
 
 - [notes/REPORT.md](notes/REPORT.md)
+- [notes/RUNNER-SUMMARY.md](notes/RUNNER-SUMMARY.md)
 - [notes/cmp.md](notes/cmp.md)
 - [notes/tools/all.sh](notes/tools/all.sh)
 - [notes/tools/ana.py](notes/tools/ana.py)

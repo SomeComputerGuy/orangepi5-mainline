@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-# SPDX-License-Identifier: GPL-2.0
+# SPDX-License-Identifier: GPL-2.0-only
 """Webcam picture check (pure Python; GStreamer only for capture and JPEG decode).
 
   camcheck.py find                         print the webcam's /dev/videoN (name match, capture node)
@@ -27,6 +27,7 @@ GW, GH = 128, 72                             # canonical (warped) grid
 CAM_NAME = os.environ.get("CAM_NAME", "Aluratek")
 TH = {"bars_min": 0.87, "stripes_min": 0.85, "black_frac": 0.12, "min_contrast": 0.25, "texture_min": 0.08,
       "gap_min": 0.03}
+GROW_DECAY, GROW_FRAC = 0.99, 0.5   # grow_screen(): reference may fall 1 %/pixel; a pixel joins at >= half of it
 ASPECT_TOL = 0.10   # detect_crop() reads the box edge off the pattern's bloom and a coarse grid: a 4:3 pillarbox
                     # (0.75) is measured as 0.81; a stretched 4:3 mode on a 16:9 panel differs by 0.25
 
@@ -187,6 +188,52 @@ def warp(img, quad, gw=GW, gh=GH):
     return out
 
 
+def grow_screen(diff, w, h, seed, thr):
+    """Extend the screen component found at the seed threshold `thr` (35 % of the brightest point) to the
+    screen's real edge. A panel seen at an angle in a dark room is lit very unevenly (18..94 over one white
+    screen: viewing-angle falloff, no ambient light to lift it), so a threshold relative to the brightest
+    spot cuts its dim part off and the quad (and every warp made with it) is wrong. The edge is found per
+    frame instead, by region growing (breadth first from the seed's edge): every pixel carries a reference level
+    (on the seed's edge: the screen level within 3 pixels) that may fall by at most GROW_DECAY per pixel from its neighbour's (it follows the panel's slow falloff);
+    a neighbour joins while it reads at least GROW_FRAC of that reference and is above the frame's
+    background (noise floor of the off-screen pixels, and 8 % of the screen maximum). At the screen edge the
+    level drops to the background, or to a much weaker glow/reflection, within a few pixels: growth stops."""
+    from collections import deque
+    ref = [0.0] * (w * h)
+    inside = bytearray(w * h)
+    for p in seed:
+        inside[p] = 1
+        ref[p] = diff[p]
+    bg = sorted(diff[p] for p in range(0, w * h, 7) if not inside[p] and diff[p] <= thr)
+    if not bg:
+        return seed
+    med = bg[len(bg) // 2]
+    mad = sorted(abs(v - med) for v in bg)[len(bg) // 2]
+    low = max(med + 6 * mad + 3, 0.08 * max(diff[p] for p in seed))
+    # the seed's own edge pixels lie on the blurred screen edge: their reference is the screen level next to
+    # them (maximum within 3 pixels), not their own reading, or growth would continue down the blur
+    edge = []
+    for p in seed:
+        x, y = p % w, p // w
+        if 0 < x < w - 1 and 0 < y < h - 1 and inside[p - 1] and inside[p + 1] and inside[p - w] and inside[p + w]:
+            continue
+        ref[p] = max(diff[yy * w + xx] for yy in range(max(y - 3, 0), min(y + 4, h))
+                     for xx in range(max(x - 3, 0), min(x + 4, w)))
+        edge.append(p)
+    out, dq = list(seed), deque(edge)
+    while dq:
+        p = dq.popleft()
+        x = p % w
+        r = ref[p] * GROW_DECAY
+        for q in ((p - 1) if x else -1, (p + 1) if x < w - 1 else -1, p - w, p + w):
+            if 0 <= q < w * h and not inside[q] and diff[q] > low and diff[q] >= GROW_FRAC * r:
+                inside[q] = 1
+                ref[q] = max(diff[q], r)
+                out.append(q)
+                dq.append(q)
+    return out
+
+
 def quad_of(img_w, img_k):
     """TL, TR, BR, BL corners (fractions) of the largest bright component of white - black"""
     w, h, _ = img_w
@@ -214,6 +261,7 @@ def quad_of(img_w, img_k):
                 best = comp
     if len(best) < w * h * 0.02:
         raise RuntimeError("screen region too small")
+    best = grow_screen(diff, w, h, best, thr)
     pts = [((p % w + .5) / w, (p // w + .5) / h) for p in best]
     # extreme points along the diagonals (aspect-weighted) are the corners of a convex quadrilateral
     ax = w / h
@@ -598,6 +646,22 @@ def selftest():
         r = classify(cal, cases["good"][0], "bars", 1235)
         print(f"{qname:8s} {'wrongcase':10s} want WRONGCASE got {r['verdict']}")
         bad += r["verdict"] != "WRONGCASE"
+        # dark room: the panel's brightness falls off ~5x from bottom to top (viewing angle, nothing else
+        # lit); the calibration must still find the whole screen (grow_screen), not only its bright part
+        def shade(fy):
+            return 0.2 + 0.8 * fy
+        cs = calib(save("white-shaded", synth(lambda fx, fy: (95 * shade(fy),) * 3, quad)),
+                   save("black-shaded", synth(lambda fx, fy: (2, 2, 2), quad)))
+        top = min(cs["quad"][0][1], cs["quad"][1][1])
+        want_top = min(quad[0][1], quad[1][1]) / 108
+        for name, img, want in (
+                ("shaded", synth(lambda fx, fy: [2 + c * shade(fy) / 255 * 93 for c in bars(fx, fy, 255, 0, (1, 1, 1))], quad),
+                 "GOOD"),
+                ("shaded-hs", synth(lambda fx, fy: [2 + c * shade(fy) / 255 * 93 for c in bars((fx + .3) % 1, fy, 255, 0, (1, 1, 1))],
+                                    quad), "not GOOD")):
+            r = classify(cs, img, "bars", 1234)
+            print(f"{qname:8s} {name:10s} want {want:9s} got {r['verdict']:9s} {cam_summary(r)} quad top {top:.3f} (screen {want_top:.3f})")
+            bad += (r["verdict"] == "GOOD") != (want == "GOOD") or abs(top - want_top) > 0.03
     return bad
 
 

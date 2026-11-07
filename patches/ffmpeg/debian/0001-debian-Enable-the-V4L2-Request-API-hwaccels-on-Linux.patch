@@ -12,6 +12,7 @@ Build-Depends and pass --enable-libudev, which makes configure fail
 instead of silently dropping the hwaccels if it is missing.
 
 Assisted-by: LLM
+Signed-off-by: Arun Iyengar <aiyengar1990@gmail.com>
 ---
  debian/control | 1 +
  debian/rules   | 4 +++-

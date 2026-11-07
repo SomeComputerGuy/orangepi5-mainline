@@ -1,0 +1,1 @@
+[hevc @ 0xabdb478aad40] The cu_qp_delta 35 is outside the valid range [-26, 25].

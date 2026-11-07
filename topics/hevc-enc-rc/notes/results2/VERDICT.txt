@@ -1,0 +1,37 @@
+== H.265 CBR: new (#16hrc2) vs old (#16rc2); PSNR from per-picture MSE, dPSNR at equal achieved bitrate
+case              err%  gop%  old%  peak   lim   psnrG  dGOPs    dSS spike  idrR    fps oldfps  checks
+bbb1080:2000       3.5   0.1   0.2  1.43  1.40  36.853  0.409  0.774  1.18  1.79  231.3  231.5  RATE ok PEAK FAIL PSNR ok SPIKE ok FPS ok KERNEL ok
+bbb1080:4000       3.2   0.1   0.1  1.37  1.40  40.017  0.684  0.772  1.13  1.71  230.5  230.8  RATE ok PEAK ok PSNR ok SPIKE ok FPS ok KERNEL ok
+bbb1080:8000       2.8   0.1   0.2  1.39  1.40  43.062  0.682  0.558  1.26  1.65  227.1  229.0  RATE ok PEAK ok PSNR ok SPIKE ok FPS ok KERNEL ok
+yacht1080:2000     1.2   0.1   0.2  1.07  1.40  32.620 -0.052 -0.043  0.90  1.08  233.3  235.6  RATE ok PEAK ok PSNR ok SPIKE ok FPS ok KERNEL ok
+yacht1080:4000     0.9   0.0   0.1  1.06  1.40  35.519 -0.067 -0.043  0.81  0.98  233.1  232.0  RATE ok PEAK ok PSNR ok SPIKE ok FPS ok KERNEL ok
+yacht1080:8000     0.8   0.1  -0.0  1.05  1.40  38.677 -0.088 -0.051  0.82  0.97  233.3  229.9  RATE ok PEAK ok PSNR FAIL SPIKE ok FPS ok KERNEL ok
+bbb2160:20000     -0.3  -0.3  -0.0  1.24  1.66  48.290  1.006  0.915  1.14  1.60   61.1   61.1  RATE ok PEAK ok PSNR ok SPIKE ok FPS ok KERNEL ok
+bbb2160:40000     -1.2  -1.2  -2.9  1.26  1.66  51.273  0.831  0.467  0.96  1.51   60.2   60.6  RATE ok PEAK ok PSNR ok SPIKE ok FPS ok KERNEL ok
+jelly2160:20000    0.0   0.1  -0.2  1.10  1.66  39.690 -0.102  0.012  1.22  0.81   61.8   62.0  RATE ok PEAK ok PSNR ok SPIKE ok FPS ok KERNEL ok
+jelly2160:40000    0.0   0.0   0.1  1.09  1.66  42.473 -0.133 -0.007  1.21  0.83   61.4   61.3  RATE ok PEAK ok PSNR ok SPIKE ok FPS ok KERNEL ok
+mean dGOPs over 10 cases: +0.317 dB  ok
+median fps 1080p: new 232.2 old 231.2  ok
+median fps 2160p: new 61.2 old 61.2  ok
+== H.264 regression of the shared helper: new vs old
+bbb1080:rkv:4000       kbps 4088 vs 4096 (err +2.2% gop +0.0%)  psnr 37.315 vs 37.190  dPSNR@rate +0.133  sizes identical: False  ok
+yacht1080:rkv:2000     kbps 2019 vs 2018 (err +1.0% gop +0.1%)  psnr 29.776 vs 28.495  dPSNR@rate +1.279  sizes identical: False  ok
+bbb1080:h1:4000        kbps 4070 vs 4076 (err +1.8% gop -0.1%)  psnr 37.002 vs 36.928  dPSNR@rate +0.080  sizes identical: False  ok
+== H.265 wider than 4096 (new)
+w4104-h265-cqp   4104x2160    cqp psnr 43.111109 left 43.109309 right 44.147538 fps 45.87  PASS
+w5120-h265-cbr   5120x2880  60000 psnr 51.545932 left 51.396434 right 52.201403 fps 29.30  PASS
+w8192-h265-cqp   8192x4320    cqp psnr 46.392270 left 46.121819 right 46.680689 fps 11.71  PASS
+== reference only: hevcrc-1 15hrc1 (k15 base, same HEVC rate control as k16-venc8k)
+bbb1080:2000       hrc1 err   3.2 peak 1.52 idrR 3.02 psnr(ffmpeg) 37.168  | hrc2 peak 1.43 idrR 1.79 psnr(ffmpeg) 37.106
+bbb1080:4000       hrc1 err   3.0 peak 1.45 idrR 2.40 psnr(ffmpeg) 40.167  | hrc2 peak 1.37 idrR 1.71 psnr(ffmpeg) 40.066
+bbb1080:8000       hrc1 err   2.5 peak 1.43 idrR 2.11 psnr(ffmpeg) 42.885  | hrc2 peak 1.39 idrR 1.65 psnr(ffmpeg) 42.888
+yacht1080:2000       hrc1 err   1.2 peak 1.06 idrR 1.04 psnr(ffmpeg) 32.563  | hrc2 peak 1.07 idrR 1.08 psnr(ffmpeg) 32.557
+yacht1080:4000       hrc1 err   0.8 peak 1.05 idrR 0.97 psnr(ffmpeg) 35.420  | hrc2 peak 1.06 idrR 0.98 psnr(ffmpeg) 35.428
+yacht1080:8000       hrc1 err   0.7 peak 1.05 idrR 0.97 psnr(ffmpeg) 38.573  | hrc2 peak 1.05 idrR 0.97 psnr(ffmpeg) 38.566
+bbb2160:20000      hrc1 err  -0.3 peak 1.33 idrR 2.30 psnr(ffmpeg) 48.310  | hrc2 peak 1.24 idrR 1.60 psnr(ffmpeg) 48.289
+bbb2160:40000      hrc1 err  -1.2 peak 1.26 idrR 1.51 psnr(ffmpeg) 51.267  | hrc2 peak 1.26 idrR 1.51 psnr(ffmpeg) 51.273
+jelly2160:20000      hrc1 err   0.1 peak 1.10 idrR 0.65 psnr(ffmpeg) 39.713  | hrc2 peak 1.10 idrR 0.81 psnr(ffmpeg) 39.690
+jelly2160:40000      hrc1 err  -0.0 peak 1.09 idrR 0.62 psnr(ffmpeg) 42.499  | hrc2 peak 1.09 idrR 0.83 psnr(ffmpeg) 42.473
+
+new (16hrc2): 2 failed checks
+OVERALL FAIL

@@ -1,7 +1,7 @@
 From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
 From: Boris Brezillon <boris.brezillon@collabora.com>
 Date: Tue, 6 Aug 2024 09:06:05 +0000
-Subject: [PATCH 06/11] avcodec/h264dec: add ref_pic_marking and pic_order_cnt
+Subject: [PATCH 06/13] avcodec/h264dec: add ref_pic_marking and pic_order_cnt
  bit_size to slice context
 
 The V4L2_CID_STATELESS_H264_DECODE_PARAMS control require following:
@@ -27,7 +27,7 @@ Link: https://github.com/Kwiboo/FFmpeg/tree/v4l2-request-n8.1
  2 files changed, 7 insertions(+), 1 deletion(-)
 
 diff --git a/libavcodec/h264_slice.c b/libavcodec/h264_slice.c
-index e3b4436..72d0e0c 100644
+index e3b4436fcb..72d0e0c1fd 100644
 --- a/libavcodec/h264_slice.c
 +++ b/libavcodec/h264_slice.c
 @@ -1703,7 +1703,7 @@ static int h264_slice_header_parse(const H264Context *h, H264SliceContext *sl,
@@ -68,7 +68,7 @@ index e3b4436..72d0e0c 100644
  
      if (sl->slice_type_nos != AV_PICTURE_TYPE_I && pps->cabac) {
 diff --git a/libavcodec/h264dec.h b/libavcodec/h264dec.h
-index 74fd09d..33d7886 100644
+index 74fd09dfaa..33d788627f 100644
 --- a/libavcodec/h264dec.h
 +++ b/libavcodec/h264dec.h
 @@ -322,6 +322,7 @@ typedef struct H264SliceContext {

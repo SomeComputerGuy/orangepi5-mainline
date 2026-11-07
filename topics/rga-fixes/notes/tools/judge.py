@@ -243,9 +243,10 @@ for line in open(CASES):
                 oy, _ = outp('XR24', fr)
                 kr, kb = (0.2126, 0.0722) if kind == 'rgb709' else (0.2627, 0.0593)
                 kg = 1 - kr - kb
-                cb = np.repeat(np.repeat(chroma_pairs(rc_)[..., 0], 2, 0), 2, 1)
-                cr = np.repeat(np.repeat(chroma_pairs(rc_)[..., 1], 2, 0), 2, 1)
-                Y = (ry - 64) / 876.0; Cb = (cb - 512) / 896.0; Cr = (cr - 512) / 896.0
+                # chroma locals must not reuse 'cr' (the crop rectangle that refp() tests on the next frame)
+                pcb = np.repeat(np.repeat(chroma_pairs(rc_)[..., 0], 2, 0), 2, 1)
+                pcr = np.repeat(np.repeat(chroma_pairs(rc_)[..., 1], 2, 0), 2, 1)
+                Y = (ry - 64) / 876.0; Cb = (pcb - 512) / 896.0; Cr = (pcr - 512) / 896.0
                 R = Y + 2 * (1 - kr) * Cr; B = Y + 2 * (1 - kb) * Cb; G = (Y - kr * R - kb * B) / kg
                 ref_rgb = np.clip(np.stack([B, G, R], -1) * 255, 0, 255)
                 p = psnr(oy, ref_rgb, 255)

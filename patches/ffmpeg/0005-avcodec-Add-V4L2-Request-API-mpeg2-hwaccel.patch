@@ -1,7 +1,7 @@
 From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
 From: Jonas Karlman <jonas@kwiboo.se>
 Date: Tue, 6 Aug 2024 09:06:04 +0000
-Subject: [PATCH 05/11] avcodec: Add V4L2 Request API mpeg2 hwaccel
+Subject: [PATCH 05/13] avcodec: Add V4L2 Request API mpeg2 hwaccel
 
 Add a V4L2 Request API hwaccel for MPEG2.
 
@@ -23,7 +23,7 @@ Link: https://github.com/Kwiboo/FFmpeg/tree/v4l2-request-n8.1
  create mode 100644 libavcodec/v4l2_request_mpeg2.c
 
 diff --git a/configure b/configure
-index b50aa06..3b00bcf 100755
+index b50aa0605d..3b00bcfc0d 100755
 --- a/configure
 +++ b/configure
 @@ -368,7 +368,7 @@ External library support:
@@ -69,7 +69,7 @@ index b50aa06..3b00bcf 100755
      check_func_headers "linux/media.h linux/videodev2.h" v4l2_timeval_to_ns
      check_pkg_config libudev libudev libudev.h udev_new
 diff --git a/libavcodec/Makefile b/libavcodec/Makefile
-index f680897..0898f82 100644
+index f680897c9e..0898f8232a 100644
 --- a/libavcodec/Makefile
 +++ b/libavcodec/Makefile
 @@ -1086,6 +1086,7 @@ OBJS-$(CONFIG_MPEG2_DXVA2_HWACCEL)        += dxva2_mpeg2.o
@@ -81,7 +81,7 @@ index f680897..0898f82 100644
  OBJS-$(CONFIG_MPEG2_VDPAU_HWACCEL)        += vdpau_mpeg12.o
  OBJS-$(CONFIG_MPEG2_VIDEOTOOLBOX_HWACCEL) += videotoolbox.o
 diff --git a/libavcodec/hwaccels.h b/libavcodec/hwaccels.h
-index 3de1912..8893064 100644
+index 3de191288a..8893064ce7 100644
 --- a/libavcodec/hwaccels.h
 +++ b/libavcodec/hwaccels.h
 @@ -60,6 +60,7 @@ extern const struct FFHWAccel ff_mpeg2_d3d11va2_hwaccel;
@@ -93,7 +93,7 @@ index 3de1912..8893064 100644
  extern const struct FFHWAccel ff_mpeg2_vdpau_hwaccel;
  extern const struct FFHWAccel ff_mpeg2_videotoolbox_hwaccel;
 diff --git a/libavcodec/mpeg12dec.c b/libavcodec/mpeg12dec.c
-index 4c83bcf..c65e9e3 100644
+index 4c83bcfa90..c65e9e3b86 100644
 --- a/libavcodec/mpeg12dec.c
 +++ b/libavcodec/mpeg12dec.c
 @@ -821,6 +821,9 @@ static const enum AVPixelFormat mpeg2_hwaccel_pixfmt_list_420[] = {
@@ -118,7 +118,7 @@ index 4c83bcf..c65e9e3 100644
                      },
 diff --git a/libavcodec/v4l2_request_mpeg2.c b/libavcodec/v4l2_request_mpeg2.c
 new file mode 100644
-index 0000000..5d89b71
+index 0000000000..5d89b7168e
 --- /dev/null
 +++ b/libavcodec/v4l2_request_mpeg2.c
 @@ -0,0 +1,184 @@

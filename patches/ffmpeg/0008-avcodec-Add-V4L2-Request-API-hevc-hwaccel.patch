@@ -1,7 +1,7 @@
 From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
 From: Jernej Skrabec <jernej.skrabec@gmail.com>
 Date: Tue, 6 Aug 2024 09:06:07 +0000
-Subject: [PATCH 08/11] avcodec: Add V4L2 Request API hevc hwaccel
+Subject: [PATCH 08/13] avcodec: Add V4L2 Request API hevc hwaccel
 
 Add a V4L2 Request API hwaccel for HEVC, supporting both slice and
 frame decoding modes.
@@ -28,7 +28,7 @@ Link: https://github.com/Kwiboo/FFmpeg/tree/v4l2-request-n8.1
  create mode 100644 libavcodec/v4l2_request_hevc.c
 
 diff --git a/configure b/configure
-index 0bfd843..f86e5a3 100755
+index 0bfd84358d..f86e5a3597 100755
 --- a/configure
 +++ b/configure
 @@ -2645,6 +2645,7 @@ TYPES_LIST="
@@ -62,7 +62,7 @@ index 0bfd843..f86e5a3 100755
  fi
  
 diff --git a/libavcodec/Makefile b/libavcodec/Makefile
-index 8590e62..44c5f3f 100644
+index 8590e62c27..44c5f3fb01 100644
 --- a/libavcodec/Makefile
 +++ b/libavcodec/Makefile
 @@ -1074,6 +1074,7 @@ OBJS-$(CONFIG_HEVC_DXVA2_HWACCEL)         += dxva2_hevc.o
@@ -74,7 +74,7 @@ index 8590e62..44c5f3f 100644
  OBJS-$(CONFIG_HEVC_VDPAU_HWACCEL)         += vdpau_hevc.o h265_profile_level.o
  OBJS-$(CONFIG_HEVC_VULKAN_HWACCEL)        += vulkan_decode.o vulkan_hevc.o
 diff --git a/libavcodec/hevc/hevcdec.c b/libavcodec/hevc/hevcdec.c
-index ae5f0fe..647251e 100644
+index ae5f0fe69d..647251e6f0 100644
 --- a/libavcodec/hevc/hevcdec.c
 +++ b/libavcodec/hevc/hevcdec.c
 @@ -580,6 +580,7 @@ static enum AVPixelFormat get_format(HEVCContext *s, const HEVCSPS *sps)
@@ -116,7 +116,7 @@ index ae5f0fe..647251e 100644
                                 NULL
                             },
 diff --git a/libavcodec/hwaccels.h b/libavcodec/hwaccels.h
-index 0521534..f4bad68 100644
+index 052153465f..f4bad68913 100644
 --- a/libavcodec/hwaccels.h
 +++ b/libavcodec/hwaccels.h
 @@ -47,6 +47,7 @@ extern const struct FFHWAccel ff_hevc_d3d11va2_hwaccel;
@@ -129,7 +129,7 @@ index 0521534..f4bad68 100644
  extern const struct FFHWAccel ff_hevc_videotoolbox_hwaccel;
 diff --git a/libavcodec/v4l2_request_hevc.c b/libavcodec/v4l2_request_hevc.c
 new file mode 100644
-index 0000000..26cba2c
+index 0000000000..26cba2c75f
 --- /dev/null
 +++ b/libavcodec/v4l2_request_hevc.c
 @@ -0,0 +1,752 @@

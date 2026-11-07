@@ -1,0 +1,5 @@
+[hevc @ 0xc9d3c1817cc0] CABAC_MAX_BIN : 7
+[hevc @ 0xc9d3c1817cc0] The cu_qp_delta 1094995529 is outside the valid range [-26, 25].
+[hevc @ 0xc9d3c19b72e0] CABAC_MAX_BIN : 7
+[hevc @ 0xc9d3c19b72e0] The cu_qp_delta 1094995529 is outside the valid range [-26, 25].
+[hevc @ 0xc9d3c182f210] The cu_qp_delta 64 is outside the valid range [-26, 25].

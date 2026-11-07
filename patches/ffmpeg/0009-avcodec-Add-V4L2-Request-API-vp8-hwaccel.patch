@@ -1,7 +1,7 @@
 From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
 From: Boris Brezillon <boris.brezillon@collabora.com>
 Date: Wed, 22 May 2019 14:46:58 +0200
-Subject: [PATCH 09/11] avcodec: Add V4L2 Request API vp8 hwaccel
+Subject: [PATCH 09/13] avcodec: Add V4L2 Request API vp8 hwaccel
 
 Add a V4L2 Request API hwaccel for VP8.
 
@@ -25,7 +25,7 @@ Link: https://github.com/Kwiboo/FFmpeg/tree/v4l2-request-n8.1
  create mode 100644 libavcodec/v4l2_request_vp8.c
 
 diff --git a/configure b/configure
-index f86e5a3..3546fff 100755
+index f86e5a3597..3546fffa52 100755
 --- a/configure
 +++ b/configure
 @@ -3477,6 +3477,8 @@ vc1_vdpau_hwaccel_deps="vdpau"
@@ -46,7 +46,7 @@ index f86e5a3..3546fff 100755
      check_pkg_config libudev libudev libudev.h udev_new
      check_struct linux/videodev2.h "struct v4l2_ctrl_hevc_decode_params" num_delta_pocs_of_ref_rps_idx
 diff --git a/libavcodec/Makefile b/libavcodec/Makefile
-index 44c5f3f..2c209a0 100644
+index 44c5f3fb01..2c209a0a6a 100644
 --- a/libavcodec/Makefile
 +++ b/libavcodec/Makefile
 @@ -1104,6 +1104,7 @@ OBJS-$(CONFIG_VC1_QSV_HWACCEL)            += qsvdec.o
@@ -58,7 +58,7 @@ index 44c5f3f..2c209a0 100644
  OBJS-$(CONFIG_VP9_D3D11VA_HWACCEL)        += dxva2_vp9.o
  OBJS-$(CONFIG_VP9_DXVA2_HWACCEL)          += dxva2_vp9.o
 diff --git a/libavcodec/hwaccels.h b/libavcodec/hwaccels.h
-index f4bad68..e60ec2a 100644
+index f4bad68913..e60ec2a498 100644
 --- a/libavcodec/hwaccels.h
 +++ b/libavcodec/hwaccels.h
 @@ -81,6 +81,7 @@ extern const struct FFHWAccel ff_vc1_nvdec_hwaccel;
@@ -71,7 +71,7 @@ index f4bad68..e60ec2a 100644
  extern const struct FFHWAccel ff_vp9_d3d11va2_hwaccel;
 diff --git a/libavcodec/v4l2_request_vp8.c b/libavcodec/v4l2_request_vp8.c
 new file mode 100644
-index 0000000..3fb2395
+index 0000000000..3fb23951df
 --- /dev/null
 +++ b/libavcodec/v4l2_request_vp8.c
 @@ -0,0 +1,242 @@
@@ -318,7 +318,7 @@ index 0000000..3fb2395
 +    .caps_internal      = HWACCEL_CAP_ASYNC_SAFE,
 +};
 diff --git a/libavcodec/vp8.c b/libavcodec/vp8.c
-index 9010e19..8a1e342 100644
+index 9010e19e6b..8a1e3425ca 100644
 --- a/libavcodec/vp8.c
 +++ b/libavcodec/vp8.c
 @@ -184,6 +184,9 @@ static enum AVPixelFormat get_pixel_format(VP8Context *s)

@@ -1,0 +1,2 @@
+[hevc @ 0xb16fe28c2950] The cu_qp_delta -36 is outside the valid range [-26, 25].
+[hevc @ 0xb16fe28d59f0] The cu_qp_delta -28 is outside the valid range [-26, 25].

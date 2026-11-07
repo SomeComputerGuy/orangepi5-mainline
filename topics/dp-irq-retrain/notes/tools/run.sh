@@ -50,11 +50,14 @@ timeout 15 $S true || { log "board unreachable"; exit 1; }
 d=$TOP/$KDIR
 $S "cat > /var/tmp/usb-expected.txt" < $W/k14/usb-expected.txt
 $S "mkdir -p /var/tmp/dpblack/debs && rm -f /var/tmp/dpblack/debs/*.deb" || exit 1
-for p in image headers; do $S "cat > /var/tmp/dpblack/debs/$p.deb" < $d/linux-$p-7.3.0-opi5_7.3.0-${KREV}_arm64.deb || exit 1; done
+# deb by glob (each KDIR holds one build; stock is 7.3.0+opi5.15 since 2026-11-06), version read from the deb
+IMGDEB=$(ls $d/linux-image-7.3.0-opi5_*_arm64.deb | head -1); HDRDEB=$(ls $d/linux-headers-7.3.0-opi5_*_arm64.deb | head -1)
+DEBVER=$(dpkg-deb -f "$IMGDEB" Version)
+$S "cat > /var/tmp/dpblack/debs/image.deb" < "$IMGDEB" || exit 1; $S "cat > /var/tmp/dpblack/debs/headers.deb" < "$HDRDEB" || exit 1
 timeout 900 $S 'while sudo -n fuser /var/lib/dpkg/lock-frontend /var/lib/dpkg/lock >/dev/null 2>&1; do sleep 5; done'
 log "installing $KREV: $(timeout 900 $S 'sudo -n dpkg -i /var/tmp/dpblack/debs/image.deb /var/tmp/dpblack/debs/headers.deb >/dev/null 2>&1; echo dpkg=$?; true')"
 timeout 900 $S 'while sudo -n fuser /var/lib/dpkg/lock-frontend /var/lib/dpkg/lock >/dev/null 2>&1; do sleep 5; done; dpkg -l linux-image-7.3.0-opi5 | tail -1; stat -c "initrd=%s" /boot/initrd.img-7.3.0-opi5' > "$R/dpkg.txt"
-grep -q "^ii  linux-image-7.3.0-opi5 *7.3.0-$KREV " "$R/dpkg.txt" && ! grep -q "^initrd=0$" "$R/dpkg.txt" || { log "INSTALL FAILED: $(cat $R/dpkg.txt)"; exit 3; }
+grep -qF " $DEBVER " "$R/dpkg.txt" && grep -q "^ii " "$R/dpkg.txt" && ! grep -q "^initrd=0$" "$R/dpkg.txt" || { log "INSTALL FAILED: $(cat $R/dpkg.txt)"; exit 3; }
 timeout 20 $S 'sudo -n systemctl reboot' 2>/dev/null; sleep 60
 for i in $(seq 1 30); do timeout 8 $S true 2>/dev/null && break; sleep 10; done
 timeout 120 $S 'for i in $(seq 1 18); do lsusb | awk "{print \$6}" | sort > /tmp/u.txt; [ -z "$(comm -23 /var/tmp/usb-expected.txt /tmp/u.txt)" ] && break; sleep 5; done'

@@ -1,0 +1,720 @@
+[  204.497853]   size: 567136 bits, target: 589026 bits, qp error: -78/256, qp: 3667/256
+[  210.652079] + v4l2-enc-cbr: begin
+[  210.652089]   nominal: 666666 bits, plan: 5797090 bits, target: 5797090 bits
+[  210.652092]   buffer: 0 bits, expected: 0 bits, gop: 0, ratio: 160
+[  210.652095]   intra: 1, picture QP 23, I state ref -1/256, I add 0/256
+[  210.666338] + v4l2-enc-cbr: end
+[  210.666365]   size: 3470712 bits, target: 5797090 bits, qp error: -1134/256, qp: 6831/256
+[  210.666606] + v4l2-enc-cbr: begin
+[  210.666627]   nominal: 666666 bits, plan: 579709 bits, target: 870506 bits
+[  210.666641]   buffer: 2804046 bits, expected: 5130424 bits, gop: 0, ratio: 160
+[  210.666655]   intra: 0, picture QP 27, I state ref 6912/256, I add 0/256
+[  210.681035] + v4l2-enc-cbr: end
+[  210.681062]   size: 904472 bits, target: 870506 bits, qp error: 84/256, qp: 6841/256
+[  210.681304] + v4l2-enc-cbr: begin
+[  210.681320]   nominal: 666666 bits, plan: 579709 bits, target: 829910 bits
+[  210.681333]   buffer: 3041852 bits, expected: 5043467 bits, gop: 0, ratio: 160
+[  210.681345]   intra: 0, picture QP 27, I state ref 6912/256, I add 0/256
+[  210.695790] + v4l2-enc-cbr: end
+[  210.695820]   size: 933984 bits, target: 829910 bits, qp error: 264/256, qp: 6874/256
+[  210.695960] + v4l2-enc-cbr: begin
+[  210.695973]   nominal: 666666 bits, plan: 579709 bits, target: 785626 bits
+[  210.695986]   buffer: 3309170 bits, expected: 4956510 bits, gop: 0, ratio: 160
+[  210.695999]   intra: 0, picture QP 27, I state ref 6912/256, I add 0/256
+[  210.710492] + v4l2-enc-cbr: end
+[  210.710522]   size: 930960 bits, target: 785626 bits, qp error: 378/256, qp: 6921/256
+[  210.710677] + v4l2-enc-cbr: begin
+[  210.710690]   nominal: 666666 bits, plan: 579709 bits, target: 741720 bits
+[  210.710703]   buffer: 3573464 bits, expected: 4869553 bits, gop: 0, ratio: 160
+[  210.710716]   intra: 0, picture QP 27, I state ref 6912/256, I add 0/256
+[  210.725128] + v4l2-enc-cbr: end
+[  210.725147]   size: 955448 bits, target: 741720 bits, qp error: 558/256, qp: 6990/256
+[  210.725292] + v4l2-enc-cbr: begin
+[  210.725304]   nominal: 666666 bits, plan: 607210 bits, target: 533189 bits
+[  210.725314]   buffer: 3862246 bits, expected: 3270078 bits, gop: 0, ratio: 110
+[  210.725325]   intra: 0, picture QP 27, I state ref 6912/256, I add 0/256
+[  210.739744] + v4l2-enc-cbr: end
+[  210.739763]   size: 895256 bits, target: 533189 bits, qp error: 1146/256, qp: 7322/256
+[  210.739889] + v4l2-enc-cbr: begin
+[  210.739902]   nominal: 666666 bits, plan: 607210 bits, target: 497184 bits
+[  210.739915]   buffer: 4090836 bits, expected: 3210622 bits, gop: 0, ratio: 110
+[  210.739927]   intra: 0, picture QP 29, I state ref 6912/256, I add 0/256
+[  210.754348] + v4l2-enc-cbr: end
+[  210.754364]   size: 680728 bits, target: 497184 bits, qp error: 696/256, qp: 7409/256
+[  210.754572] + v4l2-enc-cbr: begin
+[  210.754585]   nominal: 666666 bits, plan: 607210 bits, target: 487994 bits
+[  210.754598]   buffer: 4104898 bits, expected: 3151166 bits, gop: 0, ratio: 110
+[  210.754610]   intra: 0, picture QP 29, I state ref 6912/256, I add 0/256
+[  210.769090] + v4l2-enc-cbr: end
+[  210.769105]   size: 713624 bits, target: 487994 bits, qp error: 840/256, qp: 7550/256
+[  210.769254] + v4l2-enc-cbr: begin
+[  210.769264]   nominal: 666666 bits, plan: 607210 bits, target: 474692 bits
+[  210.769273]   buffer: 4151856 bits, expected: 3091710 bits, gop: 0, ratio: 110
+[  210.769282]   intra: 0, picture QP 29, I state ref 6912/256, I add 0/256
+[  210.783682] + v4l2-enc-cbr: end
+[  210.783697]   size: 702144 bits, target: 474692 bits, qp error: 864/256, qp: 7706/256
+[  210.783882] + v4l2-enc-cbr: begin
+[  210.783895]   nominal: 666666 bits, plan: 607210 bits, target: 462825 bits
+[  210.783906]   buffer: 4187334 bits, expected: 3032254 bits, gop: 0, ratio: 110
+[  210.783918]   intra: 0, picture QP 30, I state ref 6912/256, I add 0/256
+[  210.798325] + v4l2-enc-cbr: end
+[  210.798343]   size: 596248 bits, target: 462825 bits, qp error: 564/256, qp: 7776/256
+[  210.798467] + v4l2-enc-cbr: begin
+[  210.798481]   nominal: 666666 bits, plan: 607210 bits, target: 464196 bits
+[  210.798494]   buffer: 4116916 bits, expected: 2972798 bits, gop: 0, ratio: 110
+[  210.798507]   intra: 0, picture QP 30, I state ref 6912/256, I add 0/256
+[  210.812917] + v4l2-enc-cbr: end
+[  210.812932]   size: 571608 bits, target: 464196 bits, qp error: 456/256, qp: 7833/256
+[  210.813113] + v4l2-enc-cbr: begin
+[  210.813126]   nominal: 666666 bits, plan: 607210 bits, target: 468646 bits
+[  210.813138]   buffer: 4021858 bits, expected: 2913342 bits, gop: 0, ratio: 110
+[  210.813150]   intra: 0, picture QP 31, I state ref 6912/256, I add 0/256
+[  210.827640] + v4l2-enc-cbr: end
+[  210.827657]   size: 529184 bits, target: 468646 bits, qp error: 270/256, qp: 7866/256
+[  210.827774] + v4l2-enc-cbr: begin
+[  210.827785]   nominal: 666666 bits, plan: 607210 bits, target: 478399 bits
+[  210.827795]   buffer: 3884376 bits, expected: 2853886 bits, gop: 0, ratio: 110
+[  210.827805]   intra: 0, picture QP 31, I state ref 6912/256, I add 0/256
+[  210.842253] + v4l2-enc-cbr: end
+[  210.842272]   size: 530456 bits, target: 478399 bits, qp error: 228/256, qp: 7894/256
+[  210.842395] + v4l2-enc-cbr: begin
+[  210.842408]   nominal: 666666 bits, plan: 607210 bits, target: 487993 bits
+[  210.842421]   buffer: 3748166 bits, expected: 2794430 bits, gop: 0, ratio: 110
+[  210.842434]   intra: 0, picture QP 31, I state ref 6912/256, I add 0/256
+[  210.856866] + v4l2-enc-cbr: end
+[  210.856880]   size: 537336 bits, target: 487993 bits, qp error: 216/256, qp: 7921/256
+[  210.857080] + v4l2-enc-cbr: begin
+[  210.857092]   nominal: 666666 bits, plan: 607210 bits, target: 496728 bits
+[  210.857104]   buffer: 3618836 bits, expected: 2734974 bits, gop: 0, ratio: 110
+[  210.857114]   intra: 0, picture QP 31, I state ref 6912/256, I add 0/256
+[  210.871462] + v4l2-enc-cbr: end
+[  210.871478]   size: 572160 bits, target: 496728 bits, qp error: 312/256, qp: 7960/256
+[  210.871581] + v4l2-enc-cbr: begin
+[  210.871592]   nominal: 666666 bits, plan: 607210 bits, target: 501109 bits
+[  210.871602]   buffer: 3524330 bits, expected: 2675518 bits, gop: 0, ratio: 110
+[  210.871613]   intra: 0, picture QP 31, I state ref 6912/256, I add 0/256
+[  210.886098] + v4l2-enc-cbr: end
+[  210.886119]   size: 556784 bits, target: 501109 bits, qp error: 234/256, qp: 7989/256
+[  210.886304] + v4l2-enc-cbr: begin
+[  210.886319]   nominal: 666666 bits, plan: 607210 bits, target: 507412 bits
+[  210.886340]   buffer: 3414448 bits, expected: 2616062 bits, gop: 0, ratio: 110
+[  210.886353]   intra: 0, picture QP 31, I state ref 6912/256, I add 0/256
+[  210.900775] + v4l2-enc-cbr: end
+[  210.900792]   size: 557232 bits, target: 507412 bits, qp error: 210/256, qp: 8015/256
+[  210.900907] + v4l2-enc-cbr: begin
+[  210.900918]   nominal: 666666 bits, plan: 607210 bits, target: 513659 bits
+[  210.900928]   buffer: 3305014 bits, expected: 2556606 bits, gop: 0, ratio: 110
+[  210.900939]   intra: 0, picture QP 31, I state ref 6912/256, I add 0/256
+[  210.915373] + v4l2-enc-cbr: end
+[  210.915392]   size: 552424 bits, target: 513659 bits, qp error: 162/256, qp: 8035/256
+[  210.915515] + v4l2-enc-cbr: begin
+[  210.915528]   nominal: 666666 bits, plan: 607210 bits, target: 520508 bits
+[  210.915540]   buffer: 3190772 bits, expected: 2497150 bits, gop: 0, ratio: 110
+[  210.915553]   intra: 0, picture QP 31, I state ref 6912/256, I add 0/256
+[  210.930051] + v4l2-enc-cbr: end
+[  210.930069]   size: 580152 bits, target: 520508 bits, qp error: 240/256, qp: 8065/256
+[  210.930174] + v4l2-enc-cbr: begin
+[  210.930183]   nominal: 666666 bits, plan: 607210 bits, target: 523890 bits
+[  210.930220]   buffer: 3104258 bits, expected: 2437694 bits, gop: 0, ratio: 110
+[  210.930231]   intra: 0, picture QP 32, I state ref 6912/256, I add 0/256
+[  210.944697] + v4l2-enc-cbr: end
+[  210.944714]   size: 513392 bits, target: 523890 bits, qp error: -42/256, qp: 8060/256
+[  210.944825] + v4l2-enc-cbr: begin
+[  210.944835]   nominal: 666666 bits, plan: 607210 bits, target: 535617 bits
+[  210.944846]   buffer: 2950984 bits, expected: 2378238 bits, gop: 0, ratio: 110
+[  210.944856]   intra: 0, picture QP 31, I state ref 6912/256, I add 0/256
+[  210.959293] + v4l2-enc-cbr: end
+[  210.959309]   size: 561784 bits, target: 535617 bits, qp error: 108/256, qp: 8073/256
+[  210.959420] + v4l2-enc-cbr: begin
+[  210.959430]   nominal: 666666 bits, plan: 607210 bits, target: 541295 bits
+[  210.959441]   buffer: 2846102 bits, expected: 2318782 bits, gop: 0, ratio: 110
+[  210.959451]   intra: 0, picture QP 32, I state ref 6912/256, I add 0/256
+[  210.973868] + v4l2-enc-cbr: end
+[  210.973884]   size: 542040 bits, target: 541295 bits, qp error: 6/256, qp: 8073/256
+[  210.974113] + v4l2-enc-cbr: begin
+[  210.974126]   nominal: 666666 bits, plan: 607210 bits, target: 549442 bits
+[  210.974138]   buffer: 2721476 bits, expected: 2259326 bits, gop: 0, ratio: 110
+[  210.974149]   intra: 0, picture QP 32, I state ref 6912/256, I add 0/256
+[  210.988650] + v4l2-enc-cbr: end
+[  210.988670]   size: 554008 bits, target: 549442 bits, qp error: 18/256, qp: 8075/256
+[  210.988805] + v4l2-enc-cbr: begin
+[  210.988818]   nominal: 666666 bits, plan: 607210 bits, target: 556092 bits
+[  210.988831]   buffer: 2608818 bits, expected: 2199870 bits, gop: 0, ratio: 110
+[  210.988843]   intra: 0, picture QP 32, I state ref 6912/256, I add 0/256
+[  211.003279] + v4l2-enc-cbr: end
+[  211.003297]   size: 539568 bits, target: 556092 bits, qp error: -66/256, qp: 8067/256
+[  211.003436] + v4l2-enc-cbr: begin
+[  211.003449]   nominal: 666666 bits, plan: 607210 bits, target: 564547 bits
+[  211.003461]   buffer: 2481720 bits, expected: 2140414 bits, gop: 0, ratio: 110
+[  211.003474]   intra: 0, picture QP 32, I state ref 6912/256, I add 0/256
+[  211.017892] + v4l2-enc-cbr: end
+[  211.017907]   size: 559368 bits, target: 564547 bits, qp error: -24/256, qp: 8064/256
+[  211.018013] + v4l2-enc-cbr: begin
+[  211.018023]   nominal: 666666 bits, plan: 607210 bits, target: 570527 bits
+[  211.018033]   buffer: 2374422 bits, expected: 2080958 bits, gop: 0, ratio: 110
+[  211.018044]   intra: 0, picture QP 32, I state ref 6912/256, I add 0/256
+[  211.032461] + v4l2-enc-cbr: end
+[  211.032480]   size: 543600 bits, target: 570527 bits, qp error: -108/256, qp: 8051/256
+[  211.032609] + v4l2-enc-cbr: begin
+[  211.032622]   nominal: 666666 bits, plan: 607210 bits, target: 578479 bits
+[  211.032635]   buffer: 2251356 bits, expected: 2021502 bits, gop: 0, ratio: 110
+[  211.032647]   intra: 0, picture QP 31, I state ref 6912/256, I add 0/256
+[  211.047078] + v4l2-enc-cbr: end
+[  211.047096]   size: 584136 bits, target: 578479 bits, qp error: 18/256, qp: 8053/256
+[  211.047268] + v4l2-enc-cbr: begin
+[  211.047282]   nominal: 666666 bits, plan: 607210 bits, target: 581363 bits
+[  211.047295]   buffer: 2168826 bits, expected: 1962046 bits, gop: 0, ratio: 110
+[  211.047309]   intra: 0, picture QP 31, I state ref 6912/256, I add 0/256
+[  211.061748] + v4l2-enc-cbr: end
+[  211.061765]   size: 581392 bits, target: 581363 bits, qp error: 0/256, qp: 8053/256
+[  211.061894] + v4l2-enc-cbr: begin
+[  211.061906]   nominal: 666666 bits, plan: 607210 bits, target: 584590 bits
+[  211.061919]   buffer: 2083552 bits, expected: 1902590 bits, gop: 0, ratio: 110
+[  211.061931]   intra: 0, picture QP 31, I state ref 6912/256, I add 0/256
+[  211.076364] + v4l2-enc-cbr: end
+[  211.076380]   size: 589632 bits, target: 584590 bits, qp error: 18/256, qp: 8055/256
+[  211.076492] + v4l2-enc-cbr: begin
+[  211.076502]   nominal: 666666 bits, plan: 607210 bits, target: 586787 bits
+[  211.076512]   buffer: 2006518 bits, expected: 1843134 bits, gop: 0, ratio: 110
+[  211.076522]   intra: 0, picture QP 31, I state ref 6912/256, I add 0/256
+[  211.090933] + v4l2-enc-cbr: end
+[  211.090948]   size: 628504 bits, target: 586787 bits, qp error: 150/256, qp: 8073/256
+[  211.091056] + v4l2-enc-cbr: begin
+[  211.091065]   nominal: 666666 bits, plan: 607210 bits, target: 584126 bits
+[  211.091076]   buffer: 1968356 bits, expected: 1783678 bits, gop: 0, ratio: 110
+[  211.091086]   intra: 0, picture QP 32, I state ref 6912/256, I add 0/256
+[  211.105509] + v4l2-enc-cbr: end
+[  211.105523]   size: 555080 bits, target: 584126 bits, qp error: -108/256, qp: 8060/256
+[  211.105758] + v4l2-enc-cbr: begin
+[  211.105771]   nominal: 666666 bits, plan: 607210 bits, target: 590642 bits
+[  211.105783]   buffer: 1856770 bits, expected: 1724222 bits, gop: 0, ratio: 110
+[  211.105795]   intra: 0, picture QP 31, I state ref 6912/256, I add 0/256
+[  211.120230] + v4l2-enc-cbr: end
+[  211.120248]   size: 608632 bits, target: 590642 bits, qp error: 66/256, qp: 8068/256
+[  211.120360] + v4l2-enc-cbr: begin
+[  211.120370]   nominal: 666666 bits, plan: 607210 bits, target: 590464 bits
+[  211.120380]   buffer: 1798736 bits, expected: 1664766 bits, gop: 0, ratio: 110
+[  211.120391]   intra: 0, picture QP 32, I state ref 6912/256, I add 0/256
+[  211.134801] + v4l2-enc-cbr: end
+[  211.134820]   size: 570048 bits, target: 590464 bits, qp error: -78/256, qp: 8059/256
+[  211.135034] + v4l2-enc-cbr: begin
+[  211.135048]   nominal: 666666 bits, plan: 607210 bits, target: 595109 bits
+[  211.135060]   buffer: 1702118 bits, expected: 1605310 bits, gop: 0, ratio: 110
+[  211.135072]   intra: 0, picture QP 31, I state ref 6912/256, I add 0/256
+[  211.149540] + v4l2-enc-cbr: end
+[  211.149555]   size: 584000 bits, target: 595109 bits, qp error: -42/256, qp: 8054/256
+[  211.149672] + v4l2-enc-cbr: begin
+[  211.149683]   nominal: 666666 bits, plan: 607210 bits, target: 598011 bits
+[  211.149693]   buffer: 1619452 bits, expected: 1545854 bits, gop: 0, ratio: 110
+[  211.149703]   intra: 0, picture QP 31, I state ref 6912/256, I add 0/256
+[  211.164219] + v4l2-enc-cbr: end
+[  211.164238]   size: 590152 bits, target: 598011 bits, qp error: -30/256, qp: 8051/256
+[  211.164374] + v4l2-enc-cbr: begin
+[  211.164387]   nominal: 666666 bits, plan: 607210 bits, target: 600143 bits
+[  211.164400]   buffer: 1542938 bits, expected: 1486398 bits, gop: 0, ratio: 110
+[  211.164413]   intra: 0, picture QP 31, I state ref 6912/256, I add 0/256
+[  211.178818] + v4l2-enc-cbr: end
+[  211.178833]   size: 592208 bits, target: 600143 bits, qp error: -30/256, qp: 8048/256
+[  211.178937] + v4l2-enc-cbr: begin
+[  211.178947]   nominal: 666666 bits, plan: 607210 bits, target: 602018 bits
+[  211.178957]   buffer: 1468480 bits, expected: 1426942 bits, gop: 0, ratio: 110
+[  211.178968]   intra: 0, picture QP 31, I state ref 6912/256, I add 0/256
+[  211.193439] + v4l2-enc-cbr: end
+[  211.193455]   size: 581952 bits, target: 602018 bits, qp error: -78/256, qp: 8039/256
+[  211.193681] + v4l2-enc-cbr: begin
+[  211.193695]   nominal: 666666 bits, plan: 607210 bits, target: 605175 bits
+[  211.193707]   buffer: 1383766 bits, expected: 1367486 bits, gop: 0, ratio: 110
+[  211.193719]   intra: 0, picture QP 31, I state ref 6912/256, I add 0/256
+[  211.208128] + v4l2-enc-cbr: end
+[  211.208144]   size: 601400 bits, target: 605175 bits, qp error: -12/256, qp: 8038/256
+[  211.208286] + v4l2-enc-cbr: begin
+[  211.208298]   nominal: 666666 bits, plan: 607210 bits, target: 605902 bits
+[  211.208308]   buffer: 1318500 bits, expected: 1308030 bits, gop: 0, ratio: 110
+[  211.208319]   intra: 0, picture QP 31, I state ref 6912/256, I add 0/256
+[  211.222737] + v4l2-enc-cbr: end
+[  211.222756]   size: 612624 bits, target: 605902 bits, qp error: 24/256, qp: 8041/256
+[  211.222878] + v4l2-enc-cbr: begin
+[  211.222891]   nominal: 666666 bits, plan: 607210 bits, target: 605225 bits
+[  211.222904]   buffer: 1264458 bits, expected: 1248574 bits, gop: 0, ratio: 110
+[  211.222917]   intra: 0, picture QP 31, I state ref 6912/256, I add 0/256
+[  211.237294] + v4l2-enc-cbr: end
+[  211.237310]   size: 599512 bits, target: 605225 bits, qp error: -24/256, qp: 8038/256
+[  211.237506] + v4l2-enc-cbr: begin
+[  211.237520]   nominal: 666666 bits, plan: 607210 bits, target: 606187 bits
+[  211.237532]   buffer: 1197304 bits, expected: 1189118 bits, gop: 0, ratio: 110
+[  211.237543]   intra: 0, picture QP 31, I state ref 6912/256, I add 0/256
+[  211.251974] + v4l2-enc-cbr: end
+[  211.251991]   size: 542112 bits, target: 606187 bits, qp error: -246/256, qp: 8008/256
+[  211.252113] + v4l2-enc-cbr: begin
+[  211.252126]   nominal: 666666 bits, plan: 607210 bits, target: 614324 bits
+[  211.252139]   buffer: 1072750 bits, expected: 1129662 bits, gop: 0, ratio: 110
+[  211.252152]   intra: 0, picture QP 31, I state ref 6912/256, I add 0/256
+[  211.266667] + v4l2-enc-cbr: end
+[  211.266683]   size: 561584 bits, target: 614324 bits, qp error: -198/256, qp: 7984/256
+[  211.266801] + v4l2-enc-cbr: begin
+[  211.266811]   nominal: 666666 bits, plan: 607210 bits, target: 620027 bits
+[  211.266821]   buffer: 967668 bits, expected: 1070206 bits, gop: 0, ratio: 110
+[  211.266831]   intra: 0, picture QP 31, I state ref 6912/256, I add 0/256
+[  211.281264] + v4l2-enc-cbr: end
+[  211.281282]   size: 559720 bits, target: 620027 bits, qp error: -222/256, qp: 7957/256
+[  211.281405] + v4l2-enc-cbr: begin
+[  211.281418]   nominal: 666666 bits, plan: 607210 bits, target: 625963 bits
+[  211.281431]   buffer: 860722 bits, expected: 1010750 bits, gop: 0, ratio: 110
+[  211.281444]   intra: 0, picture QP 31, I state ref 6912/256, I add 0/256
+[  211.295919] + v4l2-enc-cbr: end
+[  211.295932]   size: 592400 bits, target: 625963 bits, qp error: -120/256, qp: 7942/256
+[  211.296034] + v4l2-enc-cbr: begin
+[  211.296043]   nominal: 666666 bits, plan: 607210 bits, target: 627814 bits
+[  211.296052]   buffer: 786456 bits, expected: 951294 bits, gop: 0, ratio: 110
+[  211.296061]   intra: 0, picture QP 31, I state ref 6912/256, I add 0/256
+[  211.310472] + v4l2-enc-cbr: end
+[  211.310491]   size: 598592 bits, target: 627814 bits, qp error: -108/256, qp: 7929/256
+[  211.310617] + v4l2-enc-cbr: begin
+[  211.310629]   nominal: 666666 bits, plan: 607210 bits, target: 628892 bits
+[  211.310643]   buffer: 718382 bits, expected: 891838 bits, gop: 0, ratio: 110
+[  211.310655]   intra: 0, picture QP 31, I state ref 6912/256, I add 0/256
+[  211.325095] + v4l2-enc-cbr: end
+[  211.325113]   size: 610336 bits, target: 628892 bits, qp error: -66/256, qp: 7921/256
+[  211.325289] + v4l2-enc-cbr: begin
+[  211.325303]   nominal: 666666 bits, plan: 607210 bits, target: 628501 bits
+[  211.325316]   buffer: 662052 bits, expected: 832382 bits, gop: 0, ratio: 110
+[  211.325329]   intra: 0, picture QP 31, I state ref 6912/256, I add 0/256
+[  211.339782] + v4l2-enc-cbr: end
+[  211.339801]   size: 589992 bits, target: 628501 bits, qp error: -138/256, qp: 7904/256
+[  211.339939] + v4l2-enc-cbr: begin
+[  211.339952]   nominal: 666666 bits, plan: 607210 bits, target: 630653 bits
+[  211.339966]   buffer: 585378 bits, expected: 772926 bits, gop: 0, ratio: 110
+[  211.339978]   intra: 0, picture QP 31, I state ref 6912/256, I add 0/256
+[  211.354398] + v4l2-enc-cbr: end
+[  211.354417]   size: 571536 bits, target: 630653 bits, qp error: -222/256, qp: 7877/256
+[  211.354634] + v4l2-enc-cbr: begin
+[  211.354648]   nominal: 666666 bits, plan: 607210 bits, target: 635112 bits
+[  211.354659]   buffer: 490248 bits, expected: 713470 bits, gop: 0, ratio: 110
+[  211.354671]   intra: 0, picture QP 31, I state ref 6912/256, I add 0/256
+[  211.369004] + v4l2-enc-cbr: end
+[  211.369020]   size: 581072 bits, target: 635112 bits, qp error: -198/256, qp: 7853/256
+[  211.369127] + v4l2-enc-cbr: begin
+[  211.369137]   nominal: 666666 bits, plan: 607210 bits, target: 638380 bits
+[  211.369148]   buffer: 404654 bits, expected: 654014 bits, gop: 0, ratio: 110
+[  211.369158]   intra: 0, picture QP 31, I state ref 6912/256, I add 0/256
+[  211.383617] + v4l2-enc-cbr: end
+[  211.383634]   size: 597936 bits, target: 638380 bits, qp error: -144/256, qp: 7835/256
+[  211.383759] + v4l2-enc-cbr: begin
+[  211.383772]   nominal: 666666 bits, plan: 607210 bits, target: 639539 bits
+[  211.383784]   buffer: 335924 bits, expected: 594558 bits, gop: 0, ratio: 110
+[  211.383797]   intra: 0, picture QP 31, I state ref 6912/256, I add 0/256
+[  211.398257] + v4l2-enc-cbr: end
+[  211.398273]   size: 584848 bits, target: 639539 bits, qp error: -198/256, qp: 7811/256
+[  211.398475] + v4l2-enc-cbr: begin
+[  211.398488]   nominal: 666666 bits, plan: 607210 bits, target: 642334 bits
+[  211.398501]   buffer: 254106 bits, expected: 535102 bits, gop: 0, ratio: 110
+[  211.398513]   intra: 0, picture QP 31, I state ref 6912/256, I add 0/256
+[  211.412972] + v4l2-enc-cbr: end
+[  211.412990]   size: 609456 bits, target: 642334 bits, qp error: -114/256, qp: 7797/256
+[  211.413117] + v4l2-enc-cbr: begin
+[  211.413130]   nominal: 666666 bits, plan: 607210 bits, target: 642053 bits
+[  211.413142]   buffer: 196896 bits, expected: 475646 bits, gop: 0, ratio: 110
+[  211.413155]   intra: 0, picture QP 30, I state ref 6912/256, I add 0/256
+[  211.427631] + v4l2-enc-cbr: end
+[  211.427646]   size: 648616 bits, target: 642053 bits, qp error: 24/256, qp: 7800/256
+[  211.427761] + v4l2-enc-cbr: begin
+[  211.427772]   nominal: 666666 bits, plan: 607210 bits, target: 636878 bits
+[  211.427782]   buffer: 178846 bits, expected: 416190 bits, gop: 0, ratio: 110
+[  211.427792]   intra: 0, picture QP 30, I state ref 6912/256, I add 0/256
+[  211.442228] + v4l2-enc-cbr: end
+[  211.442243]   size: 676112 bits, target: 636878 bits, qp error: 132/256, qp: 7816/256
+[  211.442430] + v4l2-enc-cbr: begin
+[  211.442443]   nominal: 666666 bits, plan: 607210 bits, target: 628265 bits
+[  211.442454]   buffer: 188292 bits, expected: 356734 bits, gop: 0, ratio: 110
+[  211.442466]   intra: 0, picture QP 31, I state ref 6912/256, I add 0/256
+[  211.456913] + v4l2-enc-cbr: end
+[  211.456932]   size: 632768 bits, target: 628265 bits, qp error: 18/256, qp: 7818/256
+[  211.457060] + v4l2-enc-cbr: begin
+[  211.457074]   nominal: 666666 bits, plan: 607210 bits, target: 625070 bits
+[  211.457087]   buffer: 154394 bits, expected: 297278 bits, gop: 0, ratio: 110
+[  211.457100]   intra: 0, picture QP 31, I state ref 6912/256, I add 0/256
+[  211.471457] + v4l2-enc-cbr: end
+[  211.471476]   size: 619960 bits, target: 625070 bits, qp error: -18/256, qp: 7816/256
+[  211.471599] + v4l2-enc-cbr: begin
+[  211.471612]   nominal: 666666 bits, plan: 607210 bits, target: 623476 bits
+[  211.471625]   buffer: 107688 bits, expected: 237822 bits, gop: 0, ratio: 110
+[  211.471637]   intra: 0, picture QP 31, I state ref 6912/256, I add 0/256
+[  211.486067] + v4l2-enc-cbr: end
+[  211.486083]   size: 619600 bits, target: 623476 bits, qp error: -12/256, qp: 7815/256
+[  211.486194] + v4l2-enc-cbr: begin
+[  211.486246]   nominal: 666666 bits, plan: 607210 bits, target: 621928 bits
+[  211.486258]   buffer: 60622 bits, expected: 178366 bits, gop: 0, ratio: 110
+[  211.486268]   intra: 0, picture QP 31, I state ref 6912/256, I add 0/256
+[  211.500727] + v4l2-enc-cbr: end
+[  211.500743]   size: 611544 bits, target: 621928 bits, qp error: -42/256, qp: 7810/256
+[  211.500972] + v4l2-enc-cbr: begin
+[  211.500985]   nominal: 666666 bits, plan: 607210 bits, target: 621386 bits
+[  211.500998]   buffer: 5500 bits, expected: 118910 bits, gop: 0, ratio: 110
+[  211.501010]   intra: 0, picture QP 31, I state ref 6912/256, I add 0/256
+[  211.515413] + v4l2-enc-cbr: end
+[  211.515429]   size: 600480 bits, target: 621386 bits, qp error: -72/256, qp: 7801/256
+[  211.515532] + v4l2-enc-cbr: begin
+[  211.515543]   nominal: 666666 bits, plan: 607210 bits, target: 622227 bits
+[  211.515553]   buffer: -60686 bits, expected: 59454 bits, gop: 0, ratio: 110
+[  211.515563]   intra: 0, picture QP 30, I state ref 6912/256, I add 0/256
+[  211.529990] + v4l2-enc-cbr: end
+[  211.530033]   size: 701792 bits, target: 622227 bits, qp error: 264/256, qp: 7834/256
+[  211.530155] + v4l2-enc-cbr: begin
+[  211.530168]   nominal: 666666 bits, plan: 4174568 bits, target: 4177763 bits
+[  211.530181]   buffer: -25560 bits, expected: 0 bits, gop: 60, ratio: 110
+[  211.530193]   intra: 1, picture QP 25, I state ref 6912/256, I add 0/256
+[  211.544567] + v4l2-enc-cbr: end
+[  211.544584]   size: 2810688 bits, target: 4177763 bits, qp error: -876/256, qp: 7794/256
+[  211.544806] + v4l2-enc-cbr: begin
+[  211.544820]   nominal: 666666 bits, plan: 607210 bits, target: 780890 bits
+[  211.544832]   buffer: 2118462 bits, expected: 3507902 bits, gop: 60, ratio: 110
+[  211.544844]   intra: 0, picture QP 30, I state ref 7834/256, I add 0/256
+[  211.559253] + v4l2-enc-cbr: end
+[  211.559272]   size: 753640 bits, target: 780890 bits, qp error: -78/256, qp: 7785/256
+[  211.559378] + v4l2-enc-cbr: begin
+[  211.559389]   nominal: 666666 bits, plan: 607210 bits, target: 762586 bits
+[  211.559399]   buffer: 2205436 bits, expected: 3448446 bits, gop: 60, ratio: 110
+[  211.559409]   intra: 0, picture QP 30, I state ref 7834/256, I add 0/256
+[  211.573844] + v4l2-enc-cbr: end
+[  211.573858]   size: 685576 bits, target: 762586 bits, qp error: -234/256, qp: 7756/256
+[  211.573967] + v4l2-enc-cbr: begin
+[  211.573977]   nominal: 666666 bits, plan: 607210 bits, target: 752790 bits
+[  211.573988]   buffer: 2224346 bits, expected: 3388990 bits, gop: 60, ratio: 110
+[  211.573998]   intra: 0, picture QP 30, I state ref 7834/256, I add 0/256
+[  211.588427] + v4l2-enc-cbr: end
+[  211.588443]   size: 704336 bits, target: 752790 bits, qp error: -144/256, qp: 7738/256
+[  211.588674] + v4l2-enc-cbr: begin
+[  211.588688]   nominal: 666666 bits, plan: 607210 bits, target: 740649 bits
+[  211.588699]   buffer: 2262016 bits, expected: 3329534 bits, gop: 60, ratio: 110
+[  211.588711]   intra: 0, picture QP 30, I state ref 7834/256, I add 0/256
+[  211.603150] + v4l2-enc-cbr: end
+[  211.603168]   size: 684816 bits, target: 740649 bits, qp error: -174/256, qp: 7717/256
+[  211.603349] + v4l2-enc-cbr: begin
+[  211.603364]   nominal: 666666 bits, plan: 619554 bits, target: 658427 bits
+[  211.603377]   buffer: 2280166 bits, expected: 2591155 bits, gop: 60, ratio: 89
+[  211.603390]   intra: 0, picture QP 30, I state ref 7834/256, I add 0/256
+[  211.617843] + v4l2-enc-cbr: end
+[  211.617862]   size: 671208 bits, target: 658427 bits, qp error: 42/256, qp: 7722/256
+[  211.617993] + v4l2-enc-cbr: begin
+[  211.618006]   nominal: 666666 bits, plan: 619554 bits, target: 651970 bits
+[  211.618019]   buffer: 2284708 bits, expected: 2544043 bits, gop: 60, ratio: 89
+[  211.618031]   intra: 0, picture QP 30, I state ref 7834/256, I add 0/256
+[  211.632480] + v4l2-enc-cbr: end
+[  211.632497]   size: 658064 bits, target: 651970 bits, qp error: 18/256, qp: 7724/256
+[  211.632611] + v4l2-enc-cbr: begin
+[  211.632621]   nominal: 666666 bits, plan: 619554 bits, target: 647157 bits
+[  211.632632]   buffer: 2276106 bits, expected: 2496931 bits, gop: 60, ratio: 89
+[  211.632642]   intra: 0, picture QP 30, I state ref 7834/256, I add 0/256
+[  211.647098] + v4l2-enc-cbr: end
+[  211.647117]   size: 657272 bits, target: 647157 bits, qp error: 36/256, qp: 7728/256
+[  211.647302] + v4l2-enc-cbr: begin
+[  211.647317]   nominal: 666666 bits, plan: 619554 bits, target: 642442 bits
+[  211.647330]   buffer: 2266712 bits, expected: 2449819 bits, gop: 60, ratio: 89
+[  211.647343]   intra: 0, picture QP 30, I state ref 7834/256, I add 0/256
+[  211.661755] + v4l2-enc-cbr: end
+[  211.661770]   size: 649376 bits, target: 642442 bits, qp error: 24/256, qp: 7731/256
+[  211.661866] + v4l2-enc-cbr: begin
+[  211.661876]   nominal: 666666 bits, plan: 619554 bits, target: 638714 bits
+[  211.661887]   buffer: 2249422 bits, expected: 2402707 bits, gop: 60, ratio: 89
+[  211.661897]   intra: 0, picture QP 30, I state ref 7834/256, I add 0/256
+[  211.676313] + v4l2-enc-cbr: end
+[  211.676331]   size: 638176 bits, target: 638714 bits, qp error: 0/256, qp: 7731/256
+[  211.676453] + v4l2-enc-cbr: begin
+[  211.676466]   nominal: 666666 bits, plan: 619554 bits, target: 636386 bits
+[  211.676479]   buffer: 2220932 bits, expected: 2355595 bits, gop: 60, ratio: 89
+[  211.676492]   intra: 0, picture QP 30, I state ref 7834/256, I add 0/256
+[  211.690951] + v4l2-enc-cbr: end
+[  211.690970]   size: 644584 bits, target: 636386 bits, qp error: 30/256, qp: 7734/256
+[  211.691097] + v4l2-enc-cbr: begin
+[  211.691111]   nominal: 666666 bits, plan: 619554 bits, target: 633258 bits
+[  211.691123]   buffer: 2198850 bits, expected: 2308483 bits, gop: 60, ratio: 89
+[  211.691136]   intra: 0, picture QP 30, I state ref 7834/256, I add 0/256
+[  211.705596] + v4l2-enc-cbr: end
+[  211.705611]   size: 643608 bits, target: 633258 bits, qp error: 36/256, qp: 7738/256
+[  211.705716] + v4l2-enc-cbr: begin
+[  211.705727]   nominal: 666666 bits, plan: 619554 bits, target: 630251 bits
+[  211.705737]   buffer: 2175792 bits, expected: 2261371 bits, gop: 60, ratio: 89
+[  211.705747]   intra: 0, picture QP 30, I state ref 7834/256, I add 0/256
+[  211.720177] + v4l2-enc-cbr: end
+[  211.720193]   size: 649408 bits, target: 630251 bits, qp error: 72/256, qp: 7747/256
+[  211.720453] + v4l2-enc-cbr: begin
+[  211.720467]   nominal: 666666 bits, plan: 619554 bits, target: 626519 bits
+[  211.720479]   buffer: 2158534 bits, expected: 2214259 bits, gop: 60, ratio: 89
+[  211.720491]   intra: 0, picture QP 30, I state ref 7834/256, I add 0/256
+[  211.734940] + v4l2-enc-cbr: end
+[  211.734960]   size: 651368 bits, target: 626519 bits, qp error: 90/256, qp: 7758/256
+[  211.735102] + v4l2-enc-cbr: begin
+[  211.735115]   nominal: 666666 bits, plan: 619554 bits, target: 622542 bits
+[  211.735127]   buffer: 2143236 bits, expected: 2167147 bits, gop: 60, ratio: 89
+[  211.735140]   intra: 0, picture QP 30, I state ref 7834/256, I add 0/256
+[  211.749626] + v4l2-enc-cbr: end
+[  211.749645]   size: 643656 bits, target: 622542 bits, qp error: 72/256, qp: 7767/256
+[  211.749776] + v4l2-enc-cbr: begin
+[  211.749789]   nominal: 666666 bits, plan: 619554 bits, target: 619531 bits
+[  211.749801]   buffer: 2120226 bits, expected: 2120035 bits, gop: 60, ratio: 89
+[  211.749814]   intra: 0, picture QP 30, I state ref 7834/256, I add 0/256
+[  211.764287] + v4l2-enc-cbr: end
+[  211.764307]   size: 633512 bits, target: 619531 bits, qp error: 48/256, qp: 7773/256
+[  211.764423] + v4l2-enc-cbr: begin
+[  211.764433]   nominal: 666666 bits, plan: 619554 bits, target: 617786 bits
+[  211.764443]   buffer: 2087072 bits, expected: 2072923 bits, gop: 60, ratio: 89
+[  211.764453]   intra: 0, picture QP 30, I state ref 7834/256, I add 0/256
+[  211.778873] + v4l2-enc-cbr: end
+[  211.778888]   size: 641632 bits, target: 617786 bits, qp error: 84/256, qp: 7783/256
+[  211.778994] + v4l2-enc-cbr: begin
+[  211.779004]   nominal: 666666 bits, plan: 619554 bits, target: 615026 bits
+[  211.779015]   buffer: 2062038 bits, expected: 2025811 bits, gop: 60, ratio: 89
+[  211.779025]   intra: 0, picture QP 30, I state ref 7834/256, I add 0/256
+[  211.793457] + v4l2-enc-cbr: end
+[  211.793472]   size: 611480 bits, target: 615026 bits, qp error: -12/256, qp: 7782/256
+[  211.793708] + v4l2-enc-cbr: begin
+[  211.793721]   nominal: 666666 bits, plan: 619554 bits, target: 616035 bits
+[  211.793733]   buffer: 2006852 bits, expected: 1978699 bits, gop: 60, ratio: 89
+[  211.793744]   intra: 0, picture QP 30, I state ref 7834/256, I add 0/256
+[  211.808191] + v4l2-enc-cbr: end
+[  211.808245]   size: 615640 bits, target: 616035 bits, qp error: 0/256, qp: 7782/256
+[  211.808374] + v4l2-enc-cbr: begin
+[  211.808387]   nominal: 666666 bits, plan: 619554 bits, target: 616525 bits
+[  211.808400]   buffer: 1955826 bits, expected: 1931587 bits, gop: 60, ratio: 89
+[  211.808413]   intra: 0, picture QP 30, I state ref 7834/256, I add 0/256
+[  211.822834] + v4l2-enc-cbr: end
+[  211.822849]   size: 589472 bits, target: 616525 bits, qp error: -96/256, qp: 7770/256
+[  211.822955] + v4l2-enc-cbr: begin
+[  211.822966]   nominal: 666666 bits, plan: 619554 bits, target: 620284 bits
+[  211.822976]   buffer: 1878632 bits, expected: 1884475 bits, gop: 60, ratio: 89
+[  211.822986]   intra: 0, picture QP 30, I state ref 7834/256, I add 0/256
+[  211.837422] + v4l2-enc-cbr: end
+[  211.837437]   size: 611936 bits, target: 620284 bits, qp error: -30/256, qp: 7767/256
+[  211.837669] + v4l2-enc-cbr: begin
+[  211.837682]   nominal: 666666 bits, plan: 619554 bits, target: 621236 bits
+[  211.837694]   buffer: 1823902 bits, expected: 1837363 bits, gop: 60, ratio: 89
+[  211.837706]   intra: 0, picture QP 30, I state ref 7834/256, I add 0/256
+[  211.852170] + v4l2-enc-cbr: end
+[  211.852187]   size: 599728 bits, target: 621236 bits, qp error: -78/256, qp: 7758/256
+[  211.852437] + v4l2-enc-cbr: begin
+[  211.852451]   nominal: 666666 bits, plan: 619554 bits, target: 623714 bits
+[  211.852463]   buffer: 1756964 bits, expected: 1790251 bits, gop: 60, ratio: 89
+[  211.852475]   intra: 0, picture QP 30, I state ref 7834/256, I add 0/256
+[  211.866925] + v4l2-enc-cbr: end
+[  211.866941]   size: 613384 bits, target: 623714 bits, qp error: -42/256, qp: 7753/256
+[  211.867059] + v4l2-enc-cbr: begin
+[  211.867070]   nominal: 666666 bits, plan: 619554 bits, target: 624486 bits
+[  211.867080]   buffer: 1703682 bits, expected: 1743139 bits, gop: 60, ratio: 89
+[  211.867090]   intra: 0, picture QP 30, I state ref 7834/256, I add 0/256
+[  211.881537] + v4l2-enc-cbr: end
+[  211.881553]   size: 614504 bits, target: 624486 bits, qp error: -36/256, qp: 7749/256
+[  211.881667] + v4l2-enc-cbr: begin
+[  211.881677]   nominal: 666666 bits, plan: 619554 bits, target: 625117 bits
+[  211.881687]   buffer: 1651520 bits, expected: 1696027 bits, gop: 60, ratio: 89
+[  211.881698]   intra: 0, picture QP 30, I state ref 7834/256, I add 0/256
+[  211.896146] + v4l2-enc-cbr: end
+[  211.896166]   size: 605912 bits, target: 625117 bits, qp error: -66/256, qp: 7741/256
+[  211.896336] + v4l2-enc-cbr: begin
+[  211.896350]   nominal: 666666 bits, plan: 619554 bits, target: 626822 bits
+[  211.896364]   buffer: 1590766 bits, expected: 1648915 bits, gop: 60, ratio: 89
+[  211.896376]   intra: 0, picture QP 30, I state ref 7834/256, I add 0/256
+[  211.910872] + v4l2-enc-cbr: end
+[  211.910888]   size: 610240 bits, target: 626822 bits, qp error: -54/256, qp: 7735/256
+[  211.911002] + v4l2-enc-cbr: begin
+[  211.911012]   nominal: 666666 bits, plan: 619554 bits, target: 627986 bits
+[  211.911023]   buffer: 1534340 bits, expected: 1601803 bits, gop: 60, ratio: 89
+[  211.911033]   intra: 0, picture QP 30, I state ref 7834/256, I add 0/256
+[  211.925469] + v4l2-enc-cbr: end
+[  211.925484]   size: 608808 bits, target: 627986 bits, qp error: -66/256, qp: 7727/256
+[  211.925706] + v4l2-enc-cbr: begin
+[  211.925720]   nominal: 666666 bits, plan: 619554 bits, target: 629330 bits
+[  211.925731]   buffer: 1476482 bits, expected: 1554691 bits, gop: 60, ratio: 89
+[  211.925743]   intra: 0, picture QP 30, I state ref 7834/256, I add 0/256
+[  211.940192] + v4l2-enc-cbr: end
+[  211.940243]   size: 599224 bits, target: 629330 bits, qp error: -108/256, qp: 7714/256
+[  211.940372] + v4l2-enc-cbr: begin
+[  211.940386]   nominal: 666666 bits, plan: 619554 bits, target: 631871 bits
+[  211.940399]   buffer: 1409040 bits, expected: 1507579 bits, gop: 60, ratio: 89
+[  211.940411]   intra: 0, picture QP 30, I state ref 7834/256, I add 0/256
+[  211.954864] + v4l2-enc-cbr: end
+[  211.954880]   size: 614104 bits, target: 631871 bits, qp error: -60/256, qp: 7707/256
+[  211.954989] + v4l2-enc-cbr: begin
+[  211.955000]   nominal: 666666 bits, plan: 619554 bits, target: 632552 bits
+[  211.955010]   buffer: 1356478 bits, expected: 1460467 bits, gop: 60, ratio: 89
+[  211.955020]   intra: 0, picture QP 30, I state ref 7834/256, I add 0/256
+[  211.969522] + v4l2-enc-cbr: end
+[  211.969546]   size: 622720 bits, target: 632552 bits, qp error: -36/256, qp: 7703/256
+[  211.969682] + v4l2-enc-cbr: begin
+[  211.969695]   nominal: 666666 bits, plan: 619554 bits, target: 632156 bits
+[  211.969708]   buffer: 1312532 bits, expected: 1413355 bits, gop: 60, ratio: 89
+[  211.969720]   intra: 0, picture QP 30, I state ref 7834/256, I add 0/256
+[  211.984237] + v4l2-enc-cbr: end
+[  211.984255]   size: 627488 bits, target: 632156 bits, qp error: -18/256, qp: 7701/256
+[  211.984476] + v4l2-enc-cbr: begin
+[  211.984489]   nominal: 666666 bits, plan: 619554 bits, target: 631165 bits
+[  211.984501]   buffer: 1273354 bits, expected: 1366243 bits, gop: 60, ratio: 89
+[  211.984513]   intra: 0, picture QP 30, I state ref 7834/256, I add 0/256
+[  211.998984] + v4l2-enc-cbr: end
+[  211.999000]   size: 618800 bits, target: 631165 bits, qp error: -42/256, qp: 7696/256
+[  211.999278] + v4l2-enc-cbr: begin
+[  211.999292]   nominal: 666666 bits, plan: 619554 bits, target: 631259 bits
+[  211.999304]   buffer: 1225488 bits, expected: 1319131 bits, gop: 60, ratio: 89
+[  211.999316]   intra: 0, picture QP 30, I state ref 7834/256, I add 0/256
+[  212.013746] + v4l2-enc-cbr: end
+[  212.013763]   size: 589264 bits, target: 631259 bits, qp error: -150/256, qp: 7678/256
+[  212.013882] + v4l2-enc-cbr: begin
+[  212.013895]   nominal: 666666 bits, plan: 619554 bits, target: 635045 bits
+[  212.013908]   buffer: 1148086 bits, expected: 1272019 bits, gop: 60, ratio: 89
+[  212.013920]   intra: 0, picture QP 30, I state ref 7834/256, I add 0/256
+[  212.028378] + v4l2-enc-cbr: end
+[  212.028396]   size: 601824 bits, target: 635045 bits, qp error: -120/256, qp: 7663/256
+[  212.028525] + v4l2-enc-cbr: begin
+[  212.028538]   nominal: 666666 bits, plan: 619554 bits, target: 637261 bits
+[  212.028551]   buffer: 1083244 bits, expected: 1224907 bits, gop: 60, ratio: 89
+[  212.028564]   intra: 0, picture QP 30, I state ref 7834/256, I add 0/256
+[  212.043031] + v4l2-enc-cbr: end
+[  212.043049]   size: 601168 bits, target: 637261 bits, qp error: -132/256, qp: 7647/256
+[  212.043180] + v4l2-enc-cbr: begin
+[  212.043193]   nominal: 666666 bits, plan: 619554 bits, target: 639560 bits
+[  212.043245]   buffer: 1017746 bits, expected: 1177795 bits, gop: 60, ratio: 89
+[  212.043261]   intra: 0, picture QP 30, I state ref 7834/256, I add 0/256
+[  212.057713] + v4l2-enc-cbr: end
+[  212.057730]   size: 585968 bits, target: 639560 bits, qp error: -192/256, qp: 7623/256
+[  212.057843] + v4l2-enc-cbr: begin
+[  212.057853]   nominal: 666666 bits, plan: 619554 bits, target: 643758 bits
+[  212.057863]   buffer: 937048 bits, expected: 1130683 bits, gop: 60, ratio: 89
+[  212.057873]   intra: 0, picture QP 30, I state ref 7834/256, I add 0/256
+[  212.072327] + v4l2-enc-cbr: end
+[  212.072342]   size: 596104 bits, target: 643758 bits, qp error: -168/256, qp: 7602/256
+[  212.072460] + v4l2-enc-cbr: begin
+[  212.072470]   nominal: 666666 bits, plan: 619554 bits, target: 646689 bits
+[  212.072480]   buffer: 866486 bits, expected: 1083571 bits, gop: 60, ratio: 89
+[  212.072490]   intra: 0, picture QP 30, I state ref 7834/256, I add 0/256
+[  212.086920] + v4l2-enc-cbr: end
+[  212.086937]   size: 591496 bits, target: 646689 bits, qp error: -198/256, qp: 7578/256
+[  212.087061] + v4l2-enc-cbr: begin
+[  212.087074]   nominal: 666666 bits, plan: 619554 bits, target: 650196 bits
+[  212.087087]   buffer: 791316 bits, expected: 1036459 bits, gop: 60, ratio: 89
+[  212.087100]   intra: 0, picture QP 30, I state ref 7834/256, I add 0/256
+[  212.101596] + v4l2-enc-cbr: end
+[  212.101616]   size: 579960 bits, target: 650196 bits, qp error: -252/256, qp: 7547/256
+[  212.101755] + v4l2-enc-cbr: begin
+[  212.101768]   nominal: 666666 bits, plan: 619554 bits, target: 655146 bits
+[  212.101781]   buffer: 704610 bits, expected: 989347 bits, gop: 60, ratio: 89
+[  212.101793]   intra: 0, picture QP 29, I state ref 7834/256, I add 0/256
+[  212.116301] + v4l2-enc-cbr: end
+[  212.116320]   size: 673832 bits, target: 655146 bits, qp error: 60/256, qp: 7554/256
+[  212.116458] + v4l2-enc-cbr: begin
+[  212.116471]   nominal: 666666 bits, plan: 619554 bits, target: 648361 bits
+[  212.116483]   buffer: 711776 bits, expected: 942235 bits, gop: 60, ratio: 89
+[  212.116496]   intra: 0, picture QP 30, I state ref 7834/256, I add 0/256
+[  212.130923] + v4l2-enc-cbr: end
+[  212.130938]   size: 582504 bits, target: 648361 bits, qp error: -240/256, qp: 7524/256
+[  212.131038] + v4l2-enc-cbr: begin
+[  212.131049]   nominal: 666666 bits, plan: 619554 bits, target: 652992 bits
+[  212.131059]   buffer: 627614 bits, expected: 895123 bits, gop: 60, ratio: 89
+[  212.131069]   intra: 0, picture QP 29, I state ref 7834/256, I add 0/256
+[  212.145518] + v4l2-enc-cbr: end
+[  212.145536]   size: 634120 bits, target: 652992 bits, qp error: -66/256, qp: 7516/256
+[  212.145651] + v4l2-enc-cbr: begin
+[  212.145662]   nominal: 666666 bits, plan: 619554 bits, target: 651171 bits
+[  212.145672]   buffer: 595068 bits, expected: 848011 bits, gop: 60, ratio: 89
+[  212.145682]   intra: 0, picture QP 29, I state ref 7834/256, I add 0/256
+[  212.160134] + v4l2-enc-cbr: end
+[  212.160150]   size: 629680 bits, target: 651171 bits, qp error: -78/256, qp: 7507/256
+[  212.160311] + v4l2-enc-cbr: begin
+[  212.160323]   nominal: 666666 bits, plan: 619554 bits, target: 649906 bits
+[  212.160334]   buffer: 558082 bits, expected: 800899 bits, gop: 60, ratio: 89
+[  212.160345]   intra: 0, picture QP 29, I state ref 7834/256, I add 0/256
+[  212.174767] + v4l2-enc-cbr: end
+[  212.174783]   size: 649648 bits, target: 649906 bits, qp error: 0/256, qp: 7507/256
+[  212.175009] + v4l2-enc-cbr: begin
+[  212.175022]   nominal: 666666 bits, plan: 619554 bits, target: 646144 bits
+[  212.175034]   buffer: 541064 bits, expected: 753787 bits, gop: 60, ratio: 89
+[  212.175046]   intra: 0, picture QP 29, I state ref 7834/256, I add 0/256
+[  212.189500] + v4l2-enc-cbr: end
+[  212.189515]   size: 633640 bits, target: 646144 bits, qp error: -48/256, qp: 7501/256
+[  212.189627] + v4l2-enc-cbr: begin
+[  212.189637]   nominal: 666666 bits, plan: 619554 bits, target: 644383 bits
+[  212.189648]   buffer: 508038 bits, expected: 706675 bits, gop: 60, ratio: 89
+[  212.189658]   intra: 0, picture QP 29, I state ref 7834/256, I add 0/256
+[  212.204133] + v4l2-enc-cbr: end
+[  212.204150]   size: 655736 bits, target: 644383 bits, qp error: 36/256, qp: 7505/256
+[  212.204300] + v4l2-enc-cbr: begin
+[  212.204312]   nominal: 666666 bits, plan: 619554 bits, target: 639860 bits
+[  212.204323]   buffer: 497108 bits, expected: 659563 bits, gop: 60, ratio: 89
+[  212.204339]   intra: 0, picture QP 29, I state ref 7834/256, I add 0/256
+[  212.218764] + v4l2-enc-cbr: end
+[  212.218782]   size: 659232 bits, target: 639860 bits, qp error: 66/256, qp: 7513/256
+[  212.218903] + v4l2-enc-cbr: begin
+[  212.218916]   nominal: 666666 bits, plan: 619554 bits, target: 634901 bits
+[  212.218929]   buffer: 489674 bits, expected: 612451 bits, gop: 60, ratio: 89
+[  212.218941]   intra: 0, picture QP 29, I state ref 7834/256, I add 0/256
+[  212.233373] + v4l2-enc-cbr: end
+[  212.233386]   size: 631552 bits, target: 634901 bits, qp error: -12/256, qp: 7512/256
+[  212.233566] + v4l2-enc-cbr: begin
+[  212.233579]   nominal: 666666 bits, plan: 619554 bits, target: 633401 bits
+[  212.233591]   buffer: 454560 bits, expected: 565339 bits, gop: 60, ratio: 89
+[  212.233603]   intra: 0, picture QP 29, I state ref 7834/256, I add 0/256
+[  212.248048] + v4l2-enc-cbr: end
+[  212.248062]   size: 638992 bits, target: 633401 bits, qp error: 24/256, qp: 7515/256
+[  212.248289] + v4l2-enc-cbr: begin
+[  212.248301]   nominal: 666666 bits, plan: 619554 bits, target: 630971 bits
+[  212.248312]   buffer: 426886 bits, expected: 518227 bits, gop: 60, ratio: 89
+[  212.248324]   intra: 0, picture QP 29, I state ref 7834/256, I add 0/256
+[  212.262781] + v4l2-enc-cbr: end
+[  212.262798]   size: 644832 bits, target: 630971 bits, qp error: 48/256, qp: 7521/256
+[  212.262911] + v4l2-enc-cbr: begin
+[  212.262922]   nominal: 666666 bits, plan: 619554 bits, target: 627811 bits
+[  212.262932]   buffer: 405052 bits, expected: 471115 bits, gop: 60, ratio: 89
+[  212.262941]   intra: 0, picture QP 29, I state ref 7834/256, I add 0/256
+[  212.277416] + v4l2-enc-cbr: end
+[  212.277434]   size: 633736 bits, target: 627811 bits, qp error: 24/256, qp: 7524/256
+[  212.277567] + v4l2-enc-cbr: begin
+[  212.277581]   nominal: 666666 bits, plan: 619554 bits, target: 626039 bits
+[  212.277594]   buffer: 372122 bits, expected: 424003 bits, gop: 60, ratio: 89
+[  212.277606]   intra: 0, picture QP 29, I state ref 7834/256, I add 0/256
+[  212.292035] + v4l2-enc-cbr: end
+[  212.292049]   size: 636016 bits, target: 626039 bits, qp error: 36/256, qp: 7528/256
+[  212.292263] + v4l2-enc-cbr: begin
+[  212.292277]   nominal: 666666 bits, plan: 619554 bits, target: 623981 bits
+[  212.292290]   buffer: 341472 bits, expected: 376891 bits, gop: 60, ratio: 89
+[  212.292301]   intra: 0, picture QP 29, I state ref 7834/256, I add 0/256
+[  212.306793] + v4l2-enc-cbr: end
+[  212.306811]   size: 635920 bits, target: 623981 bits, qp error: 42/256, qp: 7533/256
+[  212.306927] + v4l2-enc-cbr: begin
+[  212.306938]   nominal: 666666 bits, plan: 619554 bits, target: 621935 bits
+[  212.306948]   buffer: 310726 bits, expected: 329779 bits, gop: 60, ratio: 89
+[  212.306958]   intra: 0, picture QP 29, I state ref 7834/256, I add 0/256
+[  212.321416] + v4l2-enc-cbr: end
+[  212.321434]   size: 621784 bits, target: 621935 bits, qp error: -6/256, qp: 7533/256
+[  212.321557] + v4l2-enc-cbr: begin
+[  212.321570]   nominal: 666666 bits, plan: 619554 bits, target: 621656 bits
+[  212.321583]   buffer: 265844 bits, expected: 282667 bits, gop: 60, ratio: 89
+[  212.321596]   intra: 0, picture QP 29, I state ref 7834/256, I add 0/256
+[  212.336075] + v4l2-enc-cbr: end
+[  212.336094]   size: 637680 bits, target: 621656 bits, qp error: 60/256, qp: 7540/256
+[  212.336277] + v4l2-enc-cbr: begin
+[  212.336292]   nominal: 666666 bits, plan: 619554 bits, target: 619392 bits
+[  212.336304]   buffer: 236858 bits, expected: 235555 bits, gop: 60, ratio: 89
+[  212.336317]   intra: 0, picture QP 29, I state ref 7834/256, I add 0/256
+[  212.350791] + v4l2-enc-cbr: end
+[  212.350809]   size: 632776 bits, target: 619392 bits, qp error: 48/256, qp: 7546/256
+[  212.350937] + v4l2-enc-cbr: begin
+[  212.350950]   nominal: 666666 bits, plan: 619554 bits, target: 617739 bits
+[  212.350963]   buffer: 202968 bits, expected: 188443 bits, gop: 60, ratio: 89
+[  212.350976]   intra: 0, picture QP 29, I state ref 7834/256, I add 0/256
+[  212.365401] + v4l2-enc-cbr: end
+[  212.365415]   size: 624200 bits, target: 617739 bits, qp error: 24/256, qp: 7549/256
+[  212.365520] + v4l2-enc-cbr: begin
+[  212.365530]   nominal: 666666 bits, plan: 619554 bits, target: 617158 bits
+[  212.365540]   buffer: 160502 bits, expected: 141331 bits, gop: 60, ratio: 89
+[  212.365550]   intra: 0, picture QP 29, I state ref 7834/256, I add 0/256
+[  212.380046] + v4l2-enc-cbr: end
+[  212.380061]   size: 624312 bits, target: 617158 bits, qp error: 24/256, qp: 7552/256
+[  212.380319] + v4l2-enc-cbr: begin
+[  212.380334]   nominal: 666666 bits, plan: 619554 bits, target: 616563 bits
+[  212.380346]   buffer: 118148 bits, expected: 94219 bits, gop: 60, ratio: 89
+[  212.380358]   intra: 0, picture QP 30, I state ref 7834/256, I add 0/256
+[  212.394797] + v4l2-enc-cbr: end
+[  212.394814]   size: 584872 bits, target: 616563 bits, qp error: -114/256, qp: 7538/256
+[  212.394920] + v4l2-enc-cbr: begin
+[  212.394931]   nominal: 666666 bits, plan: 619554 bits, target: 620898 bits
+[  212.394941]   buffer: 36354 bits, expected: 47107 bits, gop: 60, ratio: 89
+[  212.394951]   intra: 0, picture QP 29, I state ref 7834/256, I add 0/256
+[  212.409309] + v4l2-enc-cbr: end

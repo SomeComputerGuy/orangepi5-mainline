@@ -1,7 +1,7 @@
 From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
 From: Jonas Karlman <jonas@kwiboo.se>
 Date: Tue, 6 Aug 2024 09:06:03 +0000
-Subject: [PATCH 04/11] avcodec/v4l2request: Add common decode support for
+Subject: [PATCH 04/13] avcodec/v4l2request: Add common decode support for
  hwaccels
 
 Add common support for decoding using the V4L2 Request API.
@@ -46,7 +46,7 @@ Link: https://github.com/Kwiboo/FFmpeg/tree/v4l2-request-n8.1
  4 files changed, 581 insertions(+), 2 deletions(-)
 
 diff --git a/configure b/configure
-index d6dbe37..b50aa06 100755
+index d6dbe3734e..b50aa0605d 100755
 --- a/configure
 +++ b/configure
 @@ -3344,7 +3344,7 @@ dxva2_deps="dxva2api_h DXVA2_ConfigPictureDecode ole32 user32"
@@ -67,7 +67,7 @@ index d6dbe37..b50aa06 100755
      check_pkg_config libudev libudev libudev.h udev_new
      v4l2_request_extralibs="$libudev_extralibs"
 diff --git a/libavcodec/hwconfig.h b/libavcodec/hwconfig.h
-index ee29ca6..159064a 100644
+index ee29ca631d..159064a1f1 100644
 --- a/libavcodec/hwconfig.h
 +++ b/libavcodec/hwconfig.h
 @@ -79,6 +79,8 @@ void ff_hwaccel_uninit(AVCodecContext *avctx);
@@ -80,7 +80,7 @@ index ee29ca6..159064a 100644
  #define HW_CONFIG_ENCODER(device, frames, ad_hoc, format, device_type_) \
      &(const AVCodecHWConfigInternal) { \
 diff --git a/libavcodec/v4l2_request.c b/libavcodec/v4l2_request.c
-index dfec0e8..36eec85 100644
+index dfec0e8906..36eec85402 100644
 --- a/libavcodec/v4l2_request.c
 +++ b/libavcodec/v4l2_request.c
 @@ -19,6 +19,7 @@
@@ -649,7 +649,7 @@ index dfec0e8..36eec85 100644
          // Stop streaming on OUTPUT queue
          type = ctx->fctxi->output.format.type;
 diff --git a/libavcodec/v4l2_request.h b/libavcodec/v4l2_request.h
-index d09bbf7..53759f2 100644
+index d09bbf7344..53759f20bb 100644
 --- a/libavcodec/v4l2_request.h
 +++ b/libavcodec/v4l2_request.h
 @@ -46,10 +46,51 @@ typedef struct V4L2RequestContext {

@@ -1,7 +1,7 @@
 From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
 From: Boris Brezillon <boris.brezillon@collabora.com>
 Date: Tue, 9 Dec 2025 20:30:05 +0100
-Subject: [PATCH 10/11] avcodec: Add V4L2 Request API vp9 hwaccel
+Subject: [PATCH 10/13] avcodec: Add V4L2 Request API vp9 hwaccel
 
 Add a V4L2 Request API hwaccel for VP9.
 
@@ -25,7 +25,7 @@ Link: https://github.com/Kwiboo/FFmpeg/tree/v4l2-request-n8.1
  create mode 100644 libavcodec/v4l2_request_vp9.c
 
 diff --git a/configure b/configure
-index 3546fff..06e8608 100755
+index 3546fffa52..06e86082c0 100755
 --- a/configure
 +++ b/configure
 @@ -3491,6 +3491,8 @@ vp9_dxva2_hwaccel_deps="dxva2 DXVA_PicParams_VP9"
@@ -46,7 +46,7 @@ index 3546fff..06e8608 100755
      check_pkg_config libudev libudev libudev.h udev_new
      check_struct linux/videodev2.h "struct v4l2_ctrl_hevc_decode_params" num_delta_pocs_of_ref_rps_idx
 diff --git a/libavcodec/Makefile b/libavcodec/Makefile
-index 2c209a0..b68e8bd 100644
+index 2c209a0a6a..b68e8bd7b4 100644
 --- a/libavcodec/Makefile
 +++ b/libavcodec/Makefile
 @@ -1110,6 +1110,7 @@ OBJS-$(CONFIG_VP9_D3D11VA_HWACCEL)        += dxva2_vp9.o
@@ -58,7 +58,7 @@ index 2c209a0..b68e8bd 100644
  OBJS-$(CONFIG_VP9_VDPAU_HWACCEL)          += vdpau_vp9.o
  OBJS-$(CONFIG_VP9_VIDEOTOOLBOX_HWACCEL)   += videotoolbox_vp9.o
 diff --git a/libavcodec/hwaccels.h b/libavcodec/hwaccels.h
-index e60ec2a..ca47a3c 100644
+index e60ec2a498..ca47a3c906 100644
 --- a/libavcodec/hwaccels.h
 +++ b/libavcodec/hwaccels.h
 @@ -88,6 +88,7 @@ extern const struct FFHWAccel ff_vp9_d3d11va2_hwaccel;
@@ -71,7 +71,7 @@ index e60ec2a..ca47a3c 100644
  extern const struct FFHWAccel ff_vp9_videotoolbox_hwaccel;
 diff --git a/libavcodec/v4l2_request_vp9.c b/libavcodec/v4l2_request_vp9.c
 new file mode 100644
-index 0000000..e93937d
+index 0000000000..e93937daf2
 --- /dev/null
 +++ b/libavcodec/v4l2_request_vp9.c
 @@ -0,0 +1,530 @@
@@ -606,7 +606,7 @@ index 0000000..e93937d
 +    .caps_internal      = HWACCEL_CAP_ASYNC_SAFE,
 +};
 diff --git a/libavcodec/vp9.c b/libavcodec/vp9.c
-index c175169..db849f4 100644
+index c175169ce4..db849f4511 100644
 --- a/libavcodec/vp9.c
 +++ b/libavcodec/vp9.c
 @@ -168,6 +168,7 @@ static int update_size(AVCodecContext *avctx, int w, int h)

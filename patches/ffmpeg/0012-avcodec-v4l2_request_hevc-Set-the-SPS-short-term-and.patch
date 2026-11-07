@@ -1,7 +1,7 @@
-From 8b2e0183d741c14da8bc9b1ea8132e802b69313e Mon Sep 17 00:00:00 2001
+From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
 From: Arun Iyengar <aiyengar1990@gmail.com>
 Date: Thu, 29 Oct 2026 23:08:47 +0000
-Subject: [PATCH] avcodec/v4l2_request_hevc: Set the SPS short-term and
+Subject: [PATCH 12/13] avcodec/v4l2_request_hevc: Set the SPS short-term and
  long-term RPS controls
 
 The Rockchip VDPU381 (RK3588) and VDPU383 (RK3576) HEVC decoders parse
@@ -35,12 +35,13 @@ compared with FFmpeg's own sets (1510 short-term sets, 1106 of them
 inter-predicted, and 8 long-term candidates), without a difference.
 
 Assisted-by: LLM
+Signed-off-by: Arun Iyengar <aiyengar1990@gmail.com>
 ---
  libavcodec/v4l2_request_hevc.c | 137 ++++++++++++++++++++++++++++++++-
  1 file changed, 134 insertions(+), 3 deletions(-)
 
 diff --git a/libavcodec/v4l2_request_hevc.c b/libavcodec/v4l2_request_hevc.c
-index 26cba2c..fb8484a 100644
+index 26cba2c75f..fb8484a784 100644
 --- a/libavcodec/v4l2_request_hevc.c
 +++ b/libavcodec/v4l2_request_hevc.c
 @@ -25,7 +25,7 @@
@@ -238,6 +239,3 @@ index 26cba2c..fb8484a 100644
  
      control[0].value = ctx->decode_mode;
      control[1].value = ctx->start_code;
--- 
-2.55.0
-

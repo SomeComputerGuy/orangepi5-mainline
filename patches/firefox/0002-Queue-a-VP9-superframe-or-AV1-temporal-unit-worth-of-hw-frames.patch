@@ -1,0 +1,93 @@
+From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
+From: Arun Iyengar <aiyengar1990@gmail.com>
+Date: Fri, 6 Nov 2026 16:10:00 +0000
+Subject: [PATCH] Bug NNNNNNN - Queue enough hardware-decoded VP9/AV1 frames to
+ cover a multi-frame packet. r?media-playback-reviewers
+
+MediaDecoderStateMachine keeps only media.video-queue.hw-accel-size (3)
+decoded frames ahead when the decoder is hardware accelerated, on the
+assumption that hardware decoding is fast for every frame. That holds per
+decoded frame, but not per packet: a VP9 superframe or an AV1 temporal unit
+of a hierarchical (pyramid) GOP carries the hidden ALTREF and the hidden
+frames of every layer below it before the shown frame. The hardware
+decoder (VA-API, V4L2, Vulkan) runs one job per frame, so that packet takes
+several frame durations, and the next packets (show_existing_frame) come
+out almost for free. With 3 frames queued, the queue runs dry during the
+burst although the average decode rate keeps up.
+
+Seen on an RK3588 (Hantro VPU981 behind libva-v4l2-request) with a 4K60
+AV1 clip with 16-frame mini-GOPs: ~10 ms per decoded frame, but 6-7 frames
+(~60 ms) in the first temporal unit of each mini-GOP. Firefox dropped 6.2%
+and 3.1% of the frames in two runs; with media.video-queue.hw-accel-size=6
+it dropped 2.4%, the same as the 1080p clips. Chrome drops 0.2% on the same
+driver.
+
+Report MinNumVideoBuffers = 8 from the Linux FFmpeg video decoder when it
+decodes VP9 or AV1 in hardware (not in low-latency mode). A hidden frame is
+only of use when it is kept in one of the 8 reference slots (and a VP9
+superframe holds at most 8 frames), so 8 frames cover the longest burst a
+real stream produces. The FFmpeg hardware frame pool already has room for
+it (8 references + EXTRA_HW_FRAMES 9). The Android implementation of the
+same property (MediaCodec output buffer limits) is unchanged; H.264/HEVC
+decode one frame per packet and keep the 3-frame default.
+
+Assisted-by: LLM
+Signed-off-by: Arun Iyengar <aiyengar1990@gmail.com>
+---
+diff --git a/dom/media/platforms/ffmpeg/FFmpegVideoDecoder.cpp b/dom/media/platforms/ffmpeg/FFmpegVideoDecoder.cpp
+--- a/dom/media/platforms/ffmpeg/FFmpegVideoDecoder.cpp
++++ b/dom/media/platforms/ffmpeg/FFmpegVideoDecoder.cpp
+@@ -2596,6 +2596,38 @@
+       return MediaDataDecoder::GetDecodeProperty(aName);
+   }
+ }
++#elif defined(MOZ_USE_HWDECODE) && defined(MOZ_WIDGET_GTK)
++Maybe<MediaDataDecoder::PropertyValue> FFmpegVideoDecoder<
++    LIBAV_VER>::GetDecodeProperty(MediaDataDecoder::PropertyName aName) const {
++  if (aName != PropertyName::MinNumVideoBuffers || mLowLatency ||
++      !IsHardwareAccelerated()) {
++    return MediaDataDecoder::GetDecodeProperty(aName);
++  }
++  // A hardware decoder (VA-API, V4L2, Vulkan) decodes one frame per job, but
++  // a VP9 superframe or an AV1 temporal unit can carry several frames of
++  // which only the last one is shown: with hierarchical (pyramid) GOPs the
++  // first packet of a mini-GOP holds the hidden ALTREF and the hidden frames
++  // of every pyramid layer below it. The decoder spends several frame
++  // durations on that packet and then returns the following frames
++  // (show_existing_frame) almost for free. The default hardware queue
++  // (media.video-queue.hw-accel-size, 3 frames) is shorter than that burst,
++  // so 4K60 AV1 drops frames although the average decode rate keeps up.
++  // A hidden frame is only of use when it is kept in one of the 8 reference
++  // slots of VP9/AV1 (and a VP9 superframe holds at most 8 frames), so a
++  // queue of 8 frames covers the longest burst a real stream produces.
++  static constexpr uint32_t kMaxFramesPerPacket = 8;
++  switch (mCodecID) {
++#  ifdef FFMPEG_AV1_DECODE
++    case AV_CODEC_ID_AV1:
++#  endif
++    case AV_CODEC_ID_VP9:
++      FFMPEG_LOG("Hardware {} decoding: asking for at least {} queued frames",
++                 AVCodecToString(mCodecID), kMaxFramesPerPacket);
++      return Some(PropertyValue(kMaxFramesPerPacket));
++    default:
++      return MediaDataDecoder::GetDecodeProperty(aName);
++  }
++}
+ #endif
+ 
+ AVCodecID FFmpegVideoDecoder<LIBAV_VER>::GetCodecId(
+diff --git a/dom/media/platforms/ffmpeg/FFmpegVideoDecoder.h b/dom/media/platforms/ffmpeg/FFmpegVideoDecoder.h
+--- a/dom/media/platforms/ffmpeg/FFmpegVideoDecoder.h
++++ b/dom/media/platforms/ffmpeg/FFmpegVideoDecoder.h
+@@ -125,7 +125,8 @@
+ #endif
+   }
+ 
+-#ifdef MOZ_WIDGET_ANDROID
++#if defined(MOZ_WIDGET_ANDROID) || \
++    (defined(MOZ_USE_HWDECODE) && defined(MOZ_WIDGET_GTK))
+   Maybe<MediaDataDecoder::PropertyValue> GetDecodeProperty(
+       MediaDataDecoder::PropertyName aName) const override;
+ #endif
+-- 
+2.47.0
