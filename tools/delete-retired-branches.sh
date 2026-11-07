@@ -13,10 +13,10 @@ YES=0; [ "${1:-}" = --yes ] && YES=1
 
 # retired branch -> tag that preserves its tip
 PAIRS=(
-  "opi5/image-7.3        image-7.3.0-8"
-  "opi5/image-7.3-extra  image-7.3.0-8-extra"
-  "opi5/image-k6         image-7.3.0-6"
-  "opi5/image-k7         image-7.3.0-7"
+  "opi5/image-7.3        image-7.3.0+opi5.8"
+  "opi5/image-7.3-extra  image-7.3.0+opi5.8-extra"
+  "opi5/image-k6         image-7.3.0+opi5.6"
+  "opi5/image-k7         image-7.3.0+opi5.7"
   "opi5/integration      archive/integration"
   "opi5/rkvdec-ccu-base  archive/rkvdec-ccu-base"
   "opi5/dw-dp-redetect   archive/dw-dp-redetect"

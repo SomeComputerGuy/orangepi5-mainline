@@ -6,9 +6,16 @@
 #   gst-plugins-good1.0 v4l2transform colorimetry, souphttpsrc HEAD race (patches/gst-plugins-good)
 #   alsa-ucm-conf       UCM for the RK3588 HDMI/DP and ES8388 sound cards (Architecture: all)
 # Rootless: mmdebstrap --mode=unshare + qemu-user binfmt, no sudo.
+# Each source builds in its own persistent arm64 chroot (stonking-arm64-<source>,
+# made on first use by arm64-chroot / scripts/build-chroot.sh, kept in
+# ~/chroots); every build still starts from a fresh /build tree and runs
+# build-dep. OPI5_FRESH_CHROOT=1 bootstraps a throwaway chroot per build instead.
 # Usage: build-media-debs.sh [source...]     (default: all of the above, in that order)
+#        build-media-debs.sh --prepare-chroot [source...]
+#            create the chroots and install the build-deps, without building
 # Output: out/debs-media/*.deb plus a Packages index (a flat apt repository that
-#         IMAGE_VARIANT=desktop scripts/build-image.sh installs from).
+#         IMAGE_VARIANT=desktop scripts/build-image.sh installs from);
+#         OPI5_MEDIA_REPO=DIR puts the repository elsewhere.
 #
 # patches/<dir>/*.patch are appended to debian/patches/series (upstream code,
 # applied by dpkg-source); patches/<dir>/debian/*.patch change the packaging
@@ -23,6 +30,8 @@ if [ "${1:-}" = --in-chroot ]; then
   export DEBIAN_FRONTEND=noninteractive
   mkdir -p /build/debs && cd /build
   apt-get update -q
+  # persistent chroot: catch up with the archive, like a fresh bootstrap would
+  if [ -n "${OPI5_PERSISTENT:-}" ]; then apt-get -q -y full-upgrade; fi
   apt-get source -q --only-source "$src=$ver"
   dir=$(find . -maxdepth 1 -mindepth 1 -type d -name "${src}-*" | head -1)
   cd "$dir"
@@ -53,12 +62,18 @@ if [ "${1:-}" = --in-chroot ]; then
   # any: the arm64 packages (-B); all: an Architecture: all source (-A)
   if [ "$build" = all ]; then bd=--indep-only bt=-A; else bd=--arch-only bt=-B; fi
   apt-get build-dep -q -y $bd -Pnocheck ./
+  if [ -n "${OPI5_DEPS_ONLY:-}" ]; then exit 0; fi
   # ccache (installed and seeded by the host side, see below): compilers of this
   # name in /usr/lib/ccache come first in PATH. Sources are always unpacked at
   # /build, so hits carry over between runs. Cache size is capped to keep the
-  # copy in/out cheap.
-  if [ -d /usr/lib/ccache ] && [ -d /build/opi5-media-ccache ]; then
-    export PATH=/usr/lib/ccache:$PATH CCACHE_DIR=/build/opi5-media-ccache CCACHE_BASEDIR=/build CCACHE_MAXSIZE=3G
+  # copy in/out cheap. A persistent chroot keeps its cache in OPI5_CCACHE_DIR.
+  ccdir=${OPI5_CCACHE_DIR:-/build/opi5-media-ccache}
+  if [ -n "${OPI5_CCACHE_DIR:-}" ]; then
+    mkdir -p "$ccdir"
+    [ -d /usr/lib/ccache ] || apt-get install -q -y ccache
+  fi
+  if [ -d /usr/lib/ccache ] && [ -d "$ccdir" ]; then
+    export PATH=/usr/lib/ccache:$PATH CCACHE_DIR=$ccdir CCACHE_BASEDIR=/build CCACHE_MAXSIZE=3G
   fi
   DEB_BUILD_OPTIONS="nocheck noautodbgsym parallel=$jobs" \
     dpkg-buildpackage $bt -us -uc -Pnocheck
@@ -66,10 +81,16 @@ if [ "${1:-}" = --in-chroot ]; then
   exit 0
 fi
 
+PREPARE=
+if [ "${1:-}" = --prepare-chroot ]; then PREPARE=1; shift; fi
 [ "$(id -u)" -ne 0 ] || { echo "run as your normal user (rootless build)"; exit 1; }
 SELF=$(readlink -f "$0")
 TOP=$(cd "$(dirname "$SELF")/.." && pwd)
-REPO=$TOP/out/debs-media
+REPO=${OPI5_MEDIA_REPO:-$TOP/out/debs-media}
+FRESH=${OPI5_FRESH_CHROOT:-0}
+[ -z "$PREPARE" ] || FRESH=0
+# The persistent chroot manager: the installed arm64-chroot, else this repository's copy
+CHROOT_TOOL=$(command -v arm64-chroot || echo "$TOP/scripts/build-chroot.sh")
 WORK=$TOP/build/media
 SUITE=stonking
 MIRROR=http://ports.ubuntu.com/ubuntu-ports
@@ -97,7 +118,8 @@ fi
 # apt cache: apt-cacher-ng on 127.0.0.1:3142 is used if it is listening
 # (OPI5_APT_PROXY=http://host:port overrides, OPI5_APT_PROXY=none disables). Only
 # http is proxied; https sources go direct. The option lands in the build chroot's
-# /etc/apt/apt.conf.d/99mmdebstrap (the chroot is thrown away).
+# /etc/apt/apt.conf.d/99mmdebstrap (the chroot is thrown away); persistent
+# chroots get it per entry (ARM64_CHROOT_APT_PROXY).
 APT_PROXY=${OPI5_APT_PROXY:-}
 if [ -z "$APT_PROXY" ] && (exec 3<>/dev/tcp/127.0.0.1/3142) 2>/dev/null; then
   APT_PROXY=http://127.0.0.1:3142
@@ -109,6 +131,7 @@ if [ -n "$APT_PROXY" ] && [ "$APT_PROXY" != none ]; then
 else
   echo "apt cache: not used (nothing on 127.0.0.1:3142, or OPI5_APT_PROXY=none)"
 fi
+export ARM64_CHROOT_APT_PROXY=${APT_PROXY:-none}
 
 # ccache for the compiles inside the chroot (OPI5_MEDIA_CCACHE=0 disables). The
 # cache lives on the host in $CCACHE_HOST and is copied into each build chroot and
@@ -116,9 +139,14 @@ fi
 # The synced-out copy replaces the host cache, so evicted entries don't pile up; a
 # failed build doesn't sync its cache back. Only the cache is exchanged: nothing
 # of it ends up in the debs.
+# A persistent chroot keeps its own cache inside, at $CCACHE_PERSISTENT.
 CCACHE_HOST=$HOME/.cache/opi5-media-ccache   # basename must stay opi5-media-ccache
-CCACHE_OPTS=() CCACHE_SYNC=()
-if [ "${OPI5_MEDIA_CCACHE:-1}" != 0 ]; then
+CCACHE_PERSISTENT=/var/cache/opi5-media-ccache
+CCACHE_OPTS=() CCACHE_SYNC=() CCACHE_ENV=()
+if [ "${OPI5_MEDIA_CCACHE:-1}" != 0 ] && [ "$FRESH" = 0 ]; then
+  CCACHE_ENV=(--env "OPI5_CCACHE_DIR=$CCACHE_PERSISTENT")
+  echo "ccache: in each persistent chroot at $CCACHE_PERSISTENT"
+elif [ "${OPI5_MEDIA_CCACHE:-1}" != 0 ]; then
   rm -rf "$CCACHE_HOST.new"; mkdir -p "$CCACHE_HOST"
   CCACHE_OPTS=(--include=ccache
     --customize-hook='mkdir -p "$1/build"'
@@ -133,11 +161,28 @@ index_repo() {
   (cd "$REPO" && dpkg-scanpackages --multiversion . /dev/null > Packages 2>/dev/null)
 }
 index_repo
-# apt runs as the unshared root (a subordinate uid), which can't read $HOME, so
-# the local repository is served from a world-readable copy
+# Fresh chroots: apt runs as the unshared root (a subordinate uid), which can't
+# read $HOME, so the local repository is served from a world-readable copy.
+# Persistent chroots bind it in read-only (arm64-chroot setup lets that uid
+# traverse $HOME).
 STAGE=$(mktemp -d /tmp/opi5-media-repo.XXXXXX)
 trap 'rm -rf "$STAGE"' EXIT
 chmod 755 "$STAGE"
+
+# Persistent chroot for one source: build (or only install build-deps) with a
+# fresh /build; the debs come out through a writable bind of $1/debs
+build_persistent() {
+  local src=$1 w=$2 deps_only=$3
+  local name=$SUITE-arm64-$src extra=()
+  [ -z "$deps_only" ] || extra=(--env OPI5_DEPS_ONLY=1)
+  "$CHROOT_TOOL" ensure "$name" --suite "$SUITE" --mirror "$MIRROR" --components "$COMPONENTS" \
+    --keyring /usr/share/keyrings/ubuntu-archive-keyring.gpg --include ccache || return 1
+  mkdir -p "$w/debs"; chmod 755 "$w"   # the chroot root must reach $w/debs
+  "$CHROOT_TOOL" run --scratch /build --bind-rw "$w/debs:/build/debs" \
+    --bind "$pdir:/tmp/opi5-patches" --bind "$SELF:/tmp/$(basename "$SELF")" \
+    --local-repo "$REPO" --env OPI5_PERSISTENT=1 "${CCACHE_ENV[@]}" "${extra[@]}" \
+    "$name" -- /bin/bash "/tmp/$(basename "$SELF")" --in-chroot "$src" "$ver" "$rev" "$JOBS" "${PDIR[$src]}" "${BUILD[$src]:-any}"
+}
 
 for src in "${SOURCES[@]}"; do
   [ -n "${VERSION[$src]:-}" ] || { echo "unknown source package $src"; exit 1; }
@@ -147,7 +192,17 @@ for src in "${SOURCES[@]}"; do
   # A fresh work directory per run: an interrupted run's mmdebstrap may still finish
   # and sync its debs out later
   w=$(mktemp -d "$WORK/$src.XXXXXX")
+  if [ -n "$PREPARE" ]; then
+    echo "==> $src: chroot $SUITE-arm64-$src with build-deps (log: $w/build.log)"
+    build_persistent "$src" "$w" 1 > "$w/build.log" 2>&1 || { echo "$src failed; see $w/build.log"; tail -20 "$w/build.log"; exit 1; }
+    rm -rf "$w"
+    continue
+  fi
   echo "==> $src $ver+opi5.$rev (log: $w/build.log)"
+  if [ "$FRESH" = 0 ]; then
+    echo "    persistent chroot $SUITE-arm64-$src"
+    build_persistent "$src" "$w" "" > "$w/build.log" 2>&1 || { echo "$src failed; see $w/build.log"; tail -20 "$w/build.log"; exit 1; }
+  else
   rm -f "$STAGE"/*
   cp "$REPO"/Packages "$STAGE"/
   for d in "$REPO"/*.deb; do if [ -e "$d" ]; then cp "$d" "$STAGE"/; fi; done
@@ -177,6 +232,7 @@ for src in "${SOURCES[@]}"; do
     "deb [trusted=yes] file://$STAGE ./" \
     > "$w/build.log" 2>&1 || { echo "$src failed; see $w/build.log"; tail -20 "$w/build.log"; exit 1; }
   if [ -d "$CCACHE_HOST.new" ]; then rm -rf "$CCACHE_HOST"; mv "$CCACHE_HOST.new" "$CCACHE_HOST"; fi
+  fi
   # Replace the previous build of this source in the repository
   for d in "$REPO"/*.deb; do
     [ -e "$d" ] || continue
@@ -184,7 +240,8 @@ for src in "${SOURCES[@]}"; do
     [ -n "$s" ] || s=$(dpkg-deb -f "$d" Package)
     if [ "$s" = "$src" ]; then rm -f "$d"; fi
   done
-  mv "$w"/debs/*.deb "$REPO/"
+  # copy, not mv: debs from a persistent chroot belong to its subordinate root
+  cp --preserve=timestamps "$w"/debs/*.deb "$REPO/"
   rm -rf "$w"
   chmod 644 "$REPO"/*.deb
   index_repo

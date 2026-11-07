@@ -1,7 +1,7 @@
 # image-k6: Earlier image-kernel base: v7.3 + patches/linux 0001-1408 (314 patches); the topics below sit on it (image-k7 = this + usb3-port + rkvdec-reset)
 
 - Workspace branch: `opi5/image-k6b-7.3` (exported 2026-11-07)
-- Kernel fork: tag `image-7.3.0-6` (retired branch `opi5/image-k6`; see PUBLISH.md)
+- Kernel fork: tag `image-7.3.0+opi5.6` (retired branch `opi5/image-k6`; see PUBLISH.md)
 - Sits on: `v7.3` (base commit `c03c1a14507d`)
 - Hardware test: yes: ran on the board
 - Next upstream step: none (integration only); provenance in docs/image-kernel/MANIFEST.md

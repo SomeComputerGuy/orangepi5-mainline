@@ -21,7 +21,7 @@ This repository has two purposes:
 
 | Component | Version | Where |
 |---|---|---|
-| Kernel | **7.3.0+opi5.15** = Linux v7.3 + the 479 patches in `patches/linux`, regression-tested on the board. Versions are `<mainline>+opi5.<rev>`. The next kernel, 7.3.0+opi5.16, is a release candidate under test, not released | `scripts/build-kernel.sh`; fork branch `opi5/image` (tag `image-7.3.0-15`) |
+| Kernel | **7.3.0+opi5.15** = Linux v7.3 + the 479 patches in `patches/linux`, regression-tested on the board. Versions are `<mainline>+opi5.<rev>`. The next kernel, 7.3.0+opi5.16, is a release candidate under test, not released | `scripts/build-kernel.sh`; fork branch `opi5/image` (tag `image-7.3.0+opi5.15`) |
 | U-Boot | v2026.10 + `patches/u-boot` (three carried fixes and the board `-u-boot.dtsi` fragments) | `scripts/build-uboot.sh` |
 | TF-A | v2.15.0 + `patches/tf-a` (PHP CRU clock-gate save/restore), BL31 built from source | `scripts/build-uboot.sh` |
 | Image | Ubuntu 26.10 arm64, server and desktop variants | `scripts/build-image.sh` |
@@ -209,7 +209,7 @@ What each step does:
   private arm64 sysroot. The module-signing key is generated in `build/linux/certs/` and must
   stay private. It is never part of this repository or of any package. The same tree is
   branch `opi5/image` in the [kernel fork](https://github.com/SomeComputerGuy/linux), and every
-  image kernel has a tag `image-<package version>` (the current one is `image-7.3.0+opi5.15`; older kernels kept their old `image-7.3.0-<n>` tags).
+  image kernel has a tag `image-<package version>` (the current one is `image-7.3.0+opi5.15`).
 - **`build-uboot.sh`** builds TF-A BL31 from source (`BL31_SRC=rkbin` uses Rockchip's binary
   instead), resetting `src/tf-a` to v2.15.0 and applying `patches/tf-a/*.patch`. It patches
   a copy of the rkbin DDR blob to print at 115200 baud, resets `src/u-boot` to v2026.10, applies

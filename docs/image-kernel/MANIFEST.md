@@ -18,7 +18,7 @@ from the listed branch. Evidence paths are relative to `work/_out/`. Nothing has
 upstream from this project.
 
 **Current state (2026-11-01):** the image kernel is build 11 (`7.3.0-11`) = v7.3 + the 422 patches
-in `patches/linux` (fork tag `image-7.3.0-11`). The sections at the end of this file ("Kernel 9",
+in `patches/linux` (fork tag `image-7.3.0+opi5.11`). The sections at the end of this file ("Kernel 9",
 "Kernel 10", "Kernel 11") list what each build added after the 337-patch stack of kernel 8 and how
 it was tested. Per-patch hardware evidence for our own patches is in
 `work/_out/upstream-send/TESTMAP.md` (100 tested, 32 still need a test as of 2026-11-01); the
