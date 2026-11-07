@@ -1,0 +1,57 @@
+From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
+From: Arun Iyengar <aiyengar1990@gmail.com>
+Date: Wed, 4 Nov 2026 16:31:49 +0000
+Subject: [PATCH] usb: typec: tcpm: Don't cut a pending state delay short on a
+ re-queue
+
+tcpm_state_machine_work() applies port->delayed_state as soon as it
+runs, assuming it only runs when the state machine timer fired. The
+work can also run because it was queued for another reason while it was
+already running.
+
+This happens at every port registration: tcpm_init() runs with the port
+lock held and calls tcpm_set_state() twice with no delay (default state,
+then PORT_RESET). The first call queues the work, which starts and
+blocks on the lock; the second call queues it again. The first run
+handles PORT_RESET and schedules PORT_RESET_WAIT_OFF after
+PD_T_ERROR_RECOVERY; the second run then applies it at once. On an
+Orange Pi 5 (FUSB302) the log shows the 100 ms ErrorRecovery taking
+6 us:
+
+  pending state change PORT_RESET -> PORT_RESET_WAIT_OFF @ 100 ms
+  state change PORT_RESET -> PORT_RESET_WAIT_OFF [delayed 100 ms]
+
+so the "clean slate" that tcpm_init() asks for never happens.
+
+If the delay has not expired yet, re-arm the timer for the time left
+and return, as tcpm_send_queued_message() already does.
+
+Assisted-by: LLM
+Signed-off-by: Arun Iyengar <aiyengar1990@gmail.com>
+---
+ drivers/usb/typec/tcpm/tcpm.c | 12 ++++++++++++
+ 1 file changed, 12 insertions(+)
+
+diff --git a/drivers/usb/typec/tcpm/tcpm.c b/drivers/usb/typec/tcpm/tcpm.c
+index 79e13350ad25..813ff45f24d7 100644
+--- a/drivers/usb/typec/tcpm/tcpm.c
++++ b/drivers/usb/typec/tcpm/tcpm.c
+@@ -6621,6 +6621,18 @@ static void tcpm_state_machine_work(struct kthread_work *work)
+ 
+ 	/* If we were queued due to a delayed state change, update it now */
+ 	if (port->delayed_state) {
++		/*
++		 * The work may have been queued again for another reason
++		 * while it was running, for instance by tcpm_init() at port
++		 * registration, which sets two states in a row with the
++		 * port lock held. Do not cut a pending delay short; re-arm
++		 * the timer for the time that is left.
++		 */
++		if (ktime_after(port->delayed_runtime, ktime_get())) {
++			hrtimer_start(&port->state_machine_timer,
++				      port->delayed_runtime, HRTIMER_MODE_ABS);
++			goto done;
++		}
+ 		tcpm_log(port, "state change %s -> %s [delayed %ld ms]",
+ 			 tcpm_states[port->state],
+ 			 tcpm_states[port->delayed_state], port->delay_ms);

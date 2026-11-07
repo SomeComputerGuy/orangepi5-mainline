@@ -8,7 +8,7 @@ tools/, ...) are never touched. See tools/export/README.md.
 import argparse, datetime, os, re, shutil, subprocess, sys
 from pathlib import Path
 
-IMAGE_BRANCH = "k15-v4"   # workspace branch whose tree is v7.3 + patches/linux (update with the image kernel)
+IMAGE_BRANCH = "k16-rc2"   # workspace branch whose tree is v7.3 + patches/linux (update with the image kernel)
 REPO = Path(__file__).resolve().parents[2]
 CONF = REPO / "tools/export/topics.conf"
 EXCLUDE_FILE = REPO / "tools/export/exclude.conf"

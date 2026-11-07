@@ -1,0 +1,56 @@
+From ea41e6721cf084ede7a928bc2a4a29804274be1c Mon Sep 17 00:00:00 2001
+From: Arun Iyengar <aiyengar1990@gmail.com>
+Date: Thu, 5 Nov 2026 12:45:24 +0000
+Subject: [PATCH 2295/2312] media: verisilicon: Crop H.264 encodes to 2 pixel
+ units
+
+The OUTPUT crop rectangle of the encoder is the coded picture size. Its
+width is rounded up to a multiple of 4, as the right overfill register
+of the H1/VEPU2 counts 4 pixel units, so a 1918 pixel wide picture is
+coded 1920 wide and userspace that asked for 1918 can't encode it.
+
+H.264 crops in units of 2 samples for 4:2:0 (frame_crop_right_offset
+and frame_crop_bottom_offset of the SPS, which v4l2-h264-enc derives
+from the coded size). The overfill only tells the hardware how many
+right-most columns to fill itself instead of reading them. With a crop
+that isn't a multiple of 4 the last columns are read from the source
+buffer, which spans whole macroblocks, and are cropped away by the SPS.
+Rockchip's MPP does the same: it programs the overfill as the 4 pixel
+part of the padding and crops to any even width.
+
+Round the H.264 crop rectangle to 2 pixels in both directions. Heights
+were accepted unrounded, and for an odd height the integer division of
+the SPS crop offset made the decoded picture one line taller, so round
+them up to 2 as well.
+JPEG keeps the 4 pixel rounding.
+
+Assisted-by: LLM
+Signed-off-by: Arun Iyengar <aiyengar1990@gmail.com>
+---
+ drivers/media/platform/verisilicon/hantro_v4l2.c | 10 ++++++++++
+ 1 file changed, 10 insertions(+)
+
+diff --git a/drivers/media/platform/verisilicon/hantro_v4l2.c b/drivers/media/platform/verisilicon/hantro_v4l2.c
+index 9c98456642d0..d86807bba484 100644
+--- a/drivers/media/platform/verisilicon/hantro_v4l2.c
++++ b/drivers/media/platform/verisilicon/hantro_v4l2.c
+@@ -867,6 +867,16 @@ static int vidioc_s_selection(struct file *file, void *priv,
+ 		rect->top = 0;
+ 		rect->width = ctx->src_fmt.width;
+ 		rect->height = ctx->src_fmt.height;
++	} else if (ctx->vpu_dst_fmt->codec_mode == HANTRO_MODE_H264_ENC) {
++		/*
++		 * H.264 crops in units of 2 luma samples for 4:2:0 (the SPS
++		 * frame_crop_*_offset). The right overfill register counts 4
++		 * pixel units, so a 2 pixel crop is not filled by the hardware:
++		 * those source columns are read from the buffer, which spans
++		 * whole macroblocks, and fall outside the cropped picture.
++		 */
++		rect->width = round_up(rect->width, 2);
++		rect->height = round_up(rect->height, 2);
+ 	} else {
+ 		/* We support widths aligned to 4 pixels and arbitrary heights. */
+ 		rect->width = round_up(rect->width, 4);
+-- 
+2.55.0
+

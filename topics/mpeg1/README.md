@@ -2,7 +2,7 @@
 
 - Workspace branch: `k15-mpeg1` (exported 2026-11-07)
 - Kernel fork branch: `opi5/mpeg1` (see PUBLISH.md)
-- Sits on: `image` (base commit `bb1a61971a26`)
+- Sits on: `image-k15` (base commit `bb1a61971a26`)
 - Hardware test: tested on the board: all 5 hardware-decodable ISO/IEC 13818-4 MPEG-1 vectors and a 1080p30 stream decode, with the MPEG1_SLICE format (29/29 checks). D-pictures are not supported (no RK3588 decoder handles them)
 - Next upstream step: in the 7.3.0+opi5.16 release candidate (under test)
 - Patches: 6 = 6 ours, 0 carried from others, 0 local-only

@@ -1,0 +1,65 @@
+From d05013466f77c82f188d9dd8c4cd2c93324b3448 Mon Sep 17 00:00:00 2001
+From: Arun Iyengar <aiyengar1990@gmail.com>
+Date: Thu, 5 Nov 2026 23:02:13 +0000
+Subject: [PATCH 2308/2312] media: rockchip: rga: Don't write past the end of
+ the descriptor table
+
+fill_descriptors() checks n_desc > max_desc before it writes the entry at
+index n_desc, so it writes one entry past the end of the table before it
+gives up, or without giving up when the scatterlist ends right there.
+
+The off-by-one also hid that the table is too small for formats with
+more than one memory plane: rga_buf_init() sizes it from the page count
+of the sum of the plane sizes, but rga_buf_prepare() starts every plane
+at a new entry, so each plane needs its own page count rounded up. With
+the check fixed, such buffers would be rejected.
+
+Round up the page count of each plane and stop before index max_desc.
+
+Fixes: a61ff67ffb9d ("media: rockchip: rga: rework buffer handling for multi-planar formats")
+Cc: stable@vger.kernel.org
+Assisted-by: LLM
+Signed-off-by: Arun Iyengar <aiyengar1990@gmail.com>
+---
+ drivers/media/platform/rockchip/rga/rga-buf.c | 10 ++++++----
+ 1 file changed, 6 insertions(+), 4 deletions(-)
+
+diff --git a/drivers/media/platform/rockchip/rga/rga-buf.c b/drivers/media/platform/rockchip/rga/rga-buf.c
+index 47a8d5a4500a..c1814318785e 100644
+--- a/drivers/media/platform/rockchip/rga/rga-buf.c
++++ b/drivers/media/platform/rockchip/rga/rga-buf.c
+@@ -26,7 +26,7 @@ static ssize_t fill_descriptors(struct rga_dma_desc *desc, size_t max_desc,
+ 	dma_addr_t addr;
+ 
+ 	for_each_sgtable_dma_page(sgt, &iter, 0) {
+-		if (n_desc > max_desc)
++		if (n_desc >= max_desc)
+ 			return -EINVAL;
+ 		addr = sg_page_iter_dma_address(&iter);
+ 		tmp->addr = lower_32_bits(addr);
+@@ -79,7 +79,6 @@ static int rga_buf_init(struct vb2_buffer *vb)
+ 	struct rockchip_rga *rga = ctx->rga;
+ 	struct rga_frame *f = rga_get_frame(ctx, vb->vb2_queue->type);
+ 	size_t n_desc = 0;
+-	u32 size = 0;
+ 	u8 i;
+ 
+ 	if (IS_ERR(f))
+@@ -88,9 +87,12 @@ static int rga_buf_init(struct vb2_buffer *vb)
+ 	if (!rga_has_internal_iommu(rga))
+ 		return 0;
+ 
++	/*
++	 * Every plane is a separate buffer whose descriptors start at a new
++	 * entry, so round up the page count of each plane on its own.
++	 */
+ 	for (i = 0; i < f->pix.num_planes; i++)
+-		size += f->pix.plane_fmt[i].sizeimage;
+-	n_desc = DIV_ROUND_UP(size, PAGE_SIZE);
++		n_desc += DIV_ROUND_UP(f->pix.plane_fmt[i].sizeimage, PAGE_SIZE);
+ 
+ 	rbuf->n_desc = n_desc;
+ 	rbuf->dma_desc = dma_alloc_coherent(rga->cores[0]->dev,
+-- 
+2.55.0
+

@@ -1,0 +1,39 @@
+From 600f1c5c1225f7efa5cbf9e1831c7e6249e8b8a4 Mon Sep 17 00:00:00 2001
+From: Arun Iyengar <aiyengar1990@gmail.com>
+Date: Thu, 5 Nov 2026 20:44:25 +0000
+Subject: [PATCH 2306/2312] media: uapi: mpeg2: document that D-pictures are
+ optional
+
+MPEG-1 D-pictures (DC coefficients only) are rare and not every MPEG-1
+capable decoder decodes them: the Rockchip VDPU2 MPEG-1 mode has no
+DC-only decoding and Hantro rejects the D picture coding type. Say so
+in the uAPI, and that the rejection also applies to
+VIDIOC_TRY_EXT_CTRLS, so that applications can find out whether a
+decoder supports D-pictures before they hand one to it, and decode or
+drop them otherwise.
+
+Assisted-by: LLM
+Signed-off-by: Arun Iyengar <aiyengar1990@gmail.com>
+---
+ .../userspace-api/media/v4l/ext-ctrls-codec-stateless.rst    | 5 ++++-
+ 1 file changed, 4 insertions(+), 1 deletion(-)
+
+diff --git a/Documentation/userspace-api/media/v4l/ext-ctrls-codec-stateless.rst b/Documentation/userspace-api/media/v4l/ext-ctrls-codec-stateless.rst
+index ecdd93072c8c..972b5b950b31 100644
+--- a/Documentation/userspace-api/media/v4l/ext-ctrls-codec-stateless.rst
++++ b/Documentation/userspace-api/media/v4l/ext-ctrls-codec-stateless.rst
+@@ -1555,7 +1555,10 @@ FWHT Flags
+       - Picture coding type for the frame covered by the current slice
+ 	(V4L2_MPEG2_PIC_CODING_TYPE_I, V4L2_MPEG2_PIC_CODING_TYPE_P,
+ 	V4L2_MPEG2_PIC_CODING_TYPE_B, or V4L2_MPEG2_PIC_CODING_TYPE_D in MPEG-1
+-	sequences).
++	sequences). Decoding D-pictures is optional: drivers that cannot
++	decode them reject V4L2_MPEG2_PIC_CODING_TYPE_D, also in
++	``VIDIOC_TRY_EXT_CTRLS``, which applications can use to find out
++	whether D-pictures are supported.
+     * - __u8
+       - ``picture_structure``
+       - Picture structure (1: interlaced top field, 2: interlaced bottom field,
+-- 
+2.55.0
+

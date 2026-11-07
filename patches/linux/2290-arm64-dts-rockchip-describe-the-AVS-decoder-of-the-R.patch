@@ -1,0 +1,34 @@
+From 8d7c4d12c05893bf4d711b60bd9e22e3e0feead8 Mon Sep 17 00:00:00 2001
+From: Arun Iyengar <aiyengar1990@gmail.com>
+Date: Thu, 5 Nov 2026 10:53:49 +0000
+Subject: [PATCH 2290/2312] arm64: dts: rockchip: describe the AVS+ decoder of
+ the RK3588 VPU121
+
+Add the registers of the AVS+ decoder at 0xfdb51000 to the VPU121 node.
+The decoder shares the interrupt, clocks, power domain and IOMMU already
+described there.
+
+Assisted-by: LLM
+Signed-off-by: Arun Iyengar <aiyengar1990@gmail.com>
+---
+ arch/arm64/boot/dts/rockchip/rk3588-base.dtsi | 4 +++-
+ 1 file changed, 3 insertions(+), 1 deletion(-)
+
+diff --git a/arch/arm64/boot/dts/rockchip/rk3588-base.dtsi b/arch/arm64/boot/dts/rockchip/rk3588-base.dtsi
+index 1d5035b47ffa..728989116ab3 100644
+--- a/arch/arm64/boot/dts/rockchip/rk3588-base.dtsi
++++ b/arch/arm64/boot/dts/rockchip/rk3588-base.dtsi
+@@ -1261,7 +1261,9 @@ rknn_mmu_2: iommu@fdada000 {
+ 
+ 	vpu121: video-codec@fdb50000 {
+ 		compatible = "rockchip,rk3588-vpu121", "rockchip,rk3568-vpu";
+-		reg = <0x0 0xfdb50000 0x0 0x800>;
++		reg = <0x0 0xfdb50000 0x0 0x800>,
++		      <0x0 0xfdb51000 0x0 0x200>;
++		reg-names = "vpu", "avsd";
+ 		interrupts = <GIC_SPI 120 IRQ_TYPE_LEVEL_HIGH 0>,
+ 			     <GIC_SPI 119 IRQ_TYPE_LEVEL_HIGH 0>;
+ 		interrupt-names = "vepu", "vdpu";
+-- 
+2.55.0
+

@@ -12,7 +12,7 @@ set -u
 MODE=$1 KREV=$2; shift 2; UNITS=("$@")
 TOP=$HOME/orangepi5; W=$TOP/work/_out; D=$W/k15/dp-ycc; LOG=$D/ycc.log
 S=$(cat ~/.claude/jobs/35761d63/tmp/ssh.cmd); ME="dp-ycc $$"; CHUNK=${CHUNK:-15}
-STOCK_V="#15 SMP PREEMPT_DYNAMIC Wed Nov  4 20:25:22"
+STOCK_V="#16 SMP PREEMPT_DYNAMIC Sat Nov  7 04:32:10"
 if [ "$KREV" = stock ]; then KT=$STOCK_V; KTAG=stock15; else KT="#$KREV SMP"; KTAG=$KREV; KDIR=$TOP/out/test/k$KREV/debs; fi
 log() { echo "[$(date +%T)] $*" | tee -a $LOG; }
 want() { [ -n "$(ls -A $W/BOARD-WANT 2>/dev/null | grep -vx dp-ycc)" ]; }

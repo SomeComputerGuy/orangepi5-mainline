@@ -2,7 +2,7 @@
 
 - Workspace branch: `k15-dpirq` (exported 2026-11-07)
 - Kernel fork branch: `opi5/dp-irq-retrain` (see PUBLISH.md)
-- Sits on: `image` (base commit `bb1a61971a26`)
+- Sits on: `image-k15` (base commit `bb1a61971a26`)
 - Hardware test: tested on the board: does not change the rare DP "silent black" it was meant to fix (1 in 180 modesets with and without it), so it is not in the image kernel
 - Next upstream step: none for now (a different fix for the DP black is under test)
 - Patches: 1 = 1 ours, 0 carried from others, 0 local-only
@@ -21,6 +21,8 @@ Apply with `git am` in the order listed in [`series`](series), on top of the par
 - [notes/RUNNER-SUMMARY.md](notes/RUNNER-SUMMARY.md)
 - [notes/STATE.md](notes/STATE.md)
 - [notes/b2/HANDOFF.md](notes/b2/HANDOFF.md)
+- [notes/b2/RUNNER-SUMMARY.md](notes/b2/RUNNER-SUMMARY.md)
+- [notes/b2/check.txt](notes/b2/check.txt)
 - [notes/b2/tools/camcal.sh](notes/b2/tools/camcal.sh)
 - [notes/b2/tools/camverdict.py](notes/b2/tools/camverdict.py)
 - [notes/b2/tools/check-dpb2.sh](notes/b2/tools/check-dpb2.sh)

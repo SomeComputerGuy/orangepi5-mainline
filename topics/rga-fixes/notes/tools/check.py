@@ -30,7 +30,7 @@ def chk(name, ok, info=''):
 # 1. stock restored, lock released
 host = rd(R, 'host.log')
 un = re.findall(r'uname -v: (.*)', host)
-chk('stock-restored', un and re.search(r'#15 SMP.*Wed Nov  *4 20:25:22', un[-1]) and 'lock released' in host,
+chk('stock-restored', un and re.search(r'#16 SMP.*Sat Nov  *7 04:32:10', un[-1]) and 'lock released' in host,
     un[-1] if un else 'no uname -v line')
 # 2. boot of the test kernel
 b = rd(R, f'boot-{KREV}.txt')

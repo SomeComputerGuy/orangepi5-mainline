@@ -34,7 +34,7 @@ for k in "BF":
             continue
         h = open(hl, errors="replace").read()
         un = re.findall(r"uname -v: (.*)", h)
-        if not un or not re.match(r"#15 SMP .*Wed Nov +4 20:25:22", un[-1]) or "lock released" not in h:
+        if not un or not re.match(r"#16 SMP .*Sat Nov +7 04:32:10", un[-1]) or "lock released" not in h:
             out("FAIL", f"stock-restored-{k}{b}", f"last uname -v: {un[-1] if un else 'none'}; lock released: {'lock released' in h}")
         else:
             out("PASS", f"stock-restored-{k}{b}", un[-1])

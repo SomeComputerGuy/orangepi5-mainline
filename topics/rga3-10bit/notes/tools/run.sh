@@ -23,14 +23,14 @@ log() { echo "[$(date +%T)] $*" | tee -a "$R/host.log"; }
 restore15() {
 	NOLOCK=1 bash $W/k14/install-check.sh > "$R/restore15.log" 2>&1; log "install-check.sh rc=$?"
 	cp $W/k14/boot.txt "$R/boot-15.txt" 2>/dev/null
-	grep -q "^7.3.0-opi5 #15 SMP.*Wed Nov  4 20:25:22" "$R/boot-15.txt" && grep -q "^warn=0$" "$R/boot-15.txt" &&
+	grep -q "^7.3.0-opi5 #16 SMP.*Sat Nov  7 04:32:10" "$R/boot-15.txt" && grep -q "^warn=0$" "$R/boot-15.txt" &&
 		grep -q "^usb_missing=$" "$R/boot-15.txt" || { log "BOOT CHECK FAILED (stock 15)"; return 3; }
 }
 release() {
 	rm -f "$WANT"
 	[ "$(cat "$LOCK" 2>/dev/null)" = "$ME" ] || return
 	timeout 900 $S 'while systemctl list-units --no-legend "rga3nv15-*" | grep -q . || sudo -n fuser /var/lib/dpkg/lock-frontend /var/lib/dpkg/lock >/dev/null 2>&1; do sleep 5; done' 2>/dev/null
-	if ! timeout 15 $S 'uname -v' 2>/dev/null | grep -q '^#15 SMP.*Wed Nov  *4 20:25:22'; then
+	if ! timeout 15 $S 'uname -v' 2>/dev/null | grep -q '^#16 SMP.*Sat Nov  *7 04:32:10'; then
 		log "restoring stock 15 before releasing the lock"
 		restore15 || { log "RESTORE FAILED: keeping BOARD-LOCK, board needs attention"; return; }
 	fi
@@ -100,7 +100,7 @@ push_tools() {
 PH=${PH:-info compliance regress cases}
 # 1) baseline on stock 15
 if [ "$STOCK" = 1 ] && ! grep -q "^ALLDONE stock" "$R/out/board.log" 2>/dev/null; then
-	if ! timeout 15 $S 'uname -v' | grep -q '^#15 SMP.*Wed Nov  *4 20:25:22'; then log "board not on stock 15, installing it"; restore15 || exit 3; fi
+	if ! timeout 15 $S 'uname -v' | grep -q '^#16 SMP.*Sat Nov  *7 04:32:10'; then log "board not on stock 15, installing it"; restore15 || exit 3; fi
 	push_tools || { log "PUSH FAILED"; exit 1; }
 	log "session stock (uname -v: $(timeout 15 $S 'uname -v'))"
 	session stock $PH; rc=$?

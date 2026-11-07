@@ -2,7 +2,7 @@
 
 - Workspace branch: `k15-avs2` (exported 2026-11-07)
 - Kernel fork branch: `opi5/avs2` (see PUBLISH.md)
-- Sits on: `image` (base commit `bb1a61971a26`)
+- Sits on: `image-k15` (base commit `bb1a61971a26`)
 - Hardware test: tested on the board: bit-exact on the 12 PKU AVS2 conformance streams (416x240 to 1080p) and 5 xavs2 streams (1080p, 2160p); v4l2-compliance 56/57 (the VIDIOC_DECODER_CMD test needs a v4l-utils that knows AVS2). Not tested: weighting quant and background pictures (no streams); field coding is refused
 - Next upstream step: in the 7.3.0+opi5.16 release candidate (under test); needs an AVS2 userspace client (FFmpeg hwaccel) before posting
 - Patches: 2 = 2 ours, 0 carried from others, 0 local-only

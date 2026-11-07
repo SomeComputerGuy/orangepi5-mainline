@@ -1,0 +1,33 @@
+# Apply in this order on top of the parent topic (see topic.env):
+#   while read -r p sha; do git am "$p"; done < <(grep -v '^#' series)
+# Second column: the original commit in the workspace clone (for reference).
+ours/0001-v7.3-patches-linux-450.patch 792992f54ee90711bbdd96f8266bbeded6a81a25
+ours/0002-pmdomain-rockchip-remove-subdomain-links-before-the-.patch f5f2760c711e242f0ea5f9f9f80f9e7e71702a34
+ours/0003-pmdomain-rockchip-do-not-report-probe-deferral-of-a-.patch 3eb2913d39b452afd89963e74c909a6c63234aec
+ours/0004-media-rockchip-rga-Register-the-video-device-after-b.patch 40dad835a5cc3b8388a33466150f70f60f36af03
+ours/0005-media-rockchip-rga-Drop-the-runtime-PM-reference-on-.patch 6e264b6a6efbee9beeb822956b2b9201e2da74d9
+ours/0006-media-rockchip-rga-Print-the-version-of-the-core-bei.patch 5973e491ce9ea907ed89f49c754cb27f9a8f9834
+ours/0007-media-rockchip-rga-Limit-the-RGA2-destination-to-409.patch 6a6bc659166a8c56b720cb28e69466d7195a9891
+ours/0008-drm-bridge-synopsys-dw-dp-Don-t-let-detection-clobbe.patch dd07d2eddbf3b0b65241d45fdfa843d40fe239fb
+ours/0009-drm-bridge-synopsys-dw-dp-Ignore-controller-plug-eve.patch 2cd5f580a126731381b44cfac7546dcd4d2fed05
+ours/0010-drm-rockchip-vop2-Plan-the-video-PLL-for-all-video-p.patch 09d933ef85fde3b7f3ff5182428579ec4d85347e
+carried/0011-drm-rockchip-dw_hdmi_qp-attach-the-HDMI-Colorspace-c.patch 829bb91aff5f406790b66cd84b70da35d7f5d9a7
+carried/0012-drm-dp-Add-drm_dp_hdr_metadata_infoframe_sdp_pack.patch cf69479603b94169c709925717728f5308ff0490
+carried/0013-drm-display-bridge-connector-Preserve-max-bpc-across.patch 79f19a56f0706e7566534458a4e360717a7d3ea4
+carried/0014-drm-rockchip-dw_dp-Attach-max-bpc-connector-property.patch a9659694e5b65fba1a69d3cf9fc455de07ae603f
+carried/0015-drm-bridge-synopsys-dw-dp-Add-HDR-static-metadata-su.patch 51b4830608d76bfc08ddd68633ee3cd162250d2b
+carried/0016-drm-bridge-synopsys-dw-dp-Add-BT.2020-colorimetry-su.patch cdcd4ffa63e51ed93d432954a6b2ebb1a72a6ad8
+ours/0017-drm-display-hdmi-state-helper-Force-a-modeset-on-Col.patch 0038b5b6acb92b798e21403b098610e7d5a58a12
+ours/0018-drm-rockchip-dw_hdmi_qp-Use-the-BT.2020-matrix-for-B.patch c7af00e2bdf405459460626a8d70dbb12232256d
+ours/0019-drm-bridge-synopsys-dw-dp-Signal-BT.2020-colorimetry.patch c8201140f4aafac7717c89cda4c155955c7dafc4
+ours/0020-usb-typec-tcpm-Don-t-cut-a-pending-state-delay-short.patch 4a100642f52fdc6ebdb6766a14b8dd0636ee3f4c
+ours/0021-arm64-dts-rockchip-Mark-the-Orange-Pi-5-5B-Type-C-po.patch ad1cb76f1597f65f68f7974085e482e82e6878fd
+ours/0022-usb-typec-fusb302-Toggle-with-the-default-Rp-current.patch c158f2b784f1104bfaf28bd0d8189b0989d1625d
+ours/0023-drm-rockchip-dw_dp-Attach-the-color-format-connector.patch 259e5a61215dc90c8cdd9269e60abff879d81eeb
+ours/0024-drm-rockchip-vop2-Add-limited-range-RGB-output.patch 06f131f4743d0583f3b7c930d0c18bfdfb1c9e25
+ours/0025-drm-rockchip-dw_hdmi_qp-Send-limited-range-RGB-and-a.patch 705ced04aeb6abbfa06b7f8a70d4cdb86ee87c02
+ours/0026-drm-rockchip-dw_hdmi_qp-Encode-SD-and-BT.601-YCbCr-w.patch 36a9e65b0104177b2ba0c0f61b29c65b99e07d24
+ours/0027-dt-bindings-display-vop2-Add-the-RK3588-DCLK-sources.patch dfeae4d21233111ef3d5da207ee24a86b39349a2
+ours/0028-drm-rockchip-vop2-Plan-the-video-PLL-in-a-private-at.patch 8e0c772386ea0297b78d936514f09a6e6a89d11c
+ours/0029-clk-rockchip-rk3588-Don-t-reparent-the-VOP-DCLK-sour.patch cf21c725a61a1d03bf83e9dfa03447b29c3c2e2b
+ours/0030-arm64-dts-rockchip-Add-the-VOP-DCLK-sources-and-thei.patch bb1a61971a2698299b5044a8db8889e58854b1c6

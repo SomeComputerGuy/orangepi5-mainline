@@ -1,0 +1,83 @@
+From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
+From: Arun Iyengar <aiyengar1990@gmail.com>
+Date: Tue, 3 Nov 2026 05:34:27 +0000
+Subject: [PATCH] drm/rockchip: dw_hdmi_qp: Send limited range RGB and attach
+ "Broadcast RGB"
+
+The HDMI state helper sets conn_state->hdmi.is_limited_range for RGB on
+CTA modes (and from "Broadcast RGB" when a connector has it) and the AVI
+InfoFrame signals that range, but the driver never passed it on, so the
+VOP2 sent full range RGB in every case.
+
+On RK3588 let the VOP2 compress RGB to the limited range whenever the
+helper chose it, and attach the "Broadcast RGB" property so that
+userspace can force full or limited range as on other HDMI drivers.
+RK3576 keeps its behaviour: its HDMI video port does post-processing in
+a different block that the VOP2 driver does not program yet.
+
+Assisted-by: LLM
+Signed-off-by: Arun Iyengar <aiyengar1990@gmail.com>
+---
+ drivers/gpu/drm/rockchip/dw_hdmi_qp-rockchip.c | 14 ++++++++++++++
+ 1 file changed, 14 insertions(+)
+
+diff --git a/drivers/gpu/drm/rockchip/dw_hdmi_qp-rockchip.c b/drivers/gpu/drm/rockchip/dw_hdmi_qp-rockchip.c
+index 09a8ab58f371..e957799d901e 100644
+--- a/drivers/gpu/drm/rockchip/dw_hdmi_qp-rockchip.c
++++ b/drivers/gpu/drm/rockchip/dw_hdmi_qp-rockchip.c
+@@ -111,6 +111,7 @@ struct rockchip_hdmi_qp {
+ 	int port_id;
+ 	const struct rockchip_hdmi_qp_ctrl_ops *ctrl_ops;
+ 	unsigned int phy_bpc;
++	bool limited_range_rgb;
+ };
+ 
+ struct rockchip_hdmi_qp_ctrl_ops {
+@@ -330,6 +331,9 @@ dw_hdmi_qp_rockchip_encoder_atomic_check(struct drm_encoder *encoder,
+ 	s->output_type = DRM_MODE_CONNECTOR_HDMIA;
+ 	s->output_bpc = conn_state->hdmi.output_bpc;
+ 	s->bus_format = ingest_fmt;
++	s->rgb_limited_range = hdmi->limited_range_rgb &&
++			       conn_state->hdmi.output_format == DRM_OUTPUT_COLOR_FORMAT_RGB444 &&
++			       conn_state->hdmi.is_limited_range;
+ 
+ 	ret = dw_hdmi_qp_rockchip_set_color_space(s, conn_state);
+ 	if (ret) {
+@@ -740,6 +744,8 @@ struct rockchip_hdmi_qp_cfg {
+ 	u8 min_frl_lanes;
+ 	u8 max_frl_rate_per_lane;
+ 	u8 max_frl_lanes;
++	/* The VOP can compress RGB to the limited quantization range */
++	bool limited_range_rgb;
+ };
+ 
+ static const struct rockchip_hdmi_qp_cfg rk3576_hdmi_cfg = {
+@@ -761,6 +767,7 @@ static const struct rockchip_hdmi_qp_cfg rk3588_hdmi_cfg = {
+ 	.phy_ops = &rk3588_hdmi_phy_ops,
+ 	/* FIXME: Screen flickering above 10 Gbps/lane, cap until root-caused */
+ 	.max_frl_rate_per_lane = 10,
++	.limited_range_rgb = true,
+ };
+ 
+ static const struct of_device_id dw_hdmi_qp_rockchip_dt_ids[] = {
+@@ -810,6 +817,7 @@ static int dw_hdmi_qp_rockchip_bind(struct device *dev, struct device *master,
+ 		return dev_err_probe(dev, -ENODEV, "Missing platform ctrl ops\n");
+ 
+ 	hdmi->ctrl_ops = cfg->ctrl_ops;
++	hdmi->limited_range_rgb = cfg->limited_range_rgb;
+ 	hdmi->dev = dev;
+ 	hdmi->port_id = -ENODEV;
+ 
+@@ -932,6 +940,12 @@ static int dw_hdmi_qp_rockchip_bind(struct device *dev, struct device *master,
+ 
+ 	drm_connector_attach_colorspace_property(connector);
+ 
++	if (hdmi->limited_range_rgb) {
++		ret = drm_connector_attach_broadcast_rgb_property(connector);
++		if (ret)
++			return ret;
++	}
++
+ 	platform_set_drvdata(pdev, hdmi);
+ 
+ 	return 0;

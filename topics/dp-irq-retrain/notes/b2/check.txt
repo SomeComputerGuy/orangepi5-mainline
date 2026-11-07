@@ -1,0 +1,31 @@
+FAIL stock-restored-D1: last uname -v: #15 SMP PREEMPT_DYNAMIC Wed Nov  4 20:25:22 UTC 2026; lock released: True
+PASS boot-D1: #16dpb1 SMP warn=0 usb_missing empty
+FAIL stock-restored-D2: last uname -v: #15 SMP PREEMPT_DYNAMIC Wed Nov  4 20:25:22 UTC 2026; lock released: True
+PASS boot-D2: #16dpb1 SMP warn=0 usb_missing empty
+FAIL stock-restored-D3: last uname -v: #15 SMP PREEMPT_DYNAMIC Wed Nov  4 20:25:22 UTC 2026; lock released: True
+PASS boot-D3: #16dpb1 SMP warn=0 usb_missing empty
+FAIL stock-restored-D4: last uname -v: #15 SMP PREEMPT_DYNAMIC Wed Nov  4 20:25:22 UTC 2026; lock released: True
+PASS boot-D4: #16dpb1 SMP warn=0 usb_missing empty
+FAIL stock-restored-D5: last uname -v: #15 SMP PREEMPT_DYNAMIC Wed Nov  4 20:25:22 UTC 2026; lock released: True
+PASS boot-D5: #16dpb1 SMP warn=0 usb_missing empty
+FAIL stock-restored-D6: last uname -v: #15 SMP PREEMPT_DYNAMIC Wed Nov  4 20:25:22 UTC 2026; lock released: True
+PASS boot-D6: #16dpb1 SMP warn=0 usb_missing empty
+FAIL stock-restored-D7: last uname -v: #15 SMP PREEMPT_DYNAMIC Wed Nov  4 20:25:22 UTC 2026; lock released: True
+PASS boot-D7: #16dpb1 SMP warn=0 usb_missing empty
+PASS valid-verdicts-gate0(old order): 700 of 700 rows (need >= 600)
+INFO black-gate0(old order): 0 of 700 valid; persistent non-GOOD 0; HDMI non-GOOD 0; failed commits 0
+INFO fifo-overflow-gate0(old order): iterations with an overflow 283 (in the client's modeset 0)
+INFO log-gate0(old order): error lines 0, types []
+INFO black-with-overflow-gate0(old order): 0 of 0 black iterations had an overflow in the client's modeset
+PASS valid-verdicts-gate1(fix): 700 of 700 rows (need >= 600)
+INFO black-gate1(fix): 0 of 700 valid; persistent non-GOOD 0; HDMI non-GOOD 0; failed commits 0
+INFO fifo-overflow-gate1(fix): iterations with an overflow 0 (in the client's modeset 0)
+INFO log-gate1(fix): error lines 0, types []
+INFO black-with-overflow-gate1(fix): 0 of 0 black iterations had an overflow in the client's modeset
+PASS iterations: 1400 rows (need >= 1300)
+PASS kernel-warnings: 0 WARNING/BUG/Oops/Call trace lines in kmsg-all*.txt (need 0)
+PASS no-new-errors: gate1-only error types: none (gate0 [])
+PASS fifo-overflow-gate1: 0 gate=1 iterations with a video FIFO overflow (need 0)
+PASS commits: failed commits gate1 0 vs gate0 0
+INFO black-rate: gate1 0/700, reference 2/1060 (gate0 0/700 + dp-black-1 2/360), one-sided Fisher p=0.3626 (lower but p >= 0.05: INCONCLUSIVE)
+OVERALL FAIL

@@ -1,0 +1,88 @@
+From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
+From: Arun Iyengar <aiyengar1990@gmail.com>
+Date: Tue, 3 Nov 2026 01:01:16 +0000
+Subject: [PATCH] media: rockchip: rga: Register the video device after binding
+ the cores
+
+rga_bind() registers the video device before it binds the cores. When
+component_bind_all() fails, the error path frees the registered video
+device with video_device_release(). The freed video device is still on
+the devices_kset list and on dpm_list, and still in sysfs, in the cdev
+table and in video_devices[], so every later walk of those lists or
+lookup of the node uses freed memory.
+
+On an RK3588 boot where the IOMMUs probe late, binding the second RGA3
+core failed with -ENODEV ("Couldn't get domain of the first core") and
+took this path. A video device registered after that got the same
+2 KiB slab object back, so the object went into both lists a second
+time while the lists were still linked through the stale entry. When
+the IOMMU of the second core probed, device_link_add() moved that core,
+the entry just before the stale one, to the tail of the lists, and
+both list checks fired:
+
+  list_del corruption. next->prev should be ffff00010144e818,
+    but was ffff00010144a818. (next=ffff000107bc00c0)
+  list_del corruption. next->prev should be ffff00010144e900,
+    but was ffff00010144a900. (next=ffff000107bc01a8)
+   devices_kset_move_last / device_pm_move_last
+   device_reorder_to_tail
+   device_link_add
+   rk_iommu_probe_device
+
+The "next" entries are kobj.entry and power.entry of a struct
+video_device, which keeps its struct device at offset 0xb8.
+
+Register the video device last, after all cores are bound, the way the
+driver did before it was split into a master and cores. Userspace also
+cannot open the node before the cores are bound and the parallel job
+limit is set. If the registration fails, unbind the cores again.
+
+Fixes: 947bd9f26316 ("media: rockchip: rga: move video device to the master")
+Assisted-by: LLM
+Signed-off-by: Arun Iyengar <aiyengar1990@gmail.com>
+---
+ drivers/media/platform/rockchip/rga/rga.c | 19 +++++++++++++------
+ 1 file changed, 13 insertions(+), 6 deletions(-)
+
+diff --git a/drivers/media/platform/rockchip/rga/rga.c b/drivers/media/platform/rockchip/rga/rga.c
+index bfda077a0f44..91642fd7d79d 100644
+--- a/drivers/media/platform/rockchip/rga/rga.c
++++ b/drivers/media/platform/rockchip/rga/rga.c
+@@ -1132,12 +1132,6 @@ static int rga_bind(struct device *dev)
+ 		goto rel_vdev;
+ 	}
+ 
+-	ret = video_register_device(vfd, VFL_TYPE_VIDEO, -1);
+-	if (ret) {
+-		v4l2_err(&rga->v4l2_dev, "Failed to register video device\n");
+-		goto rel_m2m;
+-	}
+-
+ 	ret = component_bind_all(dev, rga);
+ 	if (ret) {
+ 		dev_err(dev, "component bind failed\n");
+@@ -1147,11 +1141,24 @@ static int rga_bind(struct device *dev)
+ 	/* after binding all cores num_cores has the proper number of cores */
+ 	v4l2_m2m_set_max_parallel_jobs(rga->m2m_dev, rga->num_cores);
+ 
++	/*
++	 * Register the video device last, once all cores are bound: a
++	 * registered video device must not be freed with
++	 * video_device_release().
++	 */
++	ret = video_register_device(vfd, VFL_TYPE_VIDEO, -1);
++	if (ret) {
++		v4l2_err(&rga->v4l2_dev, "Failed to register video device\n");
++		goto unbind_cores;
++	}
++
+ 	v4l2_info(&rga->v4l2_dev, "Registered %s as /dev/%s\n",
+ 		  vfd->name, video_device_node_name(vfd));
+ 
+ 	return 0;
+ 
++unbind_cores:
++	component_unbind_all(dev, NULL);
+ rel_m2m:
+ 	v4l2_m2m_release(rga->m2m_dev);
+ rel_vdev:

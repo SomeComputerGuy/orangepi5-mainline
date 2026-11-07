@@ -1,0 +1,56 @@
+From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
+From: Igor Paunovic <royalnet026@gmail.com>
+Date: Wed, 5 Aug 2026 17:33:55 +0200
+Subject: [PATCH] drm/rockchip: dw_hdmi_qp: attach the HDMI Colorspace
+ connector property
+
+The RK3588 HDMI QP output never exposes the "Colorspace" connector
+property, so userspace has no way to request BT.2020 colorimetry.
+
+Everything needed to signal it is already in place. The connector comes
+from drm_bridge_connector_init(), which calls drmm_connector_hdmi_init()
+and attaches "max bpc", "HDR_OUTPUT_METADATA" and the output color
+format, and the HDMI state helper feeds conn_state->colorspace into the
+AVI infoframe colorimetry bits via hdmi_generate_avi_infoframe() and
+drm_hdmi_avi_infoframe_colorimetry(). dw-hdmi-qp then emits the
+infoframe through its hdmi_write_avi_infoframe hook. Only the property
+itself is missing, so conn_state->colorspace stays at its default and
+the AVI infoframe always reports "no colorimetry data".
+
+The user-visible effect is that HDR is unavailable on every RK3588 HDMI
+output. KWin (Plasma 6.x) requires "Colorspace" alongside
+"HDR_OUTPUT_METADATA" and "max bpc" before it treats an output as
+wide-gamut capable, so it never offers the HDR toggle.
+
+Create and attach the property right after the bridge connector is
+initialised, as vc4_hdmi already does. Passing 0 to
+drm_mode_create_hdmi_colorspace_property() selects the full HDMI
+colorspace set defined by the core.
+
+Tested on an Orange Pi 5 Plus driving a Samsung Odyssey G70B: KWin now
+offers the HDR toggle, the connector property switches to BT2020_RGB
+once HDR is enabled, and the output runs 4K@144 at 10 bpc.
+
+Signed-off-by: Igor Paunovic <royalnet026@gmail.com>
+---
+ drivers/gpu/drm/rockchip/dw_hdmi_qp-rockchip.c | 7 +++++++
+ 1 file changed, 7 insertions(+)
+
+diff --git a/drivers/gpu/drm/rockchip/dw_hdmi_qp-rockchip.c b/drivers/gpu/drm/rockchip/dw_hdmi_qp-rockchip.c
+index 2864856a5e30..cec084bc683c 100644
+--- a/drivers/gpu/drm/rockchip/dw_hdmi_qp-rockchip.c
++++ b/drivers/gpu/drm/rockchip/dw_hdmi_qp-rockchip.c
+@@ -889,6 +889,13 @@ static int dw_hdmi_qp_rockchip_bind(struct device *dev, struct device *master,
+ 		return dev_err_probe(dev, PTR_ERR(connector),
+ 				     "Failed to init bridge connector\n");
+ 
++	/* Passing 0 selects the full HDMI colorspace set defined by the core. */
++	ret = drm_mode_create_hdmi_colorspace_property(connector, 0);
++	if (ret)
++		return ret;
++
++	drm_connector_attach_colorspace_property(connector);
++
+ 	platform_set_drvdata(pdev, hdmi);
+ 
+ 	return 0;

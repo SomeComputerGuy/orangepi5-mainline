@@ -1,0 +1,176 @@
+From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
+From: Igor Paunovic <royalnet026@gmail.com>
+Date: Sat, 8 Aug 2026 11:57:23 +0200
+Subject: [PATCH] drm/bridge: synopsys: dw-dp: Add HDR static metadata support
+
+Send an HDR Metadata InfoFrame SDP (DP 1.4a, Table 2-100 and
+Table 2-101) when the connector state carries HDR output metadata, and
+attach the HDR_OUTPUT_METADATA property in the Rockchip glue so
+userspace can set it.
+
+The infoframe is built with drm_hdmi_infoframe_set_hdr_metadata() and
+packed with drm_dp_hdr_metadata_infoframe_sdp_pack(), then written
+into a free slot of the SDP register bank with vertical interval
+transmission, so the controller resends it once per frame during the
+vertical blanking period. The SDP is sent at the end of
+dw_dp_video_enable(), next to the existing VSC SDP; the connector
+state is passed down from atomic_enable(), which already looks it up.
+
+The allocated slot is tracked in hdr_sdp_nr and released in
+atomic_disable(), following the VSC SDP pattern exactly:
+atomic_disable() only clears tracked slots, so an untracked slot would
+leak on every enable/disable cycle until dw_dp_send_sdp() runs out of
+free slots and fails with -EBUSY for every SDP, including VSC and
+audio.
+
+A metadata change on a live stream (HDR on/off toggle, different
+mastering display data) forces a full modeset: atomic_check() compares
+the old and new connector state with
+drm_connector_atomic_hdr_metadata_equal() and sets
+crtc_state->mode_changed, the same approach as dw-hdmi. The resulting
+disable/enable cycle then drops or (re)sends the SDP.
+
+Commits without HDR metadata are unaffected: with a NULL metadata blob
+in both old and new connector state,
+drm_connector_atomic_hdr_metadata_equal() treats them as equal, no
+modeset is forced, and dw_dp_video_enable() skips the SDP. This keeps
+plain SDR commits a no-op even for compositors that write a NULL blob
+on every atomic modeset once the property exists (KWin does).
+
+Signed-off-by: Igor Paunovic <royalnet026@gmail.com>
+---
+ drivers/gpu/drm/bridge/synopsys/dw-dp.c   | 44 +++++++++++++++++++++--
+ drivers/gpu/drm/rockchip/dw_dp-rockchip.c |  2 ++
+ 2 files changed, 44 insertions(+), 2 deletions(-)
+
+diff --git a/drivers/gpu/drm/bridge/synopsys/dw-dp.c b/drivers/gpu/drm/bridge/synopsys/dw-dp.c
+index 2ca1cafa2a99..48e150a79887 100644
+--- a/drivers/gpu/drm/bridge/synopsys/dw-dp.c
++++ b/drivers/gpu/drm/bridge/synopsys/dw-dp.c
+@@ -24,6 +24,7 @@
+ #include <drm/drm_bridge_connector.h>
+ #include <drm/display/drm_dp_helper.h>
+ #include <drm/display/drm_hdmi_audio_helper.h>
++#include <drm/display/drm_hdmi_helper.h>
+ #include <drm/drm_edid.h>
+ #include <drm/drm_of.h>
+ #include <drm/drm_print.h>
+@@ -384,6 +385,7 @@ struct dw_dp {
+ 	struct drm_bridge *next_bridge;
+ 
+ 	int vsc_sdp_nr;
++	int hdr_sdp_nr;
+ 	DECLARE_BITMAP(sdp_reg_bank, SDP_REG_BANK_SIZE);
+ };
+ 
+@@ -1272,6 +1274,28 @@ static int dw_dp_send_vsc_sdp(struct dw_dp *dp)
+ 	return dw_dp_send_sdp(dp, &sdp);
+ }
+ 
++static int dw_dp_send_hdr_metadata_sdp(struct dw_dp *dp,
++				       const struct drm_connector_state *conn_state)
++{
++	struct hdmi_drm_infoframe frame;
++	struct dw_dp_sdp sdp = {};
++	ssize_t len;
++	int ret;
++
++	ret = drm_hdmi_infoframe_set_hdr_metadata(&frame, conn_state);
++	if (ret)
++		return ret;
++
++	len = drm_dp_hdr_metadata_infoframe_sdp_pack(dp->bridge.dev, &frame,
++						     &sdp.base, sizeof(sdp.base));
++	if (len < 0)
++		return len;
++
++	sdp.flags = DW_DP_SDP_VERTICAL_INTERVAL;
++
++	return dw_dp_send_sdp(dp, &sdp);
++}
++
+ static int dw_dp_video_set_pixel_mode(struct dw_dp *dp)
+ {
+ 	switch (dp->pixel_mode) {
+@@ -1366,7 +1390,8 @@ static void dw_dp_video_disable(struct dw_dp *dp)
+ 			   FIELD_PREP(VIDEO_STREAM_ENABLE, 0));
+ }
+ 
+-static int dw_dp_video_enable(struct dw_dp *dp)
++static int dw_dp_video_enable(struct dw_dp *dp,
++			      const struct drm_connector_state *conn_state)
+ {
+ 	struct dw_dp_link *link = &dp->link;
+ 	struct dw_dp_bridge_state *state;
+@@ -1541,6 +1566,9 @@ static int dw_dp_video_enable(struct dw_dp *dp)
+ 	if (dw_dp_video_need_vsc_sdp(dp))
+ 		dp->vsc_sdp_nr = dw_dp_send_vsc_sdp(dp);
+ 
++	if (conn_state->hdr_output_metadata)
++		dp->hdr_sdp_nr = dw_dp_send_hdr_metadata_sdp(dp, conn_state);
++
+ 	return 0;
+ }
+ 
+@@ -1732,6 +1760,7 @@ static int dw_dp_bridge_atomic_check(struct drm_bridge *bridge,
+ 	struct dw_dp *dp = bridge_to_dp(bridge);
+ 	struct dw_dp_bridge_state *state;
+ 	const struct dw_dp_output_format *fmt;
++	struct drm_connector_state *old_conn_state;
+ 	struct drm_display_mode *mode;
+ 	int min_hbp = 16;
+ 	int min_hsync = 9;
+@@ -1751,6 +1780,11 @@ static int dw_dp_bridge_atomic_check(struct drm_bridge *bridge,
+ 	state->bpc = fmt->bpc;
+ 	state->bpp = fmt->bpp;
+ 
++	old_conn_state = drm_atomic_get_old_connector_state(conn_state->state,
++							    conn_state->connector);
++	if (!drm_connector_atomic_hdr_metadata_equal(old_conn_state, conn_state))
++		crtc_state->mode_changed = true;
++
+ 	if ((adjusted_mode->hsync_start - adjusted_mode->hdisplay) & 0x1) {
+ 		adjusted_mode->hsync_start += 1;
+ 		dev_warn(dp->dev, "hfp is not 2 pixeel aligned, fixup to aligned hfp\n");
+@@ -2206,7 +2240,7 @@ static void dw_dp_bridge_atomic_enable(struct drm_bridge *bridge,
+ 
+ 		dw_dp_configure_protocol_converter(dp, connector);
+ 
+-		ret = dw_dp_video_enable(dp);
++		ret = dw_dp_video_enable(dp, conn_state);
+ 		if (ret < 0) {
+ 			dev_err(dp->dev, "failed to enable video: %d\n", ret);
+ 			return;
+@@ -2259,6 +2293,11 @@ static void dw_dp_bridge_atomic_disable(struct drm_bridge *bridge,
+ 		dp->vsc_sdp_nr = -1;
+ 	}
+ 
++	if (dp->hdr_sdp_nr >= 0) {
++		dw_dp_clear_sdp(dp, dp->hdr_sdp_nr);
++		dp->hdr_sdp_nr = -1;
++	}
++
+ 	dw_dp_reset(dp);
+ 	pm_runtime_put_autosuspend(dp->dev);
+ }
+@@ -2988,6 +3027,7 @@ int dw_dp_probe(struct dw_dp *dp)
+ 		return ret;
+ 
+ 	dp->vsc_sdp_nr = -1;
++	dp->hdr_sdp_nr = -1;
+ 	dp->audio_interface = DW_DP_AUDIO_UNUSED;
+ 	dp->audio_sdp_nr = -1;
+ 
+diff --git a/drivers/gpu/drm/rockchip/dw_dp-rockchip.c b/drivers/gpu/drm/rockchip/dw_dp-rockchip.c
+index d9aa8b31a0dd..d01d44e5818d 100644
+--- a/drivers/gpu/drm/rockchip/dw_dp-rockchip.c
++++ b/drivers/gpu/drm/rockchip/dw_dp-rockchip.c
+@@ -198,6 +198,8 @@ static int dw_dp_rockchip_bind(struct device *dev, struct device *master, void *
+ 		return ret;
+ 	}
+ 
++	drm_connector_attach_hdr_output_metadata_property(connector);
++
+ 	return 0;
+ }
+ 

@@ -1,0 +1,35 @@
+From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
+From: Arun Iyengar <aiyengar1990@gmail.com>
+Date: Tue, 3 Nov 2026 01:01:16 +0000
+Subject: [PATCH] media: rockchip: rga: Print the version of the core being
+ bound
+
+rga_core_bind() reads the version of the core into a local variable,
+but the "HW Version" message prints rga->version. For the first core
+that field is not set yet, so the message shows 0x00.00:
+
+  rockchip-rga rockchip,rk3588-rga3: HW Version: 0x00.00
+  rockchip-rga rockchip,rk3588-rga3: bound fdb60000.rga
+
+Print the version that was just read.
+
+Fixes: 88ac1cdf8235 ("media: rockchip: rga: bind all cores to the master")
+Assisted-by: LLM
+Signed-off-by: Arun Iyengar <aiyengar1990@gmail.com>
+---
+ drivers/media/platform/rockchip/rga/rga.c | 2 +-
+ 1 file changed, 1 insertion(+), 1 deletion(-)
+
+diff --git a/drivers/media/platform/rockchip/rga/rga.c b/drivers/media/platform/rockchip/rga/rga.c
+index b798e1e692c2..7dacbd85d853 100644
+--- a/drivers/media/platform/rockchip/rga/rga.c
++++ b/drivers/media/platform/rockchip/rga/rga.c
+@@ -884,7 +884,7 @@ static int rga_core_bind(struct device *dev, struct device *master, void *data)
+ 	version = rga->hw->get_version(core);
+ 
+ 	v4l2_info(&rga->v4l2_dev, "HW Version: 0x%02x.%02x\n",
+-		  rga->version.major, rga->version.minor);
++		  version.major, version.minor);
+ 
+ 	if (rga->num_cores) {
+ 		struct iommu_domain *domain;

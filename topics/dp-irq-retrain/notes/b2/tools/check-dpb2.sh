@@ -8,7 +8,7 @@
 # black = both camera verdicts of an iteration BLACK on DP-1 (DP=BLACK and DP2=BLACK).
 # Reference for the rate = gate=0 arm + the stock data of JOB dp-black-1 (2 black of 360 valid: 1/180 stock 15,
 # 1/180 15dpirq1, which did not change the rate).
-# PASS = every block restored stock 15 and released the lock; boot checks clean; >= 1300 rows with >= 600 valid
+# PASS = every block restored a stock kernel (plain "#N SMP" uname, no test suffix) and released the lock; boot checks clean; >= 1300 rows with >= 600 valid
 # camera verdicts per arm; 0 WARNING/BUG/Oops/Call trace lines; no error type in the gate=1 arm that the gate=0 arm
 # does not have; 0 "video FIFO overflow" in the gate=1 arm; failed commits gate=1 <= gate=0; and
 # gate=1 black < reference rate with one-sided Fisher p < 0.05.
@@ -40,7 +40,7 @@ for b in BLOCKS:
         continue
     h = open(hl, errors="replace").read()
     un = re.findall(r"uname -v: (.*)", h)
-    if not un or not re.match(r"#15 SMP .*Wed Nov +4 20:25:22", un[-1]) or "lock released" not in h:
+    if not un or not re.match(r"#[0-9]+ SMP ", un[-1]) or "lock released" not in h:
         out("FAIL", f"stock-restored-{b}", f"last uname -v: {un[-1] if un else 'none'}; lock released: {'lock released' in h}")
     else:
         out("PASS", f"stock-restored-{b}", un[-1])

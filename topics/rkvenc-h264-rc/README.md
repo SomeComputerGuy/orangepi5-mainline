@@ -2,7 +2,7 @@
 
 - Workspace branch: `k15-vencrc` (exported 2026-11-07)
 - Kernel fork branch: `opi5/rkvenc-h264-rc` (see PUBLISH.md)
-- Sits on: `image` (base commit `bb1a61971a26`)
+- Sits on: `image-k15` (base commit `bb1a61971a26`)
 - Hardware test: tested on the board with GStreamer v4l2slh264enc, 1080p and 4K clips at 2-40 Mbit/s: bitrate error from -2.8..-9.4% to -0.6..+2.5%, PSNR-Y +0.7 to +3.6 dB at 1080p
 - Next upstream step: in the 7.3.0+opi5.16 release candidate (under test); send to linux-media with the encoder series
 - Patches: 4 = 4 ours, 0 carried from others, 0 local-only

@@ -63,7 +63,7 @@ restore() { # stock 15; keeps the lock and stops if the check fails
 	log "restore stock 15"
 	NOLOCK=1 timeout 900 bash "$W/k14/install-check.sh" > "$TMP/restore.log" 2>&1
 	head -1 "$W/k14/boot.txt"
-	if grep -q "Wed Nov  4 20:25:22" "$W/k14/boot.txt" && grep -q "^usb_missing=$" "$W/k14/boot.txt"; then
+	if grep -q "Sat Nov  7 04:32:10" "$W/k14/boot.txt" && grep -q "^usb_missing=$" "$W/k14/boot.txt"; then
 		release
 	else
 		end "BLOCKED stock restore check failed (lock kept), see $TMP/restore.log and $W/k14/boot.txt"
