@@ -1,11 +1,12 @@
 # Measured results
 
-Sections 1-10 summarise what was measured on the Orange Pi 5 test board on 2026-10-29 and in the
-night to 2026-10-30 (kernel builds 2 and 3), with the command that produced each number, where it
-ran, and the kernel it ran on. Section 11 (suspend) and section 12 (kernel builds 7 to 11,
-2026-10-31 to 2026-11-01) carry the later results. Only numbers that were written down at the time
-are given here; where a source is ambiguous it says so. The detailed notes (more tables, analysis,
-raw logs) are linked in each section.
+Sections 1-10 are the first measurements on the Orange Pi 5 test board, made during development
+on an early image kernel (in places with a topic's modules dropped in), with the command that
+produced each number and where it ran. Section 11 covers suspend and section 12 the regression run
+of the current image kernel (7.3.0+opi5.15). Every fix shown below as verified is in the current
+image kernel. Only numbers that were written down at the time are given here; where a source is
+ambiguous it says so. The detailed notes (more tables, analysis, raw logs) are linked in each
+section.
 
 How to re-run any of this: [`TESTING.md`](TESTING.md). The clips: [`TEST-MEDIA.md`](TEST-MEDIA.md).
 
@@ -14,29 +15,16 @@ How to re-run any of this: [`TESTING.md`](TESTING.md). The clips: [`TEST-MEDIA.m
 - Board: Orange Pi 5 (RK3588S, 8 GB), booting from an M.2 SATA SSD (`rk3588s-orangepi-5-sata` DTB).
   Gigabit Ethernet to the host.
 - Displays: a TCL TV on HDMI0 (3840x2160 at 60 Hz TMDS/FRL and 120 Hz FRL) and a Dell P2415Q on the
-  USB-C port through a USB-C hub with a DP-to-HDMI converter (2 lanes HBR2, 3840x2160 at 30 Hz).
+  USB-C port, first through a USB-C hub with a DP-to-HDMI converter (2 lanes HBR2, 3840x2160 at
+  30 Hz), later with a native 4-lane DP cable.
 - Software: Ubuntu 26.10 arm64 server image built from this repository, GStreamer 1.28.x
   (v4l2codecs, kmssink, waylandsink under weston), the board's Ubuntu FFmpeg as the software
   reference decoder.
-
-### Kernels
-
-| Name | What | Used for |
-|---|---|---|
-| **build 3** | `7.3.0-opi5 #3 SMP PREEMPT_DYNAMIC Thu Oct 29 20:03:17 UTC 2026`, package `7.3.0-3`, `patches/linux` at 292 patches. Installed and validated by `tests/k3-validation/run-k3.sh`. Its DTB predates 1005 (DP alt mode), so the board ran it with the DTB built from the integration branch with 1005 | almost everything below |
-| build 3 + drop-in modules | build 3 with signed modules from a topic branch in `/lib/modules/7.3.0-opi5/updates/opi5-<topic>/` (and, for audio and CCU, a DTB built from that branch) | the per-topic verifications (VOP2, DP, audio, codec fixes, CCU) |
-| build 2 | `7.3.0-opi5 #2`, the build with the GPU/NPU patches 0501-0514 (Oct 29 17:38 UTC) | GPU/NPU and suspend |
-| builds 4-8 | `patches/linux` at 309 to 337 patches (2026-10-30/31). Build 5 ran the USB3 port and tcpm tests, build 6 the first HDMI display matrix, build 7 is in the 2026-10-31 desktop image, build 8 (337 patches, tag `image-7.3.0-8`) the DP dock and HDMI fixes of 2026-10-31 | sections 11-12 and the topic notes |
-| builds 9-11 | 2026-11-01: build 9 (370 patches, CCU and the 19xx fixes; built, never installed), build 10 (387 patches, + carried Armbian/PCIe fixes), **build 11 (`7.3.0-11`, 422 patches, tag `image-7.3.0-11`, the current image kernel)**. What each added: [`image-kernel/MANIFEST.md`](image-kernel/MANIFEST.md) | section 12 |
-
-The current image kernel (build 11) contains every fix listed below as verified, including the
-rkvdec CCU work (`patches/linux/2001-2017`, in the image since build 9).
 
 ## 1. Codec sweep: decoders
 
 - Command (board): `nohup sudo bash ~/codecsweep/codecsweep.sh > ~/codecsweep/run.log 2>&1 &`
   ([`tests/codec-sweep/`](../tests/codec-sweep/)). Report: `~/codecsweep/report.txt`.
-- Kernel: build 3. Run 2026-10-29 20:50:44, directly after the mode sweep.
 - This run used the first version of `codecsweep.sh`. Its decoder part is the same as the
   published, corrected script (which only adds a PSNR column when a test isn't bit-exact); its
   encoder and JPEG PSNR numbers had measurement bugs, see section 2.
@@ -76,8 +64,7 @@ reference. Fixed by stack patches 0715 and 0716 (`topics/codec-quality`); with t
 ct2/ct3/ct4 reach 52.9 / 54.5 / 67.5 / 66.7 dB and tcela-8/9/10 reach 63.6 / 56.3 / 63.9 dB average
 PSNR vs FFmpeg (they were rejected before).
 
-Same day, the k3 validation run (`tests/k3-validation/run-k3.sh` on the host, build 3,
-2026-10-29 20:31) checked the `~/demo` YachtRide encodes: rkvdec HEVC 4K120, AV1 1080p120, G1 H.264
+The validation run (`tests/k3-validation/run-k3.sh` on the host) checked the `~/demo` YachtRide encodes: rkvdec HEVC 4K120, AV1 1080p120, G1 H.264
 1080p120 and G1 VP8 1080p120 30/30 bit-exact, G1 MPEG-2 0/30 (as above).
 
 rkvdec H.264 4K is at about 65-68 fps on one core: the hardware is 99 % busy (B-frames 16 ms each).
@@ -93,7 +80,7 @@ The first sweep reported VEPU580 HEVC at ~32 dB, empty PSNR for H.264 and 12.3 d
 were **measurement bugs** in the sweep (1 ms timestamps from a `-r 60 -c copy` remux paired every
 third frame with the wrong source frame; FFmpeg can't probe raw H.264 named `.es`; JPEG buffers
 written out at their padded size). The corrected numbers, decoded to raw frames and compared by
-frame index with `vqcmp.sh` (`vqcmp.sh psnr <stream.es> <src.nv12> <WxH>`, board, build 3 with the
+frame index with `vqcmp.sh` (`vqcmp.sh psnr <stream.es> <src.nv12> <WxH>`, board, with the
 codec-quality modules), 240 frames at 60 fps, QP 26:
 
 | Encoder | 360p avg PSNR | 720p avg PSNR | 1080p avg PSNR |
@@ -120,7 +107,7 @@ complete. Details: [`topics/codec-quality/notes/RESULTS.md`](../topics/codec-qua
 
 - Command (board): `nohup sudo bash ~/modesweep/modesweep.sh > ~/modesweep/run.log 2>&1 &`
   ([`tests/modesweep/`](../tests/modesweep/)). Report: `~/modesweep/report.txt`.
-- Kernel: build 3, before the VOP2 fix. Run 2026-10-29 20:39:50 to 20:50:35.
+- Kernel: an early image kernel, before the VOP2 fix (1301-1302).
 - Every mode of each connector, 4 s with a `modetest` pattern, then the same mode with a
   full-screen NV12 overlay on an Esmart plane; counts VOP `POST_BUF_EMPTY` (underflow) and failures.
   HDMI-A-1 offered 39 modes, DP-1 35 modes.
@@ -134,7 +121,7 @@ itself has not been re-run on a kernel with 1301-1302.
 Note on the count: in the script as it ran, the per-plane format loop read its input from
 `/dev/null` (`done < /dev/null` after the pipe), so it ran no tests. 150 = 39 x 2 + 35 x 2 = 148 mode
 tests plus the 2 dual-display tests. Per-plane formats were therefore not covered by this run. The
-published `tests/modesweep/modesweep.sh` has this fixed (2026-10-30), so a re-run also covers every
+published `tests/modesweep/modesweep.sh` has this fixed, so a re-run also covers every
 format on every plane and reports more than 150 tests. That part has not been run on the board yet.
 
 ## 4. Network streaming (netstress)
@@ -142,11 +129,9 @@ format on every plane and reports more than 150 tests. That part has not been ru
 - Commands: host `python3 -I tests/netstress/rangeserver.py "$OPI5_HOST_IP" 8099 <media dir>`;
   board `bash ~/netstress/netstress.sh http://$OPI5_HOST_IP:8099 30` (30 s per case)
   ([`tests/netstress/`](../tests/netstress/)). Report: `~/netstress/report.txt`.
-- Kernel: build 3 (from the report header; the report doesn't list which drop-in modules were
-  installed at the time). Runs 2026-10-29 23:33 and 23:38-23:41.
   Decoding on rkvdec (`v4l2slvideo6h264dec`, `v4l2slh265dec`), shown full-screen through weston.
 
-Raw line rate (k3 validation, `run-k3.sh`, a TCP throughput helper on host and board): board to host
+Raw line rate (validation run, `run-k3.sh`, a TCP throughput helper on host and board): board to host
 941 Mbit/s, host to board 943 Mbit/s.
 
 | Case | Frames (30 s) | Network | NIC errors | CPU (8 cores) | VOP underflows |
@@ -176,8 +161,7 @@ both ports) and 1302 (report `POST_BUF_EMPTY` at most once per frame).
 - Tools (board): `tests/vop2-underflow/` (`planetest.c`, `rc.sh <label> <planetest args>` for the
   atomic plane tests, `vm.sh <label> <hdmi mode> <dp mode|-> <load 0|1> <secs>` for the kmssink
   matrix). The per-row arguments were not recorded beyond the case descriptions below.
-- Kernel: build 3 with the fixed module in `updates/opi5-vop2` (it also contained 1101). Boots of
-  22:33, 22:45 and 23:17 on 2026-10-29.
+- Kernel: with the VOP2 fix (1301-1302) as a drop-in module.
 
 planetest, 4K120, 6 s (720 frames), bad frames:
 
@@ -213,7 +197,7 @@ flips run 120/120). Details:
 
 - Tools (board): `tests/dp-smooth/` (`opi5-play`, `flipmeasure.sh <tag> <conn> <plane> <clip> 8 [props]`
   + `cadence.py`), clips `~/codecsweep/work/ref_h265_*`, 8 s per run, fps from fpsdisplaysink.
-- Kernel: build 3 (+ `updates/opi5-dp-smooth` for the retrain fix, boot of 22:23).
+- Kernel: with the retrain fix as a drop-in module (`updates/opi5-dp-smooth`).
 
 | Case | DP (30 Hz) | HDMI (60 Hz) |
 |---|---|---|
@@ -232,9 +216,9 @@ through this 2-lane DP-to-HDMI dongle (HDMI 1.4 input, 300 MHz TMDS). Details:
 
 ## 7. rkvdec CCU: one stream on both decoder cores
 
-**Status: done, in the image kernel since build 9** (`patches/linux/2001-2017`). The numbers below are
+**Status: done, in the image kernel** (`patches/linux/2001-2017`). The numbers below are
 the first measurement, as drop-in modules (`updates/opi5-rkvdec-ccu`) plus a DTB overlay for the CCU
-node on build 3; the finished series also runs VP9 and field/MBAFF H.264 through the CCU, bit-exact
+node; the finished series also runs VP9 and field/MBAFF H.264 through the CCU, bit-exact
 (fluster identical to single-core), and survived the KASAN timeout-recovery stress of
 [`topics/rkvdec-reset/notes/RESULTS.md`](../topics/rkvdec-reset/notes/RESULTS.md).
 
@@ -258,7 +242,7 @@ cores waiting on references (the POC high bits weren't programmed). The finished
 
 ## 8. Audio
 
-- Kernel: build 3 with the DTB and `dw-hdmi-qp.ko` from the audio branch (stack patches 1201-1202).
+- Kernel: with the DTB and `dw-hdmi-qp.ko` from the audio branch (stack patches 1201-1202).
 - Scripts (board): [`tests/audio/`](../tests/audio/): `sudo bash modeswitch-listen.sh` (440 Hz tone on
   HDMI while switching modes), `bash listen-test.sh hdmi|dp|hp|all`, `seq.sh`.
 
@@ -272,7 +256,7 @@ Details: [`topics/audio/notes/RESULTS.md`](../topics/audio/notes/RESULTS.md).
 
 ## 9. GPU and NPU
 
-- Kernel: build 2 (`#2`, Oct 29 17:38 UTC, patches 0501-0514 and the combined DTB), 18:40-18:55.
+- Kernel: with patches 0501-0514 and the combined DTB.
 - Commands (board): weston headless + `glmark2-es2-wayland --off-screen`, `vkmark --winsys headless`,
   NPU `classify.py` with and without `--delegate /usr/lib/teflon/libteflon.so` (MobileNet v1/v2
   224 quant, 30 invokes per image, 3 images). See
@@ -307,68 +291,71 @@ v4l2codecs `fakevideosink` fps on the same clip. Run it with `tests/va-driver/ru
 
 ## 11. Suspend
 
-- First run: kernel build 2, TF-A v2.15.0 with the suspend fix (in SPI NOR), 2026-10-29 19:04-20:40.
-  Freezer, devices, platform and processors test levels passed; real s2idle passed 3/3 with a slow
-  console and seemed to hang on resume 10/10 with a fast console. Deep sleep hit a kernel BUG in
-  `cpufreq_online()` on resume (fixed by 1102) and a dead DP link after resume (fixed by 1101).
-- Root cause of the "hang" (2026-11-01, kernel build 10): the HYM8563 RTC has minute-resolution
-  alarms and the rtc core rounds an alarm **down**, so `rtcwake -s 15` usually armed an alarm in the
-  past; the hardware alarm was never set and the board slept with no wake source. Fixed by
-  `patches/linux/1917` (round such an alarm up to the next minute).
-- Result: **s2idle with an RTC wake-up works: 47/47 cycles** on build 10 + the fix (7 + 20 verbose
-  + 20 quiet; `suspend_stats` success 40, fail 0) and **10/10 on build 11**. After every resume:
-  `rtcwake` rc 0, wake from the hym8563 IRQ, all USB devices back with the same device numbers and
-  SuperSpeed links, HDMI-A-1 and DP-1 connected and enabled, Ethernet ping, SATA reads. Command:
-  `tests/suspend/s2idle-cycles.sh` (it aims the alarm past the next full minute).
-- Deep suspend (`mem`) has **not** been run; the TF-A fixes and an unattended board test are
-  prepared. 1102 is only exercised there and is untested on hardware.
+- First runs: freezer, devices, platform and processors test levels passed. Deep sleep hit a kernel
+  BUG in `cpufreq_online()` on resume (fixed by 1102) and a dead DP link after resume (fixed by
+  1101). TF-A v2.15.0 needs the PHP CRU clock-gate fix (`patches/tf-a`, in SPI NOR).
+- Root cause of the s2idle "hang": the HYM8563 RTC has minute-resolution alarms and the rtc core
+  rounds an alarm **down**, so `rtcwake -s 15` usually armed an alarm in the past; the hardware
+  alarm was never set and the board slept with no wake source. Fixed by `patches/linux/1917`
+  (round such an alarm up to the next minute).
+- Result: **s2idle with an RTC wake-up works** (47/47 cycles when the fix was made; 15/15 in the
+  regression run of the current kernel) and **deep suspend (`mem`) works** (10/10 cycles in that
+  run, resume 3.1 s, 0 kernel warnings). After every resume: `rtcwake` rc 0, wake from the hym8563
+  IRQ, all USB devices back with SuperSpeed links, HDMI-A-1 and DP-1 connected and enabled,
+  Ethernet ping, SATA reads. Command: `tests/suspend/s2idle-cycles.sh` (it aims the alarm past the
+  next full minute). An hours-long soak has not been run.
 - Details: [`topics/suspend/notes/RESULTS.md`](../topics/suspend/notes/RESULTS.md),
   [`topics/suspend-k3/`](../topics/suspend-k3/README.md).
 
-## 12. Later results (2026-10-31 to 2026-11-01, kernel builds 7 to 11)
+## 12. Current image kernel (7.3.0+opi5.15)
 
-Each item links the topic notes that hold the numbers.
+Regression run on the board, plus the results of the fixes it contains. Each item links the topic
+notes that hold the numbers.
 
-- **Kernel 11 boot** (`7.3.0-11`, 2026-11-01): no kernel warnings, SATA root, 3 SuperSpeed USB
-  devices, HDMI-A-1 and DP-1 connected, hdmi0 and dp0 sound cards, RTC hym8563, 0 deferred probes,
-  0 failed systemd units, VOP2 resets present in the DT.
+- **Regression run**: RGA2 and RGA3 copies bit-exact, v4l2-compliance 48/48 on both; HDR on the
+  HDMI TV (1080p60, 2160p60) and the DP monitor (1080p60 to 2160p60, native 4-lane cable) switches
+  SDR/PQ/SDR with the right infoframes; mixed HDR/SDR on two heads 16/16 steps (1080p) and 10/10
+  (4K60) without disturbing the other head; fluster HEVC 146/147, AVC 129/135, FR-EXT 65/69, VP9
+  230/305 (same as before); s2idle 15/15, deep suspend 10/10.
+- **Colour-format matrix** (camera-checked): HDMI 346 of 346 accepted cases good (64 of 410 refused
+  by the driver); native DP 370 of 370 good. Boot check with every expected USB device.
+- **Boot**: SATA root, SuperSpeed USB devices, HDMI-A-1 and DP-1 connected, hdmi0 and dp0 sound
+  cards, RTC hym8563, VOP2 resets present in the DT.
 - **HDMI "No Signal" wedge** after leaving YCbCr 4:2:0: trigger 10/10 and regressions clean with
-  1207-1209 ([`topics/hdmi-wedge`](../topics/hdmi-wedge/README.md)); on kernel 10/11 the carried VOP2
-  DT resets (`0300-122`) are what keeps the 4:2:0 -> RGB sequence clean (runs `vop2rst-A/B`, camera
-  checked, every step GOOD).
+  1207-1209 ([`topics/hdmi-wedge`](../topics/hdmi-wedge/README.md)); the carried VOP2 DT resets
+  (`0300-122`) keep the 4:2:0 -> RGB sequence clean (camera checked, every step GOOD).
 - **VOP2/HDMI clocking** 1211-1215: pixel clock measured from vblank timestamps within ~20 ppm over
   TMDS and FRL modes ([`topics/vop2-hdmi-clk`](../topics/vop2-hdmi-clk/README.md)).
 - **HDMI 4K60 10 bpc over FRL**: correct on the TV with and without 1203 (camera A/B); the GNOME
   greeter at 4K60 10 bpc including blank/wake ([`tests/hdmi-10bpc`](../tests/hdmi-10bpc/README.md)).
 - **HDPTX PHY lane power-down** (2224): on every HDMI blank the lanes are written off before the PHY
-  is released and come back with the picture; 80 GOOD / 0 BLACK camera steps, `lanefail=0` over the
-  kernel 11 s2idle cycles.
+  is released and come back with the picture; 80 GOOD / 0 BLACK camera steps, `lanefail=0` over
+  s2idle cycles.
 - **DP through a DP-to-HDMI dock (PCON)** 1204-1206: 1080p60 / 1440p / 4K30 clean by camera with sink
   CRCs unchanged, GNOME greeter on DP 1440p + HDMI 1080p ([`tests/dp-pcon`](../tests/dp-pcon/README.md)).
 - **USB-C DP alt-mode discovery** (tcpm 0271-0274): 100/100 dock attach cycles reach DP configured,
   0 VDM timeouts ([`topics/tcpm`](../topics/tcpm/README.md)).
+- **USB-C dock, USB side**: USB 2.0 and USB 3 devices behind the dock enumerate after boot and after
+  every s2idle and deep-suspend resume (inno-usb2 PHY fix 2225, role following 2230-2233).
 - **USB3 Type-A port** 1501-1504: a SanDisk Extreme present at boot is moved from 480M to 5000M
   ([`topics/usb3-port`](../topics/usb3-port/README.md)).
 - **rkvdec timeout recovery** 1801-1805: 3178 recoveries on a KASAN kernel, 0 reports, 600/600
   bit-exact after every stress step ([`topics/rkvdec-reset`](../topics/rkvdec-reset/README.md)).
-- **HDMI audio** EINVAL on open (kernel 10) fixed by 0402/0403: `speaker-test` and `aplay` on
-  `plughw:CARD=hdmi0` work on kernel 11 ([`topics/audio`](../topics/audio/README.md)).
-- **HDMI display matrix** (920 camera-checked cases) ran on kernel 6 and the 140-case HDMI subset on
-  kernel 10 with no DDC failure; findings: RGB565 AFBC on Cluster planes at 4K60 and two 4K120
-  plane/format cases underflow (now rejected by 1909/1910, board check pending). The kernel 11
-  rerun and the DP run are pending ([`tests/testmatrix`](../tests/testmatrix/README.md)).
+- **HDMI audio**: the EINVAL on open is fixed by 0402/0403; `speaker-test` and `aplay` on
+  `plughw:CARD=hdmi0` work ([`topics/audio`](../topics/audio/README.md)).
 
 ## Not verified / open
 
-- **USB-C dock, USB side**: on kernel 11 no USB device behind the dock enumerates, USB 2.0 or USB 3
-  (the USB-C port's dwc3 controller never starts; DP alt mode works). Regression from kernel 10, fix in progress.
-- **Deep suspend**: not run (section 11).
-- **Desktop image**: the 2026-11-01 rebuild (kernel 10) has not been booted; the client test sheet
-  (browsers and Jellyfin MPV Shim with hardware decode) is open.
+- **HDMI 2.1 FRL**: "No Signal" after a few percent of FRL mode changes (4 of 150 in the
+  regression run); a fix is under test.
+- **DP**: a rare black screen with no kernel error (about 0.6% of modesets); a fix is under test.
+- **Deep suspend soak**: short runs pass (section 11); an hours-long soak is not done.
+- **Desktop image**: the current build has not been booted yet; browser hardware decode is under
+  test (Chrome passes; Firefox needs `patches/firefox`).
 - **Headphone jack**: not checked by ear. **DP audio**: verified at signal level only.
-- **VA-API driver**: no board numbers recorded in this file (section 10); browsers not tested.
 - **Max-out test** (`tests/maxout`): written, no recorded run.
 - **Mode sweep**: not re-run after 1301-1302; the camera-checked display matrix supersedes it.
-- **Hardware tests still owed for our patches**: 32 of 141 (error paths, bindings, DT-only
-  changes); the list is `docs/workspace/UPSTREAM-TESTMAP.md`.
+- **Hardware tests still owed for some of our patches** (error paths, bindings, DT-only changes);
+  the list is `docs/workspace/UPSTREAM-TESTMAP.md`.
+- Hantro VP8/AV1 fluster suites: not run.
 - Known, not reproduced since 0715: a VPU121 decoder/IOMMU wedge under concurrent use.

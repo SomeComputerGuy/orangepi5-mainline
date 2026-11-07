@@ -1,10 +1,10 @@
 # hevc-enc-rc: Encoder CBR rate control moved to a shared helper; HEVC constant bitrate mode on the VEPU580
 
-- Workspace branch: `k15-hevcrc` (exported 2026-11-06)
+- Workspace branch: `k15-hevcrc` (exported 2026-11-07)
 - Kernel fork branch: `opi5/hevc-enc-rc` (see PUBLISH.md)
 - Sits on: `h1-h264-rc` (base commit `956c85289a35`)
-- Hardware test: built, NOT yet tested on hardware
-- Next upstream step: board test queued
+- Hardware test: tested on the board: not good enough yet. This version fails 3 checks (bitrate error 3.2% on one 1080p clip, PSNR -0.07 to -0.11 dB at 2160p); the reworked next version (not published yet) still fails 2 (peak bitrate on one clip, PSNR -0.09 dB on another). Not in the image
+- Next upstream step: fix the remaining failures and re-test
 - Patches: 3 = 3 ours, 0 carried from others, 0 local-only
 
 Apply with `git am` in the order listed in [`series`](series), on top of the parent topic (or check out the fork branch). Patch numbers are the position in that order.

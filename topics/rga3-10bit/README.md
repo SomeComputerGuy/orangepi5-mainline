@@ -1,10 +1,10 @@
 # rga3-10bit: RGA: descriptor table off-by-one and per-plane sizing fix, larger imported DMA-BUFs, NV15/P010 and rotation/flip on RGA3
 
-- Workspace branch: `k15-rga3nv15` (exported 2026-11-06)
+- Workspace branch: `k15-rga3nv15` (exported 2026-11-07)
 - Kernel fork branch: `opi5/rga3-10bit` (see PUBLISH.md)
 - Sits on: `image` (base commit `bb1a61971a26`)
-- Hardware test: tested on the board (kernel 7.3.0-15rga2): 10-bit HEVC output to XRGB at 57-58 dB vs reference (BT.709 and BT.2020), all flip+rotation cases correct, v4l2-compliance 48/48 on both nodes
-- Next upstream step: send to linux-media
+- Hardware test: tested on the board: 10-bit HEVC output to XRGB at 57-58 dB vs reference (BT.709 and BT.2020), all flip+rotation cases correct, v4l2-compliance 48/48 on both nodes
+- Next upstream step: in the 7.3.0+opi5.16 release candidate (under test); send to linux-media
 - Patches: 4 = 4 ours, 0 carried from others, 0 local-only
 
 Apply with `git am` in the order listed in [`series`](series), on top of the parent topic (or check out the fork branch). Patch numbers are the position in that order.

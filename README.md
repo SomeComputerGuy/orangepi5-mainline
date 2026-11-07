@@ -17,118 +17,114 @@ This repository has two purposes:
 **Nothing in here has been sent upstream yet.** The series are prepared (see
 "Upstream status" below), not posted.
 
-## Current versions (2026-11-05)
+## Current versions
 
 | Component | Version | Where |
 |---|---|---|
-| Kernel | `7.3.0-15` = Linux v7.3 + the 479 patches in `patches/linux`. This is the stock kernel of the image and has been regression-tested on the board (see "Kernel 7.3.0-15 regression run" below). The feature branches listed under "Work on top of 7.3.0-15" are not part of it | `scripts/build-kernel.sh`; fork tag `image-7.3.0-15` and branch `opi5/image` (`image-7.3.0-14` is the previous image kernel) |
-| U-Boot | v2026.10 + `patches/u-boot` (three carried fixes 0001-0003 and the board `-u-boot.dtsi` fragments); the 2026-11-01 build is in the test board's SPI flash and is what the 7.3.0-15 regression run used | `scripts/build-uboot.sh` |
+| Kernel | **7.3.0+opi5.15** = Linux v7.3 + the 479 patches in `patches/linux`, regression-tested on the board. Versions are `<mainline>+opi5.<rev>`. The next kernel, 7.3.0+opi5.16, is a release candidate under test, not released | `scripts/build-kernel.sh`; fork branch `opi5/image` (tag `image-7.3.0-15`) |
+| U-Boot | v2026.10 + `patches/u-boot` (three carried fixes and the board `-u-boot.dtsi` fragments) | `scripts/build-uboot.sh` |
 | TF-A | v2.15.0 + `patches/tf-a` (PHP CRU clock-gate save/restore), BL31 built from source | `scripts/build-uboot.sh` |
 | Image | Ubuntu 26.10 arm64, server and desktop variants | `scripts/build-image.sh` |
 
 ## What works
 
-The full display and video support chart (every resolution, refresh rate and colour format on HDMI and DP, verified / not tested / driver limit / hardware limit) is [`docs/video-support-chart.pdf`](docs/video-support-chart.pdf).
-
-Tested on an Orange Pi 5 (RK3588S, 8 GB) booting from an M.2 SATA SSD with the image kernel
-`7.3.0-15` for the regression run below; older rows name the kernel they were measured on (mostly 7.3.0-10 to 7.3.0-12, not re-measured one by one). Details for each topic are in its `notes/`; the per-build
-provenance is in [`docs/image-kernel/MANIFEST.md`](docs/image-kernel/MANIFEST.md).
+Tested on an Orange Pi 5 (RK3588S, 8 GB) booting from an M.2 SATA SSD, with the current image
+kernel unless a row says otherwise. The numbers come from the notes under `topics/*/notes/`.
+The full display and video support chart (every resolution, refresh rate and colour format on
+HDMI and DP: verified / not tested / driver limit / hardware limit) is
+[`docs/video-support-chart.pdf`](docs/video-support-chart.pdf).
 
 ### Works
 
 | Area | State |
 |---|---|
-| Boot | Mainline U-Boot from SPI flash or SD. TF-A BL31 from source. Big cores clocked up before Linux (boot time from 100 s down to normal). M.2 slot auto-detects NVMe or SATA and picks the matching DTB. Kernel 11 boots with no kernel warnings, 0 deferred probes and 0 failed units |
-| Storage | M.2 SATA root (new `rk3588s-orangepi-5-sata` DTB). The SATA-root reboot hang is fixed (arm-smmu-v3 power domain and clock); reboots take under 1 s |
-| Video decode | rkvdec (VDPU381) H.264/HEVC/VP9 on both cores, including **one stream on both cores through the CCU** (HEVC 4K 130 -> 227 fps, H.264 4K 67 -> 121 fps, bit-exact; in the image since kernel 9). Hantro G1 (H.264, VP8, MPEG-2), AV1. All decoders bit-exact in the codec sweep. Timeout recovery (core reset, IOMMU) proven on a KASAN kernel |
-| Video encode | VEPU580 H.264 and HEVC stateless encoder driver (new; 38-42 dB at QP 26, 4K at 39-54 fps). VPU121 H.264 encode (hantro). VEPU121 JPEG on 4 cores. **GStreamer `v4l2slh264enc` and `v4l2slh265enc` are tested on the board** (stock 7.3.0-15 and one test kernel, GStreamer patches `patches/gstreamer/0001-0014`): VEPU580 H.264 and H.265 and Hantro H1 H.264 encode, hardware and software decode of the output are bit-identical, 4K60 HEVC to H.264/H.265 transcode with zero copies, about 250 fps per stream at 1080p and 68 fps at 4K (VEPU580). Known: H.264 constant bitrate undershoots 5-10% on the stock kernel (fixed on a feature branch, below) |
-| JPEG decode | New VDPU720 (rkjpegd) driver |
-| Deinterlace | New IEP2 driver (v4l2-compliance 57/57) |
+| Boot | Mainline U-Boot from SPI flash or SD, TF-A BL31 from source. Big cores clocked up before Linux (boot time from 100 s down to normal). The M.2 slot auto-detects NVMe or SATA and picks the matching DTB. The boot check finds every expected device |
+| Storage | M.2 SATA root (`rk3588s-orangepi-5-sata` DTB). Reboots take under 1 s (the SATA-root reboot hang is fixed) |
+| Video decode | rkvdec (VDPU381) H.264/HEVC/VP9 on both cores, including **one stream on both cores through the CCU** (HEVC 4K 130 -> 227 fps, H.264 4K 67 -> 121 fps, bit-exact). Hantro G1 (H.264, VP8, MPEG-2) and AV1. Fluster: HEVC 146/147, AVC 129/135, FR-EXT 65/69, VP9 230/305. All decoders bit-exact in the codec sweep. Timeout recovery (core reset, IOMMU) proven on a KASAN kernel |
+| Video encode | VEPU580 H.264 and HEVC stateless encoder driver (38-42 dB at QP 26, 4K at 39-54 fps), Hantro H1 H.264, VEPU121 JPEG on 4 cores. GStreamer `v4l2slh264enc` and `v4l2slh265enc` (`patches/gstreamer`): hardware and software decode of the output are bit-identical, 4K60 HEVC to H.264/H.265 transcode with zero copies, about 250 fps per stream at 1080p and 68 fps at 4K |
+| JPEG decode | VDPU720 (rkjpegd) driver |
+| Deinterlace | IEP2 driver (v4l2-compliance 57/57) |
+| 2D (RGA) | RGA2 and RGA3: copies bit-exact, v4l2-compliance 48/48 on both |
 | GPU / NPU | panthor (Mali-G610) at 995-1024 MHz under load, 200 runtime suspend/resume jobs without failure; rocket (NPU) at 1 GHz with DVFS and thermal cooling, Teflon inference matches the CPU |
-| Display | HDMI0 up to 4K60 TMDS, HDMI 2.1 FRL 4K120 and 4K60 10 bpc; exact pixel clocks (VOP2 dividers, sync polarity, video PLL); the "No Signal" wedge after leaving YCbCr 4:2:0 is fixed (VOP2 resets); HDPTX PHY lanes powered down on blank. USB-C DisplayPort alt mode through a dock, including DP-to-HDMI protocol-converter docks (4K30) and pin-assignment re-train. Dual display with 0 VOP2 underflows (AXI port balancing) |
-| Audio | HDMI audio, including across FRL/TMDS mode changes; the EINVAL on open seen on kernel 10 is fixed (PCM registered before the DAI) |
-| USB | Type-A USB3 port: a device present at boot is moved from 480M to SuperSpeed (port pairing + retry). Three SuperSpeed devices at boot on kernel 11. **USB-C role switching works again from kernel 12:** the USB side of the USB-C dock (USB 2.0 and USB 3) enumerates, after boot and after every s2idle and deep-suspend resume with every expected dock device present (kernel 12 queue; the kernel 11 regression was the USB2 PHY suspend bit, `patches/linux/2225`). The follow-the-role and host-default patches (`2230`-`2233`) are in kernel 13; kernel 13 boots with all three SuperSpeed devices and no missing USB device. See "Hardware limitation" below |
-| Network | Gigabit Ethernet at line rate (940 Mbit/s, 0 errors) with `rgmii-id` |
-| Suspend (s2idle) | **Works with an RTC wake-up: 47/47 cycles on kernel 10 + the RTC fix, 10/10 on kernel 11.** The earlier "resume hang" was a lost HYM8563 minute-resolution alarm (fixed in the rtc core, `patches/linux/1917`). After every resume: USB3 links, DP, HDMI, SATA and Ethernet checked |
+| Display | HDMI0 up to 4K60 TMDS, HDMI 2.1 FRL 4K120 and 4K60 10 bpc, exact pixel clocks. In the colour-format matrix every HDMI mode the driver accepts shows correctly (346 of 346) and every native DP case is good (370 of 370). HDR (SDR/PQ switching with the right infoframes) on the HDMI TV and the DP monitor, also mixed HDR/SDR on two heads. USB-C DisplayPort alt mode with a native DP cable or through a dock, including DP-to-HDMI protocol-converter docks (4K30) and pin-assignment re-train. Dual display with 0 VOP2 underflows |
+| Audio | HDMI audio, also across FRL/TMDS mode changes |
+| USB | Type-A USB3 port: a device present at boot is moved from 480M to SuperSpeed. USB-C role switching: the USB side of a USB-C dock (USB 2.0 and USB 3) enumerates after boot and after every s2idle and deep-suspend resume. See "Hardware limitation" below |
+| Network | Gigabit Ethernet at line rate (940 Mbit/s, 0 errors) |
+| Suspend | s2idle and deep suspend (mem) with an RTC wake-up: 15/15 and 10/10 cycles in the last regression run (deep resume 3.1 s, 0 warnings). After every resume USB, DP, HDMI, SATA and Ethernet are checked |
 | Media packages | FFmpeg/mpv V4L2 Request hwaccels, GStreamer v4l2codecs and kmssink fixes (rebuilt Ubuntu packages, in both images); VA-API driver ([libva-v4l2_request fork](https://github.com/SomeComputerGuy/libva-v4l2_request)) in the desktop image |
 
-### Partially
+### Known problems
 
 | Area | State |
 |---|---|
-| Display test matrix | The camera-checked HDMI matrix (920 cases) ran on kernel 6 and 10; the rerun on kernel 11 and the DP run are pending. A few 4K120 plane/format combinations (linear XR24 on an Esmart plane, RGB565 AFBC on Cluster planes, 4:2:0) still underflow; `1909`/`1910` reject them in `atomic_check` but that is not board-checked yet |
+| HDMI 2.1 FRL | After a few percent of FRL mode changes the TV shows "No Signal" (about 3-5%). A fix is under test |
+| DP | Rarely (about 0.6% of modesets) the DP monitor stays black with no kernel error. A fix is under test |
+| HDMI modes | The driver refuses some mode/format combinations (64 of 410 in the colour matrix). FRL is capped at 10 Gbit/s per lane, so 4K100-165 at 10 bpc is not available yet |
+| H.264 encode | Constant bitrate undershoots by 5-10% (fixed in 7.3.0+opi5.16, see below) |
+| VP9 decode | Some conformance streams still fail (fluster 230/305), and FFmpeg loses its references when a VP9 stream changes resolution between inter frames; fixes are being worked on |
+| CPU frequency | The top "2400 MHz" operating point actually runs at about 2.14 GHz (under discussion) |
+
+### Partly done or not tested
+
+| Area | State |
+|---|---|
+| Desktop image | Builds with the current kernel and media packages; this build has not been booted yet. An earlier desktop image booted to the GNOME greeter on HDMI 4K60 10 bpc and on DP. Browser hardware decode through the VA driver: Chrome passes the board decode checks; Firefox needs the changes in `patches/firefox`, which Mozilla's builds do not have, and still drops some frames at 4K60 AV1 |
 | DP audio | The dp0 card exists and streams; checked at signal level only (no speakers on the DP monitor) |
-| Desktop image | Builds (`--variant desktop`, 2026-11-01, kernel 10). The previous desktop image (kernel 7) booted to the GNOME greeter on HDMI 4K60 10 bpc and on the DP dock; the client test sheet (Firefox, Chrome, Jellyfin MPV Shim with hardware decode) is still open. Browser hardware decode needs the Firefox sandbox / Chromium render-node changes, which are not in the stock builds (`patches/chromium`) |
+| Headphone / microphone jack (ES8388) | UCM defaults applied, path opens, not checked by ear |
 | Camera | rkisp2 series plus Orange Pi 5 sensor overlays (`patches/linux-extra`): probing works, no camera module attached yet |
 | MIPI DSI | ili9881c panel driver and LCD overlays (`patches/linux-extra`): no panel attached |
-| Kernel 7.3.0-15 regression run | Run on stock 7.3.0-15 on 2026-11-05: RGA2 and RGA3 regression pass (copies bit-exact, v4l2-compliance 48/48 on both); HDR on the HDMI TV (1080p60, 2160p60) and on the DP monitor (1080p60 to 2160p60, native 4-lane cable) switches SDR/PQ/SDR correctly with the right infoframes; mixed HDR/SDR on two heads 16/16 steps (1080p) and 10/10 (4K60) without disturbing the unchanged head; fluster identical to the earlier baseline (HEVC 146/147, AVC 129/135, FR-EXT 65/69, VP9 230/305); s2idle 15/15 cycles; **deep suspend 10/10 cycles** (resume 3.1 s, 0 warnings); dual-head matrix subset: DP good in all 166 committed cases. Known issues on this kernel: the HDMI "No Signal" after an FRL mode change still happens in 4 of 150 trials (2.7%, same as before); HDMI 3840x2160@59.94 10 bpc with DP 1280x800@59.81 at the same time gives a black TV (2 of 2 tries, not yet analysed; each alone is good); 7 dual-head commits were refused with EINVAL; a VP-swapped test DTB refused DP 4K60 (probably that old DTB). Not run: Hantro VP8/AV1 fluster suites |
-| Hardware tests of our patches | Counts below were taken at kernel 11 (141 of our patches then): 100 had recorded hardware evidence; 32 still needed a dedicated test (mostly error paths, bindings and DT-only changes). Those tests are in progress |
+| DP HBR3 4-lane, CEC over DP | Need a USB-C to HDMI 2.1 adapter or a CEC-capable adapter |
+| NVMe in the M.2 slot, USB boot | The test board runs from SATA; the PCIe system-PM patches are carried but exercised only by the build |
+| Long deep-suspend soak | Short cycle runs pass; an hours-long soak is not done |
 
-### Hardware limitation
-
-| Area | State |
-|---|---|
-| USB 2.0 Type-A port next to the USB3 port, and the USB-C port | On the Orange Pi 5 v1.2 the USB 2.0 Type-A port beside the USB3 port is wired in parallel to the USB 2.0 data lines of the USB-C port, with no switch. Only one of the two can use USB 2.0 at a time. The kernel makes the controller a host by default when nothing is attached to the USB-C port (`2233`), so the Type-A port works then; a USB-C partner still gets the role it negotiates. This is board design, not a driver bug |
-
-### Untested
+### Hardware limitations
 
 | Area | State |
 |---|---|
-| Longer deep-suspend soak | Deep suspend passed 10/10 cycles on kernel 15 (see the regression run); an hours-long soak is not done |
-| Headphone / microphone jack (ES8388) | UCM defaults applied, path opens, not checked by ear |
-| DP 10/12 bpc, HDMI 10 bpc in every mode, HDR, VRR | Need a 4-lane / HBR3 sink or the display-matrix rerun |
-| CEC tunnelling over DP (`1210`) | Builds; needs a CEC-capable USB-C to HDMI adapter |
-| NVMe in the M.2 slot, USB boot | The test board runs from SATA; PCIe system-PM patches (`2108-2117`) are carried but exercised only by the build |
+| USB 2.0 Type-A port next to the USB3 port, and the USB-C port | On the Orange Pi 5 v1.2 the USB 2.0 Type-A port beside the USB3 port is wired in parallel to the USB 2.0 data lines of the USB-C port, with no switch. Only one of the two can use USB 2.0 at a time. The kernel makes the controller a host by default when nothing is attached to the USB-C port, so the Type-A port works then; a USB-C partner still gets the role it negotiates |
+| DP | The RK3588 DP controller has no DSC and no MST, and one video port drives at most 4096x2304 at 60 Hz, so 4K120 and DSC over DP are not possible |
 
-The authoritative per-topic list is [`STATUS.md`](STATUS.md), generated from the workspace together
-with the topics. Open items are tracked in the workspace; the numbers above come from the notes
-exported under `topics/*/notes/` and `docs/image-kernel/`.
+## Not in the image kernel yet
 
-## Work on top of 7.3.0-15 (not in the image)
+These are kernel feature branches on top of the current image kernel. None is in `patches/linux`
+or in the stock image yet. Each is a topic under [`topics/`](topics/) and a branch `opi5/<topic>`
+in the [kernel fork](https://github.com/SomeComputerGuy/linux). Most of them are in the
+**7.3.0+opi5.16 release candidate**, which is under test and becomes the image kernel once it
+passes.
 
-These are kernel feature branches on top of the 7.3.0-15 image kernel. None is in `patches/linux`
-or in the stock image. Each is a topic under [`topics/`](topics/) and a branch `opi5/<topic>` in the
-[kernel fork](https://github.com/SomeComputerGuy/linux), based on `opi5/image`. The hardware status
-is taken from each branch's own results file; "built" means it compiles and boots as a test kernel
-but was not exercised.
-
-| Topic | What it is | Hardware status |
+| Topic | What it is | State |
 |---|---|---|
-| `rkvenc-h264-rc` | VEPU580 H.264: SPS/PPS `nal_ref_idc` fix (the old value 0 is forbidden by the standard; FFmpeg's raw H.264 probe rejected the files), a frame-level constant-bitrate control modelled on Rockchip MPP's behaviour, no adaptive QP together with the row rate control, MPP's moving-scene RDO tuning | Tested on the board with `v4l2slh264enc`: bitrate error went from -2.8..-9.4% to -0.6..+2.5%, PSNR-Y +0.7 to +3.6 dB at 1080p. HEVC rate control (a separate branch) is built, not yet tested |
-| `h1-h264-rc` | The shared H.264 constant-bitrate helper reworked; Hantro H1 and VEPU580 use it | Tested on the board (1080p, 2-16 Mbit/s): H1 mean absolute bitrate error 4.3% -> 1.1% (worst 8.2% -> 2.3%); VEPU580 mean 1.6% |
-| `iep2-std-deint` | IEP2 uses the standard deinterlacing mode control; also carries Jernej Skrabec's drm/gem check of AFBC framebuffer size | Tested: IEP2 output identical to before in 72 of 72 cases, v4l2-compliance 57/57. The AFBC check rejects 696 of 696 buffers with an undersized offset (687 were accepted before), and Mesa AFBC scanout still works. A reference leak in the carried patch was found in review and is not fixed here |
-| `iep2-first-ts` | IEP2 field-rate mode: the first frame's second field gets its timestamp from the next input buffer instead of equalling the first field's | Tested: output identical in 72 of 72 cases, timestamps exact once two buffers are queued before STREAMON, v4l2-compliance 57/57. Without the second buffer the first pair still has equal timestamps (documented fallback) |
-| `vop2-splice` | VOP2 drives modes wider than 4096 pixels by splicing video ports 0 and 1; includes four small fixes it needs (Esmart3 mixer lookup, LUT port select, AFBC offsets of a source inside a superblock, window rectangles) | Tested on the board, camera-checked on HDMI and DP: 4K60, 4096-wide and 1080p spliced modes good; SDR/HDR10 switching good with identical HDR infoframes; 200 spliced mode transitions with 0 POST_BUF_EMPTY; 0 kernel warnings. A later commit that raises ACLK for wide modes is built, not tested, and left out. The `splice_force` test parameter is not published |
-| `avs2` | AVS2 (GB/T 33475.2) stateless decoding on the RK3588 rkvdec: new pixel format and controls, driver | Per the commit message, bit-exact on the 12 PKU conformance streams (416x240 to 1080p) and 5 xavs2 streams (1080p, 2160p). v4l2-compliance 56/57 (one failure in the VIDIOC_DECODER_CMD test, stock 57/57; not yet investigated). No userspace hwaccel yet |
-| `avs-plus` | AVS1 and AVS+ decoding on the RK3588 AVS+ decoder (hantro): AVS uAPI, binding, driver, DT node | Tested on the board: AVS+ 1080i test card 5/5 bit-exact in 3 of 3 runs, AVS 720p 60/60 bit-exact; runs alongside H.264 decode and encode; corrupt streams recover. The hardware timeout reset path was not exercised |
-| `h264-mvc` | H.264 MVC (Stereo High, two views) decoding on rkvdec VDPU381: new MVC controls, driver | Tested on the board: 15 of 15 two-view JVT-MVC streams bit-exact on both views against JM 19; 20 of 20 base views in base-only mode. Only our own test client drives it |
-| `mpeg1` | MPEG-1 decoding on the RK3588 VPU121 (hantro), plus a coded format `V4L2_PIX_FMT_MPEG1_SLICE` so userspace can discover it | The decoder was verified on the board (all 5 hardware-decodable ISO/IEC 13818-4 vectors and a 1080p30 stream). The MPEG1_SLICE format patches are built, not yet tested on hardware |
-| `mpeg4` | MPEG-4 Part 2, H.263 and Sorenson Spark decoding on the same hantro decoder (uAPI from Jernej Skrabec's H616 series) | Built, not yet tested on hardware |
+| `dp-ycbcr` | DP YCbCr 4:4:4 / 4:2:2 / 4:2:0 output as requested by the connector colour format | Works (370 camera-judged DP cases). In 7.3.0+opi5.16 |
+| `vop2-splice` | Modes wider than 4096 pixels by splicing video ports 0 and 1, plus four small VOP2 fixes it needs | 4K60, 4096-wide and 1080p spliced modes good on HDMI and DP, SDR/HDR10 switching good. Wider than 4096 not tested (no such display). Open: an intermittent underrun on video port 2 after modesets. In 7.3.0+opi5.16 |
+| `mpeg1` | MPEG-1 decoding on the VPU121 (hantro), with the `V4L2_PIX_FMT_MPEG1_SLICE` format | Works (all hardware-decodable conformance vectors and a 1080p30 stream). D-pictures are not supported. In 7.3.0+opi5.16 |
+| `avs2` | AVS2 decoding on rkvdec | Bit-exact on 17 of 17 test streams; no userspace hwaccel yet. In 7.3.0+opi5.16 |
+| `avs-plus` | AVS and AVS+ decoding on the AVS+ decoder (hantro) | Bit-exact on the test streams, corrupt streams recover. In 7.3.0+opi5.16 |
+| `h264-mvc` | H.264 MVC (two-view stereo) decoding on rkvdec | 15 of 15 two-view streams bit-exact; only our own test client drives it. In 7.3.0+opi5.16 |
+| `iep2-std-deint`, `iep2-first-ts` | IEP2 uses the standard deinterlacing control, correct first-field timestamps; carries a drm/gem AFBC framebuffer size check | Works (72 of 72 cases identical, v4l2-compliance 57/57). In 7.3.0+opi5.16 |
+| `rga3-10bit` | RGA3 NV15/P010 input, rotation and flip; RGA descriptor and buffer-size fixes | Works (10-bit HEVC to RGB at 57-58 dB). In 7.3.0+opi5.16 |
+| `rga-fixes` | RGA2 flip direction, RGA3 crop, larger strides, NV20 | Works. The RGA2 flip fix is in 7.3.0+opi5.16, the rest goes into the next kernel |
+| `rkvenc-h264-rc`, `h1-h264-rc` | H.264 constant-bitrate control for VEPU580 and Hantro H1, SPS/PPS `nal_ref_idc` fix | Bitrate error within about 2.5% (was up to -9.4%), better PSNR. In 7.3.0+opi5.16 |
+| `mpeg4` | MPEG-4 Part 2, H.263 and Sorenson Spark decoding on the VPU121 | Partly: 93 of 95 board checks pass on the next revision; two failures being fixed |
+| `venc-8k` | VEPU580 encoding wider than 4096 pixels | H.264 works up to 16384x2048. H.265 is broken in the published version; the fix passed the board test and is not published yet |
+| `hevc-enc-rc` | HEVC constant-bitrate control on VEPU580 | Not good enough yet: still fails 2 board checks |
+| `dp-irq-retrain` | DP link retrain on IRQ_HPD link loss | Tested: does not fix the rare DP black, so it is not taken |
 
-Userspace work from the same period:
+Passed on the board but not published as topics yet: AVS1 decoding on the VPU121 decoder,
+macroblock-level rate control for the H1 encoder, and two fixes for browser hardware decode
+(m2m stream-off, RGA3 strides). They go into the kernel after 7.3.0+opi5.16.
 
-- The GStreamer encoders above are in `patches/gstreamer` and tested (see "Video encode").
-- A merged FFmpeg V4L2 request series (ours plus the H616 project's, 35 patches, with AVS2,
-  MPEG-1 and others) exists in the workspace as a proposal; `patches/ffmpeg` is unchanged. It
-  applies cleanly, builds natively and cross-builds, and the full FATE run (5343 tests) has no
-  failures, plus 807 arm64 FATE tests under qemu. It has not been run on the board.
+Userspace: the GStreamer encoders and the shared FFmpeg V4L2 Request series (AVS2, MPEG-1 and
+others) are in `patches/gstreamer` and `patches/ffmpeg` and run on the board. FFmpeg and GStreamer
+support for the new MPEG-4, AVS, AVS+ and MVC decoders, IEP2 in GStreamer/FFmpeg and an FFmpeg
+stateless encoder are not written yet.
 
 ## Upstream status
 
-Nothing has been posted, pushed or mailed. From our 141 patches, 40 series were prepared on
-linux-next (`next-20261030`, or `torvalds/master` for pure fixes) with cover letters, `send.sh`
-dry-runs and per-series notes:
-
-- 24 series apply on their upstream base and are ready once the remaining hardware tests in the
-  table above are recorded (iommu, media, drm, phy, usb, pm, ASoC, rtc, netdev, driver core, DT);
-- 11 depend on unmerged series by other people (rkvdec multi-core and VP9, the H.264 stateless
-  encode uAPI, dw-dp v11, the USBDP rework, the m2m multi-job series) and go out as RFC replies on
-  those threads;
-- 5 are on hold (the HDMI 2.1 FRL fixes until the Collabora FRL series is posted; a DT patch that
-  needs a binding still under review; one symptom fix superseded by a PHY series; one patch whose
-  authorship has to be settled);
-- 9 patches are dropped as duplicates of work that is already upstream or under review (the rkjpegd
-  driver, two hantro fixes, a VOP2 clock patch, the rga/rkvdec sync backport).
+Nothing has been posted, pushed or mailed. Series are prepared on linux-next (or
+`torvalds/master` for pure fixes) with cover letters and per-series notes. Only patches that are
+proven on hardware will be sent. Some go out as replies to other people's unmerged series (rkvdec
+multi-core and VP9, the H.264 stateless encode uAPI, dw-dp, the USBDP rework, HDMI 2.1 FRL);
+patches that duplicate work already upstream or under review are dropped.
 
 The per-patch hardware test map is exported as
 [`docs/workspace/UPSTREAM-TESTMAP.md`](docs/workspace/UPSTREAM-TESTMAP.md); the series themselves
@@ -191,7 +187,7 @@ scripts/flash-sd.sh /dev/sdX [desktop]    # 8. write it to an SD card (sudo, ask
 | Step | Output (in `out/` unless noted) |
 |---|---|
 | 2. `fetch-sources.sh` | `src/linux` (v7.3 `c03c1a14`), `src/u-boot` (v2026.10), `src/tf-a` (v2.15.0), `src/rkbin` (pinned commit), `src/libva-v4l2-request` (pinned commit). Prints `<name>: <commit> OK` for each |
-| 3. `build-kernel.sh` | `debs/linux-image-7.3.0-opi5_7.3.0-<n>_arm64.deb` (currently `7.3.0-15`), `linux-headers-…`, `linux-libc-dev_…` |
+| 3. `build-kernel.sh` | `debs/linux-image-7.3.0-opi5_<version>_arm64.deb`, `linux-headers-…`, `linux-libc-dev_…` |
 | 4. `build-uboot.sh` | `u-boot-rockchip.bin` (SD/eMMC, sector 64) and `u-boot-rockchip-spi.bin` (SPI NOR) |
 | 5. `build-media-debs.sh` | `debs-media/`: `ffmpeg`/`libav*` `7:8.1.2-2ubuntu2+opi5.2`, `mpv` `0.41.0-2ubuntu5+opi5.2`, `gstreamer1.0-plugins-bad` and friends `1.28.6-1ubuntu1+opi5.4`, `gst-plugins-good` `1.28.7-1build1+opi5.1`, `alsa-ucm-conf` `1.2.16.1-1ubuntu1+opi5.1`, plus a signed `Packages` index. Logs: `build/media/<source>.*/build.log` |
 | 6. `build-va-driver.sh` | `debs-media/v4l2-request-va-driver_1.2+opi5.2-1_arm64.deb` |
@@ -213,8 +209,7 @@ What each step does:
   private arm64 sysroot. The module-signing key is generated in `build/linux/certs/` and must
   stay private. It is never part of this repository or of any package. The same tree is
   branch `opi5/image` in the [kernel fork](https://github.com/SomeComputerGuy/linux), and every
-  image kernel has a tag named after its package version (`image-7.3.0-15`, `image-7.3.0-14`,
-  `image-7.3.0-11`, `image-7.3.0-8`, `image-7.3.0-7`, `image-7.3.0-6`).
+  image kernel has a tag `image-<package version>` (the current one is `image-7.3.0-15`).
 - **`build-uboot.sh`** builds TF-A BL31 from source (`BL31_SRC=rkbin` uses Rockchip's binary
   instead), resetting `src/tf-a` to v2.15.0 and applying `patches/tf-a/*.patch`. It patches
   a copy of the rkbin DDR blob to print at 115200 baud, resets `src/u-boot` to v2026.10, applies
@@ -237,7 +232,7 @@ What each step does:
 - **`build-va-driver.sh`** builds the VA-API driver for the V4L2 stateless decoders, so
   Firefox and Chrome can decode with the hardware. It uses
   [SomeComputerGuy/libva-v4l2_request](https://github.com/SomeComputerGuy/libva-v4l2_request),
-  branch `opi5/main`, pinned at commit `069af0906f88`. That is megi's
+  branch `opi5/main`, pinned at commit `e912dc47684e`. That is megi's
   [libva-v4l2_request](https://xff.cz/git/libva-v4l2_request) `cac6ece` plus three of
   sofus13's HEVC fixes and our RK3588 work, under GPL-3.0-or-later. The build uses the
   source's own `debian/` packaging, in the same kind of rootless chroot as the media packages.
@@ -253,11 +248,10 @@ What each step does:
   rootless, to check that the package set resolves. `--reuse-rootfs` reuses the previous
   run's tree.
 
-**Verified so far:** the kernel, U-Boot and both image variants have been built from these
-scripts; the server image and the kernel 11 packages run on the test board, and the U-Boot
-build of 2026-11-01 is in its SPI flash. The desktop image built on 2026-10-31 (kernel 7)
-booted to the GNOME greeter on both outputs; the 2026-11-01 rebuild has not been booted yet.
-The VA driver, the FFmpeg V4L2 Request patches and the GStreamer patches have been used on the
+**Verified so far:** the kernel, U-Boot and both image variants build from these scripts; the
+server image, the current kernel packages and U-Boot (in SPI flash) run on the test board. The
+current desktop build has not been booted yet; an earlier one booted to the GNOME greeter on both
+outputs. The VA driver, the FFmpeg V4L2 Request patches and the GStreamer patches are used on the
 board (the display tests rely on the kmssink fixes).
 
 ### First-boot credentials
@@ -329,8 +323,8 @@ the board tests in [`tests/`](tests/), [`docs/RESULTS.md`](docs/RESULTS.md) for 
 measured so far and the command behind each one, and [`docs/TEST-MEDIA.md`](docs/TEST-MEDIA.md)
 for the clips (not included: public URLs, licences and sha256). Each topic's
 `notes/TESTING.md` or `notes/RESULTS.md` has the per-topic details, and
-[`docs/image-kernel/MANIFEST.md`](docs/image-kernel/MANIFEST.md) says which kernel build tested
-which patch range.
+[`docs/image-kernel/MANIFEST.md`](docs/image-kernel/MANIFEST.md) says where each patch range of the
+image kernel comes from and how it was tested.
 
 ## Kernel topics
 
@@ -349,13 +343,13 @@ Each `topics/<topic>/` contains:
 - `cover-letter.txt` (written by hand) or `cover-letter.draft.txt` (generated skeleton), and
   `notes/` (design notes, results, test procedures and test tools).
 
-Most topics are based on **v7.3**, on top of `multicore` and `board-sata` (see each
-`topic.env`). The prepared upstream series are rebased on linux-next instead (see "Upstream
+Most topics are based on **v7.3**, on top of `multicore` and `board-sata`; the newer feature
+branches sit on the image kernel (`image`; see each `topic.env`). The prepared upstream series are rebased on linux-next instead (see "Upstream
 status"). The `v7.4-*` topics are early versions on the 7.4 merge window (`c339f4010`).
 
 For `git` history instead of patch files, use the kernel fork named in
 [`PUBLISH.md`](PUBLISH.md): branch `opi5/<topic>` for each topic, `opi5/image` for the exact
-current image kernel and tags `image-<version>` for every image kernel built so far.
+current image kernel and tags `image-<version>` for the image kernels.
 `tools/recreate-kernel-branches.sh` builds the same branches locally from these patch files and
 verifies every tree.
 

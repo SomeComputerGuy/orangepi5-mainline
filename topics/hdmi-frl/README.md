@@ -1,9 +1,9 @@
 # hdmi-frl: HDMI 2.0 scrambling + HDMI 2.1 FRL on HDMI0 (carried Collabora work)
 
-- Workspace branch: `opi5/hdmi-frl-7.3` (exported 2026-11-06)
+- Workspace branch: `opi5/hdmi-frl-7.3` (exported 2026-11-07)
 - Kernel fork branch: `opi5/hdmi-frl` (see PUBLISH.md)
 - Sits on: `board-sata` (base commit `5e33b74b04cf`)
-- Hardware test: see RESULTS.md / TESTING.md; kernel 12: wedge trigger 80/80 GOOD, FRL steps camera GOOD; the later FRL fixes (patches/linux 1216-1222, kernel 13/14) are in testing
+- Hardware test: partly: in the image kernel together with the later FRL fixes (patches/linux 1216-1222): FRL 4K120 and 4K60 10 bpc work, the 4:2:0 wedge trigger is clean (80/80); open: an intermittent "No Signal" after a few percent of FRL mode changes (fix under test)
 - Next upstream step: track the Collabora series; report test results on the list
 - Patches: 122 = 0 ours, 122 carried from others, 0 local-only
 

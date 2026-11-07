@@ -1,4 +1,4 @@
-# rkvdec-ccu: rkvdec CCU (one stream on both decoder cores): bit-exactness, fps A/B, two-stream and fluster runs. The CCU driver is in the image kernel since build 9 (patches/linux 2001-2017)
+# rkvdec-ccu: rkvdec CCU (one stream on both decoder cores): bit-exactness, fps A/B, two-stream and fluster runs. The CCU driver is in the image kernel (patches/linux 2001-2017)
 
 - Runs on: **board** (copy this directory to the board, e.g. with `scp -r`)
 - How it was run: `bash ~/ccu/ccu-verify.sh`

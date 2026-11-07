@@ -1,10 +1,10 @@
 # venc-8k: VEPU580: encode pictures wider than 4096 pixels (external line buffer)
 
-- Workspace branch: `k15-venc8k` (exported 2026-11-06)
+- Workspace branch: `k15-venc8k` (exported 2026-11-07)
 - Kernel fork branch: `opi5/venc-8k` (see PUBLISH.md)
 - Sits on: `hevc-enc-rc` (base commit `4a63c9b23492`)
-- Hardware test: built, NOT yet tested on hardware
-- Next upstream step: board test queued
+- Hardware test: tested on the board: H.264 above 4096 pixels wide works (up to 16384x2048 and 8192x4320); H.265 above 4096 wide is broken in this version (PSNR about 4.5 dB). The fix (encode in tile columns no wider than 4096) passed the board test on the next version, not published yet; 4K and below unchanged. Not in the image
+- Next upstream step: publish the fixed version; take it into the next kernel
 - Patches: 1 = 1 ours, 0 carried from others, 0 local-only
 
 Apply with `git am` in the order listed in [`series`](series), on top of the parent topic (or check out the fork branch). Patch numbers are the position in that order.

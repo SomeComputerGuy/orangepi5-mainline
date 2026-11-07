@@ -1,4 +1,4 @@
-# k3-validation: The host-driven unattended install + validation run used for kernel build 3 (reference; adapt the paths)
+# k3-validation: Host-driven unattended kernel install + validation run (reference; adapt the paths and the kernel version)
 
 - Runs on: **host**
 - How it was run: `nohup tests/k3-validation/run-k3.sh > run.log 2>&1 &`

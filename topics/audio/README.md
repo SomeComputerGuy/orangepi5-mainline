@@ -1,9 +1,9 @@
 # audio: Audio: dw-hdmi-qp N/CTS after a link rate change, DP0 audio for RK3588 / Orange Pi 5
 
-- Workspace branch: `opi5/audio-7.3` (exported 2026-11-06)
+- Workspace branch: `opi5/audio-7.3` (exported 2026-11-07)
 - Kernel fork branch: `opi5/audio` (see PUBLISH.md)
 - Sits on: `integration` (base commit `1afa8d268718`)
-- Hardware test: partly: HDMI audible through FRL/TMDS mode changes, and the kernel-10 EINVAL on open is fixed (patches/linux 0402-0403, verified on kernel 11); DP audio signal-level only; headphone jack not checked by ear
+- Hardware test: partly: HDMI audio works, also across FRL/TMDS mode changes (the EINVAL on open is fixed by patches/linux 0402-0403); DP audio checked at signal level only; headphone jack not checked by ear
 - Next upstream step: listen test on DP and the jack; 1202 and 0402/0403 are prepared, 1201 waits for the dw-dp audio binding
 - Patches: 2 = 2 ours, 0 carried from others, 0 local-only
 

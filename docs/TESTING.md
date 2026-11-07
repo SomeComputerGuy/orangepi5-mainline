@@ -12,10 +12,9 @@ parts run on the host; each section says where.
 ## Prerequisites
 
 1. **The board runs the image built from this repository** (server image is fine; see the top-level
-   README for building and flashing). The reference results of sections 1-10 ran on kernel build 3
-   of `patches/linux`, partly with drop-in modules from topic branches (see RESULTS.md, "Kernels");
-   the later ones on builds 7 to 11. A kernel built from the current `patches/linux` (build 11)
-   contains all of those fixes, the rkvdec CCU included. Check what is running with `uname -v` and
+   README for building and flashing). The reference results were measured during development, partly with
+   drop-in modules from topic branches (see RESULTS.md); a kernel built from the current
+   `patches/linux` contains all of those fixes, the rkvdec CCU included. Check what is running with `uname -v` and
    `modinfo -n rockchip_vdec`.
 2. **SSH login with the project key:** `scripts/pi-add-key.sh [user@host]` creates the key (if
    needed) and installs it on the board once (it asks for the board password).
@@ -102,7 +101,7 @@ nohup sudo bash ~/modesweep/modesweep.sh > ~/modesweep/run.log 2>&1 &
 ```
 
 Report: `~/modesweep/report.txt`, one line per mode (`rc=` and `underflow=` per test, `scdc40=` for
-HDMI), ending in `tests: N  with underflow: U  rc!=0: F`. Reference (build 3, before the VOP2 fix):
+HDMI), ending in `tests: N  with underflow: U  rc!=0: F`. Reference (before the VOP2 fix):
 `tests: 150  with underflow: 1  rc!=0: 0`, the one being 4K120 with an NV12 overlay. On a kernel
 with 1301-1302 expect `with underflow: 0`. The per-plane format section was skipped in the
 reference run (a stdin bug, fixed in the published script), so a re-run reports more than 150 tests
@@ -204,7 +203,7 @@ and expects the other test directories in `~/ccu`, `~/cq` and `~/browser-hwdec`.
 
 ## 9. rkvdec CCU (`tests/rkvdec-ccu`)
 
-The CCU driver is in the image kernel since build 9 (`patches/linux/2001-2017`, DT node included),
+The CCU driver is in the image kernel (`patches/linux/2001-2017`, DT node included),
 so this runs on the image kernel. On an older kernel `ccu-verify.sh` only shows that the CCU isn't
 there. Copy the directory to `~/ccu`.
 

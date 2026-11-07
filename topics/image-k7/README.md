@@ -1,9 +1,9 @@
-# image-k7: Image kernel 7 (tag image-7.3.0-7): v7.3 + the 321 patches of that build = image-k6 + usb3-port (1501-1504) + 1801/1802/1804. The current image kernel is tag image-7.3.0-14 (449 patches), see docs/image-kernel/MANIFEST.md
+# image-k7: Earlier image kernel (tag image-7.3.0-7): image-k6 + usb3-port (1501-1504) + rkvdec-reset (1801/1802/1804); rkvdec-ccu sits on it. The current image kernel is branch opi5/image
 
-- Workspace branch: `opi5/image-k7-7.3` (exported 2026-11-06)
+- Workspace branch: `opi5/image-k7-7.3` (exported 2026-11-07)
 - Kernel fork: tag `image-7.3.0-7` (retired branch `opi5/image-k7`; see PUBLISH.md)
 - Sits on: `usb3-port` (base commit `398229c00d6f`)
-- Hardware test: yes: 1501-1504 run on kernel build 5, 1801/1802/1804 proven on a KASAN kernel (see rkvdec-reset)
+- Hardware test: yes: ran on the board (rkvdec-reset proven on a KASAN kernel)
 - Next upstream step: none (integration only); provenance in docs/image-kernel/MANIFEST.md
 - Patches: 3 = 3 ours, 0 carried from others, 0 local-only
 

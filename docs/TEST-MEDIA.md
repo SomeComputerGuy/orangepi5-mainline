@@ -7,7 +7,7 @@ commands that made the derived encodes. With these you can rebuild the same file
 downloads) or reproduce them with the same encoder settings (the encodes).
 
 The sizes and hashes below were computed with `stat -c %s` and `sha256sum` from the files that
-the tests ran on (2026-10-29/30).
+the tests ran on.
 
 Reference results that used these clips are in [`RESULTS.md`](RESULTS.md); how to run the tests is
 in [`TESTING.md`](TESTING.md).

@@ -478,24 +478,23 @@ def status_md(topics, repo):
                  f"`{t['parent']}` | {c['ours']} / {c['carried']} / {c['local']} | "
                  f"{md_escape(t['hw'])} | {md_escape(t['next'])} |")
     L += ["", "## Image kernel", "",
-          "`patches/linux/` is what `scripts/build-kernel.sh` applies on v7.3 for the image "
-          "(recreated as fork branch `opi5/image`, plus tag `image-<kernel package version>` for every "
-          "image kernel, e.g. `image-7.3.0-14` for kernel build 14, which is in testing). It is a snapshot of the topics that "
-          "were ready for the image plus the carried fixes added since (kernel builds 9-14); the topic "
-          "directories are the reference for upstreaming, and the prepared upstream series (not sent) are "
-          "listed per patch in docs/image-kernel/MANIFEST.md."
-          + (" Range-by-range provenance and test state: [docs/image-kernel/MANIFEST.md](docs/image-kernel/MANIFEST.md)."
+          "`patches/linux/` is what `scripts/build-kernel.sh` applies on v7.3 for the image kernel "
+          "(current release 7.3.0+opi5.15; versions are `<mainline>+opi5.<rev>`). It is recreated as fork branch "
+          "`opi5/image`. It holds the topics above that are marked as in the image, plus carried fixes; "
+          "the topic directories are the reference for upstreaming. The feature branches based on `image` "
+          "are not in it yet; most of them are in the 7.3.0+opi5.16 release candidate, which is under test."
+          + (" Which patch range comes from where, and how it was tested: [docs/image-kernel/MANIFEST.md](docs/image-kernel/MANIFEST.md)."
              if (repo / "docs/image-kernel/MANIFEST.md").exists() else ""), "",
           f"Patches in patches/linux: {len(list((repo / 'patches/linux').glob('*.patch')))}; other patch "
           "directories: " + (", ".join(sorted(d.name for d in (repo / 'patches').iterdir() if d.is_dir() and d.name != 'linux')) or "none") + ".", "",
           "## U-Boot and TF-A", "",
-          "U-Boot v2026.10 + `patches/u-boot` (the 2026-11-01 build is in the test board's SPI flash) and TF-A v2.15.0 + `patches/tf-a`.", "",
+          "U-Boot v2026.10 + `patches/u-boot` and TF-A v2.15.0 + `patches/tf-a`; this build is in the test board's SPI flash.", "",
           "| Patch | Where | Tested | Next step |", "|---|---|---|---|",
           "| ata: dwc_ahci: Look up the PHY on sata-port subnodes too | patches/upstream/u-boot | yes (boots from M.2 SATA) | send (scripts/send-uboot-patches.sh) |",
           "| RFC rockchip: rk3588: Raise the Cortex-A76 cluster clocks to 1.2 GHz | patches/upstream/u-boot | yes (boot time 100 s -> normal) | send as RFC |",
           "| Board -u-boot.dtsi fragments (SATA, M.2 auto-detect, big-core clocks) | patches/u-boot | yes (in the image and in SPI flash) | the cpuclk part is covered by the RFC above |",
           "| 0001-0003: naneng-combphy pipe_con1_for_sata offset, ahci READ CAPACITY last LBA, PCIe LTSSM timeout on cold boot (carried from Armbian, authorship kept) | patches/u-boot | yes: the SPI-flash build with them boots from M.2 SATA (PCIe/NVMe not exercised) | none (other people's patches; report results on their threads) |",
-          "| fix(rk3588): save and restore the PHP CRU clock gate state | patches/tf-a | s2idle: 47 + 10 cycles with it in SPI NOR; deep suspend (mem) not run yet | run the deep-suspend test, then TF-A Gerrit |",
+          "| fix(rk3588): save and restore the PHP CRU clock gate state | patches/tf-a | yes: s2idle and deep suspend (mem) work with it in SPI NOR (s2idle 15/15, deep 10/10 in the last regression run) | send to TF-A Gerrit |",
           "", "## Not published", "",
           "- `opi5/vepu580` (and `_out/vepu580*`): port of an out-of-tree, vendor-derived encoder driver by other authors, marked NOT FOR UPSTREAM; superseded by the `rkvenc` topic.",
           "- `opi5/*-debug` branches: fault-injection debugging only.",
