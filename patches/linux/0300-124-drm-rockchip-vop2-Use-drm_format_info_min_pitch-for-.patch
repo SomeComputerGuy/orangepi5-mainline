@@ -1,0 +1,49 @@
+From 600680c3e6d046f234173155f15fcc5affc835f8 Mon Sep 17 00:00:00 2001
+From: Chaoyi Chen <chaoyi.chen@rock-chips.com>
+Date: Thu, 22 Oct 2026 15:17:35 +0800
+Subject: [PATCH] drm/rockchip: vop2: Use drm_format_info_min_pitch() for plane offsets
+
+Use the block aware helper instead of cpp[], the latter aliases
+char_per_block and is wrong for packed 10-bit formats like NV15,
+NV20 and NV30.
+
+Tested with modetest[0]:
+
+```
+	modetest -s 86:3840x2160 -P \
+	59@83:3940x2160~96,0,3840,2160+0+0@NV20 -a
+```
+
+fb size (3940x2160), src at (96, 0) with size (3840x2160),
+dst at (0, 0) with size (3840x2160)
+
+[0]: https://github.com/windowsair/libdrm/tree/src-pos-support
+
+Assisted-by: LLM
+Signed-off-by: Chaoyi Chen <chaoyi.chen@rock-chips.com>
+Link: https://patch.msgid.link/20261022071737.508-2-kernel@airkyi.com
+Signed-off-by: Sebastian Reichel <sebastian.reichel@collabora.com>
+
+Link: https://gitlab.collabora.com/hardware-enablement/rockchip-3588/linux/-/commit/600680c3e6d046f234173155f15fcc5affc835f8
+---
+diff --git a/drivers/gpu/drm/rockchip/rockchip_drm_vop2.c b/drivers/gpu/drm/rockchip/rockchip_drm_vop2.c
+--- a/drivers/gpu/drm/rockchip/rockchip_drm_vop2.c
++++ b/drivers/gpu/drm/rockchip/rockchip_drm_vop2.c
+@@ -1358,7 +1358,7 @@ static void vop2_plane_atomic_update(struct drm_plane *plane,
+ 
+ 	afbc_en = drm_is_afbc(fb->modifier);
+ 
+-	offset = (src->x1 >> 16) * fb->format->cpp[0];
++	offset = drm_format_info_min_pitch(fb->format, 0, src->x1 >> 16);
+ 
+ 	/*
+ 	 * AFBC HDR_PTR must set to the zero offset of the framebuffer.
+@@ -1377,7 +1377,7 @@ static void vop2_plane_atomic_update(struct drm_plane *plane,
+ 		int hsub = fb->format->hsub;
+ 		int vsub = fb->format->vsub;
+ 
+-		offset = (src->x1 >> 16) * fb->format->cpp[1] / hsub;
++		offset = drm_format_info_min_pitch(fb->format, 1, src->x1 >> 16) / hsub;
+ 		offset += (src->y1 >> 16) * fb->pitches[1] / vsub;
+ 
+ 		if ((pstate->rotation & DRM_MODE_REFLECT_Y) && !afbc_en)

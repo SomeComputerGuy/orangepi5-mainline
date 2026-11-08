@@ -1,0 +1,67 @@
+From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
+From: Arun Iyengar <aiyengar1990@gmail.com>
+Date: Sun, 1 Nov 2026 06:35:56 +0000
+Subject: [PATCH] arm64: dts: rockchip: Add the video PLL to the RK3588 VOP
+
+Hand V0PLL to the VOP as its "pll_v0" clock, so that the video ports can
+retune it for pixel clocks the HDMI PHY PLL cannot provide (HDMI FRL
+mode) or that are not integer fractions of the system PLLs (DisplayPort,
+eDP, DSI), e.g. 3840x2160@59.94Hz.
+
+
+Assisted-by: LLM
+Signed-off-by: Arun Iyengar <aiyengar1990@gmail.com>
+---
+ arch/arm64/boot/dts/rockchip/rk3588-base.dtsi  | 6 ++++--
+ arch/arm64/boot/dts/rockchip/rk3588-extra.dtsi | 6 ++++--
+ 2 files changed, 8 insertions(+), 4 deletions(-)
+
+diff --git a/arch/arm64/boot/dts/rockchip/rk3588-base.dtsi b/arch/arm64/boot/dts/rockchip/rk3588-base.dtsi
+index 307938128faa..a14dee0999fe 100644
+--- a/arch/arm64/boot/dts/rockchip/rk3588-base.dtsi
++++ b/arch/arm64/boot/dts/rockchip/rk3588-base.dtsi
+@@ -1769,7 +1769,8 @@ vop: vop@fdd90000 {
+ 			 <&cru DCLK_VOP2>,
+ 			 <&cru DCLK_VOP3>,
+ 			 <&cru PCLK_VOP_ROOT>,
+-			 <&hdptxphy0>;
++			 <&hdptxphy0>,
++			 <&cru PLL_V0PLL>;
+ 		clock-names = "aclk",
+ 			      "hclk",
+ 			      "dclk_vp0",
+@@ -1777,7 +1778,8 @@ vop: vop@fdd90000 {
+ 			      "dclk_vp2",
+ 			      "dclk_vp3",
+ 			      "pclk_vop",
+-			      "pll_hdmiphy0";
++			      "pll_hdmiphy0",
++			      "pll_v0";
+ 		iommus = <&vop_mmu>;
+ 		power-domains = <&power RK3588_PD_VOP>;
+ 		resets = <&cru SRST_A_VOP>,
+diff --git a/arch/arm64/boot/dts/rockchip/rk3588-extra.dtsi b/arch/arm64/boot/dts/rockchip/rk3588-extra.dtsi
+index 9c3e1c45a283..a8affc1cb49b 100644
+--- a/arch/arm64/boot/dts/rockchip/rk3588-extra.dtsi
++++ b/arch/arm64/boot/dts/rockchip/rk3588-extra.dtsi
+@@ -682,7 +682,8 @@ &vop {
+ 		 <&cru DCLK_VOP3>,
+ 		 <&cru PCLK_VOP_ROOT>,
+ 		 <&hdptxphy0>,
+-		 <&hdptxphy1>;
++		 <&hdptxphy1>,
++		 <&cru PLL_V0PLL>;
+ 	clock-names = "aclk",
+ 		      "hclk",
+ 		      "dclk_vp0",
+@@ -691,5 +692,6 @@ &vop {
+ 		      "dclk_vp3",
+ 		      "pclk_vop",
+ 		      "pll_hdmiphy0",
+-		      "pll_hdmiphy1";
++		      "pll_hdmiphy1",
++		      "pll_v0";
+ };
+-- 
+2.55.0
+

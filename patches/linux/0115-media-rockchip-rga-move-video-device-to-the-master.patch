@@ -1,0 +1,204 @@
+From 947bd9f2631613c62b4729bfb9a5ee1b6320ab7c Mon Sep 17 00:00:00 2001
+From: =?UTF-8?q?Sven=20P=C3=BCschel?= <s.pueschel@pengutronix.de>
+Date: Wed, 16 Sep 2026 17:09:55 +0200
+Subject: [PATCH] media: rockchip: rga: move video device to the master
+MIME-Version: 1.0
+Content-Type: text/plain; charset=UTF-8
+Content-Transfer-Encoding: 8bit
+
+Move the video device allocation and registration to the master
+component bind function in preparation for binding multiple cores
+to the master. Moving it to the master bind function allows to
+only register the v4l2 device when all cores have been successfully
+bound to the master device. This also causes the video device to be
+bound against the master platform device instead of a specific core.
+
+As v4l2_device_register sets the drvdata (if it hasn't been set) to it's
+v4l2_device struct pointer, v4l2_device_unregister also zeroes it if the
+drvdata matches this pointer. This creates a problem, as the driver
+allocates it's main rockchip_rga struct during probe and sets it as it's
+drvdata. As the v4l2_device struct is the first element of the
+rockchip_rga struct, it has the same pointer than the rockchip_rga
+struct. Therefore v4l2_device_unregister incorrectly assumes that it has
+set the drvdata and clears it. This causes problems, as unbinding a
+core will unbind the master component, but not remove it. Therefore when
+adding the core again, the master component will be bound again and
+tries to access an NULL pointer.
+
+As the rga core binding expects the rockchip_rga struct to be fully
+initialized, bind the cores as the last step of the rga master bind.
+This also avoids a potential isr to hit just between the core bind and
+the actual initialization of the m2m device.
+
+Signed-off-by: Sven Püschel <s.pueschel@pengutronix.de>
+---
+ drivers/media/platform/rockchip/rga/rga.c | 111 +++++++++++-----------
+ 1 file changed, 58 insertions(+), 53 deletions(-)
+
+diff --git a/drivers/media/platform/rockchip/rga/rga.c b/drivers/media/platform/rockchip/rga/rga.c
+index be2eab17a..f4fd9fd82 100644
+--- a/drivers/media/platform/rockchip/rga/rga.c
++++ b/drivers/media/platform/rockchip/rga/rga.c
+@@ -746,39 +746,15 @@ static int rga_core_bind(struct device *dev, struct device *master, void *data)
+ {
+ 	struct rockchip_rga *rga = data;
+ 	struct rga_core *core = dev_get_drvdata(dev);
+-	struct video_device *vfd;
+ 	int ret = 0;
+ 
+ 	core->rga = rga;
+ 
+ 	rga->cores[0] = core;
+ 
+-	ret = v4l2_device_register(dev, &rga->v4l2_dev);
+-	if (ret)
+-		return ret;
+-	vfd = video_device_alloc();
+-	if (!vfd) {
+-		v4l2_err(&rga->v4l2_dev, "Failed to allocate video device\n");
+-		ret = -ENOMEM;
+-		goto unreg_v4l2_dev;
+-	}
+-	*vfd = rga_videodev;
+-	vfd->lock = &rga->mutex;
+-	vfd->v4l2_dev = &rga->v4l2_dev;
+-
+-	video_set_drvdata(vfd, rga);
+-	rga->vfd = vfd;
+-
+-	rga->m2m_dev = v4l2_m2m_init(&rga_m2m_ops);
+-	if (IS_ERR(rga->m2m_dev)) {
+-		v4l2_err(&rga->v4l2_dev, "Failed to init mem2mem device\n");
+-		ret = PTR_ERR(rga->m2m_dev);
+-		goto rel_vdev;
+-	}
+-
+ 	ret = pm_runtime_resume_and_get(core->dev);
+ 	if (ret < 0)
+-		goto rel_m2m;
++		return ret;
+ 
+ 	rga->version = rga->hw->get_version(core);
+ 
+@@ -787,43 +763,17 @@ static int rga_core_bind(struct device *dev, struct device *master, void *data)
+ 
+ 	pm_runtime_put(core->dev);
+ 
+-	ret = video_register_device(vfd, VFL_TYPE_VIDEO, -1);
+-	if (ret) {
+-		v4l2_err(&rga->v4l2_dev, "Failed to register video device\n");
+-		goto rel_m2m;
+-	}
+-
+-	v4l2_info(&rga->v4l2_dev, "Registered %s as /dev/%s\n",
+-		  vfd->name, video_device_node_name(vfd));
+-
+ 	return 0;
+-
+-rel_m2m:
+-	v4l2_m2m_release(rga->m2m_dev);
+-rel_vdev:
+-	video_device_release(vfd);
+-unreg_v4l2_dev:
+-	v4l2_device_unregister(&rga->v4l2_dev);
+-
+-	return ret;
+ }
+ 
+ static void rga_core_unbind(struct device *dev, struct device *master,
+ 			    void *data)
+ {
+ 	struct rga_core *core = dev_get_drvdata(dev);
+-	struct rockchip_rga *rga = core->rga;
+-
+-	v4l2_info(&rga->v4l2_dev, "Removing\n");
+ 
+-	video_unregister_device(rga->vfd);
+-
+-	/* make the ISR ignore this core before releasing the m2m device */
++	/* make the ISR ignore this core before the m2m device is released */
+ 	core->rga = NULL;
+ 	synchronize_irq(core->irq);
+-
+-	v4l2_m2m_release(rga->m2m_dev);
+-	v4l2_device_unregister(&rga->v4l2_dev);
+ }
+ 
+ static const struct component_ops rga_core_ops = {
+@@ -947,20 +897,75 @@ static struct platform_driver rga_core_pdrv = {
+ static int rga_bind(struct device *dev)
+ {
+ 	struct rockchip_rga *rga = dev_get_drvdata(dev);
++	struct video_device *vfd;
+ 	int ret;
+ 
++	ret = v4l2_device_register(dev, &rga->v4l2_dev);
++	if (ret)
++		return ret;
++	vfd = video_device_alloc();
++	if (!vfd) {
++		v4l2_err(&rga->v4l2_dev, "Failed to allocate video device\n");
++		ret = -ENOMEM;
++		goto unreg_v4l2_dev;
++	}
++	*vfd = rga_videodev;
++	vfd->lock = &rga->mutex;
++	vfd->v4l2_dev = &rga->v4l2_dev;
++
++	video_set_drvdata(vfd, rga);
++	rga->vfd = vfd;
++
++	rga->m2m_dev = v4l2_m2m_init(&rga_m2m_ops);
++	if (IS_ERR(rga->m2m_dev)) {
++		v4l2_err(&rga->v4l2_dev, "Failed to init mem2mem device\n");
++		ret = PTR_ERR(rga->m2m_dev);
++		goto rel_vdev;
++	}
++
++	ret = video_register_device(vfd, VFL_TYPE_VIDEO, -1);
++	if (ret) {
++		v4l2_err(&rga->v4l2_dev, "Failed to register video device\n");
++		goto rel_m2m;
++	}
++
+ 	ret = component_bind_all(dev, rga);
+ 	if (ret) {
+ 		dev_err(dev, "component bind failed\n");
+-		return ret;
++		goto rel_m2m;
+ 	}
+ 
++	v4l2_info(&rga->v4l2_dev, "Registered %s as /dev/%s\n",
++		  vfd->name, video_device_node_name(vfd));
++
+ 	return 0;
++
++rel_m2m:
++	v4l2_m2m_release(rga->m2m_dev);
++rel_vdev:
++	video_device_release(vfd);
++unreg_v4l2_dev:
++	v4l2_device_unregister(&rga->v4l2_dev);
++	dev_set_drvdata(dev, rga);
++	return ret;
+ }
+ 
+ static void rga_unbind(struct device *dev)
+ {
++	struct rockchip_rga *rga = dev_get_drvdata(dev);
++
++	v4l2_info(&rga->v4l2_dev, "Removing\n");
++
++	video_unregister_device(rga->vfd);
+ 	component_unbind_all(dev, NULL);
++	v4l2_m2m_release(rga->m2m_dev);
++	v4l2_device_unregister(&rga->v4l2_dev);
++	/*
++	 * As &rga->v4l2_dev == rga, v4l2_device_unregister (incorrectly)
++	 * clears the drvdata. Therefore just set it again
++	 * (ensuring it's correct regardless of the struct member position)
++	 */
++	dev_set_drvdata(dev, rga);
+ }
+ 
+ struct component_master_ops rga_master_ops = {

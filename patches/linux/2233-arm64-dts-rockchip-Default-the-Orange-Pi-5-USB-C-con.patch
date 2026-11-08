@@ -1,0 +1,44 @@
+From 8eddcc77d07358f86a33bddd2e52a33b64135b6a Mon Sep 17 00:00:00 2001
+From: Arun Iyengar <aiyengar1990@gmail.com>
+Date: Mon, 2 Nov 2026 07:05:20 +0000
+Subject: [PATCH 4/4] arm64: dts: rockchip: Default the Orange Pi 5 USB-C
+ controller to host
+
+The USB 3.0 OTG controller of the Orange Pi 5 and 5B drives the USB 2.0
+lines of the USB-C connector and, wired in parallel to them, those of a
+USB 2.0 Type-A port with an always-on VBUS. With nothing attached to
+the USB-C port the port controller sets the USB role to none, and DWC3
+then picks its role-switch default mode, which is peripheral unless the
+device tree says otherwise. A device in the Type-A port is not
+enumerated then, as nobody is the host on its lines.
+
+Make host the default mode, so that the Type-A port works whenever the
+USB-C port is unattached. A USB-C partner still gets the role it
+negotiates: device when the board is the UFP, host when it is the DFP.
+
+Fixes: c57d1a970275 ("arm64: dts: rockchip: add USB-C support to rk3588s-orangepi-5")
+Assisted-by: LLM
+Signed-off-by: Arun Iyengar <aiyengar1990@gmail.com>
+---
+ arch/arm64/boot/dts/rockchip/rk3588s-orangepi-5-5b.dtsi | 5 +++++
+ 1 file changed, 5 insertions(+)
+
+diff --git a/arch/arm64/boot/dts/rockchip/rk3588s-orangepi-5-5b.dtsi b/arch/arm64/boot/dts/rockchip/rk3588s-orangepi-5-5b.dtsi
+index d342438fd77c..3a54466387c3 100644
+--- a/arch/arm64/boot/dts/rockchip/rk3588s-orangepi-5-5b.dtsi
++++ b/arch/arm64/boot/dts/rockchip/rk3588s-orangepi-5-5b.dtsi
+@@ -301,6 +301,11 @@ &spdif_tx2 {
+ 
+ &usb_host0_xhci {
+ 	dr_mode = "otg";
++	/*
++	 * Be the host while the USB-C port is unattached, so that the Type-A
++	 * port on the same USB 2.0 lines works on its own.
++	 */
++	role-switch-default-mode = "host";
+ 	usb-role-switch;
+ 
+ 	ports {
+-- 
+2.55.0
+

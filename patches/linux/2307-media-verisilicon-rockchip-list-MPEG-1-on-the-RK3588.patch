@@ -1,0 +1,71 @@
+From c9487e9397edabc6a5cf87a2b5651e00373b9ac7 Mon Sep 17 00:00:00 2001
+From: Arun Iyengar <aiyengar1990@gmail.com>
+Date: Fri, 6 Nov 2026 11:21:30 +0000
+Subject: [PATCH 2307/2312] media: verisilicon: rockchip: list MPEG-1 on the
+ RK3588 VPU121 with AVS+
+
+The VPU121 variant that is selected when the device tree describes the
+AVS+ decoder has its own copy of the VDPU2 decoder formats. It was made
+before the VDPU2 decoder advertised V4L2_PIX_FMT_MPEG1_SLICE, so with an
+"avsd" register range MPEG-1 decoding disappears again.
+
+Add the MPEG-1 format to the copy, in the VDPU2 list order, and check at
+build time that the copy has every VDPU2 format plus AVS, so that a
+later VDPU2 format cannot be forgotten there.
+
+Assisted-by: LLM
+Signed-off-by: Arun Iyengar <aiyengar1990@gmail.com>
+---
+ .../platform/verisilicon/rockchip_vpu_hw.c    | 22 +++++++++++++++++--
+ 1 file changed, 20 insertions(+), 2 deletions(-)
+
+diff --git a/drivers/media/platform/verisilicon/rockchip_vpu_hw.c b/drivers/media/platform/verisilicon/rockchip_vpu_hw.c
+index 57b5ef76b204..c9dd9606e56a 100644
+--- a/drivers/media/platform/verisilicon/rockchip_vpu_hw.c
++++ b/drivers/media/platform/verisilicon/rockchip_vpu_hw.c
+@@ -338,8 +338,9 @@ static const struct hantro_fmt rockchip_vdpu2_dec_fmts[] = {
+ };
+ 
+ /*
+- * The RK3588 VPU121 with its AVS+ decoder: the VDPU2 formats, plus AVS1
+- * and AVS+ decoded by the AVS+ decoder.
++ * The RK3588 VPU121 with its AVS+ decoder: the VDPU2 formats, in the same
++ * order as rockchip_vdpu2_dec_fmts, plus AVS1 and AVS+ decoded by the AVS+
++ * decoder.
+  */
+ static const struct hantro_fmt rk3588_vpu121_avsd_dec_fmts[] = {
+ 	{
+@@ -380,6 +381,19 @@ static const struct hantro_fmt rk3588_vpu121_avsd_dec_fmts[] = {
+ 			.step_height = MB_DIM,
+ 		},
+ 	},
++	{
++		.fourcc = V4L2_PIX_FMT_MPEG1_SLICE,
++		.codec_mode = HANTRO_MODE_MPEG2_DEC,
++		.max_depth = 2,
++		.frmsize = {
++			.min_width = FMT_MIN_WIDTH,
++			.max_width = FMT_FHD_WIDTH,
++			.step_width = MB_DIM,
++			.min_height = FMT_MIN_HEIGHT,
++			.max_height = FMT_FHD_HEIGHT,
++			.step_height = MB_DIM,
++		},
++	},
+ 	{
+ 		.fourcc = V4L2_PIX_FMT_VP8_FRAME,
+ 		.codec_mode = HANTRO_MODE_VP8_DEC,
+@@ -622,6 +636,10 @@ static int rk3588_vpu121_hw_init(struct hantro_dev *vpu)
+ {
+ 	int ret;
+ 
++	/* The AVS+ variant has every VDPU2 format, and AVS */
++	BUILD_BUG_ON(ARRAY_SIZE(rk3588_vpu121_avsd_dec_fmts) !=
++		     ARRAY_SIZE(rockchip_vdpu2_dec_fmts) + 1);
++
+ 	ret = rockchip_avsd_hw_init(vpu);
+ 	if (ret)
+ 		return ret;
+-- 
+2.55.0
+

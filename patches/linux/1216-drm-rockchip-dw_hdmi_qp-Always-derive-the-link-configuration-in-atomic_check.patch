@@ -1,0 +1,71 @@
+From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
+From: Arun Iyengar <aiyengar1990@gmail.com>
+Date: Mon, 02 Nov 2026 06:21:53 +0000
+Subject: [PATCH] drm/rockchip: dw_hdmi_qp: Always derive the link configuration in atomic_check
+
+dw_hdmi_qp_rockchip_encoder_atomic_check() skips the PHY setup and the
+CRTC state update when the TMDS character rate, the color depth and the
+bus format are those of the last call. Since the FRL support that
+shortcut no longer covers the link configuration: an FRL link has the
+same TMDS character rate as the TMDS link it replaces, so a modeset that
+switches between TMDS and FRL at the same rate, depth and format is
+taken as unchanged. The PHY stays in its old mode and the CRTC state
+keeps the old frl_enabled, so the VOP still takes its DCLK from the
+HDMI PHY PLL, and the FRL link training fails to set the TxFFE level,
+which the PHY refuses in TMDS mode:
+
+  FRL LTS:2 set_ffe_level failed: -22
+
+Seen on an Orange Pi 5 when a sink's EDID (overridden to a 340 MHz
+maximum TMDS character rate) makes 3840x2160@60Hz 8 bpc use FRL after
+it ran over TMDS: the sink shows no signal, and every later modeset to
+the same mode fails the same way.
+
+The shortcut also keys on the rate of the last atomic check, which may
+belong to a state that was refused or only tested and never committed,
+while the CRTC state it leaves untouched is a copy of the committed one.
+
+Drop it: the link configuration is cheap to derive, and phy_configure()
+only records it for the next power-on anyway.
+
+Assisted-by: LLM
+Signed-off-by: Arun Iyengar <aiyengar1990@gmail.com>
+---
+ drivers/gpu/drm/rockchip/dw_hdmi_qp-rockchip.c | 7 -------
+ 1 file changed, 7 deletions(-)
+
+diff --git a/drivers/gpu/drm/rockchip/dw_hdmi_qp-rockchip.c b/drivers/gpu/drm/rockchip/dw_hdmi_qp-rockchip.c
+index ef3b927dac93..8e35d8ce25ff 100644
+--- a/drivers/gpu/drm/rockchip/dw_hdmi_qp-rockchip.c
++++ b/drivers/gpu/drm/rockchip/dw_hdmi_qp-rockchip.c
+@@ -109,7 +109,6 @@ struct rockchip_hdmi_qp {
+ 	int hpd_irq;
+ 	int port_id;
+ 	const struct rockchip_hdmi_qp_ctrl_ops *ctrl_ops;
+-	unsigned long long tmds_char_rate;
+ 	unsigned int phy_bpc;
+ };
+ 
+@@ -234,11 +233,6 @@ dw_hdmi_qp_rockchip_encoder_atomic_check(struct drm_encoder *encoder,
+ 	if (ingest_fmt < 0)
+ 		return -EINVAL;
+ 
+-	if (hdmi->tmds_char_rate == conn_state->hdmi.tmds_char_rate &&
+-	    s->output_bpc == conn_state->hdmi.output_bpc &&
+-	    s->bus_format == ingest_fmt)
+-		return 0;
+-
+ 	switch (ingest_fmt) {
+ 	case MEDIA_BUS_FMT_RGB888_1X24:
+ 	case MEDIA_BUS_FMT_RGB101010_1X30:
+@@ -293,7 +287,6 @@ dw_hdmi_qp_rockchip_encoder_atomic_check(struct drm_encoder *encoder,
+ 		return ret;
+ 	}
+ 
+-	hdmi->tmds_char_rate = conn_state->hdmi.tmds_char_rate;
+ 	hdmi->phy_bpc = phy_cfg.hdmi.bpc;
+ 
+ 	s->output_type = DRM_MODE_CONNECTOR_HDMIA;
+-- 
+2.55.0
+

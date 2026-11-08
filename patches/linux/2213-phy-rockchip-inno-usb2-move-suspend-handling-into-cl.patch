@@ -1,0 +1,117 @@
+From: Sebastian Reichel <sebastian.reichel@collabora.com>
+Date: Thu, 01 Oct 2026 15:12:42 +0200
+Subject: [PATCH] phy: rockchip: inno-usb2: move suspend handling into clock prepare/unprepare for RK3588/RK3576
+
+On RK3588 the 480MHz PHY clock must be running to access registers on
+the OHCI and EHCI controllers. This requires that the clock output bit
+is configured correctly (already happening) and that the PHY PLL itself
+is running. The PHY PLL is only running when the PHY is not suspended.
+This is currently handled independently of the clock and thus the clock
+might be enabled with the PHY being suspended resulting in a
+non-functional clock despite the clock being marked as prepared and
+enabled according to the common clock framework.
+
+This is especially a problem with OHCI system resume on RK3588, which
+does:
+
+ohci_platform_resume
+    -> ohci_platform_resume_common
+        -> deassert resets
+        -> ohci_platform_power_on -> enable clocks
+        -> ohci_resume
+            -> ohci_readl(ohci, &ohci->regs->control); // SError !
+            -> ...
+        -> ...
+    -> root hub resume (this resumes the PHY)
+
+Fix this by fully powering the PHY from the clock prepare function.
+
+This does not work on older platforms, which have multiple ports and
+only one 480MHz clock as we do not know which port should be resumed.
+But as far as I can tell these platforms do not have the clock
+dependency from their USB controllers and thus are not affected.
+
+Signed-off-by: Sebastian Reichel <sebastian.reichel@collabora.com>
+Link: https://patch.msgid.link/20261001-phy-rockchip-inno-usb2-clock-fix-v2-4-e01bf509359e@collabora.com
+---
+---
+ drivers/phy/rockchip/phy-rockchip-inno-usb2.c | 31 +++++++++++++++++++++------
+ 1 file changed, 24 insertions(+), 7 deletions(-)
+
+diff --git a/drivers/phy/rockchip/phy-rockchip-inno-usb2.c b/drivers/phy/rockchip/phy-rockchip-inno-usb2.c
+index 925a03fee6bc..cc923d12ef7b 100644
+--- a/drivers/phy/rockchip/phy-rockchip-inno-usb2.c
++++ b/drivers/phy/rockchip/phy-rockchip-inno-usb2.c
+@@ -363,6 +363,8 @@ static int rockchip_usb2phy_set_suspend(struct rockchip_usb2phy *rphy,
+ 
+ static int rockchip_usb2phy_clk480m_prepare(struct clk_hw *hw)
+ {
++	struct rockchip_usb2phy *rphy =
++		container_of(hw, struct rockchip_usb2phy, clk480m_hw);
+ 	const struct usb2phy_reg *clkout_ctl;
+ 	struct regmap *base;
+ 	int ret;
+@@ -379,16 +381,27 @@ static int rockchip_usb2phy_clk480m_prepare(struct clk_hw *hw)
+ 		usleep_range(1200, 1300);
+ 	}
+ 
++	if (rphy->phy_cfg->num_ports == 1) {
++		ret = rockchip_usb2phy_set_suspend(rphy, &rphy->ports[0], false);
++		if (ret)
++			return ret;
++	}
++
+ 	return 0;
+ }
+ 
+ static void rockchip_usb2phy_clk480m_unprepare(struct clk_hw *hw)
+ {
++	struct rockchip_usb2phy *rphy =
++		container_of(hw, struct rockchip_usb2phy, clk480m_hw);
+ 	const struct usb2phy_reg *clkout_ctl;
+ 	struct regmap *base;
+ 
+ 	rockchip_usb2phy_clk480m_clkout_ctl(hw, &base, &clkout_ctl);
+ 
++	if (rphy->phy_cfg->num_ports == 1)
++		rockchip_usb2phy_set_suspend(rphy, &rphy->ports[0], true);
++
+ 	/* turn off 480m clk output */
+ 	property_enable(base, clkout_ctl, false);
+ }
+@@ -632,10 +645,12 @@ static int rockchip_usb2phy_power_on(struct phy *phy)
+ 	if (ret)
+ 		return ret;
+ 
+-	ret = rockchip_usb2phy_set_suspend(rphy, rport, false);
+-	if (ret) {
+-		clk_disable_unprepare(rphy->clk480m);
+-		return ret;
++	if (rphy->phy_cfg->num_ports > 1) {
++		ret = rockchip_usb2phy_set_suspend(rphy, rport, false);
++		if (ret) {
++			clk_disable_unprepare(rphy->clk480m);
++			return ret;
++		}
+ 	}
+ 
+ 	rport->suspended = false;
+@@ -653,9 +668,11 @@ static int rockchip_usb2phy_power_off(struct phy *phy)
+ 	if (rport->suspended)
+ 		return 0;
+ 
+-	ret = rockchip_usb2phy_set_suspend(rphy, rport, true);
+-	if (ret)
+-		return ret;
++	if (rphy->phy_cfg->num_ports > 1) {
++		ret = rockchip_usb2phy_set_suspend(rphy, rport, true);
++		if (ret)
++			return ret;
++	}
+ 
+ 	rport->suspended = true;
+ 	clk_disable_unprepare(rphy->clk480m);
+
+-- 
+2.53.0
+

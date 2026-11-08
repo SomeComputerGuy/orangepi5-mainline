@@ -1,0 +1,46 @@
+From 96553d2cc8240419157654119ce15ae488fae72e Mon Sep 17 00:00:00 2001
+From: Arun Iyengar <aiyengar1990@gmail.com>
+Date: Mon, 2 Nov 2026 07:46:29 +0000
+Subject: [PATCH 2/5] iommu/rockchip: Fix the poll period and timeout of
+ FORCE_RESET
+
+rk_iommu_force_reset() passes RK_MMU_FORCE_RESET_TIMEOUT_US (100 ms) as
+the sleep between two reads of the reset status and RK_MMU_POLL_TIMEOUT_US
+(1 ms) as the timeout, the other way round from what the names and every
+other poll in the driver say. A reset that is not done at the first read
+makes readx_poll_timeout() sleep for 25 to 100 ms, read once more and
+give up, so the reset is both slower than needed when it succeeds and
+not polled for the 100 ms the driver meant to allow when it is slow.
+
+When the reset is done by the first read, as is normal (rk_iommu_resume()
+of an RK3588 video decoder IOMMU takes 9 to 18 us), nothing changes; the
+swap matters when a reset is slow or never completes, as on an RK3588
+video decoder IOMMU whose master has not gone idle.
+
+Poll every RK_MMU_POLL_PERIOD_US for up to RK_MMU_FORCE_RESET_TIMEOUT_US.
+
+Fixes: 0416bf6479ac ("iommu/rockchip: Use iopoll helpers to wait for hardware")
+Assisted-by: LLM
+Signed-off-by: Arun Iyengar <aiyengar1990@gmail.com>
+---
+ drivers/iommu/rockchip-iommu.c | 4 ++--
+ 1 file changed, 2 insertions(+), 2 deletions(-)
+
+diff --git a/drivers/iommu/rockchip-iommu.c b/drivers/iommu/rockchip-iommu.c
+index 8af64c86ff37..2634d00b907f 100644
+--- a/drivers/iommu/rockchip-iommu.c
++++ b/drivers/iommu/rockchip-iommu.c
+@@ -535,8 +535,8 @@ static int rk_iommu_force_reset(struct rk_iommu *iommu)
+ 	rk_iommu_command(iommu, RK_MMU_CMD_FORCE_RESET);
+ 
+ 	ret = readx_poll_timeout(rk_iommu_is_reset_done, iommu, val,
+-				 val, RK_MMU_FORCE_RESET_TIMEOUT_US,
+-				 RK_MMU_POLL_TIMEOUT_US);
++				 val, RK_MMU_POLL_PERIOD_US,
++				 RK_MMU_FORCE_RESET_TIMEOUT_US);
+ 	if (ret) {
+ 		dev_err(iommu->dev, "FORCE_RESET command timed out\n");
+ 		return ret;
+-- 
+2.55.0
+

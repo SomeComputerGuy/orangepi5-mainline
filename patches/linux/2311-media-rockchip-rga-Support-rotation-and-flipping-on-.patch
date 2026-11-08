@@ -1,0 +1,207 @@
+From 5e898be64d6f9f4f3030246cf7eb86c3239dea4c Mon Sep 17 00:00:00 2001
+From: Arun Iyengar <aiyengar1990@gmail.com>
+Date: Thu, 5 Nov 2026 23:04:28 +0000
+Subject: [PATCH 2311/2312] media: rockchip: rga: Support rotation and flipping
+ on the RGA3
+
+The RGA3 window can mirror its input horizontally and vertically and
+rotate it by 90 degrees, which together give every multiple of 90
+degrees with or without a flip (TRM part 2, 5.4.5). Expose them with
+the V4L2_CID_ROTATE, V4L2_CID_HFLIP and V4L2_CID_VFLIP controls the
+RGA2 already has.
+
+The window rotates first and mirrors the rotated picture, while the
+V4L2 flips apply to the source: with a 90 or 270 degree rotation a
+horizontal flip is programmed as a vertical mirror and the other way
+round.
+
+The window rotates before it scales, so the scaling factors of a 90 or
+270 degree rotation use the swapped source size. YUV 4:2:2 inputs can
+only be mirrored (TRM part 2, 5.6.3): reject a 90 or 270 degree rotation
+for them when the control is set and when streaming starts.
+
+Assisted-by: LLM
+Signed-off-by: Arun Iyengar <aiyengar1990@gmail.com>
+---
+ drivers/media/platform/rockchip/rga/rga-buf.c |  5 ++
+ drivers/media/platform/rockchip/rga/rga.c     | 12 +++++
+ drivers/media/platform/rockchip/rga/rga.h     |  6 +++
+ drivers/media/platform/rockchip/rga/rga3-hw.c | 52 ++++++++++++++++---
+ drivers/media/platform/rockchip/rga/rga3-hw.h |  3 ++
+ 5 files changed, 72 insertions(+), 6 deletions(-)
+
+diff --git a/drivers/media/platform/rockchip/rga/rga-buf.c b/drivers/media/platform/rockchip/rga/rga-buf.c
+index 78d5756468a4..5061f26d7ba1 100644
+--- a/drivers/media/platform/rockchip/rga/rga-buf.c
++++ b/drivers/media/platform/rockchip/rga/rga-buf.c
+@@ -228,6 +228,11 @@ static int rga_buf_prepare_streaming(struct vb2_queue *q)
+ 	const struct rga_hw *hw = ctx->rga->hw;
+ 	int ret;
+ 
++	/* The input format can have changed since the rotation was set */
++	ret = rga_check_rotation(hw, ctx->in.fmt, ctx->rotate);
++	if (ret < 0)
++		return ret;
++
+ 	/* It's safe to check the streaming state of the other queue,
+ 	 * as the streamon ioctl's can't race due to the lock set in
+ 	 * the queue_init function.
+diff --git a/drivers/media/platform/rockchip/rga/rga.c b/drivers/media/platform/rockchip/rga/rga.c
+index 6e95203b9b95..c6ba1ba11d61 100644
+--- a/drivers/media/platform/rockchip/rga/rga.c
++++ b/drivers/media/platform/rockchip/rga/rga.c
+@@ -310,6 +310,9 @@ static int rga_s_ctrl(struct v4l2_ctrl *ctrl)
+ 		ctx->vflip = ctrl->val;
+ 		break;
+ 	case V4L2_CID_ROTATE:
++		ret = rga_check_rotation(hw, ctx->in.fmt, ctrl->val);
++		if (ret < 0)
++			goto s_ctrl_done;
+ 		if (vb2_is_streaming(v4l2_m2m_get_dst_vq(ctx->fh.m2m_ctx)) &&
+ 		    vb2_is_streaming(v4l2_m2m_get_src_vq(ctx->fh.m2m_ctx))) {
+ 			ret = rga_check_scaling(hw, &ctx->in.crop,
+@@ -399,6 +402,15 @@ int rga_check_scaling(const struct rga_hw *hw, const struct v4l2_rect *crop_in,
+ 	return 0;
+ }
+ 
++int rga_check_rotation(const struct rga_hw *hw, const void *in_fmt, u32 rotate)
++{
++	if ((rotate == 90 || rotate == 270) && hw->can_rotate_90 &&
++	    !hw->can_rotate_90(in_fmt))
++		return -EINVAL;
++
++	return 0;
++}
++
+ struct rga_frame *rga_get_frame(struct rga_ctx *ctx, enum v4l2_buf_type type)
+ {
+ 	if (V4L2_TYPE_IS_OUTPUT(type))
+diff --git a/drivers/media/platform/rockchip/rga/rga.h b/drivers/media/platform/rockchip/rga/rga.h
+index 517dee6ead64..de6fbf5e193b 100644
+--- a/drivers/media/platform/rockchip/rga/rga.h
++++ b/drivers/media/platform/rockchip/rga/rga.h
+@@ -150,6 +150,7 @@ struct rga_frame *rga_get_frame(struct rga_ctx *ctx, enum v4l2_buf_type type);
+ 
+ int rga_check_scaling(const struct rga_hw *hw, const struct v4l2_rect *crop_in,
+ 		      const struct v4l2_rect *crop_out, u32 rotate);
++int rga_check_rotation(const struct rga_hw *hw, const void *in_fmt, u32 rotate);
+ 
+ /* RGA Buffers Manage */
+ extern const struct vb2_ops rga_qops;
+@@ -215,6 +216,11 @@ struct rga_hw {
+ 	 * are pulsed.
+ 	 */
+ 	void (*reset)(struct rga_core *core);
++	/*
++	 * Optional, returns false if the input format can't be rotated by
++	 * 90 or 270 degrees.
++	 */
++	bool (*can_rotate_90)(const void *in_fmt);
+ 	struct rockchip_rga_version (*get_version)(struct rga_core *core);
+ 	void *(*adjust_and_map_format)(struct rga_ctx *ctx,
+ 				       struct v4l2_pix_format_mplane *format,
+diff --git a/drivers/media/platform/rockchip/rga/rga3-hw.c b/drivers/media/platform/rockchip/rga/rga3-hw.c
+index 00e2cd0136b4..95259dace82b 100644
+--- a/drivers/media/platform/rockchip/rga/rga3-hw.c
++++ b/drivers/media/platform/rockchip/rga/rga3-hw.c
+@@ -65,9 +65,18 @@ static bool rga3_is_yuv10b(const struct rga3_fmt *fmt)
+ 	       fmt->hw_format == RGA3_COLOR_FMT_YUV422_10B;
+ }
+ 
++/* The RGA3 can't rotate YUV 4:2:2 by 90 or 270 degrees, only mirror it */
++static bool rga3_can_rotate_90(const void *in_fmt)
++{
++	const struct rga3_fmt *fmt = in_fmt;
++
++	return fmt->hw_format != RGA3_COLOR_FMT_YUV422 &&
++	       fmt->hw_format != RGA3_COLOR_FMT_YUV422_10B;
++}
++
+ /*
+- * Map the transformations to the RGA3 command buffer.
+- * Currently this is just the scaling settings and a fixed alpha value.
++ * Map the transformations to the RGA3 command buffer: the orientation, the
++ * scaling settings and a fixed alpha value.
+  */
+ static void rga3_cmd_set_trans_info(struct rga_ctx *ctx)
+ {
+@@ -76,14 +85,44 @@ static void rga3_cmd_set_trans_info(struct rga_ctx *ctx)
+ 	unsigned int reg;
+ 	u16 hor_scl_fac, ver_scl_fac;
+ 	const struct rga3_fmt *in = ctx->in.fmt;
++	bool rot, xmirror, ymirror;
+ 
+-	/* Support basic input cropping to support 1088px inputs */
+-	src_h = ctx->in.crop.height;
+-	src_w = ctx->in.crop.width;
++	/*
++	 * The window rotates the picture by 90 degrees clockwise and then
++	 * mirrors the rotated picture (xmirror flips it horizontally, ymirror
++	 * vertically). 180 degrees are both mirrors, 270 degrees both mirrors
++	 * and the 90 degree rotation. The V4L2 flips apply to the source,
++	 * before the rotation, so with a 90 degree rotation a horizontal flip
++	 * of the source is a vertical mirror of the rotated picture and the
++	 * other way round.
++	 */
++	rot = ctx->rotate == 90 || ctx->rotate == 270;
++	xmirror = rot ? ctx->vflip : ctx->hflip;
++	ymirror = rot ? ctx->hflip : ctx->vflip;
++	if (ctx->rotate == 180 || ctx->rotate == 270) {
++		xmirror = !xmirror;
++		ymirror = !ymirror;
++	}
++
++	/*
++	 * Support basic input cropping to support 1088px inputs.
++	 * The window rotates before it scales, so a rotated source is
++	 * scaled with its width and height swapped.
++	 */
++	if (rot) {
++		src_h = ctx->in.crop.width;
++		src_w = ctx->in.crop.height;
++	} else {
++		src_h = ctx->in.crop.height;
++		src_w = ctx->in.crop.width;
++	}
+ 	dst_h = ctx->out.pix.height;
+ 	dst_w = ctx->out.pix.width;
+ 
+ 	reg = RGA3_WIN0_RD_CTRL - RGA3_FIRST_CMD_REG;
++	cmd[reg >> 2] |= FIELD_PREP(RGA3_WIN_ROT, rot)
++		      |  FIELD_PREP(RGA3_WIN_XMIRROR, xmirror)
++		      |  FIELD_PREP(RGA3_WIN_YMIRROR, ymirror);
+ 	cmd[reg >> 2] |= FIELD_PREP(RGA3_WIN_SCALE_HOR_UP, dst_w > src_w)
+ 		      |  FIELD_PREP(RGA3_WIN_SCALE_HOR_BYPASS, dst_w == src_w)
+ 		      |  FIELD_PREP(RGA3_WIN_SCALE_VER_UP, dst_h > src_h)
+@@ -569,12 +608,13 @@ const struct rga_hw rga3_hw = {
+ 	.max_dst_height = RGA3_MAX_OUTPUT_HEIGHT,
+ 	.max_scaling_factor = RGA3_MAX_SCALING_FACTOR,
+ 	.stride_alignment = 16,
+-	.features = 0,
++	.features = RGA_FEATURE_FLIP | RGA_FEATURE_ROTATE,
+ 
+ 	.setup_cmdbuf = rga3_hw_setup_cmdbuf,
+ 	.start = rga3_hw_start,
+ 	.handle_irq = rga3_handle_irq,
+ 	.reset = rga3_soft_reset,
++	.can_rotate_90 = rga3_can_rotate_90,
+ 	.get_version = rga3_get_version,
+ 	.enum_format = rga3_enum_format,
+ 	.adjust_and_map_format = rga3_adjust_and_map_format,
+diff --git a/drivers/media/platform/rockchip/rga/rga3-hw.h b/drivers/media/platform/rockchip/rga/rga3-hw.h
+index 6d9929f9c6ea..e01642c5ef8f 100644
+--- a/drivers/media/platform/rockchip/rga/rga3-hw.h
++++ b/drivers/media/platform/rockchip/rga/rga3-hw.h
+@@ -181,6 +181,9 @@
+ #define RGA3_WIN_SCALE_VER_BYPASS BIT(22)
+ #define RGA3_WIN_SCALE_HOR_UP BIT(21)
+ #define RGA3_WIN_SCALE_HOR_BYPASS BIT(20)
++#define RGA3_WIN_YMIRROR BIT(18)
++#define RGA3_WIN_XMIRROR BIT(17)
++#define RGA3_WIN_ROT BIT(16)
+ #define RGA3_WIN_YC_SWAP BIT(13)
+ #define RGA3_WIN_RBUV_SWAP BIT(12)
+ #define RGA3_WIN_YUV10B_ENDIAN BIT(11)
+-- 
+2.55.0
+

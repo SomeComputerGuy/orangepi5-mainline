@@ -1,0 +1,75 @@
+From a9659694e5b65fba1a69d3cf9fc455de07ae603f Mon Sep 17 00:00:00 2001
+From: Igor Paunovic <royalnet026@gmail.com>
+Date: Sat, 8 Aug 2026 11:57:22 +0200
+Subject: [PATCH 2255/2271] drm/rockchip: dw_dp: Attach "max bpc" connector
+ property
+
+The dw-dp bridge already filters candidate output formats on
+conn_state->max_bpc in dw_dp_bridge_atomic_get_output_bus_fmts() and
+validates the result against the link bandwidth, but the connector
+never exposes the "max bpc" property, so userspace cannot limit the
+bit depth. Attach the property with a range of 6 to 10, matching
+dw_dp_output_formats[]: the smallest entry is 6 bpc RGB and the
+deepest entries are 10 bpc.
+
+drm_connector_attach_max_bpc_property() initializes
+connector->state->max_requested_bpc and therefore requires the
+connector to have a state. Rockchip binds its components before
+drm_mode_config_reset() runs, so the freshly created bridge connector
+does not have one yet - create the connector state before attaching
+the property, exactly like drmm_connector_hdmi_init() does for HDMI
+bridge connectors. The later drm_mode_config_reset() then re-creates
+the connector state, and the preceding patch makes
+drm_bridge_connector_create_state() restore max_requested_bpc from
+connector->max_bpc, so clients that never set the property (fbcon in
+particular) keep the full range instead of ending up with 0.
+
+With the property attached, compositors such as KWin write "max bpc"
+on every atomic modeset; any in-range value is handled by the existing
+format filter and bandwidth checks.
+
+Signed-off-by: Igor Paunovic <royalnet026@gmail.com>
+---
+ drivers/gpu/drm/rockchip/dw_dp-rockchip.c | 26 +++++++++++++++++++++++
+ 1 file changed, 26 insertions(+)
+
+diff --git a/drivers/gpu/drm/rockchip/dw_dp-rockchip.c b/drivers/gpu/drm/rockchip/dw_dp-rockchip.c
+index 59c66b657031..d9aa8b31a0dd 100644
+--- a/drivers/gpu/drm/rockchip/dw_dp-rockchip.c
++++ b/drivers/gpu/drm/rockchip/dw_dp-rockchip.c
+@@ -172,6 +172,32 @@ static int dw_dp_rockchip_bind(struct device *dev, struct device *master, void *
+ 				     "Failed to init bridge connector\n");
+ 	}
+ 
++	/*
++	 * The components are bound before drm_mode_config_reset() runs, so
++	 * the connector has no state yet, but
++	 * drm_connector_attach_max_bpc_property() requires one. Create the
++	 * connector state first, like drmm_connector_hdmi_init() does.
++	 */
++	if (connector->funcs->atomic_create_state) {
++		struct drm_connector_state *state;
++
++		state = connector->funcs->atomic_create_state(connector);
++		if (IS_ERR(state)) {
++			dw_dp_unbind(dp->base);
++			return PTR_ERR(state);
++		}
++
++		connector->state = state;
++	} else if (connector->funcs->reset) {
++		connector->funcs->reset(connector);
++	}
++
++	ret = drm_connector_attach_max_bpc_property(connector, 6, 10);
++	if (ret) {
++		dw_dp_unbind(dp->base);
++		return ret;
++	}
++
+ 	return 0;
+ }
+ 
+-- 
+2.55.0
+

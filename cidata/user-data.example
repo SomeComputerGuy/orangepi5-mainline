@@ -1,0 +1,15 @@
+#cloud-config
+# First-boot setup. Edit before first boot to add SSH keys, change user, etc.
+hostname: orangepi5
+# Creates the default "ubuntu" user (sudo); password must be changed on first login
+chpasswd:
+  expire: true
+  users:
+    - {name: ubuntu, password: ubuntu, type: text}
+ssh_pwauth: true
+# ssh_authorized_keys:
+#   - ssh-ed25519 AAAA... you@host
+growpart:
+  mode: auto
+  devices: ['/']
+resize_rootfs: true

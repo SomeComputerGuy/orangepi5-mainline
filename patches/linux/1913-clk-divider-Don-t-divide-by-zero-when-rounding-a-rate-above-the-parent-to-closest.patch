@@ -1,0 +1,46 @@
+From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
+From: Arun Iyengar <aiyengar1990@gmail.com>
+Date: Mon, 02 Nov 2026 06:21:51 +0000
+Subject: [PATCH] clk: divider: Don't divide by zero when rounding a rate above the parent to closest
+
+_div_round_closest() computes the dividers just above and just below
+the requested rate and compares the rates they give. For a rate above
+the parent rate the divider below is parent_rate / rate = 0, and
+DIV_ROUND_UP_ULL(parent_rate, 0) divides by zero: undefined behaviour,
+which arm64 happens to turn into 0 (so the comparison picks the divider
+above by accident) and x86 into a divide error.
+
+A CLK_DIVIDER_ROUND_CLOSEST divider without CLK_SET_RATE_PARENT gets
+there whenever one of its parents runs below the requested rate, e.g.
+in a composite clock whose determine_rate() asks every parent. Return
+the smallest usable divider for such a rate, like rounding up does.
+
+Fixes: 9315514252a9 ("clk: divider: fix calculation of initial best divider when rounding to closest")
+
+Assisted-by: LLM
+Signed-off-by: Arun Iyengar <aiyengar1990@gmail.com>
+---
+ drivers/clk/clk-divider.c | 7 +++++++
+ 1 file changed, 7 insertions(+)
+
+diff --git a/drivers/clk/clk-divider.c b/drivers/clk/clk-divider.c
+index f68216c65d3d..d206a40747fb 100644
+--- a/drivers/clk/clk-divider.c
++++ b/drivers/clk/clk-divider.c
+@@ -244,6 +244,13 @@ static int _div_round_closest(const struct clk_div_table *table,
+ 	int up, down;
+ 	unsigned long up_rate, down_rate;
+ 
++	/*
++	 * A rate above the parent's is closest with the smallest divider;
++	 * there is no "down" divider to compare it to (it would be 0).
++	 */
++	if (rate > parent_rate)
++		return _div_round_up(table, parent_rate, rate, flags);
++
+ 	up = DIV_ROUND_UP_ULL((u64)parent_rate, rate);
+ 	down = parent_rate / rate;
+ 
+-- 
+2.55.0
+

@@ -1,0 +1,49 @@
+From 6b74ace8d0ba24b20f2ddd10269a453b1dcd1928 Mon Sep 17 00:00:00 2001
+From: Paul Kocialkowski <paulk@sys-base.io>
+Date: Fri, 22 May 2026 12:16:47 +0200
+Subject: [PATCH] media: verisilicon: Report default pixel coding for non-JPEG
+ and fix JPEG case
+
+The JPEG colorspace is very specific to the JPEG coded format and is
+not relevant as a default for other types of coded (or non-coded) formats.
+These would typically use ITU-R Rec. BT.709 but it could be a number of other
+ones as well so reporting the default value is best.
+
+Furthermore other pixel coding attributes are best set accordingly instead
+of keeping default values in the JPEG case.
+
+Signed-off-by: Paul Kocialkowski <paulk@sys-base.io>
+Link: https://patch.msgid.link/20260522101653.2565125-9-paulk@sys-base.io
+---
+ .../media/platform/verisilicon/hantro_v4l2.c   | 18 ++++++++++++++----
+ 1 file changed, 14 insertions(+), 4 deletions(-)
+
+diff --git a/drivers/media/platform/verisilicon/hantro_v4l2.c b/drivers/media/platform/verisilicon/hantro_v4l2.c
+index 2761d37af..d7271c31a 100644
+--- a/drivers/media/platform/verisilicon/hantro_v4l2.c
++++ b/drivers/media/platform/verisilicon/hantro_v4l2.c
+@@ -442,10 +442,20 @@ hantro_reset_fmt(struct v4l2_pix_format_mplane *fmt,
+ 
+ 	fmt->pixelformat = vpu_fmt->fourcc;
+ 	fmt->field = V4L2_FIELD_NONE;
+-	fmt->colorspace = V4L2_COLORSPACE_JPEG;
+-	fmt->ycbcr_enc = V4L2_YCBCR_ENC_DEFAULT;
+-	fmt->quantization = V4L2_QUANTIZATION_DEFAULT;
+-	fmt->xfer_func = V4L2_XFER_FUNC_DEFAULT;
++
++	if (fmt->pixelformat == V4L2_PIX_FMT_JPEG) {
++		fmt->colorspace = V4L2_COLORSPACE_JPEG;
++		fmt->ycbcr_enc = V4L2_MAP_YCBCR_ENC_DEFAULT(fmt->colorspace);
++		fmt->quantization =
++			V4L2_MAP_QUANTIZATION_DEFAULT(false, fmt->colorspace,
++						      fmt->ycbcr_enc);
++		fmt->xfer_func = V4L2_MAP_XFER_FUNC_DEFAULT(fmt->colorspace);
++	} else {
++		fmt->colorspace = V4L2_COLORSPACE_DEFAULT;
++		fmt->ycbcr_enc = V4L2_XFER_FUNC_DEFAULT;
++		fmt->quantization = V4L2_QUANTIZATION_DEFAULT;
++		fmt->xfer_func = V4L2_XFER_FUNC_DEFAULT;
++	}
+ }
+ 
+ static void

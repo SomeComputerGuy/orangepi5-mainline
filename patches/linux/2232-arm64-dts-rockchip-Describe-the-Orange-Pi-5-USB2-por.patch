@@ -1,0 +1,77 @@
+From b36a4c027c27f88ae2e87c35d07be775b064041f Mon Sep 17 00:00:00 2001
+From: Arun Iyengar <aiyengar1990@gmail.com>
+Date: Mon, 2 Nov 2026 07:05:19 +0000
+Subject: [PATCH 3/4] arm64: dts: rockchip: Describe the Orange Pi 5 USB2 port
+ on the USB-C lines
+
+Of the two USB 2.0 Type-A ports of the Orange Pi 5 and 5B, one doesn't
+have data lines of its own: its D+/D- are wired straight to the USB-C
+connector's USB 2.0 lines (TYPEC0_OTG_DP/DM of the USB 3.0 OTG
+controller), with no switch in between, and its VBUS is the always-on
+5 V system supply.
+
+Describe it as a usb-a-connector linked to the controller's high-speed
+port next to the USB-C connector, so that what is behind that port is
+visible in the device tree, and say in a comment what follows from the
+wiring: a device in the Type-A port only works while the controller is
+the host on those lines and nothing uses them on the USB-C side.
+
+Assisted-by: LLM
+Signed-off-by: Arun Iyengar <aiyengar1990@gmail.com>
+---
+ .../dts/rockchip/rk3588s-orangepi-5-5b.dtsi   | 29 ++++++++++++++++++-
+ 1 file changed, 28 insertions(+), 1 deletion(-)
+
+diff --git a/arch/arm64/boot/dts/rockchip/rk3588s-orangepi-5-5b.dtsi b/arch/arm64/boot/dts/rockchip/rk3588s-orangepi-5-5b.dtsi
+index 92a3ac227dd9..d342438fd77c 100644
+--- a/arch/arm64/boot/dts/rockchip/rk3588s-orangepi-5-5b.dtsi
++++ b/arch/arm64/boot/dts/rockchip/rk3588s-orangepi-5-5b.dtsi
+@@ -88,6 +88,25 @@ usb3_con_ss: endpoint {
+ 		};
+ 	};
+ 
++	/*
++	 * One of the USB 2.0 Type-A ports has no data lines of its own: its
++	 * D+/D- are wired straight to those of the USB-C connector (no
++	 * switch), and its VBUS is always on. A device in it can only work
++	 * while the USB 3.0 OTG controller is the host on those lines and
++	 * the USB-C port doesn't use them.
++	 */
++	usb2_con: connector-usb2 {
++		compatible = "usb-a-connector";
++		label = "USB2 (USB-C data lines)";
++		vbus-supply = <&vcc5v0_sys>;
++
++		port {
++			usb2_con_hs: endpoint {
++				remote-endpoint = <&usb_host0_xhci_hs_typea>;
++			};
++		};
++	};
++
+ 	vbus_typec: regulator-vbus-typec {
+ 		compatible = "regulator-fixed";
+ 		enable-active-high;
+@@ -290,10 +309,18 @@ ports {
+ 
+ 		port@0 {
+ 			reg = <0>;
++			#address-cells = <1>;
++			#size-cells = <0>;
+ 
+-			usb_host0_xhci_hs: endpoint {
++			usb_host0_xhci_hs: endpoint@0 {
++				reg = <0>;
+ 				remote-endpoint = <&usbc0_hs>;
+ 			};
++
++			usb_host0_xhci_hs_typea: endpoint@1 {
++				reg = <1>;
++				remote-endpoint = <&usb2_con_hs>;
++			};
+ 		};
+ 
+ 		port@1 {
+-- 
+2.55.0
+

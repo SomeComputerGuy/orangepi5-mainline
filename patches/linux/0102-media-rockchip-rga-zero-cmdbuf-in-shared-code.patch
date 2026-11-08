@@ -1,0 +1,73 @@
+From 4d0c90e68769a9494552822a44e961f7f7a61428 Mon Sep 17 00:00:00 2001
+From: =?UTF-8?q?Sven=20P=C3=BCschel?= <s.pueschel@pengutronix.de>
+Date: Wed, 16 Sep 2026 17:09:42 +0200
+Subject: [PATCH] media: rockchip: rga: zero cmdbuf in shared code
+MIME-Version: 1.0
+Content-Type: text/plain; charset=UTF-8
+Content-Transfer-Encoding: 8bit
+
+Zero the command buffer (cmdbuf) in the shared code instead of the
+individual RGA2/RGA3 implementations. Besides centralizing the memset
+operation this also uses the cmdbuf_size member for the memset size,
+which is also used as the size for the actual allocation.
+
+Signed-off-by: Sven Püschel <s.pueschel@pengutronix.de>
+---
+ drivers/media/platform/rockchip/rga/rga-hw.c  | 2 --
+ drivers/media/platform/rockchip/rga/rga.c     | 1 +
+ drivers/media/platform/rockchip/rga/rga.h     | 3 +++
+ drivers/media/platform/rockchip/rga/rga3-hw.c | 2 --
+ 4 files changed, 4 insertions(+), 4 deletions(-)
+
+diff --git a/drivers/media/platform/rockchip/rga/rga-hw.c b/drivers/media/platform/rockchip/rga/rga-hw.c
+index 2e7ec8b7c..c24e03431 100644
+--- a/drivers/media/platform/rockchip/rga/rga-hw.c
++++ b/drivers/media/platform/rockchip/rga/rga-hw.c
+@@ -435,8 +435,6 @@ static void rga_cmd_set(struct rga_ctx *ctx,
+ 
+ static void rga_hw_setup_cmdbuf(struct rga_ctx *ctx)
+ {
+-	memset(ctx->cmdbuf_virt, 0, RGA_CMDBUF_SIZE);
+-
+ 	rga_cmd_set_mode(ctx);
+ 	rga_cmd_set_trans_info(ctx);
+ }
+diff --git a/drivers/media/platform/rockchip/rga/rga.c b/drivers/media/platform/rockchip/rga/rga.c
+index 543a0da75..af3c37594 100644
+--- a/drivers/media/platform/rockchip/rga/rga.c
++++ b/drivers/media/platform/rockchip/rga/rga.c
+@@ -41,6 +41,7 @@ static void device_run(void *prv)
+ 	spin_lock_irqsave(&rga->ctrl_lock, flags);
+ 	if (ctx->cmdbuf_dirty) {
+ 		ctx->cmdbuf_dirty = false;
++		memset(ctx->cmdbuf_virt, 0, rga->hw->cmdbuf_size);
+ 		rga->hw->setup_cmdbuf(ctx);
+ 	}
+ 	spin_unlock_irqrestore(&rga->ctrl_lock, flags);
+diff --git a/drivers/media/platform/rockchip/rga/rga.h b/drivers/media/platform/rockchip/rga/rga.h
+index 7bcdf36c1..57287c5b4 100644
+--- a/drivers/media/platform/rockchip/rga/rga.h
++++ b/drivers/media/platform/rockchip/rga/rga.h
+@@ -153,6 +153,9 @@ struct rga_hw {
+ 	u8 stride_alignment;
+ 	u8 features;
+ 
++	/*
++	 * Requires that the cmdbuf is already zeroed.
++	 */
+ 	void (*setup_cmdbuf)(struct rga_ctx *ctx);
+ 	void (*start)(struct rockchip_rga *rga,
+ 		      struct rga_vb_buffer *src, struct rga_vb_buffer *dst);
+diff --git a/drivers/media/platform/rockchip/rga/rga3-hw.c b/drivers/media/platform/rockchip/rga/rga3-hw.c
+index c4a713062..46ba6d270 100644
+--- a/drivers/media/platform/rockchip/rga/rga3-hw.c
++++ b/drivers/media/platform/rockchip/rga/rga3-hw.c
+@@ -261,8 +261,6 @@ static void rga3_cmd_set_wr_format(struct rga_ctx *ctx)
+ 
+ static void rga3_hw_setup_cmdbuf(struct rga_ctx *ctx)
+ {
+-	memset(ctx->cmdbuf_virt, 0, RGA3_CMDBUF_SIZE);
+-
+ 	rga3_cmd_set_win0_format(ctx);
+ 	rga3_cmd_set_trans_info(ctx);
+ 	rga3_cmd_set_wr_format(ctx);

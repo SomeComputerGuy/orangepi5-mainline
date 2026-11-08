@@ -1,0 +1,37 @@
+From dff2a1f5e79b5b1ca91eb90487e1fe166f4d374a Mon Sep 17 00:00:00 2001
+From: Arun Iyengar <aiyengar1990@gmail.com>
+Date: Thu, 5 Nov 2026 11:44:04 +0000
+Subject: [PATCH 2272/2312] drm/rockchip: vop2: Find the first mixer of a video
+ port with Esmart3 too
+
+vop2_find_start_mixer_id_for_vp() looks for the first layer that holds a
+window of the video port, but for_each_set_bit() takes the number of bits
+to search, and ROCKCHIP_VOP2_ESMART3 is the highest window id, so Esmart3
+is never found. A video port whose bottom layer shows Esmart3 then starts
+its alpha setup at the mixer of a higher layer, or, if Esmart3 is its
+only window, past all layers, and programs mixers of other video ports.
+
+Search all window ids.
+
+Assisted-by: LLM
+Signed-off-by: Arun Iyengar <aiyengar1990@gmail.com>
+---
+ drivers/gpu/drm/rockchip/rockchip_vop2_reg.c | 2 +-
+ 1 file changed, 1 insertion(+), 1 deletion(-)
+
+diff --git a/drivers/gpu/drm/rockchip/rockchip_vop2_reg.c b/drivers/gpu/drm/rockchip/rockchip_vop2_reg.c
+index 15000c1858fa..b2becaa2b442 100644
+--- a/drivers/gpu/drm/rockchip/rockchip_vop2_reg.c
++++ b/drivers/gpu/drm/rockchip/rockchip_vop2_reg.c
+@@ -1912,7 +1912,7 @@ static int vop2_find_start_mixer_id_for_vp(struct vop2_video_port *vp)
+ 
+ 	for (i = 0; i < 31; i += 4) {
+ 		match = false;
+-		for_each_set_bit(phys_id, &win_mask, ROCKCHIP_VOP2_ESMART3) {
++		for_each_set_bit(phys_id, &win_mask, ROCKCHIP_VOP2_ESMART3 + 1) {
+ 			win = vop2_find_win_by_phys_id(vop2, phys_id);
+ 			if (win->data->layer_sel_id[vp->id] == ((layer_sel >> i) & 0xf)) {
+ 				match = true;
+-- 
+2.55.0
+

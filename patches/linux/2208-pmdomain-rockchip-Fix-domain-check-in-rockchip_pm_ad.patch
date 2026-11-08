@@ -1,0 +1,40 @@
+From 53e506883206752e3861eb26f5feb2a587c5a9cb Mon Sep 17 00:00:00 2001
+From: Sergey Shtylyov <s.shtylyov@auroraos.dev>
+Date: Sun, 20 Sep 2026 20:59:27 +0300
+Subject: [PATCH] pmdomain: rockchip: Fix domain check in
+ rockchip_pm_add_one_domain()
+
+In rockchip_pm_add_one_domain(), there's the check (most probably for the
+case where the "reg" prop has an unexpected value?) which doesn't make much
+sense as the variable pd_info will be NULL iff pmu->info-> domain_info is
+NULL and the variable id is 0.  What does make sense there is checking
+pd_info->pwr_mask and pd_info->req_mask which can't both be 0 for a valid
+domain.
+
+Found by Linux Verification Center (linuxtesting.org) with the Svace
+static analysis tool.
+
+Signed-off-by: Sergey Shtylyov <s.shtylyov@auroraos.dev>
+Reviewed-by: Shawn Lin <shawn.lin@rock-chips.com>
+Signed-off-by: Ulf Hansson <ulfh@kernel.org>
+(cherry picked from commit 53e506883206752e3861eb26f5feb2a587c5a9cb)
+---
+ drivers/pmdomain/rockchip/pm-domains.c | 2 +-
+ 1 file changed, 1 insertion(+), 1 deletion(-)
+
+diff --git a/drivers/pmdomain/rockchip/pm-domains.c b/drivers/pmdomain/rockchip/pm-domains.c
+index ba66ae719428..69792e2b215b 100644
+--- a/drivers/pmdomain/rockchip/pm-domains.c
++++ b/drivers/pmdomain/rockchip/pm-domains.c
+@@ -809,7 +809,7 @@ static int rockchip_pm_add_one_domain(struct rockchip_pmu *pmu,
+ 		return 0;
+ 
+ 	pd_info = &pmu->info->domain_info[id];
+-	if (!pd_info) {
++	if (!pd_info->pwr_mask && !pd_info->req_mask) {
+ 		dev_err(pmu->dev, "%pOFn: undefined domain id %d\n",
+ 			node, id);
+ 		return -EINVAL;
+-- 
+2.55.0
+

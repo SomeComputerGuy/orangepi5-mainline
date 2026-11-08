@@ -1,0 +1,77 @@
+From 79f19a56f0706e7566534458a4e360717a7d3ea4 Mon Sep 17 00:00:00 2001
+From: Igor Paunovic <royalnet026@gmail.com>
+Date: Sat, 8 Aug 2026 11:57:21 +0200
+Subject: [PATCH 2254/2271] drm/display: bridge-connector: Preserve max bpc
+ across connector reset
+
+drm_connector_attach_max_bpc_property() initializes max_requested_bpc
+and max_bpc in the connector state, but nothing restores them when the
+connector state is later thrown away and re-created:
+drm_bridge_connector_create_state() returns a zeroed state for
+non-HDMI bridge connectors, and drm_mode_config_reset() installs such
+a fresh state on every connector that implements
+&drm_connector_funcs.atomic_create_state instead of a .reset hook.
+
+This matters because drivers can attach the property before
+drm_mode_config_reset() runs. Rockchip, for example, binds its
+component drivers (which create connectors and attach properties)
+before calling drm_mode_config_reset(). After that reset,
+max_requested_bpc is 0, so drm_atomic_connector_check() computes
+max_bpc = min(info->bpc ?: 8, 0) = 0. Any driver that filters output
+formats on conn_state->max_bpc then rejects every format, and clients
+that never set the "max bpc" property - fbcon in particular - end up
+with a black screen. meson already attaches the property on a
+drm_bridge_connector before drm_mode_config_reset() and so already
+boots with max_requested_bpc = 0 today. dw-hdmi's format negotiation
+does consume the value there, but meson attaches the property with a
+maximum of 8 and the 8-bit fallback formats are not gated on it, so
+negotiation yields the same result for 0 and 8 - the change is a
+no-op for meson.
+
+HDMI bridge connectors are immune: drm_bridge_connector_create_state()
+calls __drm_atomic_helper_connector_hdmi_state_init(), which
+initializes both fields from connector->max_bpc. amdgpu likewise
+re-initializes max_requested_bpc in its own .reset implementation.
+Non-HDMI bridge connectors have no equivalent.
+
+Mirror the HDMI helper on the non-HDMI path: record the upper attach
+limit in connector->max_bpc (drmm_connector_hdmi_init() already stores
+the same value there) and restore max_requested_bpc and max_bpc from
+it in drm_bridge_connector_create_state() whenever the "max bpc"
+property is attached. Connectors without the property behave exactly
+as before.
+
+Signed-off-by: Igor Paunovic <royalnet026@gmail.com>
+[Arun: the HDMI 2.0 series in this tree drops drm_connector.max_bpc, so
+ take the default from the "max bpc" property's range maximum instead]
+Assisted-by: LLM
+Signed-off-by: Arun Iyengar <aiyengar1990@gmail.com>
+---
+ drivers/gpu/drm/display/drm_bridge_connector.c | 9 ++++++++-
+ 1 file changed, 8 insertions(+), 1 deletion(-)
+
+diff --git a/drivers/gpu/drm/display/drm_bridge_connector.c b/drivers/gpu/drm/display/drm_bridge_connector.c
+index 18502f54d5ec..8df9476b9d95 100644
+--- a/drivers/gpu/drm/display/drm_bridge_connector.c
++++ b/drivers/gpu/drm/display/drm_bridge_connector.c
+@@ -242,9 +242,16 @@ drm_bridge_connector_create_state(struct drm_connector *connector)
+ 	if (IS_ERR(conn_state))
+ 		return conn_state;
+ 
+-	if (bridge_connector->bridge_hdmi)
++	if (bridge_connector->bridge_hdmi) {
+ 		__drm_atomic_helper_connector_hdmi_state_init(connector,
+ 							      conn_state);
++	} else if (connector->max_bpc_property) {
++		/* The property's range maximum is the attach-time default */
++		u64 max_bpc = connector->max_bpc_property->values[1];
++
++		conn_state->max_requested_bpc = max_bpc;
++		conn_state->max_bpc = max_bpc;
++	}
+ 
+ 	return conn_state;
+ }
+-- 
+2.55.0
+

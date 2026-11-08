@@ -1,0 +1,39 @@
+From: Sebastian Reichel <sebastian.reichel@collabora.com>
+Date: Thu, 01 Oct 2026 15:12:40 +0200
+Subject: [PATCH] phy: rockchip: inno-usb2: drop duplicated update of rport->suspended
+
+rockchip_usb2phy_power_on and rockchip_usb2phy_power_off already update
+rport->suspended in their success path. In case of error it's not
+sensible to update rport->suspended. So drop the duplicated update.
+
+Signed-off-by: Sebastian Reichel <sebastian.reichel@collabora.com>
+Link: https://patch.msgid.link/20261001-phy-rockchip-inno-usb2-clock-fix-v2-2-e01bf509359e@collabora.com
+---
+---
+ drivers/phy/rockchip/phy-rockchip-inno-usb2.c | 2 --
+ 1 file changed, 2 deletions(-)
+
+diff --git a/drivers/phy/rockchip/phy-rockchip-inno-usb2.c b/drivers/phy/rockchip/phy-rockchip-inno-usb2.c
+index 0ab054ee84cb..e4d8abf935c1 100644
+--- a/drivers/phy/rockchip/phy-rockchip-inno-usb2.c
++++ b/drivers/phy/rockchip/phy-rockchip-inno-usb2.c
+@@ -994,7 +994,6 @@ static void rockchip_usb2phy_sm_work(struct work_struct *work)
+ 		if (rport->suspended) {
+ 			dev_dbg(&rport->phy->dev, "Connected\n");
+ 			rockchip_usb2phy_power_on(rport->phy);
+-			rport->suspended = false;
+ 		} else {
+ 			/* D+ line pull-up, D- line pull-down */
+ 			dev_dbg(&rport->phy->dev, "FS/LS online\n");
+@@ -1004,7 +1003,6 @@ static void rockchip_usb2phy_sm_work(struct work_struct *work)
+ 		if (!rport->suspended) {
+ 			dev_dbg(&rport->phy->dev, "Disconnected\n");
+ 			rockchip_usb2phy_power_off(rport->phy);
+-			rport->suspended = true;
+ 		}
+ 
+ 		/*
+
+-- 
+2.53.0
+

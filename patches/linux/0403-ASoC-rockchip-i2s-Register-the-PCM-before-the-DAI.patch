@@ -1,0 +1,47 @@
+From 2c824b16c711ef0e58533a5a65e0ff1cf7d4ef2b Mon Sep 17 00:00:00 2001
+From: Arun Iyengar <aiyengar1990@gmail.com>
+Date: Sun, 1 Nov 2026 18:04:09 +0000
+Subject: [PATCH] ASoC: rockchip: i2s: Register the PCM before the DAI
+
+A card that was registered before its CPU DAI is retried by
+snd_soc_add_component() as soon as any component is added. The DAI
+component satisfies the DAI link's platform, which defaults to the CPU
+of_node, so the card can bind right after the DAI is registered and
+before the dmaengine PCM component of the same device exists. The card
+then has no PCM component and every open of the PCM fails with -EINVAL.
+
+Register the dmaengine PCM first, as rockchip_spdif already does.
+
+Assisted-by: LLM
+Signed-off-by: Arun Iyengar <aiyengar1990@gmail.com>
+---
+ sound/soc/rockchip/rockchip_i2s.c | 10 +++++-----
+ 1 file changed, 5 insertions(+), 5 deletions(-)
+
+diff --git a/sound/soc/rockchip/rockchip_i2s.c b/sound/soc/rockchip/rockchip_i2s.c
+index 261f36d4c2fd..cfdb982b53c2 100644
+--- a/sound/soc/rockchip/rockchip_i2s.c
++++ b/sound/soc/rockchip/rockchip_i2s.c
+@@ -827,14 +827,14 @@ static int rockchip_i2s_probe(struct platform_device *pdev)
+ 	if (ret)
+ 		return ret;
+ 
+-	ret = devm_snd_soc_register_component(&pdev->dev,
+-					      &rockchip_i2s_component,
+-					      dai, 1);
+-
++	/* Register the PCM first, a card can bind as soon as the DAI is added */
++	ret = devm_snd_dmaengine_pcm_register(&pdev->dev, NULL, 0);
+ 	if (ret)
+ 		return ret;
+ 
+-	ret = devm_snd_dmaengine_pcm_register(&pdev->dev, NULL, 0);
++	ret = devm_snd_soc_register_component(&pdev->dev,
++					      &rockchip_i2s_component,
++					      dai, 1);
+ 	if (ret)
+ 		return ret;
+ 
+-- 
+2.55.0
+

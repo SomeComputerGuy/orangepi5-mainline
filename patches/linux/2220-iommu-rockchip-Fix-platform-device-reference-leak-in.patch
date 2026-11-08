@@ -1,0 +1,39 @@
+From: Wentao Liang <vulab@iscas.ac.cn>
+Date: Thu, 17 Sep 2026 05:30:15 +0000
+Subject: [PATCH] iommu/rockchip: Fix platform device reference leak in rk_iommu_of_xlate()
+
+of_find_device_by_node() returns the platform device with an elevated
+reference count, which is dropped on the success path only.  If the
+devm_kzalloc() for the per-device data fails, the error return leaks
+that reference.
+
+Put the device reference on the error path too.
+
+Fixes: 5fd577c3eac3 ("iommu/rockchip: Use OF_IOMMU to attach devices automatically")
+Cc: stable@vger.kernel.org
+Signed-off-by: Wentao Liang <vulab@iscas.ac.cn>
+Link: https://patch.msgid.link/20260917053015.2133503-1-wentao_liang_g@163.com
+---
+---
+ drivers/iommu/rockchip-iommu.c | 4 +++-
+ 1 file changed, 3 insertions(+), 1 deletion(-)
+
+diff --git a/drivers/iommu/rockchip-iommu.c b/drivers/iommu/rockchip-iommu.c
+index 0013cf196c57..05a4fa227847 100644
+--- a/drivers/iommu/rockchip-iommu.c
++++ b/drivers/iommu/rockchip-iommu.c
+@@ -1165,8 +1165,10 @@ static int rk_iommu_of_xlate(struct device *dev,
+ 	iommu_dev = of_find_device_by_node(args->np);
+ 
+ 	data = devm_kzalloc(&iommu_dev->dev, sizeof(*data), GFP_KERNEL);
+-	if (!data)
++	if (!data) {
++		platform_device_put(iommu_dev);
+ 		return -ENOMEM;
++	}
+ 
+ 	data->iommu = platform_get_drvdata(iommu_dev);
+ 	dev_iommu_priv_set(dev, data);
+-- 
+2.34.1
+

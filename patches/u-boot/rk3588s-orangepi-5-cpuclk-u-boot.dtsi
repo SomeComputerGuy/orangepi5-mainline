@@ -1,0 +1,17 @@
+// SPDX-License-Identifier: (GPL-2.0+ OR MIT)
+/*
+ * Orange Pi 5: raise the big (Cortex-A76) clusters from their 24 MHz reset
+ * clock before Linux starts, as Rockchip's vendor U-Boot does. Otherwise early
+ * kernel work scheduled on a big core (e.g. unpacking the initramfs) crawls
+ * until Linux's SCMI cpufreq driver loads, ~90 s into boot.
+ *
+ * 1.416 GHz needs 725 mV (rk3588-opp.dtsi); vdd_cpu_big0/1 (RK8602) power up
+ * at 800 mV (VSEL0 = 0x30, read back in U-Boot), so no voltage change is
+ * needed. Linux cpufreq takes over from here. Included from
+ * rk3588s-orangepi-5-u-boot.dtsi.
+ */
+
+&scmi_clk {
+	assigned-clocks = <&scmi_clk SCMI_CLK_CPUB01>, <&scmi_clk SCMI_CLK_CPUB23>;
+	assigned-clock-rates = <1416000000>, <1416000000>;
+};

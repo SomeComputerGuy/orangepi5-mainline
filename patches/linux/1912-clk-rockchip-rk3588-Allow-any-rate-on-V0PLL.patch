@@ -1,0 +1,37 @@
+From 17d452fe73ad6fc2851901437ae1de6d59d2122a Mon Sep 17 00:00:00 2001
+From: Arun Iyengar <aiyengar1990@gmail.com>
+Date: Sun, 1 Nov 2026 06:35:55 +0000
+Subject: [PATCH 12/33] clk: rockchip: rk3588: Allow any rate on V0PLL
+
+V0PLL is the video PLL of the RK3588. It can feed the VOP2 pixel clocks
+(dclk_vop0/1/2_src, dclk_vop3), the DSI host clocks (clk_dsihost0/1) and
+clk_1000m_src, but none of the others runs from it by default (they use
+GPLL, CPLL or SPLL), so the display driver can program it for pixel
+clocks the system PLLs cannot be divided down to, and hold its rate while
+a pixel clock runs from it. Let it compute its settings for rates outside
+the rate table.
+
+
+Assisted-by: LLM
+Signed-off-by: Arun Iyengar <aiyengar1990@gmail.com>
+---
+ drivers/clk/rockchip/clk-rk3588.c | 3 ++-
+ 1 file changed, 2 insertions(+), 1 deletion(-)
+
+diff --git a/drivers/clk/rockchip/clk-rk3588.c b/drivers/clk/rockchip/clk-rk3588.c
+index 24baa0ef9bf3..6d4bc5b61341 100644
+--- a/drivers/clk/rockchip/clk-rk3588.c
++++ b/drivers/clk/rockchip/clk-rk3588.c
+@@ -659,7 +659,8 @@ static struct rockchip_pll_clock rk3588_pll_clks[] __initdata = {
+ 		     RK3588_LPLL_MODE_CON0, 0, 15, 0, rk3588_pll_rates),
+ 	[v0pll] = PLL(pll_rk3588, PLL_V0PLL, "v0pll", mux_pll_p,
+ 		     0, RK3588_PLL_CON(88),
+-		     RK3588_MODE_CON0, 4, 15, 0, rk3588_pll_rates),
++		     RK3588_MODE_CON0, 4, 15, ROCKCHIP_PLL_CALC_RATE,
++		     rk3588_pll_rates),
+ 	[aupll] = PLL(pll_rk3588, PLL_AUPLL, "aupll", mux_pll_p,
+ 		     0, RK3588_PLL_CON(96),
+ 		     RK3588_MODE_CON0, 6, 15, 0, rk3588_pll_rates),
+-- 
+2.55.0
+

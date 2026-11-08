@@ -1,0 +1,43 @@
+From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
+From: Arun Iyengar <aiyengar1990@gmail.com>
+Date: Mon, 02 Nov 2026 06:21:53 +0000
+Subject: [PATCH] drm/bridge: dw-hdmi-qp: Stop the link training patterns when FRL training passes
+
+When the sink clears its LTP request on every lane, link training has
+passed and the link goes on to carry FRL data. frl_set_ltp() still writes
+the lane pattern enables (FLT_CONFIG1[3:0] = 0xf) with pattern 0, so the
+training pattern generator stays configured until the next training
+cycle resets the register.
+
+Clear FLT_CONFIG1 instead, as the Rockchip vendor driver does once
+training passes.
+
+Assisted-by: LLM
+Signed-off-by: Arun Iyengar <aiyengar1990@gmail.com>
+---
+ drivers/gpu/drm/bridge/synopsys/dw-hdmi-qp.c | 9 ++++++++-
+ 1 file changed, 8 insertions(+), 1 deletion(-)
+
+diff --git a/drivers/gpu/drm/bridge/synopsys/dw-hdmi-qp.c b/drivers/gpu/drm/bridge/synopsys/dw-hdmi-qp.c
+index 50794185563f..3728f4509b00 100644
+--- a/drivers/gpu/drm/bridge/synopsys/dw-hdmi-qp.c
++++ b/drivers/gpu/drm/bridge/synopsys/dw-hdmi-qp.c
+@@ -801,7 +801,14 @@ static int dw_hdmi_qp_bridge_frl_set_ltp(struct drm_bridge *bridge,
+ 	struct dw_hdmi_qp *hdmi = bridge->driver_private;
+ 	u32 flt_cfg;
+ 
+-	flt_cfg = (ln3 << 16) | (ln2 << 12) | (ln1 << 8) | (ln0 << 4) | 0xf;
++	/*
++	 * No LTP requested on any lane means training passed: stop sending
++	 * link training patterns before the link carries FRL data.
++	 */
++	if (!ln0 && !ln1 && !ln2 && !ln3)
++		flt_cfg = 0;
++	else
++		flt_cfg = (ln3 << 16) | (ln2 << 12) | (ln1 << 8) | (ln0 << 4) | 0xf;
+ 
+ 	dw_hdmi_qp_write(hdmi, flt_cfg, FLT_CONFIG1);
+ 
+-- 
+2.55.0
+

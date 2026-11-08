@@ -1,0 +1,59 @@
+From b6a65b95e04ed03b869ff56cf1845038bb74a82f Mon Sep 17 00:00:00 2001
+From: Arun Iyengar <aiyengar1990@gmail.com>
+Date: Sun, 1 Nov 2026 18:04:05 +0000
+Subject: [PATCH] ASoC: rockchip: i2s-tdm: Register the PCM before the DAI
+
+A card that was registered before its CPU DAI is put on the unbind list
+by snd_soc_bind_card(), and snd_soc_add_component() retries the bind as
+soon as any component is added. The DAI component of the I2S controller
+satisfies the DAI link's platform, which defaults to the CPU of_node, so
+the card binds right after the DAI is registered and before the dmaengine
+PCM component of the same device exists. The PCM component is then never
+added to the runtime, runtime->hw stays empty and every open of the PCM
+fails with -EINVAL from snd_pcm_hw_constraints_complete(), without any
+error being logged.
+
+This is seen on RK3588 when the HDMI codec probes before the I2S
+controller of the HDMI sound card: the card has no "dma:fddf0000.i2s"
+component and "aplay -D hw:0,0" fails with "Invalid argument".
+
+Register the dmaengine PCM first, as rockchip_spdif already does, so the
+card finds both components when the DAI appears.
+
+Fixes: 081068fd6414 ("ASoC: rockchip: add support for i2s-tdm controller")
+Assisted-by: LLM
+Signed-off-by: Arun Iyengar <aiyengar1990@gmail.com>
+---
+ sound/soc/rockchip/rockchip_i2s_tdm.c | 13 +++++++++----
+ 1 file changed, 9 insertions(+), 4 deletions(-)
+
+diff --git a/sound/soc/rockchip/rockchip_i2s_tdm.c b/sound/soc/rockchip/rockchip_i2s_tdm.c
+index 610bf65d017a..2178fcdc0530 100644
+--- a/sound/soc/rockchip/rockchip_i2s_tdm.c
++++ b/sound/soc/rockchip/rockchip_i2s_tdm.c
+@@ -1359,13 +1359,18 @@ static int rockchip_i2s_tdm_probe(struct platform_device *pdev)
+ 	if (i2s_tdm->soc_data && i2s_tdm->soc_data->init)
+ 		i2s_tdm->soc_data->init(&pdev->dev, res->start);
+ 
+-	ret = devm_snd_soc_register_component(&pdev->dev,
+-					      &rockchip_i2s_tdm_component,
+-					      i2s_tdm->dai, 1);
++	/*
++	 * Register the PCM before the DAI: adding the DAI component can bind a
++	 * waiting card right away, and the card must find the PCM component
++	 * then or its DAI link ends up without one.
++	 */
++	ret = devm_snd_dmaengine_pcm_register(&pdev->dev, NULL, 0);
+ 	if (ret)
+ 		goto err_suspend;
+ 
+-	ret = devm_snd_dmaengine_pcm_register(&pdev->dev, NULL, 0);
++	ret = devm_snd_soc_register_component(&pdev->dev,
++					      &rockchip_i2s_tdm_component,
++					      i2s_tdm->dai, 1);
+ 	if (ret)
+ 		goto err_suspend;
+ 
+-- 
+2.55.0
+

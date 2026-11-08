@@ -1,0 +1,28 @@
+From 7aaf16ffb56dc5542519f0ee0cd2aed1ff777cb8 Mon Sep 17 00:00:00 2001
+From: =?UTF-8?q?Sven=20P=C3=BCschel?= <s.pueschel@pengutronix.de>
+Date: Wed, 16 Sep 2026 17:09:45 +0200
+Subject: [PATCH] media: rockchip: rga: removed unused regmap member
+MIME-Version: 1.0
+Content-Type: text/plain; charset=UTF-8
+Content-Transfer-Encoding: 8bit
+
+The grf member variable is never accessed or written by the RGA driver.
+Therefore drop it from the rockchip_rga struct.
+
+Signed-off-by: Sven Püschel <s.pueschel@pengutronix.de>
+---
+ drivers/media/platform/rockchip/rga/rga.h | 1 -
+ 1 file changed, 1 deletion(-)
+
+diff --git a/drivers/media/platform/rockchip/rga/rga.h b/drivers/media/platform/rockchip/rga/rga.h
+index 57287c5b4..a7ca80b18 100644
+--- a/drivers/media/platform/rockchip/rga/rga.h
++++ b/drivers/media/platform/rockchip/rga/rga.h
+@@ -71,7 +71,6 @@ struct rockchip_rga {
+ 	struct video_device *vfd;
+ 
+ 	struct device *dev;
+-	struct regmap *grf;
+ 	void __iomem *regs;
+ 	int irq;
+ 	struct clk_bulk_data *clks;

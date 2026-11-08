@@ -1,0 +1,87 @@
+From 64664d151e1f6e39506136a3d40d1218ef0fa5c0 Mon Sep 17 00:00:00 2001
+From: Arun Iyengar <aiyengar1990@gmail.com>
+Date: Mon, 2 Nov 2026 04:53:13 +0000
+Subject: [PATCH] media: rkvdec: vdpu381-vp9: don't predict segment IDs from a
+ reset map
+
+An error resilient VP9 frame starts from a reset segmentation map:
+setup_past_independence() sets PrevSegmentIds to 0, so with
+segmentation_temporal_update every block whose seg_id_predicted flag is
+set gets segment 0. The map of a frame of another size doesn't apply
+either, FFmpeg's decoder drops it on a size change.
+
+The backend already treats error resilient and resized frames as
+resetting the map when it picks the map the hardware writes, but still
+reports the map of the previous frame as valid to the hardware through
+segmentation_enable_lstframe, which it only clears on intra frames. The
+hardware then predicts the segment IDs from the previous frame's map,
+so the predicted blocks get the quantizer of another segment.
+
+The vp90-2-21-resize_inter_* conformance vectors code every frame error
+resilient, with cyclic refresh segmentation and temporal map updates,
+and all 24 of them mismatch libvpx, from frame 2 to 8 on, well before
+the resolution change. FFmpeg's VP9 decoder modified to predict from the
+previous map on error resilient frames reproduces the hardware output of
+vp90-2-21-resize_inter_320x180_5_1-2.webm exactly (frames 8 to 29,
+same differing bytes and maximum differences per plane).
+
+Report the previous map as invalid whenever it was reset.
+
+Assisted-by: LLM
+Signed-off-by: Arun Iyengar <aiyengar1990@gmail.com>
+---
+ .../rockchip/rkvdec/rkvdec-vdpu381-vp9.c      | 21 +++++++++++--------
+ 1 file changed, 12 insertions(+), 9 deletions(-)
+
+diff --git a/drivers/media/platform/rockchip/rkvdec/rkvdec-vdpu381-vp9.c b/drivers/media/platform/rockchip/rkvdec/rkvdec-vdpu381-vp9.c
+index 560c6ec26a9d..4c6790ca8a9c 100644
+--- a/drivers/media/platform/rockchip/rkvdec/rkvdec-vdpu381-vp9.c
++++ b/drivers/media/platform/rockchip/rkvdec/rkvdec-vdpu381-vp9.c
+@@ -724,7 +724,7 @@ static void config_registers(struct rkvdec_ctx *ctx,
+ 	u32 pixels;
+ 
+ 	dma_addr_t rlc_addr, dst_addr;
+-	bool seg_enabled, segmap_update, last_segmap_valid;
++	bool seg_enabled, segmap_reset, segmap_update, last_segmap_valid;
+ 	bool intra_only;
+ 	unsigned int i;
+ 
+@@ -816,13 +816,15 @@ static void config_registers(struct rkvdec_ctx *ctx,
+ 	 * code a new map (segmentation disabled, or update_map == 0) leaves
+ 	 * the previous map in place for the following frames, as required by
+ 	 * the spec. Intra-only, error resilient and resized frames start
+-	 * from a reset map.
++	 * from a reset map: setup_past_independence() clears PrevSegmentIds,
++	 * and the map of a frame of another size doesn't apply.
+ 	 */
+ 	seg_enabled = seg->flags & V4L2_VP9_SEGMENTATION_FLAG_ENABLED;
+-	segmap_update = intra_only || !vp9_ctx->last.valid ||
+-			(dec_params->flags & V4L2_VP9_FRAME_FLAG_ERROR_RESILIENT) ||
+-			vp9_ctx->last.width != vp9_ctx->cur.width ||
+-			vp9_ctx->last.height != vp9_ctx->cur.height ||
++	segmap_reset = intra_only || !vp9_ctx->last.valid ||
++		       (dec_params->flags & V4L2_VP9_FRAME_FLAG_ERROR_RESILIENT) ||
++		       vp9_ctx->last.width != vp9_ctx->cur.width ||
++		       vp9_ctx->last.height != vp9_ctx->cur.height;
++	segmap_update = segmap_reset ||
+ 			(seg_enabled &&
+ 			 (seg->flags & V4L2_VP9_SEGMENTATION_FLAG_UPDATE_MAP));
+ 	vp9_ctx->cur.segmapid = vp9_ctx->last.segmapid ^ segmap_update;
+@@ -839,10 +841,11 @@ static void config_registers(struct rkvdec_ctx *ctx,
+ 
+ 	/*
+ 	 * The map left by the previous frames is only meaningful if
+-	 * segmentation was used since the last intra frame.
++	 * segmentation was used since it was last reset. Otherwise the
++	 * hardware must predict segment ID 0 (temporal_update), not read
++	 * the map of the previous frame.
+ 	 */
+-	last_segmap_valid = !intra_only && vp9_ctx->last.valid &&
+-			    vp9_ctx->last.segmap_valid;
++	last_segmap_valid = !segmap_reset && vp9_ctx->last.segmap_valid;
+ 	vp9_ctx->cur.segmap_valid = seg_enabled || last_segmap_valid;
+ 
+ 	for (i = 0; i < ARRAY_SIZE(ref_bufs); i++)
+-- 
+2.55.0
+

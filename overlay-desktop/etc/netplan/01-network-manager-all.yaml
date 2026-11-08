@@ -1,0 +1,5 @@
+# Let NetworkManager manage all devices (as on Ubuntu Desktop), including the
+# wired interface cloud-init configures from the CIDATA network-config
+network:
+  version: 2
+  renderer: NetworkManager

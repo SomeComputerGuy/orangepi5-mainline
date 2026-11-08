@@ -1,0 +1,191 @@
+From 286be6ab5c6246aa6b1c5eee3c49fd67f152afa0 Mon Sep 17 00:00:00 2001
+From: Arun Iyengar <aiyengar1990@gmail.com>
+Date: Thu, 5 Nov 2026 06:49:56 +0000
+Subject: [PATCH 2303/2312] media: verisilicon: rockchip: vpu2: decode MPEG-1
+
+The VPU2 (VDPU2) decoder has an MPEG-1 mode next to its MPEG-2 mode:
+decoding mode 6 instead of 5, with the same buffers, quantiser table
+and picture registers. In MPEG-1 mode the motion vector accuracy bits
+select half pel or full pel vectors per direction, from the
+full_pel_forward_vector and full_pel_backward_vector fields of the
+MPEG-1 picture header. Rockchip's MPP library drives the decoder that
+way for streams without a sequence extension.
+
+Select the MPEG-1 mode for sequences with V4L2_MPEG2_SEQ_FLAG_MPEG1 and
+program the motion vector accuracy from the full pel flags. The f_code
+registers keep their meaning: for MPEG-1 the uAPI has userspace put
+forward_f_code and backward_f_code in both components of f_code[0] and
+f_code[1].
+
+Advertise MPEG-1 with a new variant flag on the VPU2 variants (RK3399,
+RK3568, RK3588 VPU121 and PX30), so that the G1 based variants keep
+rejecting the MPEG-1 flag and the full pel flags. D-pictures stay
+rejected: there is no known way to decode them on the VPU2. Field
+pictures in MPEG-1 sequences and full pel vectors in MPEG-2 sequences
+fail the decoding job, since they are only invalid in combination with
+the sequence control.
+
+Tested on RK3588 (VPU121) with the MPEG-1 bitstreams of the ISO/IEC
+13818-4 conformance suite through FFmpeg's v4l2-request hwaccel.
+
+Assisted-by: LLM
+Signed-off-by: Arun Iyengar <aiyengar1990@gmail.com>
+---
+ drivers/media/platform/verisilicon/hantro.h   |  3 +++
+ .../media/platform/verisilicon/hantro_drv.c   | 18 +++++++++++------
+ .../verisilicon/rockchip_vpu2_hw_mpeg2_dec.c  | 20 ++++++++++++++++---
+ .../platform/verisilicon/rockchip_vpu_hw.c    |  4 ++++
+ 4 files changed, 36 insertions(+), 9 deletions(-)
+
+diff --git a/drivers/media/platform/verisilicon/hantro.h b/drivers/media/platform/verisilicon/hantro.h
+index 614b02a22618..1ef5118b551c 100644
+--- a/drivers/media/platform/verisilicon/hantro.h
++++ b/drivers/media/platform/verisilicon/hantro.h
+@@ -82,6 +82,8 @@ struct hantro_irq {
+  * @double_buffer:		core needs double buffering
+  * @legacy_regs:		core uses legacy register set
+  * @late_postproc:		postproc must be set up at the end of the job
++ * @mpeg1_dec:			the MPEG-2 decoder also decodes MPEG-1
++ *				(V4L2_MPEG2_SEQ_FLAG_MPEG1)
+  * @multi_core:			identical instances of this variant can be driven as
+  *				a single device, running jobs in parallel
+  * @shared_devices:		an array of device ids that cannot run concurrently
+@@ -109,6 +111,7 @@ struct hantro_variant {
+ 	unsigned int double_buffer : 1;
+ 	unsigned int legacy_regs : 1;
+ 	unsigned int late_postproc : 1;
++	unsigned int mpeg1_dec : 1;
+ 	unsigned int multi_core : 1;
+ 	const struct of_device_id *shared_devices;
+ };
+diff --git a/drivers/media/platform/verisilicon/hantro_drv.c b/drivers/media/platform/verisilicon/hantro_drv.c
+index 4e50168dbb8f..5bedb3e3971d 100644
+--- a/drivers/media/platform/verisilicon/hantro_drv.c
++++ b/drivers/media/platform/verisilicon/hantro_drv.c
+@@ -363,6 +363,9 @@ queue_init(void *priv, struct vb2_queue *src_vq, struct vb2_queue *dst_vq)
+ 
+ static int hantro_try_ctrl(struct v4l2_ctrl *ctrl)
+ {
++	struct hantro_ctx *ctx = container_of(ctrl->handler,
++					      struct hantro_ctx, ctrl_handler);
++
+ 	if (ctrl->id == V4L2_CID_STATELESS_H264_SPS) {
+ 		const struct v4l2_ctrl_h264_sps *sps = ctrl->p_new.p_h264_sps;
+ 
+@@ -395,16 +398,19 @@ static int hantro_try_ctrl(struct v4l2_ctrl *ctrl)
+ 	} else if (ctrl->id == V4L2_CID_STATELESS_MPEG2_SEQUENCE) {
+ 		const struct v4l2_ctrl_mpeg2_sequence *seq = ctrl->p_new.p_mpeg2_sequence;
+ 
+-		/* No MPEG-1 decoding mode is implemented */
+-		if (seq->flags & V4L2_MPEG2_SEQ_FLAG_MPEG1)
++		if (seq->flags & V4L2_MPEG2_SEQ_FLAG_MPEG1 &&
++		    !ctx->dev->variant->mpeg1_dec)
+ 			return -EINVAL;
+ 	} else if (ctrl->id == V4L2_CID_STATELESS_MPEG2_PICTURE) {
+ 		const struct v4l2_ctrl_mpeg2_picture *pic = ctrl->p_new.p_mpeg2_picture;
+ 
+-		/* D-pictures and full pel vectors only exist in MPEG-1 */
+-		if (pic->picture_coding_type == V4L2_MPEG2_PIC_CODING_TYPE_D ||
+-		    pic->flags & (V4L2_MPEG2_PIC_FLAG_FULL_PEL_FORWARD |
+-				  V4L2_MPEG2_PIC_FLAG_FULL_PEL_BACKWARD))
++		/* The MPEG-1 mode has no D-picture (DC only) decoding */
++		if (pic->picture_coding_type == V4L2_MPEG2_PIC_CODING_TYPE_D)
++			return -EINVAL;
++		/* Full pel vectors only exist in MPEG-1 */
++		if (pic->flags & (V4L2_MPEG2_PIC_FLAG_FULL_PEL_FORWARD |
++				  V4L2_MPEG2_PIC_FLAG_FULL_PEL_BACKWARD) &&
++		    !ctx->dev->variant->mpeg1_dec)
+ 			return -EINVAL;
+ 	} else if (ctrl->id == V4L2_CID_STATELESS_AVS_SEQUENCE) {
+ 		const struct v4l2_ctrl_avs_sequence *seq = ctrl->p_new.p_avs_sequence;
+diff --git a/drivers/media/platform/verisilicon/rockchip_vpu2_hw_mpeg2_dec.c b/drivers/media/platform/verisilicon/rockchip_vpu2_hw_mpeg2_dec.c
+index 57907dd5ea9c..dc0154fd1538 100644
+--- a/drivers/media/platform/verisilicon/rockchip_vpu2_hw_mpeg2_dec.c
++++ b/drivers/media/platform/verisilicon/rockchip_vpu2_hw_mpeg2_dec.c
+@@ -154,6 +154,7 @@ int rockchip_vpu2_mpeg2_dec_run(struct hantro_ctx *ctx)
+ 	struct vb2_v4l2_buffer *src_buf, *dst_buf;
+ 	const struct v4l2_ctrl_mpeg2_sequence *seq;
+ 	const struct v4l2_ctrl_mpeg2_picture *pic;
++	bool mpeg1;
+ 	u32 reg;
+ 
+ 	src_buf = hantro_get_src_buf(ctx);
+@@ -166,6 +167,19 @@ int rockchip_vpu2_mpeg2_dec_run(struct hantro_ctx *ctx)
+ 	pic = hantro_get_ctrl(ctx,
+ 			      V4L2_CID_STATELESS_MPEG2_PICTURE);
+ 
++	/*
++	 * MPEG-1 (ISO/IEC 11172-2) has its own decoding mode: it differs
++	 * from MPEG-2 in the inverse quantisation mismatch control and has
++	 * full pel motion vectors. Userspace fills the MPEG-2 extension
++	 * fields with the MPEG-1 values. MPEG-1 has frame pictures only, and
++	 * full pel vectors do not exist in MPEG-2.
++	 */
++	mpeg1 = seq->flags & V4L2_MPEG2_SEQ_FLAG_MPEG1;
++	if (mpeg1 ? pic->picture_structure != V4L2_MPEG2_PIC_FRAME :
++		    pic->flags & (V4L2_MPEG2_PIC_FLAG_FULL_PEL_FORWARD |
++				  V4L2_MPEG2_PIC_FLAG_FULL_PEL_BACKWARD))
++		return -EINVAL;
++
+ 	reg = VDPU_REG_DEC_ADV_PRE_DIS(0) |
+ 	      VDPU_REG_DEC_SCMD_DIS(0) |
+ 	      VDPU_REG_FILTERING_DIS(1) |
+@@ -181,7 +195,7 @@ int rockchip_vpu2_mpeg2_dec_run(struct hantro_ctx *ctx)
+ 	      VDPU_REG_STARTMB_Y(0);
+ 	vdpu_write_relaxed(vpu, reg, VDPU_SWREG(52));
+ 
+-	reg = VDPU_REG_DEC_MODE(5);
++	reg = VDPU_REG_DEC_MODE(mpeg1 ? 6 : 5);
+ 	vdpu_write_relaxed(vpu, reg, VDPU_SWREG(53));
+ 
+ 	reg = VDPU_REG_DEC_STRENDIAN_E(1) |
+@@ -229,8 +243,8 @@ int rockchip_vpu2_mpeg2_dec_run(struct hantro_ctx *ctx)
+ 	      VDPU_REG_FCODE_FWD_VER(pic->f_code[0][1]) |
+ 	      VDPU_REG_FCODE_BWD_HOR(pic->f_code[1][0]) |
+ 	      VDPU_REG_FCODE_BWD_VER(pic->f_code[1][1]) |
+-	      VDPU_REG_MV_ACCURACY_FWD(1) |
+-	      VDPU_REG_MV_ACCURACY_BWD(1);
++	      VDPU_REG_MV_ACCURACY_FWD(!(pic->flags & V4L2_MPEG2_PIC_FLAG_FULL_PEL_FORWARD)) |
++	      VDPU_REG_MV_ACCURACY_BWD(!(pic->flags & V4L2_MPEG2_PIC_FLAG_FULL_PEL_BACKWARD));
+ 	vdpu_write_relaxed(vpu, reg, VDPU_SWREG(136));
+ 
+ 	rockchip_vpu2_mpeg2_dec_set_quantisation(vpu, ctx);
+diff --git a/drivers/media/platform/verisilicon/rockchip_vpu_hw.c b/drivers/media/platform/verisilicon/rockchip_vpu_hw.c
+index aab79ec511bf..5c6018ac4696 100644
+--- a/drivers/media/platform/verisilicon/rockchip_vpu_hw.c
++++ b/drivers/media/platform/verisilicon/rockchip_vpu_hw.c
+@@ -965,6 +965,7 @@ const struct hantro_variant rk3399_vpu_variant = {
+ 	.num_dec_fmts = ARRAY_SIZE(rk3399_vpu_dec_fmts),
+ 	.codec = HANTRO_JPEG_ENCODER | HANTRO_MPEG2_DECODER |
+ 		 HANTRO_VP8_DECODER,
++	.mpeg1_dec = 1,
+ 	.codec_ops = rk3399_vpu_codec_ops,
+ 	.irqs = rockchip_vpu2_irqs,
+ 	.num_irqs = ARRAY_SIZE(rockchip_vpu2_irqs),
+@@ -1010,6 +1011,7 @@ const struct hantro_variant rk3568_vpu_variant = {
+ 	.num_dec_fmts = ARRAY_SIZE(rockchip_vdpu2_dec_fmts),
+ 	.codec = HANTRO_MPEG2_DECODER |
+ 		 HANTRO_VP8_DECODER | HANTRO_H264_DECODER,
++	.mpeg1_dec = 1,
+ 	.codec_ops = rk3399_vpu_codec_ops,
+ 	.irqs = rockchip_vdpu2_irqs,
+ 	.num_irqs = ARRAY_SIZE(rockchip_vdpu2_irqs),
+@@ -1032,6 +1034,7 @@ const struct hantro_variant rk3588_vpu121_variant = {
+ 	.num_dec_fmts = ARRAY_SIZE(rockchip_vdpu2_dec_fmts),
+ 	.codec = HANTRO_H264_ENCODER | HANTRO_MPEG2_DECODER |
+ 		 HANTRO_VP8_DECODER | HANTRO_H264_DECODER,
++	.mpeg1_dec = 1,
+ 	.codec_ops = rk3588_vpu121_codec_ops,
+ 	.irqs = rk3588_vpu121_irqs,
+ 	.num_irqs = ARRAY_SIZE(rk3588_vpu121_irqs),
+@@ -1067,6 +1070,7 @@ const struct hantro_variant px30_vpu_variant = {
+ 	.num_dec_fmts = ARRAY_SIZE(rockchip_vdpu2_dec_fmts),
+ 	.codec = HANTRO_JPEG_ENCODER | HANTRO_MPEG2_DECODER |
+ 		 HANTRO_VP8_DECODER | HANTRO_H264_DECODER,
++	.mpeg1_dec = 1,
+ 	.codec_ops = rk3399_vpu_codec_ops,
+ 	.irqs = rockchip_vpu2_irqs,
+ 	.num_irqs = ARRAY_SIZE(rockchip_vpu2_irqs),
+-- 
+2.55.0
+

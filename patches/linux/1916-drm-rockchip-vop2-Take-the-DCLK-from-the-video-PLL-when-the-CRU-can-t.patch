@@ -1,0 +1,369 @@
+From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
+From: Arun Iyengar <aiyengar1990@gmail.com>
+Date: Mon, 02 Nov 2026 06:21:51 +0000
+Subject: [PATCH] drm/rockchip: vop2: Take the DCLK from the video PLL when the CRU can't
+
+In HDMI FRL mode the HDMI PHY PLL is the link PLL, so the DCLK has to
+come from the CRU, which divides GPLL, CPLL, V0PLL or AUPLL by an integer.
+3840x2160@59.94Hz at 10 bpc (593.407 MHz) or 3840x2160@119.88Hz
+(1186.813 MHz) cannot be made that way, so such modes are refused.
+DisplayPort, eDP and DSI always use the CRU and silently run the 1/1.001
+modes at the closest rate the clock framework finds.
+
+If the DT provides the video PLL ("pll_v0", V0PLL on RK3588), use it:
+when the CRU cannot make the DCLK exactly at the current PLL rates,
+atomic_check asks the PLL for the DCLK rate times 1, 2, 4, ... 32 and
+records the first rate within 1 kHz of an integer multiple of the DCLK
+(the resolution of the mode clock) in the CRTC state; atomic_enable
+programs the PLL to it and the dclk_vop*_src divider then selects the
+PLL by itself, being its closest parent.
+
+V0PLL can feed every video port, so it is shared:
+
+- A port whose DCLK runs from V0PLL (programmed for it, or simply
+  matching the current rate) holds clk_rate_exclusive on it until it is
+  disabled. clk_round_rate() from another port then returns the
+  protected rate; a DCLK within 1 kHz of an integer fraction of it is
+  shared, and the rate recorded is the protected one, so that setting it
+  is a no-op instead of a retune the protected PLL refuses with -EBUSY.
+  Two modes that share the PLL are rounded to kHz independently, so
+  rates are compared by distance, not by kHz value: 3840x2160@59.94Hz
+  sets V0PLL to 593406990 Hz, and 3840x2160@29.97Hz (296703 kHz) gets
+  V0PLL / 2 = 296703495 Hz from it.
+
+- Ports enabled in the same commit all see the PLL unprotected. They
+  are checked and enabled in the same order, so the first one to use the
+  PLL decides its rate: a port whose DCLK the CRU makes exactly at a rate
+  that is a fraction of the PLL's current one records that rate, and a
+  later port shares the recorded rate if its DCLK is a fraction of it,
+  and does not use the PLL otherwise, instead of retuning it underneath
+  the earlier port. The CRTC state's PLL rate is derived for each commit,
+  not inherited from the previous one, and the PLL is only set when its
+  rate changes.
+
+Any other rate is refused for HDMI, and falls back to the closest CRU
+rate for the other outputs, as before.
+
+Assisted-by: LLM
+Signed-off-by: Arun Iyengar <aiyengar1990@gmail.com>
+---
+ drivers/gpu/drm/rockchip/rockchip_drm_drv.h  |   2 +
+ drivers/gpu/drm/rockchip/rockchip_drm_vop2.c | 194 ++++++++++++++++++++++++---
+ drivers/gpu/drm/rockchip/rockchip_drm_vop2.h |   7 +
+ 3 files changed, 186 insertions(+), 17 deletions(-)
+
+diff --git a/drivers/gpu/drm/rockchip/rockchip_drm_drv.h b/drivers/gpu/drm/rockchip/rockchip_drm_drv.h
+index 49fb5064cd5c..7dd63a4ba25b 100644
+--- a/drivers/gpu/drm/rockchip/rockchip_drm_drv.h
++++ b/drivers/gpu/drm/rockchip/rockchip_drm_drv.h
+@@ -58,6 +58,8 @@ struct rockchip_crtc_state {
+ 	u32 bus_flags;
+ 	int color_space;
+ 	bool frl_enabled;
++	/* VOP2: rate to program into the dedicated video PLL for the DCLK, 0 if none */
++	unsigned long dclk_pll_rate;
+ };
+ #define to_rockchip_crtc_state(s) \
+ 		container_of(s, struct rockchip_crtc_state, base)
+diff --git a/drivers/gpu/drm/rockchip/rockchip_drm_vop2.c b/drivers/gpu/drm/rockchip/rockchip_drm_vop2.c
+index 90e4fe66dea0..d8541f0a1cfe 100644
+--- a/drivers/gpu/drm/rockchip/rockchip_drm_vop2.c
++++ b/drivers/gpu/drm/rockchip/rockchip_drm_vop2.c
+@@ -1184,6 +1184,11 @@ static void vop2_crtc_atomic_disable(struct drm_crtc *crtc,
+ 
+ 	vop2_crtc_disable_irq(vp, VP_INT_DSP_HOLD_VALID);
+ 
++	if (vp->pll_v0_held) {
++		clk_rate_exclusive_put(vp->pll_v0);
++		vp->pll_v0_held = false;
++	}
++
+ 	if (vp->dclk_src)
+ 		clk_set_parent(vp->dclk, vp->dclk_src);
+ 
+@@ -2266,6 +2271,29 @@ static struct clk *vop2_crtc_dclk_hdmiphy_pll(struct vop2_video_port *vp,
+ 	return NULL;
+ }
+ 
++/*
++ * A DCLK that ends up on the video PLL (programmed for this VP or simply
++ * matching its current rate) keeps that PLL's rate protected until the VP is
++ * disabled, so another VP cannot retune it underneath. A VP that needs a
++ * different rate then sees the protected rate in atomic_check.
++ */
++static void vop2_crtc_protect_dclk_pll(struct vop2_video_port *vp)
++{
++	struct clk *src, *pll;
++
++	if (!vp->pll_v0 || vp->pll_v0_held)
++		return;
++
++	/* dclk_vopN -> dclk_vopN_src -> V0PLL, or dclk_vop3 -> V0PLL */
++	src = clk_get_parent(vp->dclk);
++	pll = src ? clk_get_parent(src) : NULL;
++	if (!clk_is_match(src, vp->pll_v0) && !clk_is_match(pll, vp->pll_v0))
++		return;
++
++	if (!clk_rate_exclusive_get(vp->pll_v0))
++		vp->pll_v0_held = true;
++}
++
+ static void vop2_crtc_atomic_enable(struct drm_crtc *crtc,
+ 				    struct drm_atomic_commit *state)
+ {
+@@ -2432,7 +2460,17 @@ static void vop2_crtc_atomic_enable(struct drm_crtc *crtc,
+ 				 ret);
+ 	}
+ 
++	if (vcstate->dclk_pll_rate &&
++	    vcstate->dclk_pll_rate != clk_get_rate(vp->pll_v0)) {
++		ret = clk_set_rate(vp->pll_v0, vcstate->dclk_pll_rate);
++		if (ret < 0)
++			drm_warn(vop2->drm,
++				 "vp%d: failed to set the video PLL to %lu Hz: %d\n",
++				 vp->id, vcstate->dclk_pll_rate, ret);
++	}
++
+ 	clk_set_rate(vp->dclk, clock);
++	vop2_crtc_protect_dclk_pll(vp);
+ 
+ 	vop2_post_config(crtc, true, crtc_state, old_crtc_state);
+ 
+@@ -2489,38 +2527,115 @@ static int vop2_crtc_atomic_check_gamma(struct vop2_video_port *vp,
+ 	return 0;
+ }
+ 
++/*
++ * The mode clock is given in kHz, so a rate within 1 kHz of it is as exact as
++ * the mode can ask for. Two modes sharing the video PLL at an integer ratio
++ * (e.g. 593407 kHz and 296703 kHz) are rounded to kHz independently, so their
++ * rates can be up to 1 kHz apart: compare distances, not kHz values.
++ */
++static bool vop2_dclk_rate_exact(long rate, unsigned long clock)
++{
++	return rate > 0 && abs_diff((unsigned long)rate, clock) < 1000;
++}
++
++/*
++ * The CRU parents of dclk_vopN_src (GPLL, CPLL, V0PLL, AUPLL) only give
++ * integer fractions of their current rates. If none of them makes the DCLK
++ * exactly, retune the dedicated video PLL (V0PLL) to an integer multiple of
++ * it, provided no other VP holds that PLL's rate (clk_round_rate() on our own
++ * handle then returns the protected rate, which is accepted if the DCLK is an
++ * integer fraction of it). Returns the rate to set, as clk_round_rate() gave
++ * it, so that setting it is exact and a no-op on a shared PLL.
++ */
++static unsigned long vop2_crtc_dclk_pll_rate(struct vop2_video_port *vp,
++					     unsigned long clock)
++{
++	unsigned int n;
++	long rate;
++
++	if (!vp->pll_v0)
++		return 0;
++
++	for (n = 1; n <= 32; n <<= 1) {
++		rate = clk_round_rate(vp->pll_v0, clock * n);
++		if (rate > 0 && vop2_dclk_rate_exact(DIV_ROUND_CLOSEST(rate, n), clock))
++			return rate;
++	}
++
++	return 0;
++}
++
++/* Whether the DCLK is (within the mode clock's resolution) an integer fraction of a PLL rate */
++static bool vop2_dclk_pll_fraction(unsigned long pll_rate, unsigned long clock)
++{
++	unsigned long n = DIV_ROUND_CLOSEST(pll_rate, clock);
++
++	return n && vop2_dclk_rate_exact(DIV_ROUND_CLOSEST(pll_rate, n), clock);
++}
++
++/*
++ * A video PLL that no VP holds is free for every VP enabled in the same
++ * commit, and each of them may want to retune it, or use it at its current
++ * rate. The VPs are checked and enabled in the same order, and the first one
++ * enabled gets the PLL. Returns the rate an earlier VP of this commit runs the
++ * PLL at, 0 if none.
++ */
++static unsigned long vop2_crtc_dclk_pll_claimed(struct vop2_video_port *vp,
++						struct drm_crtc_state *crtc_state)
++{
++	struct drm_crtc_state *other;
++	struct drm_crtc *crtc;
++	int i;
++
++	for_each_new_crtc_in_state(crtc_state->state, crtc, other, i) {
++		unsigned long rate = to_rockchip_crtc_state(other)->dclk_pll_rate;
++
++		if (crtc != &vp->crtc && rate)
++			return rate;
++	}
++
++	return 0;
++}
++
+ /*
+  * HDMI needs the exact pixel clock. The HDMI PHY PLL can generate any rate
+  * the PHY supports, but when the DCLK has to come from the system CRU (FRL
+  * mode, or rates beyond the PHY PLL), it is derived by integer division
+  * from a few fixed PLLs, and the clock framework silently picks the closest
+  * lower rate: e.g. 3840x2160@59.94Hz (593.407 MHz) would run at 500 MHz.
+- * Refuse such a configuration instead of scanning out at a wrong rate.
++ * Use the video PLL for such a rate when it is available (for any output),
++ * and refuse the HDMI configuration otherwise instead of scanning out at a
++ * wrong rate.
+  */
+ static int vop2_crtc_atomic_check_dclk(struct vop2_video_port *vp,
+ 				       struct drm_crtc_state *crtc_state)
+ {
++	struct rockchip_crtc_state *vcstate = to_rockchip_crtc_state(crtc_state);
+ 	const struct drm_display_mode *mode = &crtc_state->adjusted_mode;
+ 	struct vop2 *vop2 = vp->vop2;
+ 	struct drm_encoder *encoder;
+ 	unsigned long clock = 0;
++	unsigned long pll_rate, claimed;
+ 	struct clk *cru_clk;
++	bool hdmi = false;
+ 	long rate;
+ 
+ 	if (!vop2->ops->dclk_rate || !crtc_state->active ||
+ 	    !drm_atomic_crtc_needs_modeset(crtc_state))
+ 		return 0;
+ 
+-	/* Without an HDMI PHY PLL the CRU is the only DCLK source anyway */
+-	if (!vop2->pll_hdmiphy0 && !vop2->pll_hdmiphy1)
++	vcstate->dclk_pll_rate = 0;
++
++	/* Without an alternative PLL the CRU is the only DCLK source anyway */
++	if (!vop2->pll_hdmiphy0 && !vop2->pll_hdmiphy1 && !vp->pll_v0)
+ 		return 0;
+ 
+ 	drm_for_each_encoder_mask(encoder, vop2->drm, crtc_state->encoder_mask) {
+ 		struct rockchip_encoder *rkencoder = to_rockchip_encoder(encoder);
+ 		int id = rkencoder->crtc_endpoint_id;
+ 
+-		if (id != ROCKCHIP_VOP2_EP_HDMI0 && id != ROCKCHIP_VOP2_EP_HDMI1)
+-			return 0;
++		if (id == ROCKCHIP_VOP2_EP_HDMI0 || id == ROCKCHIP_VOP2_EP_HDMI1)
++			hdmi = true;
+ 
+ 		clock = vop2->ops->dclk_rate(vp, id, crtc_state);
+ 	}
+@@ -2531,24 +2646,61 @@ static int vop2_crtc_atomic_check_dclk(struct vop2_video_port *vp,
+ 	if (mode->flags & DRM_MODE_FLAG_DBLCLK)
+ 		clock *= 2;
+ 
+-	if (vop2_crtc_dclk_hdmiphy_pll(vp, crtc_state, clock))
++	if (hdmi && vop2_crtc_dclk_hdmiphy_pll(vp, crtc_state, clock))
+ 		return 0;
+ 
+-	/* The CRU source vop2_crtc_atomic_disable() restores */
+-	cru_clk = vp->dclk_src ?: clk_get_parent(vp->dclk);
+-	if (!cru_clk || clk_is_match(cru_clk, vop2->pll_hdmiphy0) ||
+-	    clk_is_match(cru_clk, vop2->pll_hdmiphy1))
+-		return 0;
++	/*
++	 * A DCLK that can also run from an HDMI PHY PLL is a plain mux in front
++	 * of the CRU divider: use the CRU source vop2_crtc_atomic_disable()
++	 * restores. Otherwise (VP3) the DCLK is the CRU divider itself.
++	 */
++	if ((vop2->pll_hdmiphy0 && clk_has_parent(vp->dclk, vop2->pll_hdmiphy0)) ||
++	    (vop2->pll_hdmiphy1 && clk_has_parent(vp->dclk, vop2->pll_hdmiphy1))) {
++		cru_clk = vp->dclk_src ?: clk_get_parent(vp->dclk);
++		if (!cru_clk || clk_is_match(cru_clk, vop2->pll_hdmiphy0) ||
++		    clk_is_match(cru_clk, vop2->pll_hdmiphy1))
++			return 0;
++	} else {
++		cru_clk = vp->dclk;
++	}
++
++	claimed = vop2_crtc_dclk_pll_claimed(vp, crtc_state);
+ 
+ 	rate = clk_round_rate(cru_clk, clock);
+-	if (rate <= 0 || DIV_ROUND_CLOSEST(rate, 1000) != DIV_ROUND_CLOSEST(clock, 1000)) {
+-		drm_dbg_kms(vop2->drm,
+-			    "vp%d: DCLK %lu Hz not available from the CRU (closest %ld Hz)\n",
+-			    vp->id, clock, rate);
+-		return -EINVAL;
++	if (vop2_dclk_rate_exact(rate, clock)) {
++		/*
++		 * The CRU may make it from the video PLL at its current rate:
++		 * record that rate, so that no later VP of this commit retunes
++		 * the PLL underneath (setting it is a no-op).
++		 */
++		pll_rate = vp->pll_v0 ? clk_get_rate(vp->pll_v0) : 0;
++		if (!claimed && pll_rate && vop2_dclk_pll_fraction(pll_rate, clock))
++			vcstate->dclk_pll_rate = pll_rate;
++		return 0;
+ 	}
+ 
+-	return 0;
++	/* Share the rate an earlier VP runs the PLL at, or retune it */
++	if (claimed)
++		pll_rate = vop2_dclk_pll_fraction(claimed, clock) ? claimed : 0;
++	else
++		pll_rate = vop2_crtc_dclk_pll_rate(vp, clock);
++
++	vcstate->dclk_pll_rate = pll_rate;
++	if (vcstate->dclk_pll_rate) {
++		drm_dbg_kms(vop2->drm, "vp%d: DCLK %lu Hz from the video PLL at %lu Hz\n",
++			    vp->id, clock, vcstate->dclk_pll_rate);
++		return 0;
++	}
++
++	/* Other outputs keep running at the closest rate, as before */
++	if (!hdmi)
++		return 0;
++
++	drm_dbg_kms(vop2->drm,
++		    "vp%d: DCLK %lu Hz not available from the CRU (closest %ld Hz)\n",
++		    vp->id, clock, rate);
++
++	return -EINVAL;
+ }
+ 
+ static int vop2_crtc_atomic_check(struct drm_crtc *crtc,
+@@ -2883,6 +3035,9 @@ static struct drm_crtc_state *vop2_crtc_duplicate_state(struct drm_crtc *crtc)
+ 
+ 	__drm_atomic_helper_crtc_duplicate_state(crtc, &vcstate->base);
+ 
++	/* Derived by atomic_check for this commit only */
++	vcstate->dclk_pll_rate = 0;
++
+ 	return &vcstate->base;
+ }
+ 
+@@ -3130,6 +3285,11 @@ static int vop2_create_crtcs(struct vop2 *vop2)
+ 			return dev_err_probe(drm->dev, PTR_ERR(vp->dclk),
+ 					     "failed to get %s\n", dclk_name);
+ 
++		vp->pll_v0 = devm_clk_get_optional(vop2->dev, "pll_v0");
++		if (IS_ERR(vp->pll_v0))
++			return dev_err_probe(drm->dev, PTR_ERR(vp->pll_v0),
++					     "failed to get pll_v0\n");
++
+ 		vp->dclk_rst = devm_reset_control_get_optional_exclusive(vop2->dev,
+ 									 dclk_name);
+ 		if (IS_ERR(vp->dclk_rst))
+diff --git a/drivers/gpu/drm/rockchip/rockchip_drm_vop2.h b/drivers/gpu/drm/rockchip/rockchip_drm_vop2.h
+index 9f134f2db05b..20fa7734d156 100644
+--- a/drivers/gpu/drm/rockchip/rockchip_drm_vop2.h
++++ b/drivers/gpu/drm/rockchip/rockchip_drm_vop2.h
+@@ -263,6 +263,13 @@ struct vop2_video_port {
+ 	struct vop2 *vop2;
+ 	struct clk *dclk;
+ 	struct clk *dclk_src;
++	/**
++	 * @pll_v0: per-VP handle on the dedicated video PLL (RK3588 V0PLL), so
++	 * that the rate protection one VP holds also applies to the others.
++	 */
++	struct clk *pll_v0;
++	/** @pll_v0_held: @pll_v0 rate protected while the DCLK runs from it */
++	bool pll_v0_held;
+ 	struct reset_control *dclk_rst;
+ 	unsigned int id;
+ 	const struct vop2_video_port_data *data;
+-- 
+2.55.0
+

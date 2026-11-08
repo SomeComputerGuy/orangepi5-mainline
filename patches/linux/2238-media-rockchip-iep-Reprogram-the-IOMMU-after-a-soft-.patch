@@ -1,0 +1,75 @@
+From b873cb022778ccffdf0adb1ec6b36abcfbf29006 Mon Sep 17 00:00:00 2001
+From: Arun Iyengar <aiyengar1990@gmail.com>
+Date: Mon, 2 Nov 2026 07:46:30 +0000
+Subject: [PATCH 5/5] media: rockchip: iep: Reprogram the IOMMU after a soft
+ reset
+
+iep_reset() reprograms the IOMMU only after the CRU fallback, on the
+assumption that the soft reset leaves the IOMMU alone. It doesn't: read
+back right after the soft reset (IEP2_ACLK_SRESET_P, ARST_FINISH_DONE
+seen) on an RK3588S, the IEP's IOMMU at 0xfdbb0800 is in bypass:
+
+  before:  DTE 0x04b98100 STATUS 0x19 (paging, idle) INT_MASK 0x3
+  soft:    DTE 0x00000000 STATUS 0x18 (paging off)   INT_MASK 0x0
+
+rk_iommu still considers the default domain attached, so the next job
+after a failed or timed-out one would access memory with its IOVAs used
+as physical addresses.
+
+Reprogram the IOMMU after every reset. (The VDPU720 JPEG decoder,
+read back the same way, keeps its IOMMU state across its soft reset.)
+
+Fold into "media: rockchip: add IEP2 deinterlacer driver".
+
+Assisted-by: LLM
+Signed-off-by: Arun Iyengar <aiyengar1990@gmail.com>
+---
+ drivers/media/platform/rockchip/iep/iep.c | 24 +++++++++++------------
+ 1 file changed, 12 insertions(+), 12 deletions(-)
+
+diff --git a/drivers/media/platform/rockchip/iep/iep.c b/drivers/media/platform/rockchip/iep/iep.c
+index 4475628938c6..d64019e101e4 100644
+--- a/drivers/media/platform/rockchip/iep/iep.c
++++ b/drivers/media/platform/rockchip/iep/iep.c
+@@ -126,9 +126,10 @@ static enum v4l2_field iep_buf_field(struct iep_ctx *ctx,
+ static void iep_iommu_restore(struct iep_dev *iep)
+ {
+ 	/*
+-	 * After a CRU reset the IOMMU has lost its state. Attach an empty
+-	 * domain and detach it again to reprogram the default domain (same as
+-	 * rkvdec).
++	 * Both the soft reset and a CRU reset of the IEP also reset its IOMMU,
++	 * which is then in bypass (DTE_ADDR 0, paging disabled). Attach an
++	 * empty domain and detach it again to reprogram the default domain
++	 * (same as rkvdec).
+ 	 */
+ 	if (iep->empty_domain) {
+ 		iommu_attach_device(iep->empty_domain, iep->dev);
+@@ -146,16 +147,15 @@ static void iep_reset(struct iep_dev *iep)
+ 	iep_write(iep, IEP2_CONFIG0, IEP2_ACLK_SRESET_P);
+ 	ret = readl_relaxed_poll_timeout(iep->regs + IEP2_STATUS, status,
+ 					 status & IEP2_ARST_FINISH_DONE, 0, 5);
+-	if (!ret)
+-		return;
+-
+-	dev_warn(iep->dev, "soft reset timeout, using CRU reset\n");
+-	if (!iep->rstc)
+-		return;
++	if (ret) {
++		dev_warn(iep->dev, "soft reset timeout, using CRU reset\n");
++		if (iep->rstc) {
++			reset_control_assert(iep->rstc);
++			udelay(5);
++			reset_control_deassert(iep->rstc);
++		}
++	}
+ 
+-	reset_control_assert(iep->rstc);
+-	udelay(5);
+-	reset_control_deassert(iep->rstc);
+ 	iep_iommu_restore(iep);
+ }
+ 
+-- 
+2.55.0
+

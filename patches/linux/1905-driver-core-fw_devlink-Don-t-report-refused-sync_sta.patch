@@ -1,0 +1,55 @@
+From ef76e6ec8fd43d3f46f34b52dd052b33dd32ca65 Mon Sep 17 00:00:00 2001
+From: Arun Iyengar <aiyengar1990@gmail.com>
+Date: Sun, 1 Nov 2026 05:54:13 +0000
+Subject: [PATCH 05/33] driver core: fw_devlink: Don't report refused
+ sync_state-only links as errors
+
+A SYNC_STATE_ONLY device link is refused by device_link_add() once the
+consumer has already probed, since such a link only orders sync_state()
+callbacks and would be useless. This legitimately happens when a consumer
+that probes early (for example the Rockchip power domain provider, whose
+domains reference a PMIC regulator through domain-supply) is inferred to
+depend on a supplier device that is added later, and results in boot-time
+"Failed to create device link (0x180)" errors for a harmless condition.
+
+Log the refusal of a sync_state-only link at debug level and keep the error
+for links that matter for probe ordering.
+
+(cherry picked from commit 15c769d8567ef979cc4e22f3c00b667252077fae)
+
+Assisted-by: LLM
+Signed-off-by: Arun Iyengar <aiyengar1990@gmail.com>
+---
+ drivers/base/core.c | 16 ++++++++++++++--
+ 1 file changed, 14 insertions(+), 2 deletions(-)
+
+diff --git a/drivers/base/core.c b/drivers/base/core.c
+index 4c0c373998a1..cc0ba69cf2ba 100644
+--- a/drivers/base/core.c
++++ b/drivers/base/core.c
+@@ -2241,8 +2241,20 @@ static int fw_devlink_create_devlink(struct device *con,
+ 		}
+ 
+ 		if (con != sup_dev && !device_link_add(con, sup_dev, flags)) {
+-			dev_err(con, "Failed to create device link (0x%x) with supplier %s for %pfwf\n",
+-				flags, dev_name(sup_dev), link->consumer);
++			/*
++			 * A SYNC_STATE_ONLY link only orders sync_state() and
++			 * is refused once the consumer has probed. That is
++			 * expected when a consumer that probes early (e.g. a
++			 * power domain provider referencing a regulator
++			 * supplier that is added later) is linked to a late
++			 * supplier, so don't report it as an error.
++			 */
++			if (device_link_flag_is_sync_state_only(flags))
++				dev_dbg(con, "Not creating sync_state-only device link (0x%x) with supplier %s for %pfwf\n",
++					flags, dev_name(sup_dev), link->consumer);
++			else
++				dev_err(con, "Failed to create device link (0x%x) with supplier %s for %pfwf\n",
++					flags, dev_name(sup_dev), link->consumer);
+ 			ret = -EINVAL;
+ 		}
+ 
+-- 
+2.55.0
+

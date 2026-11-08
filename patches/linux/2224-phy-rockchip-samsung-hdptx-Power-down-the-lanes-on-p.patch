@@ -1,0 +1,76 @@
+From c6fbf4a64b4a834af379edb0e8d2fc9ff0fe9267 Mon Sep 17 00:00:00 2001
+From: Arun Iyengar <aiyengar1990@gmail.com>
+Date: Sun, 1 Nov 2026 19:45:30 +0000
+Subject: [PATCH] phy: rockchip: samsung-hdptx: Power down the lanes on
+ phy_power_off()
+
+Since the PHY became a clock provider, rk_hdptx_phy_power_off() does
+nothing but drop the shared usage count, and the PHY is only really
+disabled when that count reaches zero.  The count is also held by every
+clock consumer of the PHY PLL, so with a clock reference outstanding
+the lanes keep driving the link after the HDMI controller has asked for
+the PHY to be powered off.
+
+On RK3588 a clock reference is almost always outstanding: the VOP lists
+the PHY clock among its clocks so it can source its DCLK from it, and
+the Rockchip power domain driver puts every clock of a device under
+pm_clk, which prepares the PHY clock (i.e. bumps the usage count)
+whenever the VOP is runtime active.  As soon as any other video port is
+in use, e.g. a DP output, switching the HDMI CRTC off therefore leaves
+the HDMI lanes enabled and the TMDS clock on the cable, so the sink
+never sees the link go away.  The lanes stay on until the whole VOP
+goes to runtime suspend.
+
+The lanes belong to the PHY consumer alone, whereas the PLL is shared
+with the clock consumers.  Hence disable the lane output and hold the
+lanes in reset in rk_hdptx_phy_power_off() regardless of the usage
+count, and keep leaving the PLL to the count.  This is the state the
+PHY is in between PLL and lane bring-up anyway, and the next
+rk_hdptx_phy_power_on() restores the lanes through the regular
+rk_hdptx_post_enable_lane() path, so no additional PLL re-init is
+needed.  The vendor driver does the same: its power_off callback only
+clears the lane enable bits, leaving the PLL to the clock refcount.
+
+The DP mode is left untouched: its PLL is not exposed as a clock and
+the lanes are torn down by rk_hdptx_dp_reset() from the usage count.
+
+Fixes: c4b09c562086 ("phy: phy-rockchip-samsung-hdptx: Add clock provider support")
+Assisted-by: LLM
+Signed-off-by: Arun Iyengar <aiyengar1990@gmail.com>
+---
+ drivers/phy/rockchip/phy-rockchip-samsung-hdptx.c | 15 +++++++++++++++
+ 1 file changed, 15 insertions(+)
+
+diff --git a/drivers/phy/rockchip/phy-rockchip-samsung-hdptx.c b/drivers/phy/rockchip/phy-rockchip-samsung-hdptx.c
+index 6879eecc5a9f..751bb503dcfe 100644
+--- a/drivers/phy/rockchip/phy-rockchip-samsung-hdptx.c
++++ b/drivers/phy/rockchip/phy-rockchip-samsung-hdptx.c
+@@ -1768,10 +1768,25 @@ static int rk_hdptx_phy_power_on(struct phy *phy)
+ 	return ret;
+ }
+ 
++static void rk_hdptx_lane_disable(struct rk_hdptx_phy *hdptx)
++{
++	regmap_update_bits(hdptx->regmap, LNTOP_REG(0207), LANE_EN_MASK,
++			   FIELD_PREP(LANE_EN_MASK, 0));
++	reset_control_assert(hdptx->rsts[RST_LANE].rstc);
++}
++
+ static int rk_hdptx_phy_power_off(struct phy *phy)
+ {
+ 	struct rk_hdptx_phy *hdptx = phy_get_drvdata(phy);
+ 
++	/*
++	 * The lanes are owned by the PHY consumer alone, hence shut them
++	 * down right away.  The PLL is shared with the clock consumers, so
++	 * leave its fate to the usage count.
++	 */
++	if (phy_get_mode(phy) != PHY_MODE_DP)
++		rk_hdptx_lane_disable(hdptx);
++
+ 	return rk_hdptx_phy_consumer_put(hdptx, false);
+ }
+ 
+-- 
+2.55.0
+

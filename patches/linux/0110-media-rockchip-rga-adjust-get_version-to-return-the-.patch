@@ -1,0 +1,92 @@
+From 8346629f9372f33ba7ce809b62c7ba2447777563 Mon Sep 17 00:00:00 2001
+From: =?UTF-8?q?Sven=20P=C3=BCschel?= <s.pueschel@pengutronix.de>
+Date: Wed, 16 Sep 2026 17:09:50 +0200
+Subject: [PATCH] media: rockchip: rga: adjust get_version to return the
+ version
+MIME-Version: 1.0
+Content-Type: text/plain; charset=UTF-8
+Content-Transfer-Encoding: 8bit
+
+Adjust get_version to return the version instead of directly updating it
+in the rockchip_rga structure. This is done in preparation for a
+multi-core support to check that cores with the same compatible share the
+same version.
+
+Signed-off-by: Sven Püschel <s.pueschel@pengutronix.de>
+---
+ drivers/media/platform/rockchip/rga/rga-hw.c  | 10 +++++++---
+ drivers/media/platform/rockchip/rga/rga.c     |  2 +-
+ drivers/media/platform/rockchip/rga/rga.h     |  2 +-
+ drivers/media/platform/rockchip/rga/rga3-hw.c |  8 +++++---
+ 4 files changed, 14 insertions(+), 8 deletions(-)
+
+diff --git a/drivers/media/platform/rockchip/rga/rga-hw.c b/drivers/media/platform/rockchip/rga/rga-hw.c
+index c24e03431..691e605b0 100644
+--- a/drivers/media/platform/rockchip/rga/rga-hw.c
++++ b/drivers/media/platform/rockchip/rga/rga-hw.c
+@@ -466,10 +466,14 @@ static bool rga_handle_irq(struct rockchip_rga *rga)
+ 	return intr & RGA_INT_COMMAND_FINISHED;
+ }
+ 
+-static void rga_get_version(struct rockchip_rga *rga)
++static struct rockchip_rga_version rga_get_version(struct rockchip_rga *rga)
+ {
+-	rga->version.major = (rga_read(rga, RGA_VERSION_INFO) >> 24) & 0xFF;
+-	rga->version.minor = (rga_read(rga, RGA_VERSION_INFO) >> 20) & 0x0F;
++	u32 version = rga_read(rga, RGA_VERSION_INFO);
++
++	return (struct rockchip_rga_version) {
++		.major = (version >> 24) & 0xFF,
++		.minor = (version >> 20) & 0x0F,
++	};
+ }
+ 
+ static struct rga_fmt formats[] = {
+diff --git a/drivers/media/platform/rockchip/rga/rga.c b/drivers/media/platform/rockchip/rga/rga.c
+index 6c60bb7f4..581b03a1e 100644
+--- a/drivers/media/platform/rockchip/rga/rga.c
++++ b/drivers/media/platform/rockchip/rga/rga.c
+@@ -861,7 +861,7 @@ static int rga_probe(struct platform_device *pdev)
+ 	if (ret < 0)
+ 		goto rel_m2m;
+ 
+-	rga->hw->get_version(rga);
++	rga->version = rga->hw->get_version(rga);
+ 
+ 	v4l2_info(&rga->v4l2_dev, "HW Version: 0x%02x.%02x\n",
+ 		  rga->version.major, rga->version.minor);
+diff --git a/drivers/media/platform/rockchip/rga/rga.h b/drivers/media/platform/rockchip/rga/rga.h
+index a7ca80b18..adde4d071 100644
+--- a/drivers/media/platform/rockchip/rga/rga.h
++++ b/drivers/media/platform/rockchip/rga/rga.h
+@@ -159,7 +159,7 @@ struct rga_hw {
+ 	void (*start)(struct rockchip_rga *rga,
+ 		      struct rga_vb_buffer *src, struct rga_vb_buffer *dst);
+ 	bool (*handle_irq)(struct rockchip_rga *rga);
+-	void (*get_version)(struct rockchip_rga *rga);
++	struct rockchip_rga_version (*get_version)(struct rockchip_rga *rga);
+ 	void *(*adjust_and_map_format)(struct rga_ctx *ctx,
+ 				       struct v4l2_pix_format_mplane *format,
+ 				       bool is_output);
+diff --git a/drivers/media/platform/rockchip/rga/rga3-hw.c b/drivers/media/platform/rockchip/rga/rga3-hw.c
+index 46ba6d270..a80dd7609 100644
+--- a/drivers/media/platform/rockchip/rga/rga3-hw.c
++++ b/drivers/media/platform/rockchip/rga/rga3-hw.c
+@@ -299,12 +299,14 @@ static bool rga3_handle_irq(struct rockchip_rga *rga)
+ 	return FIELD_GET(RGA3_INT_FRM_DONE, intr);
+ }
+ 
+-static void rga3_get_version(struct rockchip_rga *rga)
++static struct rockchip_rga_version rga3_get_version(struct rockchip_rga *rga)
+ {
+ 	u32 version = rga_read(rga, RGA3_VERSION_NUM);
+ 
+-	rga->version.major = FIELD_GET(RGA3_VERSION_NUM_MAJOR, version);
+-	rga->version.minor = FIELD_GET(RGA3_VERSION_NUM_MINOR, version);
++	return (struct rockchip_rga_version) {
++		.major = FIELD_GET(RGA3_VERSION_NUM_MAJOR, version),
++		.minor = FIELD_GET(RGA3_VERSION_NUM_MINOR, version),
++	};
+ }
+ 
+ static struct rga3_fmt rga3_formats[] = {

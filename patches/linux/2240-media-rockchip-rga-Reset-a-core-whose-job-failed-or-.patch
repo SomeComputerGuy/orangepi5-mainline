@@ -1,0 +1,498 @@
+From 4e2ce9e3f93ea4615ec887cc7384fe1cc7688bb3 Mon Sep 17 00:00:00 2001
+From: Arun Iyengar <aiyengar1990@gmail.com>
+Date: Mon, 2 Nov 2026 09:10:11 +0000
+Subject: [PATCH 2/3] media: rockchip: rga: Reset a core whose job failed or
+ timed out
+
+The driver finishes a job only when the core reports that it is done. A
+job that never completes, because the core is stuck or the interrupt is
+lost, is never finished: its buffers are never returned, userspace waits
+forever, and closing the device blocks in v4l2_m2m_cancel_job(). Nothing
+resets the core either, which is left as the failed job left it.
+
+Add a watchdog to each core, armed before a job is started. When it
+fires, or right away when the core reports an error (which the hardware
+backends can now do from their interrupt handler), it:
+
+ - pulses the core, AXI and AHB reset lines of the core, which the
+   driver already gets from the device tree and pulses at probe;
+ - reinitializes the IOMMU of the core, if it is behind one. The reset
+   also resets the IOMMU: on RK3588, read back right after the reset of
+   an RGA3 core, its IOMMU is in bypass (DTE_ADDR 0, STATUS 0x18, paging
+   disabled, INT_MASK 0) although the IOMMU driver still considers it
+   attached. As in the Hantro and rkvdec drivers, an empty paging domain
+   is attached and detached again, which makes the IOMMU driver program
+   the default domain again, and a core attached to the domain of the
+   first core is detached from it first and attached back at the end.
+   Read back afterwards, DTE_ADDR again holds the domain's directory
+   table and STATUS is 0x19 (paging enabled, idle);
+ - returns the buffers of the job with VB2_BUF_STATE_ERROR, so that
+   userspace sees the failure and goes on with the next job.
+
+The interrupt handler only completes a job whose watchdog it could
+cancel, so a job is finished once, either by the interrupt or by the
+watchdog. The handlers now also tell the core's interrupts apart from
+others on a shared line.
+
+The timeout is 2 s, twice what the Rockchip BSP driver allows for a job.
+
+Tested on an Orange Pi 5 (RK3588S) with a test-only fault injection
+(not part of this patch) and the next patch, which makes the RGA3
+report its errors. On both RGA3 cores, each of the following faults was
+injected in one job of a 1920x1080 NV12 to 1280x720 XBGR32
+stream: unmapped source IOVA, unmapped destination IOVA, and a job that
+is never started. The faulted job came back with V4L2_BUF_FLAG_ERROR and
+every following frame had the CRC of the fault-free run.
+Ten faulted jobs in a row on each core were followed by correct
+frames, a fault on one core didn't disturb a stream on the other one
+(150 of 150 frames correct), and v4l2convert pipelines with faults
+injected while streaming ran to their end. Fault-free conversions
+(seven format/scale cases, GStreamer v4l2convert) give the same output,
+bit for bit, as without this patch.
+
+Assisted-by: LLM
+Signed-off-by: Arun Iyengar <aiyengar1990@gmail.com>
+---
+ drivers/media/platform/rockchip/rga/rga-hw.c  |   6 +-
+ drivers/media/platform/rockchip/rga/rga.c     | 219 ++++++++++++++----
+ drivers/media/platform/rockchip/rga/rga.h     |  43 +++-
+ drivers/media/platform/rockchip/rga/rga3-hw.c |   7 +-
+ 4 files changed, 222 insertions(+), 53 deletions(-)
+
+diff --git a/drivers/media/platform/rockchip/rga/rga-hw.c b/drivers/media/platform/rockchip/rga/rga-hw.c
+index bbd3c7e3c481..448c0806bfe6 100644
+--- a/drivers/media/platform/rockchip/rga/rga-hw.c
++++ b/drivers/media/platform/rockchip/rga/rga-hw.c
+@@ -453,15 +453,17 @@ static void rga_hw_start(struct rga_core *core,
+ 	rga_write(core, RGA_CMD_CTRL, 0x1);
+ }
+ 
+-static bool rga_handle_irq(struct rga_core *core)
++static enum rga_irq_status rga_handle_irq(struct rga_core *core)
+ {
+ 	int intr;
+ 
+ 	intr = rga_read(core, RGA_INT) & 0xf;
++	if (!intr)
++		return RGA_IRQ_NONE;
+ 
+ 	rga_mod(core, RGA_INT, intr << 4, 0xf << 4);
+ 
+-	return intr & RGA_INT_COMMAND_FINISHED;
++	return intr & RGA_INT_COMMAND_FINISHED ? RGA_IRQ_DONE : RGA_IRQ_BUSY;
+ }
+ 
+ static struct rockchip_rga_version rga_get_version(struct rga_core *core)
+diff --git a/drivers/media/platform/rockchip/rga/rga.c b/drivers/media/platform/rockchip/rga/rga.c
+index 0c367b627858..df58e08fa949 100644
+--- a/drivers/media/platform/rockchip/rga/rga.c
++++ b/drivers/media/platform/rockchip/rga/rga.c
+@@ -34,6 +34,109 @@
+ static int debug;
+ module_param(debug, int, 0644);
+ 
++/* Longest time a job may take before its core is reset */
++#define RGA_JOB_TIMEOUT_MS	2000
++
++static void rga_job_finish(struct rga_core *core, struct rga_ctx *ctx,
++			   enum vb2_buffer_state state)
++{
++	struct rockchip_rga *rga = core->rga;
++	struct vb2_v4l2_buffer *src, *dst;
++
++	src = v4l2_m2m_src_buf_remove(ctx->fh.m2m_ctx);
++	dst = v4l2_m2m_dst_buf_remove(ctx->fh.m2m_ctx);
++
++	WARN_ON(!src);
++	WARN_ON(!dst);
++
++	v4l2_m2m_buf_copy_metadata(src, dst);
++
++	dst->sequence = ctx->csequence++;
++
++	v4l2_m2m_buf_done(src, state);
++	v4l2_m2m_buf_done(dst, state);
++	v4l2_m2m_job_finish(rga->m2m_dev, ctx->fh.m2m_ctx);
++
++	pm_runtime_put_autosuspend(core->dev);
++}
++
++static void rga_core_reset(struct rga_core *core)
++{
++	unsigned int i;
++
++	for (i = 0; i < RGA_NUM_RESETS; i++) {
++		reset_control_assert(core->resets[i].rstc);
++		udelay(1);
++		reset_control_deassert(core->resets[i].rstc);
++	}
++}
++
++/*
++ * Resetting a core also resets its IOMMU, which is then left in bypass while
++ * the IOMMU driver still considers it attached to its domain. Attach the
++ * empty domain and detach it again to return to the default DMA domain: the
++ * IOMMU driver then fully reinitializes the IOMMU, which keeps the mappings
++ * of the domain. A core attached to the domain of the first core is detached
++ * from it first, and attached to it again at the end.
++ */
++static void rga_core_iommu_restore(struct rga_core *core)
++{
++	int ret;
++
++	if (!core->empty_domain)
++		return;
++
++	if (core->attached_domain)
++		iommu_detach_device(core->attached_domain, core->dev);
++
++	ret = iommu_attach_device(core->empty_domain, core->dev);
++	if (ret)
++		dev_warn(core->dev, "Failed to attach the empty IOMMU domain: %d\n",
++			 ret);
++	else
++		iommu_detach_device(core->empty_domain, core->dev);
++
++	if (core->attached_domain) {
++		ret = iommu_attach_device(core->attached_domain, core->dev);
++		if (ret)
++			dev_err(core->dev, "Failed to attach back to the IOMMU domain of the first core: %d\n",
++				ret);
++	}
++}
++
++/*
++ * Runs when the job of a core timed out, or right away when the core reported
++ * an error. Either way the core may still be busy or stuck on the bus: reset
++ * it and its IOMMU before returning the buffers with an error, so that the
++ * next job starts on a clean core.
++ */
++static void rga_watchdog(struct work_struct *work)
++{
++	struct rga_core *core = container_of(to_delayed_work(work),
++					     struct rga_core, watchdog_work);
++	struct rockchip_rga *rga = core->rga;
++	struct rga_ctx *ctx = core->curr;
++	unsigned long flags;
++
++	if (WARN_ON(!ctx))
++		return;
++
++	if (READ_ONCE(core->job_failed))
++		dev_err(core->dev, "job failed, resetting the core\n");
++	else
++		dev_err(core->dev, "job timed out, resetting the core\n");
++
++	rga_core_reset(core);
++	rga_core_iommu_restore(core);
++
++	spin_lock_irqsave(&rga->cores_lock, flags);
++	WRITE_ONCE(core->job_failed, false);
++	core->curr = NULL;
++	spin_unlock_irqrestore(&rga->cores_lock, flags);
++
++	rga_job_finish(core, ctx, VB2_BUF_STATE_ERROR);
++}
++
+ static void device_run(void *prv)
+ {
+ 	struct rga_ctx *ctx = prv;
+@@ -79,42 +182,46 @@ static void device_run(void *prv)
+ 
+ 	dst = v4l2_m2m_next_dst_buf(ctx->fh.m2m_ctx);
+ 
++	schedule_delayed_work(&core->watchdog_work,
++			      msecs_to_jiffies(RGA_JOB_TIMEOUT_MS));
+ 	rga->hw->start(core, vb_to_rga(src), vb_to_rga(dst));
+ }
+ 
+ static irqreturn_t rga_core_irq(struct rga_core *core)
+ {
+ 	struct rockchip_rga *rga = core->rga;
++	enum rga_irq_status status;
++	struct rga_ctx *ctx;
+ 
+ 	/* ignore interrupt on an unbound core */
+ 	if (!rga)
+ 		return IRQ_HANDLED;
+ 
+-	if (rga->hw->handle_irq(core)) {
+-		struct vb2_v4l2_buffer *src, *dst;
+-		struct rga_ctx *ctx = core->curr;
+-
+-		WARN_ON(!ctx);
+-
+-		core->curr = NULL;
+-
+-		src = v4l2_m2m_src_buf_remove(ctx->fh.m2m_ctx);
+-		dst = v4l2_m2m_dst_buf_remove(ctx->fh.m2m_ctx);
+-
+-		WARN_ON(!src);
+-		WARN_ON(!dst);
+-
+-		v4l2_m2m_buf_copy_metadata(src, dst);
++	status = rga->hw->handle_irq(core);
++	if (status == RGA_IRQ_NONE)
++		return IRQ_NONE;
+ 
+-		dst->sequence = ctx->csequence++;
++	ctx = core->curr;
++	if (status == RGA_IRQ_BUSY || !ctx || READ_ONCE(core->job_failed))
++		return IRQ_HANDLED;
+ 
+-		v4l2_m2m_buf_done(src, VB2_BUF_STATE_DONE);
+-		v4l2_m2m_buf_done(dst, VB2_BUF_STATE_DONE);
+-		v4l2_m2m_job_finish(rga->m2m_dev, ctx->fh.m2m_ctx);
++	/*
++	 * If the watchdog isn't pending anymore, it is already resetting the
++	 * core and finishes the job itself.
++	 */
++	if (!cancel_delayed_work(&core->watchdog_work))
++		return IRQ_HANDLED;
+ 
+-		pm_runtime_put_autosuspend(core->dev);
++	if (status == RGA_IRQ_ERROR) {
++		/* The core must be reset, which can't be done from here */
++		WRITE_ONCE(core->job_failed, true);
++		schedule_delayed_work(&core->watchdog_work, 0);
++		return IRQ_HANDLED;
+ 	}
+ 
++	core->curr = NULL;
++	rga_job_finish(core, ctx, VB2_BUF_STATE_DONE);
++
+ 	return IRQ_HANDLED;
+ }
+ 
+@@ -734,38 +841,19 @@ static const struct video_device rga_videodev = {
+ 
+ static int rga_parse_dt(struct rga_core *core)
+ {
+-	struct reset_control *core_rst, *axi_rst, *ahb_rst;
+ 	int ret;
+ 
+-	core_rst = devm_reset_control_get(core->dev, "core");
+-	if (IS_ERR(core_rst)) {
+-		dev_err(core->dev, "failed to get core reset controller\n");
+-		return PTR_ERR(core_rst);
+-	}
+-
+-	axi_rst = devm_reset_control_get(core->dev, "axi");
+-	if (IS_ERR(axi_rst)) {
+-		dev_err(core->dev, "failed to get axi reset controller\n");
+-		return PTR_ERR(axi_rst);
+-	}
+-
+-	ahb_rst = devm_reset_control_get(core->dev, "ahb");
+-	if (IS_ERR(ahb_rst)) {
+-		dev_err(core->dev, "failed to get ahb reset controller\n");
+-		return PTR_ERR(ahb_rst);
++	core->resets[0].id = "core";
++	core->resets[1].id = "axi";
++	core->resets[2].id = "ahb";
++	ret = devm_reset_control_bulk_get_exclusive(core->dev, RGA_NUM_RESETS,
++						    core->resets);
++	if (ret) {
++		dev_err(core->dev, "failed to get reset controllers\n");
++		return ret;
+ 	}
+ 
+-	reset_control_assert(core_rst);
+-	udelay(1);
+-	reset_control_deassert(core_rst);
+-
+-	reset_control_assert(axi_rst);
+-	udelay(1);
+-	reset_control_deassert(axi_rst);
+-
+-	reset_control_assert(ahb_rst);
+-	udelay(1);
+-	reset_control_deassert(ahb_rst);
++	rga_core_reset(core);
+ 
+ 	ret = devm_clk_bulk_get_all(core->dev, &core->clks);
+ 	if (ret < 0) {
+@@ -809,6 +897,7 @@ static int rga_core_bind(struct device *dev, struct device *master, void *data)
+ 			dev_err(core->dev, "Couldn't attach to the domain of the first core\n");
+ 			return ret;
+ 		}
++		core->attached_domain = domain;
+ 
+ 		/* we are not the first core, expect that we have the same version */
+ 		if (rga->version.major != version.major || rga->version.minor != version.minor) {
+@@ -846,6 +935,7 @@ static void rga_core_unbind(struct device *dev, struct device *master,
+ 
+ 			if (domain)
+ 				iommu_detach_device(domain, core->dev);
++			core->attached_domain = NULL;
+ 		}
+ 
+ 		spin_lock_irqsave(&rga->cores_lock, flags);
+@@ -855,6 +945,8 @@ static void rga_core_unbind(struct device *dev, struct device *master,
+ 		break;
+ 	}
+ 
++	cancel_delayed_work_sync(&core->watchdog_work);
++
+ 	/* make the ISR ignore this core before the m2m device is released */
+ 	core->rga = NULL;
+ 	synchronize_irq(core->irq);
+@@ -865,6 +957,32 @@ static const struct component_ops rga_core_ops = {
+ 	.unbind = rga_core_unbind,
+ };
+ 
++static void rga_free_empty_domain(void *data)
++{
++	iommu_domain_free(data);
++}
++
++static int rga_alloc_empty_domain(struct rga_core *core)
++{
++	struct iommu_domain *domain;
++
++	if (!iommu_get_domain_for_dev(core->dev))
++		return 0;
++
++	domain = iommu_paging_domain_alloc(core->dev);
++	if (IS_ERR(domain)) {
++		/* Not fatal, the IOMMU just won't be restored after a reset */
++		dev_warn(core->dev, "Failed to allocate an empty IOMMU domain: %pe\n",
++			 domain);
++		return 0;
++	}
++
++	core->empty_domain = domain;
++
++	return devm_add_action_or_reset(core->dev, rga_free_empty_domain,
++					domain);
++}
++
+ static int rga_core_probe(struct platform_device *pdev)
+ {
+ 	struct rga_core *core;
+@@ -884,11 +1002,16 @@ static int rga_core_probe(struct platform_device *pdev)
+ 		return -ENOMEM;
+ 
+ 	core->dev = &pdev->dev;
++	INIT_DELAYED_WORK(&core->watchdog_work, rga_watchdog);
+ 
+ 	ret = rga_parse_dt(core);
+ 	if (ret)
+ 		return dev_err_probe(&pdev->dev, ret, "Unable to parse OF data\n");
+ 
++	ret = rga_alloc_empty_domain(core);
++	if (ret)
++		return ret;
++
+ 	ret = devm_pm_runtime_enable(core->dev);
+ 	if (ret)
+ 		return ret;
+diff --git a/drivers/media/platform/rockchip/rga/rga.h b/drivers/media/platform/rockchip/rga/rga.h
+index f241e3c7b2ac..7debc3027df1 100644
+--- a/drivers/media/platform/rockchip/rga/rga.h
++++ b/drivers/media/platform/rockchip/rga/rga.h
+@@ -9,6 +9,8 @@
+ #include <linux/bits.h>
+ #include <linux/clk.h>
+ #include <linux/platform_device.h>
++#include <linux/reset.h>
++#include <linux/workqueue.h>
+ #include <media/videobuf2-v4l2.h>
+ #include <media/v4l2-ctrls.h>
+ #include <media/v4l2-device.h>
+@@ -36,12 +38,37 @@ struct rockchip_rga_version {
+ 	u32 minor;
+ };
+ 
++#define RGA_NUM_RESETS 3
++
++/**
++ * struct rga_core - one RGA core
++ * @dev:		device of the core
++ * @regs:		registers of the core
++ * @irq:		interrupt of the core
++ * @clks:		clocks of the core
++ * @num_clks:		number of clocks
++ * @resets:		core, AXI and AHB reset lines of the core
++ * @empty_domain:	empty IOMMU domain, used to reinitialize the IOMMU after
++ *			a failed job; NULL if the core isn't behind an IOMMU
++ * @attached_domain:	IOMMU domain of the first core that this core is
++ *			attached to, if any
++ * @watchdog_work:	resets the core when its job times out or fails
++ * @job_failed:		the core reported an error for the current job and
++ *			@watchdog_work is queued to reset it
++ * @rga:		RGA device the core is bound to
++ * @curr:		context of the job running on the core, if any
++ */
+ struct rga_core {
+ 	struct device *dev;
+ 	void __iomem *regs;
+ 	int irq;
+ 	struct clk_bulk_data *clks;
+ 	int num_clks;
++	struct reset_control_bulk_data resets[RGA_NUM_RESETS];
++	struct iommu_domain *empty_domain;
++	struct iommu_domain *attached_domain;
++	struct delayed_work watchdog_work;
++	bool job_failed;
+ 
+ 	struct rockchip_rga *rga;
+ 	struct rga_ctx *curr;
+@@ -146,6 +173,20 @@ static inline void rga_mod(struct rga_core *core, u32 reg, u32 val, u32 mask)
+ 	rga_write(core, reg, temp);
+ };
+ 
++/**
++ * enum rga_irq_status - what an interrupt of a core reports
++ * @RGA_IRQ_NONE:	the core didn't raise an interrupt
++ * @RGA_IRQ_BUSY:	the job is still running
++ * @RGA_IRQ_DONE:	the job is done
++ * @RGA_IRQ_ERROR:	the job failed and the core must be reset
++ */
++enum rga_irq_status {
++	RGA_IRQ_NONE,
++	RGA_IRQ_BUSY,
++	RGA_IRQ_DONE,
++	RGA_IRQ_ERROR,
++};
++
+ #define RGA_FEATURE_FLIP	BIT(0)
+ #define RGA_FEATURE_ROTATE	BIT(1)
+ #define RGA_FEATURE_BG_COLOR	BIT(2)
+@@ -166,7 +207,7 @@ struct rga_hw {
+ 	void (*setup_cmdbuf)(struct rga_ctx *ctx);
+ 	void (*start)(struct rga_core *core,
+ 		      struct rga_vb_buffer *src, struct rga_vb_buffer *dst);
+-	bool (*handle_irq)(struct rga_core *core);
++	enum rga_irq_status (*handle_irq)(struct rga_core *core);
+ 	struct rockchip_rga_version (*get_version)(struct rga_core *core);
+ 	void *(*adjust_and_map_format)(struct rga_ctx *ctx,
+ 				       struct v4l2_pix_format_mplane *format,
+diff --git a/drivers/media/platform/rockchip/rga/rga3-hw.c b/drivers/media/platform/rockchip/rga/rga3-hw.c
+index 745760d830a6..670ba4ec5762 100644
+--- a/drivers/media/platform/rockchip/rga/rga3-hw.c
++++ b/drivers/media/platform/rockchip/rga/rga3-hw.c
+@@ -288,15 +288,18 @@ static void rga3_hw_start(struct rga_core *core,
+ 		  FIELD_PREP(RGA3_CMD_LINE_START_PULSE, 1));
+ }
+ 
+-static bool rga3_handle_irq(struct rga_core *core)
++static enum rga_irq_status rga3_handle_irq(struct rga_core *core)
+ {
+ 	u32 intr;
+ 
+ 	intr = rga_read(core, RGA3_INT_RAW);
++	if (!intr)
++		return RGA_IRQ_NONE;
++
+ 	/* clear all interrupts */
+ 	rga_write(core, RGA3_INT_CLR, intr);
+ 
+-	return FIELD_GET(RGA3_INT_FRM_DONE, intr);
++	return FIELD_GET(RGA3_INT_FRM_DONE, intr) ? RGA_IRQ_DONE : RGA_IRQ_BUSY;
+ }
+ 
+ static struct rockchip_rga_version rga3_get_version(struct rga_core *core)
+-- 
+2.55.0
+

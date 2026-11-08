@@ -1,0 +1,75 @@
+From 5c7c5401d8b2b1811183ed7609606af8670f9d82 Mon Sep 17 00:00:00 2001
+From: Cristian Ciocaltea <cristian.ciocaltea@collabora.com>
+Date: Fri, 10 Jul 2026 22:57:06 +0300
+Subject: [PATCH] drm/vc4: hdmi: Propagate -EDEADLK to the top level
+
+drm_connector_helper_funcs.detect_ctx() is expected to propagate
+-EDEADLK so that context owners, e.g. drm_helper_probe_detect_ctx(), can
+perform the required backoff and retry.
+
+vc4_hdmi_handle_hotplug() instead runs its own retry loop and calls
+drm_modeset_backoff() on an acquire context it does not own.  This drops
+all locks in the context, including connection_mutex held by the core.
+
+Drop the local retry logic and propagate -EDEADLK to the caller instead.
+This aligns VC4 with the expected detect_ctx() semantics.
+
+Signed-off-by: Cristian Ciocaltea <cristian.ciocaltea@collabora.com>
+Link: https://gitlab.collabora.com/hardware-enablement/rockchip-3588/linux/-/commit/2fc74ba693b13b3ae00ffed5b31d33a757295596
+---
+ drivers/gpu/drm/vc4/vc4_hdmi.c | 23 +++++++----------------
+ 1 file changed, 7 insertions(+), 16 deletions(-)
+
+diff --git a/drivers/gpu/drm/vc4/vc4_hdmi.c b/drivers/gpu/drm/vc4/vc4_hdmi.c
+index 249c4e556..6a27b2dec 100644
+--- a/drivers/gpu/drm/vc4/vc4_hdmi.c
++++ b/drivers/gpu/drm/vc4/vc4_hdmi.c
+@@ -344,12 +344,11 @@ static int vc4_hdmi_reset_link(struct drm_connector *connector,
+ 	return drm_atomic_helper_reset_crtc(crtc, ctx);
+ }
+ 
+-static void vc4_hdmi_handle_hotplug(struct vc4_hdmi *vc4_hdmi,
+-				    struct drm_modeset_acquire_ctx *ctx,
+-				    enum drm_connector_status status)
++static int vc4_hdmi_handle_hotplug(struct vc4_hdmi *vc4_hdmi,
++				   struct drm_modeset_acquire_ctx *ctx,
++				   enum drm_connector_status status)
+ {
+ 	struct drm_connector *connector = &vc4_hdmi->connector;
+-	int ret;
+ 
+ 	/*
+ 	 * NOTE: This function should really be called with vc4_hdmi->mutex
+@@ -368,17 +367,9 @@ static void vc4_hdmi_handle_hotplug(struct vc4_hdmi *vc4_hdmi,
+ 	drm_atomic_helper_connector_hdmi_hotplug(connector, ctx, status);
+ 
+ 	if (status != connector_status_connected)
+-		return;
+-
+-	for (;;) {
+-		ret = vc4_hdmi_reset_link(connector, ctx);
+-		if (ret == -EDEADLK) {
+-			drm_modeset_backoff(ctx);
+-			continue;
+-		}
++		return 0;
+ 
+-		break;
+-	}
++	return vc4_hdmi_reset_link(connector, ctx);
+ }
+ 
+ static int vc4_hdmi_connector_detect_ctx(struct drm_connector *connector,
+@@ -416,10 +407,10 @@ static int vc4_hdmi_connector_detect_ctx(struct drm_connector *connector,
+ 			status = connector_status_connected;
+ 	}
+ 
+-	vc4_hdmi_handle_hotplug(vc4_hdmi, ctx, status);
++	ret = vc4_hdmi_handle_hotplug(vc4_hdmi, ctx, status);
+ 	pm_runtime_put(&vc4_hdmi->pdev->dev);
+ 
+-	return status;
++	return ret == -EDEADLK ? ret : status;
+ }
+ 
+ static int vc4_hdmi_connector_get_modes(struct drm_connector *connector)

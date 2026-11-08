@@ -1,0 +1,176 @@
+From 06f131f4743d0583f3b7c930d0c18bfdfb1c9e25 Mon Sep 17 00:00:00 2001
+From: Arun Iyengar <aiyengar1990@gmail.com>
+Date: Tue, 3 Nov 2026 05:33:55 +0000
+Subject: [PATCH 2265/2271] drm/rockchip: vop2: Add limited range RGB output
+
+The HDMI state helper decides per commit whether RGB goes out in the
+full or the limited quantization range
+(conn_state->hdmi.is_limited_range: "Broadcast RGB", or the CTA-861
+default for the mode) and signals that in the AVI InfoFrame, but the
+VOP2 always sends full range RGB. On every CTA mode (all 4K, 1080p and
+720p modes) a sink therefore gets full range data in an InfoFrame that
+says limited range, crushing the darkest 1/16th of the range to black
+and clipping the brightest to white.
+
+The RK3568 and RK3588 video ports have a post-processing BCSH
+(brightness, contrast, saturation, hue) block that works on Y'CbCr
+between an R'G'B' to Y'CbCr and a Y'CbCr to R'G'B' conversion. With the
+same conversion on both sides, a contrast and saturation of 219/255 and
+a brightness of 16/255 map full range R'G'B' to 16 + 219/255 * R', which
+is the limited range. The conversions are the limited range BT.709 ones:
+with full range ones the chroma of saturated red and blue sits at the
+very end of the code range and wraps around when a 10 bit window is
+shown (red turned green). Program it in atomic_enable, from a new
+rockchip_crtc_state flag set by the encoder. YCbCr output is unaffected:
+its window R2Y matrices already produce limited range.
+
+The flag is cleared when the CRTC state is duplicated, as the encoder's
+atomic_check sets it again on every modeset, and a video port that moves
+to another encoder must not keep it.
+
+Assisted-by: LLM
+Signed-off-by: Arun Iyengar <aiyengar1990@gmail.com>
+---
+ drivers/gpu/drm/rockchip/rockchip_drm_drv.h  |  2 +
+ drivers/gpu/drm/rockchip/rockchip_drm_vop2.c | 57 ++++++++++++++++++++
+ drivers/gpu/drm/rockchip/rockchip_drm_vop2.h | 22 ++++++++
+ 3 files changed, 81 insertions(+)
+
+diff --git a/drivers/gpu/drm/rockchip/rockchip_drm_drv.h b/drivers/gpu/drm/rockchip/rockchip_drm_drv.h
+index 7dd63a4ba25b..7bf9a8262258 100644
+--- a/drivers/gpu/drm/rockchip/rockchip_drm_drv.h
++++ b/drivers/gpu/drm/rockchip/rockchip_drm_drv.h
+@@ -57,6 +57,8 @@ struct rockchip_crtc_state {
+ 	u32 bus_format;
+ 	u32 bus_flags;
+ 	int color_space;
++	/* RGB output in the limited quantization range (16-235 for 8 bpc) */
++	bool rgb_limited_range;
+ 	bool frl_enabled;
+ 	/* VOP2: rate to program into the dedicated video PLL for the DCLK, 0 if none */
+ 	unsigned long dclk_pll_rate;
+diff --git a/drivers/gpu/drm/rockchip/rockchip_drm_vop2.c b/drivers/gpu/drm/rockchip/rockchip_drm_vop2.c
+index b41d37b5249d..3eff2967ebde 100644
+--- a/drivers/gpu/drm/rockchip/rockchip_drm_vop2.c
++++ b/drivers/gpu/drm/rockchip/rockchip_drm_vop2.c
+@@ -2294,6 +2294,59 @@ static void vop2_crtc_protect_dclk_pll(struct vop2_video_port *vp)
+ 		vp->pll_v0_held = true;
+ }
+ 
++/*
++ * The VP post-processing BCSH (brightness, contrast, saturation, hue) block
++ * works on Y'CbCr, between an optional R'G'B' to Y'CbCr (R2Y) and Y'CbCr to
++ * R'G'B' (Y2R) conversion. With the same conversion on both sides, scaling
++ * Y' and CbCr by 219/255 and lifting Y' by 16/255 maps full range R'G'B' to
++ * the limited quantization range: R' = 16 + R * 219 / 255. The conversions
++ * have to be limited range ones: full range puts the chroma of saturated red
++ * and blue at the very end of the code range, which wraps around with 10 bit
++ * windows. Only the RK3568 and RK3588 video ports have that block at these
++ * offsets.
++ */
++static bool vop2_vp_has_bcsh(struct vop2_video_port *vp)
++{
++	return vp->vop2->version == VOP_VERSION_RK3568 ||
++	       vp->vop2->version == VOP_VERSION_RK3588;
++}
++
++static void vop2_bcsh_setup(struct vop2_video_port *vp,
++			    struct rockchip_crtc_state *vcstate)
++{
++	const struct vop2_video_port_data *vp_data = &vp->vop2->data->vp[vp->id];
++	/* Contrast and saturation are 1.8 fixed point, brightness in output LSBs */
++	u32 gain = DIV_ROUND_CLOSEST(219 * 256, 255);
++	int brightness;
++
++	if (!vop2_vp_has_bcsh(vp))
++		return;
++
++	if (!vcstate->rgb_limited_range || vcstate->yuv_overlay) {
++		vop2_vp_write(vp, RK3568_VP_BCSH_COLOR_BAR, 0);
++		vop2_vp_write(vp, RK3568_VP_BCSH_CTRL, 0);
++		return;
++	}
++
++	brightness = vp_data->feature & VOP2_VP_FEATURE_OUTPUT_10BIT ? 64 : 16;
++
++	vop2_vp_write(vp, RK3568_VP_BCSH_CTRL,
++		      FIELD_PREP(RK3568_VP_BCSH_CTRL__R2Y_CSC_MODE, CSC_BT709L) |
++		      RK3568_VP_BCSH_CTRL__R2Y_EN |
++		      FIELD_PREP(RK3568_VP_BCSH_CTRL__Y2R_CSC_MODE, CSC_BT709L) |
++		      RK3568_VP_BCSH_CTRL__Y2R_EN);
++	vop2_vp_write(vp, RK3568_VP_BCSH_BCS,
++		      FIELD_PREP(RK3568_VP_BCSH_BCS__OUT_MODE, BCSH_OUT_MODE_NORMAL_VIDEO) |
++		      FIELD_PREP(RK3568_VP_BCSH_BCS__SAT_CON, gain) |
++		      FIELD_PREP(RK3568_VP_BCSH_BCS__CONTRAST, gain) |
++		      FIELD_PREP(RK3568_VP_BCSH_BCS__BRIGHTNESS, brightness));
++	vop2_vp_write(vp, RK3568_VP_BCSH_H,
++		      FIELD_PREP(RK3568_VP_BCSH_H__COS_HUE, 0x100) |
++		      FIELD_PREP(RK3568_VP_BCSH_H__SIN_HUE, 0));
++	vop2_vp_write(vp, RK3568_VP_BCSH_COLOR_BAR,
++		      RK3568_VP_BCSH_COLOR_BAR__BCSH_EN);
++}
++
+ static void vop2_crtc_atomic_enable(struct drm_crtc *crtc,
+ 				    struct drm_atomic_commit *state)
+ {
+@@ -2473,6 +2526,7 @@ static void vop2_crtc_atomic_enable(struct drm_crtc *crtc,
+ 	vop2_crtc_protect_dclk_pll(vp);
+ 
+ 	vop2_post_config(crtc, true, crtc_state, old_crtc_state);
++	vop2_bcsh_setup(vp, vcstate);
+ 
+ 	vop2_cfg_done(vp);
+ 
+@@ -3312,6 +3366,9 @@ static struct drm_crtc_state *vop2_crtc_duplicate_state(struct drm_crtc *crtc)
+ 
+ 	__drm_atomic_helper_crtc_duplicate_state(crtc, &vcstate->base);
+ 
++	/* Set by the encoder's atomic_check, which runs for every modeset */
++	vcstate->rgb_limited_range = false;
++
+ 	return &vcstate->base;
+ }
+ 
+diff --git a/drivers/gpu/drm/rockchip/rockchip_drm_vop2.h b/drivers/gpu/drm/rockchip/rockchip_drm_vop2.h
+index 20fa7734d156..7425e63f826f 100644
+--- a/drivers/gpu/drm/rockchip/rockchip_drm_vop2.h
++++ b/drivers/gpu/drm/rockchip/rockchip_drm_vop2.h
+@@ -440,6 +440,13 @@ enum vop_csc_format {
+ 	CSC_BT2020L,
+ };
+ 
++enum vop2_bcsh_out_mode {
++	BCSH_OUT_MODE_BLACK,
++	BCSH_OUT_MODE_BLUE,
++	BCSH_OUT_MODE_COLOR_BAR,
++	BCSH_OUT_MODE_NORMAL_VIDEO,
++};
++
+ enum src_factor_mode {
+ 	SRC_FAC_ALPHA_ZERO,
+ 	SRC_FAC_ALPHA_ONE,
+@@ -701,6 +708,21 @@ enum dst_factor_mode {
+ 
+ #define RK3568_REG_CFG_DONE__GLB_CFG_DONE_EN		BIT(15)
+ 
++#define RK3568_VP_BCSH_CTRL__R2Y_CSC_MODE		GENMASK(7, 6)
++#define RK3568_VP_BCSH_CTRL__R2Y_EN			BIT(4)
++#define RK3568_VP_BCSH_CTRL__Y2R_CSC_MODE		GENMASK(3, 2)
++#define RK3568_VP_BCSH_CTRL__Y2R_EN			BIT(0)
++
++#define RK3568_VP_BCSH_BCS__OUT_MODE			GENMASK(31, 30)
++#define RK3568_VP_BCSH_BCS__SAT_CON			GENMASK(29, 20)
++#define RK3568_VP_BCSH_BCS__CONTRAST			GENMASK(16, 8)
++#define RK3568_VP_BCSH_BCS__BRIGHTNESS			GENMASK(7, 0)
++
++#define RK3568_VP_BCSH_H__COS_HUE			GENMASK(24, 16)
++#define RK3568_VP_BCSH_H__SIN_HUE			GENMASK(8, 0)
++
++#define RK3568_VP_BCSH_COLOR_BAR__BCSH_EN		BIT(31)
++
+ #define RK3568_VP_DSP_CTRL__STANDBY			BIT(31)
+ #define RK3568_VP_DSP_CTRL__DSP_LUT_EN			BIT(28)
+ #define RK3568_VP_DSP_CTRL__DITHER_DOWN_MODE		BIT(20)
+-- 
+2.55.0
+

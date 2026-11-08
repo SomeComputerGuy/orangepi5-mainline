@@ -1,0 +1,210 @@
+From a91309d6f7409c44262572670b3bc8da2b15c69d Mon Sep 17 00:00:00 2001
+From: Arun Iyengar <aiyengar1990@gmail.com>
+Date: Mon, 2 Nov 2026 09:10:28 +0000
+Subject: [PATCH 3/3] media: rockchip: rga: Handle the RGA3 error interrupts
+
+The RGA3 code only enables the frame done interrupt. A job that fails,
+for instance because its IOMMU reports a page fault, either never
+completes or completes with whatever the core read or wrote.
+
+Enable the error interrupts that the Rockchip BSP driver enables: the
+MMU interrupt, the read and write bus errors, the FBC decoder, size and
+FIFO errors of both windows, and the horizontal size error of the
+writer. The vertical size error of the writer is left out, as the BSP
+driver documents that it is raised on every job. Report an error to the
+core code, which then resets the core, and mask the interrupts of the
+core until then.
+
+Only look at the enabled interrupts: INT_RAW also holds status bits that
+don't raise the interrupt, and the line is shared with the IOMMU.
+
+Before the reset lines are pulsed, soft reset the core, as the BSP
+driver does, and wait for RO_SRST to report it done (only bit 0 is seen
+set on RK3588). Pulsing the reset lines alone is not enough for a core
+that failed in the middle of a frame. On an Orange Pi 5 (RK3588S), with
+v4l2convert streaming 1920x1080 NV12 to 1280x720 BGRx at 60 fps and an
+unmapped source and then destination address injected in one job each:
+
+ - reset lines only: the next jobs kept timing out (58 timeouts in a
+   120 s run), the pipeline hung, and later the RGA31 power domain
+   could not be idled and the next IOMMU resume took an SError;
+ - soft reset, then the reset lines: 0 timeouts in 8 runs on the two
+   cores, each pipeline ran to its end.
+
+The soft reset also resets the IOMMU of the core (read back right after
+it: DTE_ADDR 0, STATUS 0x18), which the core code reinitializes after
+the reset.
+
+An unmapped source or destination address raises the MMU interrupt
+(INT_RAW 0x2), and the faulted job comes back with an error about 1 ms
+after it is queued, reset included (0.90 to 1.04 ms measured).
+A job whose destination size doesn't match its window size raises no
+error interrupt and completes with wrong output, so it isn't detected.
+
+Assisted-by: LLM
+Signed-off-by: Arun Iyengar <aiyengar1990@gmail.com>
+---
+ drivers/media/platform/rockchip/rga/rga.c     |  2 +
+ drivers/media/platform/rockchip/rga/rga.h     |  5 +++
+ drivers/media/platform/rockchip/rga/rga3-hw.c | 44 +++++++++++++++++--
+ drivers/media/platform/rockchip/rga/rga3-hw.h | 20 +++++++++
+ 4 files changed, 67 insertions(+), 4 deletions(-)
+
+diff --git a/drivers/media/platform/rockchip/rga/rga.c b/drivers/media/platform/rockchip/rga/rga.c
+index df58e08fa949..bfda077a0f44 100644
+--- a/drivers/media/platform/rockchip/rga/rga.c
++++ b/drivers/media/platform/rockchip/rga/rga.c
+@@ -126,6 +126,8 @@ static void rga_watchdog(struct work_struct *work)
+ 	else
+ 		dev_err(core->dev, "job timed out, resetting the core\n");
+ 
++	if (rga->hw->reset)
++		rga->hw->reset(core);
+ 	rga_core_reset(core);
+ 	rga_core_iommu_restore(core);
+ 
+diff --git a/drivers/media/platform/rockchip/rga/rga.h b/drivers/media/platform/rockchip/rga/rga.h
+index 7debc3027df1..c83cc7c546eb 100644
+--- a/drivers/media/platform/rockchip/rga/rga.h
++++ b/drivers/media/platform/rockchip/rga/rga.h
+@@ -208,6 +208,11 @@ struct rga_hw {
+ 	void (*start)(struct rga_core *core,
+ 		      struct rga_vb_buffer *src, struct rga_vb_buffer *dst);
+ 	enum rga_irq_status (*handle_irq)(struct rga_core *core);
++	/*
++	 * Optional, stops a core that is still busy before its reset lines
++	 * are pulsed.
++	 */
++	void (*reset)(struct rga_core *core);
+ 	struct rockchip_rga_version (*get_version)(struct rga_core *core);
+ 	void *(*adjust_and_map_format)(struct rga_ctx *ctx,
+ 				       struct v4l2_pix_format_mplane *format,
+diff --git a/drivers/media/platform/rockchip/rga/rga3-hw.c b/drivers/media/platform/rockchip/rga/rga3-hw.c
+index 670ba4ec5762..972cf5ce9748 100644
+--- a/drivers/media/platform/rockchip/rga/rga3-hw.c
++++ b/drivers/media/platform/rockchip/rga/rga3-hw.c
+@@ -7,6 +7,7 @@
+ #include <linux/pm_runtime.h>
+ #include <linux/bitfield.h>
+ #include <linux/delay.h>
++#include <linux/iopoll.h>
+ #include <linux/printk.h>
+ 
+ #include <media/v4l2-common.h>
+@@ -283,25 +284,59 @@ static void rga3_hw_start(struct rga_core *core,
+ 	/* set to master mode and start the conversion */
+ 	rga_write(core, RGA3_SYS_CTRL,
+ 		  FIELD_PREP(RGA3_CMD_MODE, RGA3_CMD_MODE_MASTER));
+-	rga_write(core, RGA3_INT_EN, FIELD_PREP(RGA3_INT_FRM_DONE, 1));
++	rga_write(core, RGA3_INT_EN, RGA3_INT_FRM_DONE | RGA3_INT_ERRORS);
+ 	rga_write(core, RGA3_CMD_CTRL,
+ 		  FIELD_PREP(RGA3_CMD_LINE_START_PULSE, 1));
+ }
+ 
+ static enum rga_irq_status rga3_handle_irq(struct rga_core *core)
+ {
+-	u32 intr;
++	u32 raw, intr;
+ 
+-	intr = rga_read(core, RGA3_INT_RAW);
++	/*
++	 * The interrupt line is shared with the IOMMU of the core, and
++	 * INT_RAW also has status bits that don't raise an interrupt.
++	 */
++	raw = rga_read(core, RGA3_INT_RAW);
++	intr = raw & rga_read(core, RGA3_INT_EN);
+ 	if (!intr)
+ 		return RGA_IRQ_NONE;
+ 
+ 	/* clear all interrupts */
+-	rga_write(core, RGA3_INT_CLR, intr);
++	rga_write(core, RGA3_INT_CLR, raw);
++
++	if (intr & RGA3_INT_ERRORS) {
++		/* stay quiet until the reset, the next job enables them again */
++		rga_write(core, RGA3_INT_EN, 0);
++		dev_err(core->dev, "error interrupt, INT_RAW 0x%08x STATUS0 0x%08x CMD_STATE 0x%08x\n",
++			raw, rga_read(core, RGA3_STATUS0),
++			rga_read(core, RGA3_CMD_STATE));
++		return RGA_IRQ_ERROR;
++	}
+ 
+ 	return FIELD_GET(RGA3_INT_FRM_DONE, intr) ? RGA_IRQ_DONE : RGA_IRQ_BUSY;
+ }
+ 
++/*
++ * A job that failed can leave the core busy on the bus, for instance when its
++ * IOMMU reported a page fault and it went on with the frame. The soft reset
++ * of the core lets its AXI master finish the outstanding transactions, which
++ * pulsing its reset lines alone doesn't: the next job could then hang.
++ */
++static void rga3_soft_reset(struct rga_core *core)
++{
++	u32 val;
++	int ret;
++
++	rga_write(core, RGA3_SYS_CTRL, RGA3_CCLK_SRESET | RGA3_ACLK_SRESET);
++	ret = readl_poll_timeout(core->regs + RGA3_RO_SRST, val,
++				 val & RGA3_RO_SRST_DONE,
++				 1, RGA3_RESET_TIMEOUT);
++	rga_write(core, RGA3_SYS_CTRL, 0);
++	if (ret)
++		dev_warn(core->dev, "soft reset timed out, RO_SRST 0x%08x\n", val);
++}
++
+ static struct rockchip_rga_version rga3_get_version(struct rga_core *core)
+ {
+ 	u32 version = rga_read(core, RGA3_VERSION_NUM);
+@@ -508,6 +543,7 @@ const struct rga_hw rga3_hw = {
+ 	.setup_cmdbuf = rga3_hw_setup_cmdbuf,
+ 	.start = rga3_hw_start,
+ 	.handle_irq = rga3_handle_irq,
++	.reset = rga3_soft_reset,
+ 	.get_version = rga3_get_version,
+ 	.enum_format = rga3_enum_format,
+ 	.adjust_and_map_format = rga3_adjust_and_map_format,
+diff --git a/drivers/media/platform/rockchip/rga/rga3-hw.h b/drivers/media/platform/rockchip/rga/rga3-hw.h
+index 85fd8ae257ec..d75a517083b5 100644
+--- a/drivers/media/platform/rockchip/rga/rga3-hw.h
++++ b/drivers/media/platform/rockchip/rga/rga3-hw.h
+@@ -128,10 +128,14 @@
+ 
+ /* INT_* */
+ #define RGA3_INT_FRM_DONE BIT(0)
++#define RGA3_INT_MMU BIT(1)
+ #define RGA3_INT_DMA_READ_BUS_ERR BIT(2)
+ #define RGA3_INT_WIN0_FBC_DEC_ERR BIT(5)
+ #define RGA3_INT_WIN0_HOR_ERR BIT(6)
+ #define RGA3_INT_WIN0_VER_ERR BIT(7)
++#define RGA3_INT_WIN1_FBC_DEC_ERR BIT(9)
++#define RGA3_INT_WIN1_HOR_ERR BIT(10)
++#define RGA3_INT_WIN1_VER_ERR BIT(11)
+ #define RGA3_INT_WR_VER_ERR BIT(13)
+ #define RGA3_INT_WR_HOR_ERR BIT(14)
+ #define RGA3_INT_WR_BUS_ERR BIT(15)
+@@ -141,6 +145,22 @@
+ #define RGA3_INT_WIN0_HOR_FIFO_RD_ERR BIT(19)
+ #define RGA3_INT_WIN0_VER_FIFO_WR_ERR BIT(20)
+ #define RGA3_INT_WIN0_VER_FIFO_RD_ERR BIT(21)
++#define RGA3_INT_WIN1_IN_FIFO_WR_ERR BIT(24)
++#define RGA3_INT_WIN1_IN_FIFO_RD_ERR BIT(25)
++#define RGA3_INT_WIN1_HOR_FIFO_WR_ERR BIT(26)
++#define RGA3_INT_WIN1_HOR_FIFO_RD_ERR BIT(27)
++#define RGA3_INT_WIN1_VER_FIFO_WR_ERR BIT(28)
++#define RGA3_INT_WIN1_VER_FIFO_RD_ERR BIT(29)
++/*
++ * All error interrupts, except RGA3_INT_WR_VER_ERR, which the Rockchip BSP
++ * driver documents as raised on every job.
++ */
++#define RGA3_INT_ERRORS (RGA3_INT_MMU | RGA3_INT_DMA_READ_BUS_ERR | \
++			 RGA3_INT_WIN0_FBC_DEC_ERR | RGA3_INT_WIN0_HOR_ERR | \
++			 RGA3_INT_WIN0_VER_ERR | RGA3_INT_WIN1_FBC_DEC_ERR | \
++			 RGA3_INT_WIN1_HOR_ERR | RGA3_INT_WIN1_VER_ERR | \
++			 RGA3_INT_WR_HOR_ERR | RGA3_INT_WR_BUS_ERR | \
++			 GENMASK(21, 16) | GENMASK(29, 24))
+ 
+ /* RO_SRST */
+ #define RGA3_RO_SRST_DONE GENMASK(5, 0)
+-- 
+2.55.0
+

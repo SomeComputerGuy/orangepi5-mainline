@@ -1,0 +1,69 @@
+From 6ec465f56e4ba59fb67e21996c53e1a0be2731d3 Mon Sep 17 00:00:00 2001
+From: Arun Iyengar <aiyengar1990@gmail.com>
+Date: Sat, 31 Oct 2026 20:37:20 +0000
+Subject: [PATCH 3/5] drm/bridge: dw-hdmi-qp: Clear the FRL link state when
+ leaving FRL
+
+When the link falls back to TMDS, .hdmi_frl_fallback_tmds() only clears
+OPMODE_FRL in LINK_CONFIG0. OPMODE_FRL_4LANES stays set, and FLT_CONFIG1
+keeps the link training pattern configuration of the last training
+(0x0f), so the controller stays configured for a 4 lane FRL link while
+it transmits TMDS. Disabling the output leaves both FRL bits set as well,
+so the next mode is set up with the FRL operation mode still enabled.
+
+On an Orange Pi 5 every TMDS mode set after an FRL mode runs with
+LINK_CONFIG0 = 0x100 and FLT_CONFIG1 = 0x0f.
+
+Clear both FRL operation mode bits and FLT_CONFIG1 when falling back to
+TMDS and when the output is disabled. The vendor kernel likewise clears
+OPMODE_FRL and OPMODE_FRL_4LANES whenever it sets up TMDS mode.
+
+Assisted-by: LLM
+Signed-off-by: Arun Iyengar <aiyengar1990@gmail.com>
+---
+ drivers/gpu/drm/bridge/synopsys/dw-hdmi-qp.c | 14 +++++++++++++-
+ 1 file changed, 13 insertions(+), 1 deletion(-)
+
+diff --git a/drivers/gpu/drm/bridge/synopsys/dw-hdmi-qp.c b/drivers/gpu/drm/bridge/synopsys/dw-hdmi-qp.c
+index 9ed344c..b9563d3 100644
+--- a/drivers/gpu/drm/bridge/synopsys/dw-hdmi-qp.c
++++ b/drivers/gpu/drm/bridge/synopsys/dw-hdmi-qp.c
+@@ -589,6 +589,16 @@ static void dw_hdmi_qp_tx_disable(struct dw_hdmi_qp *hdmi)
+ 		       AVP_DATAPATH_VIDEO_SWDISABLE, GLOBAL_SWDISABLE);
+ }
+ 
++/*
++ * Leave FRL operation: TMDS mode needs both FRL bits cleared, and no link
++ * training pattern must be left programmed.
++ */
++static void dw_hdmi_qp_frl_link_clear(struct dw_hdmi_qp *hdmi)
++{
++	dw_hdmi_qp_mod(hdmi, 0, OPMODE_FRL | OPMODE_FRL_4LANES, LINK_CONFIG0);
++	dw_hdmi_qp_write(hdmi, 0, FLT_CONFIG1);
++}
++
+ static void dw_hdmi_qp_bridge_atomic_enable(struct drm_bridge *bridge,
+ 					    struct drm_atomic_commit *state)
+ {
+@@ -663,6 +673,7 @@ static void dw_hdmi_qp_bridge_atomic_disable(struct drm_bridge *bridge,
+ 	connector = drm_atomic_get_old_connector_for_encoder(state, bridge->encoder);
+ 	drm_connector_hdmi_disable_scrambling(connector);
+ 	drm_connector_hdmi_disable_frl(connector);
++	dw_hdmi_qp_frl_link_clear(hdmi);
+ 
+ 	hdmi->phy.ops->disable(hdmi, hdmi->phy.data);
+ }
+@@ -778,8 +789,9 @@ static int dw_hdmi_qp_bridge_frl_fallback_tmds(struct drm_bridge *bridge)
+ 	if (!conn)
+ 		return 0;
+ 
++	dw_hdmi_qp_frl_link_clear(hdmi);
+ 	dw_hdmi_qp_mod(hdmi, conn->display_info.is_hdmi ? 0 : OPMODE_DVI,
+-		       OPMODE_DVI | OPMODE_FRL, LINK_CONFIG0);
++		       OPMODE_DVI, LINK_CONFIG0);
+ 
+ 	dw_hdmi_qp_tx_enable(hdmi);
+ 
+-- 
+2.55.0
+

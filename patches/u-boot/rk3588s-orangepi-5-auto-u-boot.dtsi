@@ -1,0 +1,25 @@
+// SPDX-License-Identifier: (GPL-2.0+ OR MIT)
+/*
+ * Orange Pi 5: M.2 slot auto-detect. The slot's single lane (combphy0) is
+ * shared by PCIe (NVMe) and SATA. Both controllers are enabled here; U-Boot
+ * probes devices lazily, and the PREBOOT script tries PCIe first and only
+ * then SATA (the PCIe driver releases the PHY when the link doesn't come up).
+ * Included from rk3588s-orangepi-5-u-boot.dtsi.
+ */
+
+&sata0 {
+	status = "okay";
+	/* U-Boot's dwc_ahci looks up "sata-phy" on the controller node; upstream
+	 * DT has it only on the sata-port@0 child (where Linux looks) */
+	phys = <&combphy0_ps PHY_TYPE_SATA>;
+	phy-names = "sata-phy";
+};
+
+/*
+ * The PCIe driver switches the slot's 3.3 V off again when no link comes up,
+ * which would leave a SATA SSD unpowered; U-Boot never disables always-on
+ * regulators.
+ */
+&vcc3v3_pcie20 {
+	regulator-always-on;
+};

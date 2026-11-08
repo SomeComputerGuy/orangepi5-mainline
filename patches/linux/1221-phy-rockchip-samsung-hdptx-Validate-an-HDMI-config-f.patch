@@ -1,0 +1,75 @@
+From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
+From: Arun Iyengar <aiyengar1990@gmail.com>
+Date: Mon, 2 Nov 2026 08:30:28 +0000
+Subject: [PATCH] phy: rockchip: samsung-hdptx: Validate an HDMI config for the
+ requested mode
+
+rk_hdptx_phy_validate() ignores its submode argument: it checks the
+configuration against the HDMI mode the PHY was last switched to with
+phy_set_mode_ext(), so a TMDS configuration is checked against the FRL
+rules or the other way round, depending on what an earlier user did
+with the PHY. That makes phy_validate() useless for checking a mode
+before it is committed, which is what it is for.
+
+Pass the HDMI mode to rk_hdptx_phy_verify_hdmi_config() explicitly:
+the submode for phy_validate(), the current mode for phy_configure().
+Reject an unknown PHY mode or HDMI submode in phy_validate().
+
+Assisted-by: LLM
+Signed-off-by: Arun Iyengar <aiyengar1990@gmail.com>
+---
+ .../phy/rockchip/phy-rockchip-samsung-hdptx.c | 21 ++++++++++++++-----
+ 1 file changed, 16 insertions(+), 5 deletions(-)
+
+diff --git a/drivers/phy/rockchip/phy-rockchip-samsung-hdptx.c b/drivers/phy/rockchip/phy-rockchip-samsung-hdptx.c
+index 751bb503dcfe..7ef15d23ce50 100644
+--- a/drivers/phy/rockchip/phy-rockchip-samsung-hdptx.c
++++ b/drivers/phy/rockchip/phy-rockchip-samsung-hdptx.c
+@@ -1791,12 +1791,13 @@ static int rk_hdptx_phy_power_off(struct phy *phy)
+ }
+ 
+ static int rk_hdptx_phy_verify_hdmi_config(struct rk_hdptx_phy *hdptx,
++					   enum phy_hdmi_mode mode,
+ 					   struct phy_configure_opts_hdmi *hdmi_in,
+ 					   struct rk_hdptx_hdmi_cfg *hdmi_out)
+ {
+ 	int i;
+ 
+-	if (hdptx->hdmi_cfg.mode == PHY_HDMI_MODE_FRL) {
++	if (mode == PHY_HDMI_MODE_FRL) {
+ 		unsigned long long frl_rate = 100000000ULL * hdmi_in->frl.lanes *
+ 					      hdmi_in->frl.rate_per_lane;
+ 
+@@ -2149,7 +2150,8 @@ static int rk_hdptx_phy_configure(struct phy *phy, union phy_configure_opts *opt
+ 	int ret;
+ 
+ 	if (mode != PHY_MODE_DP) {
+-		ret = rk_hdptx_phy_verify_hdmi_config(hdptx, &opts->hdmi, &hdptx->hdmi_cfg);
++		ret = rk_hdptx_phy_verify_hdmi_config(hdptx, hdptx->hdmi_cfg.mode,
++						      &opts->hdmi, &hdptx->hdmi_cfg);
+ 		if (ret) {
+ 			dev_err(hdptx->dev, "invalid hdmi params for phy configure\n");
+ 		} else {
+@@ -2209,10 +2211,19 @@ static int rk_hdptx_phy_validate(struct phy *phy, enum phy_mode mode,
+ {
+ 	struct rk_hdptx_phy *hdptx = phy_get_drvdata(phy);
+ 
+-	if (mode != PHY_MODE_DP)
+-		return rk_hdptx_phy_verify_hdmi_config(hdptx, &opts->hdmi, NULL);
++	if (mode == PHY_MODE_DP)
++		return rk_hdptx_phy_verify_dp_config(hdptx, &opts->dp);
++
++	if (mode != PHY_MODE_HDMI)
++		return -EINVAL;
+ 
+-	return rk_hdptx_phy_verify_dp_config(hdptx, &opts->dp);
++	switch (submode) {
++	case PHY_HDMI_MODE_TMDS:
++	case PHY_HDMI_MODE_FRL:
++		return rk_hdptx_phy_verify_hdmi_config(hdptx, submode, &opts->hdmi, NULL);
++	default:
++		return -EINVAL;
++	}
+ }
+ 
+ static const struct phy_ops rk_hdptx_phy_ops = {

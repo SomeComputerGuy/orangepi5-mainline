@@ -1,0 +1,88 @@
+From: Jakob Unterwurzacher <jakob.unterwurzacher@cherry.de>
+Date: Thu, 29 Oct 2026 11:06:24 +0100
+Subject: [PATCH] mfd: rk8xx-core: keep the PMIC interrupt disabled during system suspend
+
+When the system is woken up by the PMIC (e.g. by the power key), the
+PMIC interrupt is handled as soon as interrupts are re-enabled on
+resume. At that point, the bus to the PMIC may not have resumed yet, so
+reading and acking the interrupt status fails. On RK3588 with an RK806
+on SPI:
+
+  spi_master spi2: noqueue transfer failed
+  rk8xx-spi spi2.0: Failed to ack 0x79: -13
+
+Disable the interrupt at the end of rk8xx_suspend() and re-enable it at
+the start of rk8xx_resume(). Both run in the regular suspend/resume
+phase, while the parent bus controller is active. If the interrupt is a
+wakeup source, it stays armed while disabled, and the pending event is
+replayed by enable_irq() on resume.
+
+Store the interrupt number in struct rk808 for this.
+
+Link: https://patch.msgid.link/20261029-dev-tiger-v7-4-pre-20261028-tiger-suspend-b4-v1-2-cb12621c1fb4@cherry.de
+---
+---
+ drivers/mfd/rk8xx-core.c  | 19 ++++++++++++++++++-
+ include/linux/mfd/rk808.h |  1 +
+ 2 files changed, 19 insertions(+), 1 deletion(-)
+
+diff --git a/drivers/mfd/rk8xx-core.c b/drivers/mfd/rk8xx-core.c
+index 21182df45d1b6..2ae9107fc5161 100644
+--- a/drivers/mfd/rk8xx-core.c
++++ b/drivers/mfd/rk8xx-core.c
+@@ -851,6 +851,8 @@ int rk8xx_probe(struct device *dev, int variant, unsigned int irq, struct regmap
+ 	if (!irq)
+ 		return dev_err_probe(dev, -EINVAL, "No interrupt support, no core IRQ\n");
+ 
++	rk808->irq = irq;
++
+ 	ret = devm_regmap_add_irq_chip(dev, rk808->regmap, irq,
+ 				       IRQF_ONESHOT | dual_support, -1,
+ 				       rk808->regmap_irq_chip, &rk808->irq_data);
+@@ -929,7 +931,20 @@ int rk8xx_suspend(struct device *dev)
+ 		break;
+ 	}
+ 
+-	return ret;
++	if (ret)
++		return ret;
++
++	/*
++	 * Keep the interrupt disabled while the bus to the PMIC may be
++	 * suspended: otherwise a wakeup event (e.g. the power key) is handled
++	 * as soon as interrupts are re-enabled on resume, before the bus has
++	 * resumed, and reading/acking the interrupt status fails. If the
++	 * interrupt is a wakeup source, it stays armed, and the pending event
++	 * is replayed by enable_irq() on resume.
++	 */
++	disable_irq(rk808->irq);
++
++	return 0;
+ }
+ EXPORT_SYMBOL_GPL(rk8xx_suspend);
+ 
+@@ -938,6 +953,8 @@ int rk8xx_resume(struct device *dev)
+ 	struct rk808 *rk808 = dev_get_drvdata(dev);
+ 	int ret = 0;
+ 
++	enable_irq(rk808->irq);
++
+ 	switch (rk808->variant) {
+ 	case RK809_ID:
+ 	case RK817_ID:
+diff --git a/include/linux/mfd/rk808.h b/include/linux/mfd/rk808.h
+index 7ffc904c864c9..1255de484ab51 100644
+--- a/include/linux/mfd/rk808.h
++++ b/include/linux/mfd/rk808.h
+@@ -1461,6 +1461,7 @@ enum {
+ 
+ struct rk808 {
+ 	struct device			*dev;
++	unsigned int			irq;
+ 	struct regmap_irq_chip_data	*irq_data;
+ 	struct regmap			*regmap;
+ 	long				variant;
+
+-- 
+2.47.3
+

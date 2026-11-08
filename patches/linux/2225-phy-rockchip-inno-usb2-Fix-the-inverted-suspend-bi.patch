@@ -1,0 +1,49 @@
+From fc59ff389b0621f3f86efb8aba5dd624388336cd Mon Sep 17 00:00:00 2001
+From: Arun Iyengar <aiyengar1990@gmail.com>
+Date: Sun, 1 Nov 2026 23:41:39 +0000
+Subject: [PATCH] phy: rockchip: inno-usb2: Fix the inverted suspend bit in
+ rockchip_usb2phy_set_suspend()
+
+rockchip_usb2phy_set_suspend() was split out of rockchip_usb2phy_power_on()
+and rockchip_usb2phy_power_off() to hold the PHY suspend handling. The
+original code cleared the phy_sus property to leave suspend
+(property_enable(..., false) in power_on()) and set it to enter suspend
+(property_enable(..., true) in power_off()). The helper passes
+!do_suspend to property_enable(), so it now sets phy_sus when it is asked
+to leave suspend and clears it when it is asked to suspend.
+
+With the following change, which runs the helper from the 480 MHz clock's
+prepare/unprepare on RK3588 and RK3576, every USB2 PHY there is put into
+suspend as soon as its clock is prepared, and the UTMI clock towards the
+controllers never runs. On an Orange Pi 5 (RK3588S) the xHCI behind the
+Type-C port then stops counting MFINDEX, receives a single interrupt and
+never sees the hubs of the connected dock: neither the USB 2.0 side nor
+the USB 3.0 side, whose link reaches U0 but whose connect change the
+controller cannot process. The EHCI controllers behind the other two
+USB2 PHYs never interrupt either.
+
+Pass do_suspend as is, so that the helper does what the code it replaced
+did. With that, the Orange Pi 5 enumerates the dock's USB 2.0 and USB 3.0
+hubs, the webcam and the SuperSpeed devices behind them again, the EHCI
+controller sees its device, and they all survive a suspend/resume cycle.
+
+Fixes: "phy: rockchip: inno-usb2: move suspend handling into new function" (v2 3/4, <20261001-phy-rockchip-inno-usb2-clock-fix-v2-3-e01bf509359e@collabora.com>)
+Assisted-by: LLM
+Signed-off-by: Arun Iyengar <aiyengar1990@gmail.com>
+---
+ drivers/phy/rockchip/phy-rockchip-inno-usb2.c | 2 +-
+ 1 file changed, 1 insertion(+), 1 deletion(-)
+
+diff --git a/drivers/phy/rockchip/phy-rockchip-inno-usb2.c b/drivers/phy/rockchip/phy-rockchip-inno-usb2.c
+index 89281fc8d475..91748ba33460 100644
+--- a/drivers/phy/rockchip/phy-rockchip-inno-usb2.c
++++ b/drivers/phy/rockchip/phy-rockchip-inno-usb2.c
+@@ -338,7 +338,7 @@ static int rockchip_usb2phy_set_suspend(struct rockchip_usb2phy *rphy,
+ {
+ 	int ret;
+ 
+-	ret = property_enable(rphy->grf, &rport->port_cfg->phy_sus, !do_suspend);
++	ret = property_enable(rphy->grf, &rport->port_cfg->phy_sus, do_suspend);
+ 	if (ret)
+ 		return ret;
+ 

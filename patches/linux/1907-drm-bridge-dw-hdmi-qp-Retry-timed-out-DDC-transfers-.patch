@@ -1,0 +1,81 @@
+From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
+From: Arun Iyengar <aiyengar1990@gmail.com>
+Date: Sun, 1 Nov 2026 06:17:09 +0000
+Subject: [PATCH] drm/bridge: dw-hdmi-qp: Retry timed out DDC transfers and
+ drop stale I2C IRQs
+
+A DDC transfer waits 100 ms for the I2C master completion interrupt. If
+the CPU servicing the interrupt is held off for longer (observed during
+IOMMU page fault storms whose handlers dump state over a slow serial
+console), the transfer times out with -EAGAIN and callers such as EDID or
+SCDC reads fail, e.g. "FRL LTS:P SCDC read failed: -11".
+
+The timeout is the same HZ / 10 used by dw-hdmi, and the failure is
+transient, so set adap->retries and let the I2C core retry the -EAGAIN.
+
+On timeout also clear any pending I2C master interrupt status after
+aborting, so a late completion interrupt cannot terminate the retried
+transfer with stale status before the data is ready.
+
+(cherry picked from commit a9399a23f3066f866d955eabd88c52781b46ce82)
+
+Assisted-by: LLM
+Signed-off-by: Arun Iyengar <aiyengar1990@gmail.com>
+---
+ drivers/gpu/drm/bridge/synopsys/dw-hdmi-qp.c | 19 +++++++++++++++++--
+ 1 file changed, 17 insertions(+), 2 deletions(-)
+
+diff --git a/drivers/gpu/drm/bridge/synopsys/dw-hdmi-qp.c b/drivers/gpu/drm/bridge/synopsys/dw-hdmi-qp.c
+index ca93062a0878..a074a559003d 100644
+--- a/drivers/gpu/drm/bridge/synopsys/dw-hdmi-qp.c
++++ b/drivers/gpu/drm/bridge/synopsys/dw-hdmi-qp.c
+@@ -377,6 +377,19 @@ static void dw_hdmi_qp_audio_disable(struct drm_bridge *bridge,
+ 		dw_hdmi_qp_audio_disable_regs(hdmi);
+ }
+ 
++/*
++ * A transfer that timed out may still raise its completion interrupt later,
++ * e.g. when the hard IRQ was held off by a long printk() or another
++ * interrupt storm. Drop any pending event so it cannot complete the retry
++ * with stale status.
++ */
++static void dw_hdmi_qp_i2c_abort(struct dw_hdmi_qp *hdmi)
++{
++	dw_hdmi_qp_write(hdmi, 0x01, I2CM_CONTROL0);
++	dw_hdmi_qp_write(hdmi, I2CM_OP_DONE_IRQ | I2CM_READ_REQUEST_IRQ |
++			 I2CM_NACK_RCVD_IRQ, MAINUNIT_1_INT_CLEAR);
++}
++
+ static int dw_hdmi_qp_i2c_read(struct dw_hdmi_qp *hdmi,
+ 			       unsigned char *buf, unsigned int length)
+ {
+@@ -405,7 +418,7 @@ static int dw_hdmi_qp_i2c_read(struct dw_hdmi_qp *hdmi,
+ 		stat = wait_for_completion_timeout(&i2c->cmp, HZ / 10);
+ 		if (!stat) {
+ 			dev_dbg_ratelimited(hdmi->dev, "i2c read timed out\n");
+-			dw_hdmi_qp_write(hdmi, 0x01, I2CM_CONTROL0);
++			dw_hdmi_qp_i2c_abort(hdmi);
+ 			return -EAGAIN;
+ 		}
+ 
+@@ -451,7 +464,7 @@ static int dw_hdmi_qp_i2c_write(struct dw_hdmi_qp *hdmi,
+ 		stat = wait_for_completion_timeout(&i2c->cmp, HZ / 10);
+ 		if (!stat) {
+ 			dev_dbg_ratelimited(hdmi->dev, "i2c write time out!\n");
+-			dw_hdmi_qp_write(hdmi, 0x01, I2CM_CONTROL0);
++			dw_hdmi_qp_i2c_abort(hdmi);
+ 			return -EAGAIN;
+ 		}
+ 
+@@ -566,6 +579,8 @@ static struct i2c_adapter *dw_hdmi_qp_i2c_adapter(struct dw_hdmi_qp *hdmi)
+ 	init_completion(&i2c->cmp);
+ 
+ 	adap = &i2c->adap;
++	/* A timeout returns -EAGAIN; let the I2C core retry transient ones */
++	adap->retries = 2;
+ 	adap->owner = THIS_MODULE;
+ 	adap->dev.parent = hdmi->dev;
+ 	adap->algo = &dw_hdmi_qp_algorithm;
+-- 
+2.55.0
+
