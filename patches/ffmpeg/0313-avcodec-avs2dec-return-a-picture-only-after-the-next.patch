@@ -24,7 +24,6 @@ behind it in output order. Draining lifts the hold. The output order and
 the pictures are unchanged; has_b_frames accounts for the extra picture
 of delay.
 
-Assisted-by: LLM
 Signed-off-by: Arun Iyengar <aiyengar1990@gmail.com>
 ---
  libavcodec/avs2dec.c | 44 ++++++++++++++++++++++++++++++++++++++------

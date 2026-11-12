@@ -1,4 +1,4 @@
-From 6b74ace8d0ba24b20f2ddd10269a453b1dcd1928 Mon Sep 17 00:00:00 2001
+From dc7f813024d23340112c99346bfcfbc7deb3f41d Mon Sep 17 00:00:00 2001
 From: Paul Kocialkowski <paulk@sys-base.io>
 Date: Fri, 22 May 2026 12:16:47 +0200
 Subject: [PATCH] media: verisilicon: Report default pixel coding for non-JPEG
@@ -19,10 +19,10 @@ Link: https://patch.msgid.link/20260522101653.2565125-9-paulk@sys-base.io
  1 file changed, 14 insertions(+), 4 deletions(-)
 
 diff --git a/drivers/media/platform/verisilicon/hantro_v4l2.c b/drivers/media/platform/verisilicon/hantro_v4l2.c
-index 2761d37af..d7271c31a 100644
+index 6a0340a700d6..e4c9d7b3c366 100644
 --- a/drivers/media/platform/verisilicon/hantro_v4l2.c
 +++ b/drivers/media/platform/verisilicon/hantro_v4l2.c
-@@ -442,10 +442,20 @@ hantro_reset_fmt(struct v4l2_pix_format_mplane *fmt,
+@@ -443,10 +443,20 @@ hantro_reset_fmt(struct v4l2_pix_format_mplane *fmt,
  
  	fmt->pixelformat = vpu_fmt->fourcc;
  	fmt->field = V4L2_FIELD_NONE;
@@ -47,3 +47,6 @@ index 2761d37af..d7271c31a 100644
  }
  
  static void
+-- 
+2.55.0
+

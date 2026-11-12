@@ -1,0 +1,46 @@
+From f17ea3a26c47e67645f3ab8f608ca22d6e72fac8 Mon Sep 17 00:00:00 2001
+From: Arun Iyengar <aiyengar1990@gmail.com>
+Date: Tue, 10 Nov 2026 08:33:42 +0000
+Subject: [PATCH 2397/2409] drm/rockchip: vop2: Take the UV plane address from
+ the second GEM object
+
+vop2_plane_atomic_update() computes the address of the chroma plane of a
+multi-planar YUV framebuffer from fb->obj[0], the object of the luma
+plane, plus the offset of the chroma plane. A framebuffer may have its
+planes in different GEM objects though (DRM_IOCTL_MODE_ADDFB2 with two
+handles, as with an NV12M buffer from a V4L2 decoder imported as two
+DMA-BUFs). The window then fetches the chroma plane from the luma buffer,
+at an offset meant for another buffer, which shows a wrong picture or
+reads past the end of the luma buffer.
+
+Use fb->obj[1] for the chroma plane. Single plane YUV formats like
+DRM_FORMAT_YUV420_8BIT have no second object and keep using fb->obj[0].
+This is also what the vendor kernel does.
+
+Fixes: 604be85547ce ("drm/rockchip: Add VOP2 driver")
+Reported-by: Sashiko <sashiko-bot@kernel.org>
+Closes: https://lore.kernel.org/all/sashiko-outbox-206550@kernel.org/
+Cc: stable@vger.kernel.org
+Signed-off-by: Arun Iyengar <aiyengar1990@gmail.com>
+---
+ drivers/gpu/drm/rockchip/rockchip_drm_vop2.c | 4 +++-
+ 1 file changed, 3 insertions(+), 1 deletion(-)
+
+diff --git a/drivers/gpu/drm/rockchip/rockchip_drm_vop2.c b/drivers/gpu/drm/rockchip/rockchip_drm_vop2.c
+index aca0f01c051e..d8fe67fded75 100644
+--- a/drivers/gpu/drm/rockchip/rockchip_drm_vop2.c
++++ b/drivers/gpu/drm/rockchip/rockchip_drm_vop2.c
+@@ -2097,7 +2097,9 @@ static void vop2_win_update(struct vop2_win *win, struct vop2_video_port *vp,
+ 		if ((pstate->rotation & DRM_MODE_REFLECT_Y) && !afbc_en)
+ 			offset += fb->pitches[1] * ((pstate->src_h >> 16) - 2) / vsub;
+ 
+-		rk_obj = to_rockchip_obj(fb->obj[0]);
++		/* Single plane formats like YUV420_8BIT have no second object */
++		if (fb->format->num_planes > 1)
++			rk_obj = to_rockchip_obj(fb->obj[1]);
+ 		uv_mst = rk_obj->dma_addr + offset + fb->offsets[1];
+ 	}
+ 
+-- 
+2.55.0
+

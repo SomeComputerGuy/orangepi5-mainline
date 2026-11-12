@@ -22,7 +22,6 @@ picture_distance, picture_structure, top_field_first and whether it was
 intra coded. The uAPI definitions are carried in v4l2-stateless-avs.h
 until the kernel headers have them.
 
-Assisted-by: LLM
 Signed-off-by: Arun Iyengar <aiyengar1990@gmail.com>
 ---
  configure                       |   2 +

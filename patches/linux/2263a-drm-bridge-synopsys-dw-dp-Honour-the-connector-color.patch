@@ -31,7 +31,6 @@ the last bridge, the core filter becomes redundant but agrees.
 The downstream Rockchip driver filters its output format list by its
 own "color_format" connector property the same way.
 
-Assisted-by: LLM
 Signed-off-by: Arun Iyengar <aiyengar1990@gmail.com>
 ---
  drivers/gpu/drm/bridge/synopsys/dw-dp.c | 31 +++++++++++++++++++++++++

@@ -18,7 +18,6 @@ the sink, the link bandwidth or a protocol converter cannot carry leaves
 no output bus format and fails the atomic check, as for every other
 unsupported configuration.
 
-Assisted-by: LLM
 Signed-off-by: Arun Iyengar <aiyengar1990@gmail.com>
 ---
  drivers/gpu/drm/rockchip/dw_dp-rockchip.c | 14 ++++++++++++++

@@ -51,8 +51,6 @@ driver):
     h264parse ! v4l2slh264dec ! <rga3 v4l2convert> !
     video/x-raw,format=NV12,width=960,height=540 ! <rga2 v4l2convert> !
     video/x-raw,format=RGB,width=224,height=224 ! fakesink
-
-Assisted-by: LLM
 ---
  sys/v4l2/gstv4l2transform.c | 101 ++++++++++++++++++++++++++++++++++++
  1 file changed, 101 insertions(+)

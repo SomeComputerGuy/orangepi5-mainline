@@ -29,8 +29,6 @@ drmModeSetPlane() stays as the fallback when atomic is not available,
 the fd comes from the application, the plane lacks one of the
 properties, or an atomic commit fails. The primary plane page flip used
 for modesetting is unchanged.
-
-Assisted-by: LLM
 ---
  sys/kms/gstkmssink.c | 166 +++++++++++++++++++++++++++++++++++++++++--
  sys/kms/gstkmssink.h |   9 +++

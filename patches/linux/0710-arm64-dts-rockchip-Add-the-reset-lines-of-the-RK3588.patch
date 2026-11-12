@@ -1,4 +1,4 @@
-From 4602c21461642ec2f9d6521975cf9d21d424c9fe Mon Sep 17 00:00:00 2001
+From 2b760803aa6bde1ece67ff9d0b1cd340b1e3f37e Mon Sep 17 00:00:00 2001
 From: Arun Iyengar <aiyengar1990@gmail.com>
 Date: Thu, 29 Oct 2026 12:20:35 +0000
 Subject: [PATCH] arm64: dts: rockchip: Add the reset lines of the RK3588
@@ -10,18 +10,16 @@ of its IOMMU.
 
 The IOMMU of each core sits in the same register block and is clocked
 by the same clocks, so these resets likely cover its bus interface as
-well. This relies on the driver not leaving a VPU behind an IOMMU in
-reset after remove ("media: verisilicon: Don't hold a VPU behind an
-IOMMU in reset after remove").
+well. This relies on the driver not leaving the VPU in reset after
+remove ("media: verisilicon: Don't hold the VPU in reset after remove").
 
-Assisted-by: LLM
 Signed-off-by: Arun Iyengar <aiyengar1990@gmail.com>
 ---
  arch/arm64/boot/dts/rockchip/rk3588-base.dtsi | 8 ++++++++
  1 file changed, 8 insertions(+)
 
 diff --git a/arch/arm64/boot/dts/rockchip/rk3588-base.dtsi b/arch/arm64/boot/dts/rockchip/rk3588-base.dtsi
-index 6d3ef0966..16bc12789 100644
+index 506ff8de4c40..d5276dc4b2c8 100644
 --- a/arch/arm64/boot/dts/rockchip/rk3588-base.dtsi
 +++ b/arch/arm64/boot/dts/rockchip/rk3588-base.dtsi
 @@ -1328,6 +1328,8 @@ vepu121_0: video-codec@fdba0000 {
@@ -60,3 +58,6 @@ index 6d3ef0966..16bc12789 100644
  	};
  
  	vepu121_3_mmu: iommu@fdbac800 {
+-- 
+2.55.0
+

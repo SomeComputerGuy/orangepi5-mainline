@@ -21,8 +21,6 @@ like the table rounding, so dividers below the PLL keep their ratio.
 
 PLLs without the flag (the system PLLs) keep their table-only behaviour.
 
-
-Assisted-by: LLM
 Signed-off-by: Arun Iyengar <aiyengar1990@gmail.com>
 ---
  drivers/clk/rockchip/clk-pll.c | 106 ++++++++++++++++++++++++++++++++-

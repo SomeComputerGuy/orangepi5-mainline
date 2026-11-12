@@ -20,7 +20,6 @@ The window rotates before it scales, so the scaling factors of a 90 or
 only be mirrored (TRM part 2, 5.6.3): reject a 90 or 270 degree rotation
 for them when the control is set and when streaming starts.
 
-Assisted-by: LLM
 Signed-off-by: Arun Iyengar <aiyengar1990@gmail.com>
 ---
  drivers/media/platform/rockchip/rga/rga-buf.c |  5 ++

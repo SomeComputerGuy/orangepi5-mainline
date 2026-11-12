@@ -1,7 +1,7 @@
-From 53ff0a1853975a0fdb9ed8f5d1a6add943dadd0a Mon Sep 17 00:00:00 2001
+From 9cb38de2b639db29b9a86ab0e2b7ba3c804a7ef9 Mon Sep 17 00:00:00 2001
 From: Arun Iyengar <aiyengar1990@gmail.com>
 Date: Thu, 29 Oct 2026 22:56:16 +0000
-Subject: [PATCH 8/8] media: verisilicon: Don't offer VP8 above 1080p on the
+Subject: [PATCH] media: verisilicon: Don't offer VP8 above 1080p on the
  Rockchip VDPU2
 
 The VDPU2 decoder format tables (RK3328, RK3568, RK3588 VPU121) and the
@@ -18,14 +18,14 @@ advertise it: limit VP8 to the 1920x1088 of the other codecs and of the
 CAPTURE format. Userspace that checks VIDIOC_ENUM_FRAMESIZES, and the
 S_FMT clamping, then know that a 4K VP8 stream needs another decoder.
 
-Assisted-by: LLM
+Fixes: 73fb5bfa53e9 ("media: hantro: Support RK3399 VP8 decoding")
 Signed-off-by: Arun Iyengar <aiyengar1990@gmail.com>
 ---
  drivers/media/platform/verisilicon/rockchip_vpu_hw.c | 8 ++++----
  1 file changed, 4 insertions(+), 4 deletions(-)
 
 diff --git a/drivers/media/platform/verisilicon/rockchip_vpu_hw.c b/drivers/media/platform/verisilicon/rockchip_vpu_hw.c
-index 9d9baa8eb..994768cd9 100644
+index 0b9ec4b362c5..97db3697e77d 100644
 --- a/drivers/media/platform/verisilicon/rockchip_vpu_hw.c
 +++ b/drivers/media/platform/verisilicon/rockchip_vpu_hw.c
 @@ -315,10 +315,10 @@ static const struct hantro_fmt rockchip_vdpu2_dec_fmts[] = {

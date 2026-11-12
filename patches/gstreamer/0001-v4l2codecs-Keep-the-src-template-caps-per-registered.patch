@@ -18,8 +18,6 @@ probed codec stored, and the caps of the earlier codecs are leaked.
 Pass per-registration class data instead, holding the device and the
 template caps of that element type, and drop the caps from
 GstV4l2CodecDevice.
-
-Assisted-by: LLM
 ---
  sys/v4l2codecs/gstv4l2codecav1dec.c   | 15 +++++++------
  sys/v4l2codecs/gstv4l2codecdevice.h   |  1 -

@@ -14,7 +14,6 @@ Provide the kernel uAPI fourccs ('AS12', 'AS01') as #ifndef fallbacks,
 like the local v4l2-stateless-*.h headers do for the controls. They step
 aside once the kernel headers define them.
 
-Assisted-by: LLM
 Signed-off-by: Arun Iyengar <aiyengar1990@gmail.com>
 ---
  libavutil/hwcontext_v4l2request.c | 12 ++++++++++++

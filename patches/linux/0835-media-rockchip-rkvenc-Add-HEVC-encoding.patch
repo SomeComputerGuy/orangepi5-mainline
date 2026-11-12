@@ -1,4 +1,4 @@
-From 3df718f88b8d4bc8a197ef964a8deb982f24acd3 Mon Sep 17 00:00:00 2001
+From 3f1c4295377b12462311abb077b40cd63e2f813d Mon Sep 17 00:00:00 2001
 From: Arun Iyengar <aiyengar1990@gmail.com>
 Date: Thu, 29 Oct 2026 18:13:34 +0000
 Subject: [PATCH] media: rockchip: rkvenc: Add HEVC encoding
@@ -53,7 +53,6 @@ MPP library (hal_h265e_vepu580.c, hal_h265e_vepu580_reg.h,
 hal_h265e_vepu580_tune.c, vepu5xx_common.c, h265e_ps.c, h265e_api.c,
 Apache-2.0), read as documentation; no code was copied.
 
-Assisted-by: LLM
 Signed-off-by: Arun Iyengar <aiyengar1990@gmail.com>
 ---
  .../media/platform/rockchip/rkvenc/Kconfig    |   5 +-
@@ -67,7 +66,7 @@ Signed-off-by: Arun Iyengar <aiyengar1990@gmail.com>
  create mode 100644 drivers/media/platform/rockchip/rkvenc/rkvenc-hevc.c
 
 diff --git a/drivers/media/platform/rockchip/rkvenc/Kconfig b/drivers/media/platform/rockchip/rkvenc/Kconfig
-index 62bb1c7d5..5398c4a77 100644
+index 62bb1c7d5cc0..5398c4a77afa 100644
 --- a/drivers/media/platform/rockchip/rkvenc/Kconfig
 +++ b/drivers/media/platform/rockchip/rkvenc/Kconfig
 @@ -8,10 +8,11 @@ config VIDEO_ROCKCHIP_VENC
@@ -85,7 +84,7 @@ index 62bb1c7d5..5398c4a77 100644
  	  To compile this driver as a module, choose M here: the module
  	  will be called rockchip-venc.
 diff --git a/drivers/media/platform/rockchip/rkvenc/Makefile b/drivers/media/platform/rockchip/rkvenc/Makefile
-index f41e2d2af..d092543e3 100644
+index f41e2d2afdeb..d092543e339b 100644
 --- a/drivers/media/platform/rockchip/rkvenc/Makefile
 +++ b/drivers/media/platform/rockchip/rkvenc/Makefile
 @@ -4,4 +4,5 @@ obj-$(CONFIG_VIDEO_ROCKCHIP_VENC) += rockchip-venc.o
@@ -96,7 +95,7 @@ index f41e2d2af..d092543e3 100644
  		rkvenc-vepu580.o
 diff --git a/drivers/media/platform/rockchip/rkvenc/rkvenc-hevc.c b/drivers/media/platform/rockchip/rkvenc/rkvenc-hevc.c
 new file mode 100644
-index 000000000..5cb6e56d9
+index 000000000000..5cb6e56d9c34
 --- /dev/null
 +++ b/drivers/media/platform/rockchip/rkvenc/rkvenc-hevc.c
 @@ -0,0 +1,831 @@
@@ -932,7 +931,7 @@ index 000000000..5cb6e56d9
 +	.ops = &rkvenc_hevc_ops,
 +};
 diff --git a/drivers/media/platform/rockchip/rkvenc/rkvenc-regs.h b/drivers/media/platform/rockchip/rkvenc/rkvenc-regs.h
-index 8103bfdf7..e8e7ce045 100644
+index 8103bfdf7151..e8e7ce045f90 100644
 --- a/drivers/media/platform/rockchip/rkvenc/rkvenc-regs.h
 +++ b/drivers/media/platform/rockchip/rkvenc/rkvenc-regs.h
 @@ -4,7 +4,8 @@
@@ -1115,7 +1114,7 @@ index 8103bfdf7..e8e7ce045 100644
  #define VEPU580_RDO_END				0x21e8
  
 diff --git a/drivers/media/platform/rockchip/rkvenc/rkvenc-vepu580.c b/drivers/media/platform/rockchip/rkvenc/rkvenc-vepu580.c
-index 3a32caad2..ab23845a2 100644
+index 3a32caad2216..ab23845a288d 100644
 --- a/drivers/media/platform/rockchip/rkvenc/rkvenc-vepu580.c
 +++ b/drivers/media/platform/rockchip/rkvenc/rkvenc-vepu580.c
 @@ -4,8 +4,8 @@
@@ -1476,7 +1475,7 @@ index 3a32caad2..ab23845a2 100644
   * Frame-level QP with the hardware row rate control: each block row
   * (macroblock row for H.264, CTU row for HEVC) gets target_bits /
 diff --git a/drivers/media/platform/rockchip/rkvenc/rkvenc.c b/drivers/media/platform/rockchip/rkvenc/rkvenc.c
-index 623c50db2..26bee08d4 100644
+index 623c50db25a8..26bee08d4c2d 100644
 --- a/drivers/media/platform/rockchip/rkvenc/rkvenc.c
 +++ b/drivers/media/platform/rockchip/rkvenc/rkvenc.c
 @@ -43,6 +43,7 @@ static const struct rkvenc_raw_fmt rkvenc_raw_fmts[] = {
@@ -1499,7 +1498,7 @@ index 623c50db2..26bee08d4 100644
  	rkvenc_write_range(core, VEPU580_SCL_START, VEPU580_SCL_END);
  
 diff --git a/drivers/media/platform/rockchip/rkvenc/rkvenc.h b/drivers/media/platform/rockchip/rkvenc/rkvenc.h
-index 34d6c7495..a060c1d9b 100644
+index 5bc365101600..9a1e5e1d71a2 100644
 --- a/drivers/media/platform/rockchip/rkvenc/rkvenc.h
 +++ b/drivers/media/platform/rockchip/rkvenc/rkvenc.h
 @@ -15,6 +15,7 @@
@@ -1526,7 +1525,7 @@ index 34d6c7495..a060c1d9b 100644
  };
  
  enum rkvenc_pnum {
-@@ -201,6 +205,30 @@ struct rkvenc_h264_ctx {
+@@ -203,6 +207,30 @@ struct rkvenc_h264_ctx {
  	bool hw_rc;
  };
  
@@ -1557,7 +1556,7 @@ index 34d6c7495..a060c1d9b 100644
  struct rkvenc_ctx {
  	struct v4l2_fh fh;
  	struct rkvenc_dev *dev;
-@@ -242,6 +270,9 @@ void vepu580_setup_me(struct rkvenc_core *core, unsigned int width_mbs,
+@@ -244,6 +272,9 @@ void vepu580_setup_me(struct rkvenc_core *core, unsigned int width_mbs,
  		      bool intra);
  void vepu580_setup_h264_tuning(struct rkvenc_dev *rkvenc,
  			       struct rkvenc_core *core, bool intra);
@@ -1567,10 +1566,13 @@ index 34d6c7495..a060c1d9b 100644
  
  /**
   * struct vepu580_row_rc - codec-specific row rate control parameters
-@@ -269,5 +300,6 @@ dma_addr_t rkvenc_dst_addr(struct rkvenc_run *run);
+@@ -271,5 +302,6 @@ dma_addr_t rkvenc_dst_addr(struct rkvenc_run *run);
  size_t rkvenc_dst_size(struct rkvenc_run *run);
  
  extern const struct rkvenc_coded_fmt_desc rkvenc_h264_fmt_desc;
 +extern const struct rkvenc_coded_fmt_desc rkvenc_hevc_fmt_desc;
  
  #endif /* RKVENC_H_ */
+-- 
+2.55.0
+

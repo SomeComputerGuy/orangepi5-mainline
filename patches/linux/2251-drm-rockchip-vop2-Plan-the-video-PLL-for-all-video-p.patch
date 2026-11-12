@@ -1,8 +1,8 @@
-From 09d933ef85fde3b7f3ff5182428579ec4d85347e Mon Sep 17 00:00:00 2001
+From 4ccdd91ca34c7cbc60cda67a8d7192e36965d5ad Mon Sep 17 00:00:00 2001
 From: Arun Iyengar <aiyengar1990@gmail.com>
 Date: Mon, 2 Nov 2026 16:58:31 +0000
-Subject: [PATCH 2251/2271] drm/rockchip: vop2: Plan the video PLL for all
- video ports in atomic_check
+Subject: [PATCH] drm/rockchip: vop2: Plan the video PLL for all video ports in
+ atomic_check
 
 All RK3588 video ports can take their DCLK from the video PLL (V0PLL),
 but atomic_check decides about it for each port on its own, so it may
@@ -46,17 +46,16 @@ PLL is set to the new rate before the port's DCLK, so that the CRU does
 not pick the old one. Otherwise it is only accepted with the PLL at its
 current rate.
 
-Assisted-by: LLM
 Signed-off-by: Arun Iyengar <aiyengar1990@gmail.com>
 ---
  drivers/gpu/drm/rockchip/rockchip_drm_vop2.c | 435 +++++++++++++++----
  1 file changed, 348 insertions(+), 87 deletions(-)
 
 diff --git a/drivers/gpu/drm/rockchip/rockchip_drm_vop2.c b/drivers/gpu/drm/rockchip/rockchip_drm_vop2.c
-index 2b54e9ecb851..b41d37b5249d 100644
+index a3bf7499d2db..e7499aee6274 100644
 --- a/drivers/gpu/drm/rockchip/rockchip_drm_vop2.c
 +++ b/drivers/gpu/drm/rockchip/rockchip_drm_vop2.c
-@@ -2549,96 +2549,122 @@ static bool vop2_dclk_rate_close(long rate, unsigned long clock)
+@@ -2575,96 +2575,122 @@ static bool vop2_dclk_rate_close(long rate, unsigned long clock)
  
  /*
   * The CRU parents of dclk_vopN_src (GPLL, CPLL, V0PLL, AUPLL) only give
@@ -235,7 +234,7 @@ index 2b54e9ecb851..b41d37b5249d 100644
  
  	drm_for_each_encoder_mask(encoder, vop2->drm, crtc_state->encoder_mask) {
  		struct rockchip_encoder *rkencoder = to_rockchip_encoder(encoder);
-@@ -2651,13 +2677,13 @@ static int vop2_crtc_atomic_check_dclk(struct vop2_video_port *vp,
+@@ -2677,13 +2703,13 @@ static int vop2_crtc_atomic_check_dclk(struct vop2_video_port *vp,
  	}
  
  	if (!clock)
@@ -251,7 +250,7 @@ index 2b54e9ecb851..b41d37b5249d 100644
  
  	/*
  	 * A DCLK that can also run from an HDMI PHY PLL is a plain mux in front
-@@ -2669,49 +2695,287 @@ static int vop2_crtc_atomic_check_dclk(struct vop2_video_port *vp,
+@@ -2695,49 +2721,287 @@ static int vop2_crtc_atomic_check_dclk(struct vop2_video_port *vp,
  		cru_clk = vp->dclk_src ?: clk_get_parent(vp->dclk);
  		if (!cru_clk || clk_is_match(cru_clk, vop2->pll_hdmiphy0) ||
  		    clk_is_match(cru_clk, vop2->pll_hdmiphy1))
@@ -565,7 +564,7 @@ index 2b54e9ecb851..b41d37b5249d 100644
  
  	return -EINVAL;
  }
-@@ -3048,9 +3312,6 @@ static struct drm_crtc_state *vop2_crtc_duplicate_state(struct drm_crtc *crtc)
+@@ -3074,9 +3338,6 @@ static struct drm_crtc_state *vop2_crtc_duplicate_state(struct drm_crtc *crtc)
  
  	__drm_atomic_helper_crtc_duplicate_state(crtc, &vcstate->base);
  

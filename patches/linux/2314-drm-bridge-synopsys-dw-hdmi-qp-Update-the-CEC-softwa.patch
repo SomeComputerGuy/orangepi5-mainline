@@ -1,0 +1,50 @@
+From a3c4e54e6a501c36824d261a694c006861fe9885 Mon Sep 17 00:00:00 2001
+From: Arun Iyengar <aiyengar1990@gmail.com>
+Date: Fri, 6 Nov 2026 11:49:35 +0000
+Subject: [PATCH 2314/2409] drm/bridge: synopsys: dw-hdmi-qp: Update the CEC
+ software disable atomically
+
+GLOBAL_SWDISABLE holds the software disable bits of the video and audio
+data paths as well as the CEC one. The CEC enable callback updates it with
+a separate read and write, while the bridge and audio paths change the
+other bits with regmap_update_bits() from other contexts (e.g. the FRL
+link training work enabling the video data path). A CEC enable or disable
+racing with one of those can write back a stale video or audio disable bit.
+
+Use dw_hdmi_qp_mod(), i.e. regmap_update_bits() under the regmap lock, as
+the other users of the register do.
+
+Signed-off-by: Arun Iyengar <aiyengar1990@gmail.com>
+---
+ drivers/gpu/drm/bridge/synopsys/dw-hdmi-qp.c | 9 ++-------
+ 1 file changed, 2 insertions(+), 7 deletions(-)
+
+diff --git a/drivers/gpu/drm/bridge/synopsys/dw-hdmi-qp.c b/drivers/gpu/drm/bridge/synopsys/dw-hdmi-qp.c
+index 7994402df02a..9405ec1d88db 100644
+--- a/drivers/gpu/drm/bridge/synopsys/dw-hdmi-qp.c
++++ b/drivers/gpu/drm/bridge/synopsys/dw-hdmi-qp.c
+@@ -1179,19 +1179,14 @@ static int dw_hdmi_qp_cec_enable(struct drm_bridge *bridge, bool enable)
+ {
+ 	struct dw_hdmi_qp *hdmi = dw_hdmi_qp_from_bridge(bridge);
+ 	unsigned int irqs;
+-	u32 swdisable;
+ 
+ 	if (!enable) {
+ 		dw_hdmi_qp_write(hdmi, 0, CEC_INT_MASK_N);
+ 		dw_hdmi_qp_write(hdmi, ~0, CEC_INT_CLEAR);
+ 
+-		swdisable = dw_hdmi_qp_read(hdmi, GLOBAL_SWDISABLE);
+-		swdisable = swdisable | CEC_SWDISABLE;
+-		dw_hdmi_qp_write(hdmi, swdisable, GLOBAL_SWDISABLE);
++		dw_hdmi_qp_mod(hdmi, CEC_SWDISABLE, CEC_SWDISABLE, GLOBAL_SWDISABLE);
+ 	} else {
+-		swdisable = dw_hdmi_qp_read(hdmi, GLOBAL_SWDISABLE);
+-		swdisable = swdisable & ~CEC_SWDISABLE;
+-		dw_hdmi_qp_write(hdmi, swdisable, GLOBAL_SWDISABLE);
++		dw_hdmi_qp_mod(hdmi, 0, CEC_SWDISABLE, GLOBAL_SWDISABLE);
+ 
+ 		dw_hdmi_qp_write(hdmi, ~0, CEC_INT_CLEAR);
+ 		dw_hdmi_qp_write(hdmi, 1, CEC_LOCK_CONTROL);
+-- 
+2.55.0
+

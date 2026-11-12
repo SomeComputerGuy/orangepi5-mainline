@@ -1,8 +1,8 @@
-From 8e0c772386ea0297b78d936514f09a6e6a89d11c Mon Sep 17 00:00:00 2001
+From 4eaacf991ac815ccde38210dc0cecfb2630160fb Mon Sep 17 00:00:00 2001
 From: Arun Iyengar <aiyengar1990@gmail.com>
 Date: Wed, 4 Nov 2026 19:05:35 +0000
-Subject: [PATCH 2269/2271] drm/rockchip: vop2: Plan the video PLL in a private
- atomic object
+Subject: [PATCH] drm/rockchip: vop2: Plan the video PLL in a private atomic
+ object
 
 The video PLL plan of atomic_check still depends on the hardware state
 and on what the commits before set:
@@ -50,15 +50,14 @@ holds its rate and the video ports that use it:
 Without the new clocks in the device tree (and on other SoCs) the DCLK
 is checked against the CRU as before.
 
-Assisted-by: LLM
 Signed-off-by: Arun Iyengar <aiyengar1990@gmail.com>
 ---
  drivers/gpu/drm/rockchip/rockchip_drm_drv.h  |  17 +-
  drivers/gpu/drm/rockchip/rockchip_drm_fb.c   |  24 +-
- drivers/gpu/drm/rockchip/rockchip_drm_vop2.c | 827 +++++++++++--------
+ drivers/gpu/drm/rockchip/rockchip_drm_vop2.c | 825 +++++++++++--------
  drivers/gpu/drm/rockchip/rockchip_drm_vop2.h |  74 +-
  drivers/gpu/drm/rockchip/rockchip_vop2_reg.c |   4 +
- 5 files changed, 573 insertions(+), 373 deletions(-)
+ 5 files changed, 572 insertions(+), 372 deletions(-)
 
 diff --git a/drivers/gpu/drm/rockchip/rockchip_drm_drv.h b/drivers/gpu/drm/rockchip/rockchip_drm_drv.h
 index 7bf9a8262258..f2af4ea97b5f 100644
@@ -133,7 +132,7 @@ index 45588b79b3d4..fb027b077dcc 100644
  };
  
 diff --git a/drivers/gpu/drm/rockchip/rockchip_drm_vop2.c b/drivers/gpu/drm/rockchip/rockchip_drm_vop2.c
-index 3eff2967ebde..315ea16acb04 100644
+index 990ea11f3e37..7d06092aad97 100644
 --- a/drivers/gpu/drm/rockchip/rockchip_drm_vop2.c
 +++ b/drivers/gpu/drm/rockchip/rockchip_drm_vop2.c
 @@ -22,6 +22,7 @@
@@ -144,9 +143,9 @@ index 3eff2967ebde..315ea16acb04 100644
  #include <drm/drm_atomic_uapi.h>
  #include <drm/drm_blend.h>
  #include <drm/drm_crtc.h>
-@@ -1184,9 +1185,16 @@ static void vop2_crtc_atomic_disable(struct drm_crtc *crtc,
- 
+@@ -1207,9 +1208,16 @@ static void vop2_crtc_atomic_disable(struct drm_crtc *crtc,
  	vop2_crtc_disable_irq(vp, VP_INT_DSP_HOLD_VALID);
+ 	vop2_crtc_disable_post_buf_empty_irq(vp);
  
 -	if (vp->pll_v0_held) {
 -		clk_rate_exclusive_put(vp->pll_v0);
@@ -164,7 +163,7 @@ index 3eff2967ebde..315ea16acb04 100644
  	}
  
  	if (vp->dclk_src)
-@@ -2271,29 +2279,6 @@ static struct clk *vop2_crtc_dclk_hdmiphy_pll(struct vop2_video_port *vp,
+@@ -2296,29 +2304,6 @@ static struct clk *vop2_crtc_dclk_hdmiphy_pll(struct vop2_video_port *vp,
  	return NULL;
  }
  
@@ -194,7 +193,7 @@ index 3eff2967ebde..315ea16acb04 100644
  /*
   * The VP post-processing BCSH (brightness, contrast, saturation, hue) block
   * works on Y'CbCr, between an optional R'G'B' to Y'CbCr (R2Y) and Y'CbCr to
-@@ -2347,6 +2332,44 @@ static void vop2_bcsh_setup(struct vop2_video_port *vp,
+@@ -2372,6 +2357,44 @@ static void vop2_bcsh_setup(struct vop2_video_port *vp,
  		      RK3568_VP_BCSH_COLOR_BAR__BCSH_EN);
  }
  
@@ -239,7 +238,7 @@ index 3eff2967ebde..315ea16acb04 100644
  static void vop2_crtc_atomic_enable(struct drm_crtc *crtc,
  				    struct drm_atomic_commit *state)
  {
-@@ -2513,17 +2536,16 @@ static void vop2_crtc_atomic_enable(struct drm_crtc *crtc,
+@@ -2538,17 +2561,16 @@ static void vop2_crtc_atomic_enable(struct drm_crtc *crtc,
  				 ret);
  	}
  
@@ -265,7 +264,7 @@ index 3eff2967ebde..315ea16acb04 100644
  
  	vop2_post_config(crtc, true, crtc_state, old_crtc_state);
  	vop2_bcsh_setup(vp, vcstate);
-@@ -2593,8 +2615,8 @@ static bool vop2_dclk_rate_exact(long rate, unsigned long clock)
+@@ -2619,8 +2641,8 @@ static bool vop2_dclk_rate_exact(long rate, unsigned long clock)
  }
  
  /*
@@ -276,7 +275,7 @@ index 3eff2967ebde..315ea16acb04 100644
   */
  static bool vop2_dclk_rate_close(long rate, unsigned long clock)
  {
-@@ -2602,123 +2624,50 @@ static bool vop2_dclk_rate_close(long rate, unsigned long clock)
+@@ -2628,123 +2650,50 @@ static bool vop2_dclk_rate_close(long rate, unsigned long clock)
  }
  
  /*
@@ -427,7 +426,7 @@ index 3eff2967ebde..315ea16acb04 100644
  
  	drm_for_each_encoder_mask(encoder, vop2->drm, crtc_state->encoder_mask) {
  		struct rockchip_encoder *rkencoder = to_rockchip_encoder(encoder);
-@@ -2731,13 +2680,47 @@ static void vop2_crtc_dclk_req(struct vop2_video_port *vp,
+@@ -2757,13 +2706,47 @@ static void vop2_crtc_dclk_req(struct vop2_video_port *vp,
  	}
  
  	if (!clock)
@@ -477,7 +476,7 @@ index 3eff2967ebde..315ea16acb04 100644
  
  	/*
  	 * A DCLK that can also run from an HDMI PHY PLL is a plain mux in front
-@@ -2749,289 +2732,272 @@ static void vop2_crtc_dclk_req(struct vop2_video_port *vp,
+@@ -2775,289 +2758,272 @@ static void vop2_crtc_dclk_req(struct vop2_video_port *vp,
  		cru_clk = vp->dclk_src ?: clk_get_parent(vp->dclk);
  		if (!cru_clk || clk_is_match(cru_clk, vop2->pll_hdmiphy0) ||
  		    clk_is_match(cru_clk, vop2->pll_hdmiphy1))
@@ -729,7 +728,8 @@ index 3eff2967ebde..315ea16acb04 100644
 + * video ports first, sets the PLL once, and enables the video ports.
   */
 -static int vop2_dclk_plan(struct vop2 *vop2, struct drm_atomic_commit *state)
--{
++static int vop2_pll_plan(struct vop2 *vop2, struct drm_atomic_commit *state)
+ {
 -	struct drm_crtc_state *crtc_states[ROCKCHIP_MAX_CRTC] = {};
 -	struct vop2_dclk_req reqs[ROCKCHIP_MAX_CRTC];
 -	unsigned long pins[ROCKCHIP_MAX_CRTC];
@@ -738,8 +738,6 @@ index 3eff2967ebde..315ea16acb04 100644
 -	int nr_vps = vop2->data->nr_vps;
 -	unsigned int num_cands = 0, j;
 -	struct vop2_video_port *vp;
-+static int vop2_pll_plan(struct vop2 *vop2, struct drm_atomic_commit *state)
-+{
 +	const struct vop2_pll_state *old;
 +	struct drm_private_state *priv;
 +	struct vop2_pll_state *new;
@@ -971,7 +969,7 @@ index 3eff2967ebde..315ea16acb04 100644
  }
  
  static int vop2_crtc_atomic_check(struct drm_crtc *crtc,
-@@ -3406,6 +3372,72 @@ static const struct drm_crtc_funcs vop2_crtc_funcs = {
+@@ -3432,6 +3398,72 @@ static const struct drm_crtc_funcs vop2_crtc_funcs = {
  	.late_register = vop2_crtc_late_register,
  };
  
@@ -1044,7 +1042,7 @@ index 3eff2967ebde..315ea16acb04 100644
  static irqreturn_t rk3576_vp_isr(int irq, void *data)
  {
  	struct vop2_video_port *vp = data;
-@@ -3602,7 +3634,7 @@ static int vop2_create_crtcs(struct vop2 *vop2)
+@@ -3628,7 +3660,7 @@ static int vop2_create_crtcs(struct vop2 *vop2)
  	for (i = 0; i < vop2_data->nr_vps; i++) {
  		const struct vop2_video_port_data *vp_data;
  		struct device_node *np;
@@ -1053,7 +1051,7 @@ index 3eff2967ebde..315ea16acb04 100644
  
  		vp_data = &vop2_data->vp[i];
  		vp = &vop2->vps[i];
-@@ -3616,10 +3648,12 @@ static int vop2_create_crtcs(struct vop2 *vop2)
+@@ -3642,10 +3674,12 @@ static int vop2_create_crtcs(struct vop2 *vop2)
  			return dev_err_probe(drm->dev, PTR_ERR(vp->dclk),
  					     "failed to get %s\n", dclk_name);
  
@@ -1070,7 +1068,7 @@ index 3eff2967ebde..315ea16acb04 100644
  
  		vp->dclk_rst = devm_reset_control_get_optional_exclusive(vop2->dev,
  									 dclk_name);
-@@ -3874,6 +3908,45 @@ static const struct regmap_config vop2_regmap_config = {
+@@ -3900,6 +3934,45 @@ static const struct regmap_config vop2_regmap_config = {
  	.cache_type	= REGCACHE_MAPLE,
  };
  
@@ -1116,7 +1114,7 @@ index 3eff2967ebde..315ea16acb04 100644
  static int vop2_bind(struct device *dev, struct device *master, void *data)
  {
  	struct platform_device *pdev = to_platform_device(dev);
-@@ -3986,6 +4059,23 @@ static int vop2_bind(struct device *dev, struct device *master, void *data)
+@@ -4012,6 +4085,23 @@ static int vop2_bind(struct device *dev, struct device *master, void *data)
  		return dev_err_probe(drm->dev, PTR_ERR(vop2->pll_hdmiphy1),
  				     "failed to get pll_hdmiphy1\n");
  
@@ -1140,7 +1138,7 @@ index 3eff2967ebde..315ea16acb04 100644
  	vop2->axi_rst = devm_reset_control_get_optional_exclusive(vop2->dev, "axi");
  	if (IS_ERR(vop2->axi_rst))
  		return dev_err_probe(drm->dev, PTR_ERR(vop2->axi_rst),
-@@ -4011,6 +4101,10 @@ static int vop2_bind(struct device *dev, struct device *master, void *data)
+@@ -4037,6 +4127,10 @@ static int vop2_bind(struct device *dev, struct device *master, void *data)
  	if (ret)
  		return ret;
  
@@ -1151,7 +1149,7 @@ index 3eff2967ebde..315ea16acb04 100644
  	if (vop2->version >= VOP_VERSION_RK3576) {
  		struct drm_crtc *crtc;
  
-@@ -4070,6 +4164,9 @@ static void vop2_unbind(struct device *dev, struct device *master, void *data)
+@@ -4096,6 +4190,9 @@ static void vop2_unbind(struct device *dev, struct device *master, void *data)
  		rockchip_rgb_fini(vop2->rgb);
  
  	vop2_destroy_crtcs(vop2);

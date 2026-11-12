@@ -15,7 +15,6 @@ open-coding the watchdog.
 
 Local integration patch for running both series together; not posted.
 
-Assisted-by: LLM
 Signed-off-by: Arun Iyengar <aiyengar1990@gmail.com>
 ---
  .../rockchip/rkvdec/rkvdec-vdpu381-vp9.c      | 38 +++++++------------

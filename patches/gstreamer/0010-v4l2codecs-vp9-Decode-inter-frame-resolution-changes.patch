@@ -35,7 +35,6 @@ vdpu381-vp9: allow frames smaller than the CAPTURE format", aimed at
 the 24 vp90-2-21-resize_inter_* vectors of the VP9 test suite on
 RK3588, which shrink on an inter frame.
 
-Assisted-by: LLM
 Signed-off-by: Arun Iyengar <aiyengar1990@gmail.com>
 ---
  sys/v4l2codecs/gstv4l2codecvp9dec.c | 102 ++++++++++++++++++++++++++--

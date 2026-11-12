@@ -45,7 +45,6 @@ goes to A_HOST when DWC3 sets the host mode.
 Fixes: 3a7db8e9edef ("phy: phy-rockchip-inno-usb2: add rk3588 support")
 Fixes: 3d7de6e870ec ("phy: rockchip: inno-usb2: Add usb2 phys support for rk3576")
 Fixes: 80edd21db00c ("phy: rockchip: inno-usb2: Add usb2 phy support for rk3562")
-Assisted-by: LLM
 Signed-off-by: Arun Iyengar <aiyengar1990@gmail.com>
 ---
  drivers/phy/rockchip/phy-rockchip-inno-usb2.c | 81 ++++++++++++-------

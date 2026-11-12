@@ -1,0 +1,91 @@
+From 400dc6c9d701025a250c5510a14585a0a804fa2d Mon Sep 17 00:00:00 2001
+From: Arun Iyengar <aiyengar1990@gmail.com>
+Date: Sat, 7 Nov 2026 20:31:25 +0000
+Subject: [PATCH 2330/2409] drm/display: hdmi: Update vrr_capable when the EDID
+ changes
+
+The vrr_capable connector property was only set in the Rockchip encoder's
+atomic_check. atomic_check must not change visible state (it also runs
+for TEST_ONLY commits), and userspace reads vrr_capable when it probes
+the connector, before any commit: until the first modeset it read 0 for
+a VRR capable sink.
+
+The property describes the sink, so set it where the HDMI state helper
+updates the EDID on hotplug and force, for every connector that attached
+the property, and drop the atomic_check update.
+
+Signed-off-by: Arun Iyengar <aiyengar1990@gmail.com>
+---
+ .../gpu/drm/display/drm_hdmi_state_helper.c    | 18 ++++++++++++++++++
+ drivers/gpu/drm/rockchip/dw_hdmi_qp-rockchip.c |  5 -----
+ 2 files changed, 18 insertions(+), 5 deletions(-)
+
+diff --git a/drivers/gpu/drm/display/drm_hdmi_state_helper.c b/drivers/gpu/drm/display/drm_hdmi_state_helper.c
+index 747002d5552a..2ddc73298fe2 100644
+--- a/drivers/gpu/drm/display/drm_hdmi_state_helper.c
++++ b/drivers/gpu/drm/display/drm_hdmi_state_helper.c
+@@ -1709,6 +1709,20 @@ drm_atomic_helper_connector_hdmi_clear_audio_infoframe(struct drm_connector *con
+ }
+ EXPORT_SYMBOL(drm_atomic_helper_connector_hdmi_clear_audio_infoframe);
+ 
++/*
++ * The vrr_capable property describes the sink, so it follows the EDID. Keep
++ * it up to date here, where the EDID is read, rather than in atomic_check:
++ * userspace looks at it when the connector is probed, before any commit.
++ */
++static void hdmi_update_vrr_capable(struct drm_connector *connector)
++{
++	if (!connector->vrr_capable_property)
++		return;
++
++	drm_connector_set_vrr_capable_property(connector,
++		drm_display_info_is_vrr_capable(&connector->display_info));
++}
++
+ static int
+ drm_atomic_helper_connector_hdmi_update(struct drm_connector *connector,
+ 					struct drm_modeset_acquire_ctx *ctx,
+@@ -1736,6 +1750,8 @@ drm_atomic_helper_connector_hdmi_update(struct drm_connector *connector,
+ 		if (ret)
+ 			drm_warn(connector->dev, "Ignored EDID update error: %d\n", ret);
+ 
++		hdmi_update_vrr_capable(connector);
++
+ 		drm_connector_cec_phys_addr_invalidate(connector);
+ 
+ 		return 0;
+@@ -1750,6 +1766,8 @@ drm_atomic_helper_connector_hdmi_update(struct drm_connector *connector,
+ 
+ 	drm_edid_free(drm_edid);
+ 
++	hdmi_update_vrr_capable(connector);
++
+ 	if (status == connector_status_connected) {
+ 		/*
+ 		 * .detect_ctx() can only ever return a drm_connector_status or
+diff --git a/drivers/gpu/drm/rockchip/dw_hdmi_qp-rockchip.c b/drivers/gpu/drm/rockchip/dw_hdmi_qp-rockchip.c
+index 3f9fa7a60668..c576dd7a78af 100644
+--- a/drivers/gpu/drm/rockchip/dw_hdmi_qp-rockchip.c
++++ b/drivers/gpu/drm/rockchip/dw_hdmi_qp-rockchip.c
+@@ -298,7 +298,6 @@ dw_hdmi_qp_rockchip_encoder_atomic_check(struct drm_encoder *encoder,
+ 					 struct drm_crtc_state *crtc_state,
+ 					 struct drm_connector_state *conn_state)
+ {
+-	struct drm_connector *connector = conn_state->connector;
+ 	struct rockchip_crtc_state *s = to_rockchip_crtc_state(crtc_state);
+ 	struct rockchip_hdmi_qp *hdmi = to_rockchip_hdmi_qp(encoder);
+ 	union phy_configure_opts phy_cfg;
+@@ -356,10 +355,6 @@ dw_hdmi_qp_rockchip_encoder_atomic_check(struct drm_encoder *encoder,
+ 		return ret;
+ 	}
+ 
+-	if (connector->vrr_capable_property)
+-		drm_connector_set_vrr_capable_property(connector,
+-			drm_display_info_is_vrr_capable(&connector->display_info));
+-
+ 	return 0;
+ }
+ 
+-- 
+2.55.0
+

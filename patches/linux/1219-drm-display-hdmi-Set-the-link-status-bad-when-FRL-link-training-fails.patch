@@ -25,7 +25,6 @@ controller and the glue for TMDS as for any other TMDS mode.
 frl_fallback_tmds() remains the TMDS link setup of a modeset that does
 not use FRL.
 
-Assisted-by: LLM
 Signed-off-by: Arun Iyengar <aiyengar1990@gmail.com>
 ---
  drivers/gpu/drm/display/drm_hdmi_helper.c       | 51 +++++++++++++++++++++++--

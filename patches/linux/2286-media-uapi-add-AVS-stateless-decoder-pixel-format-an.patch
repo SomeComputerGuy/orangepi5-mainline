@@ -1,8 +1,8 @@
-From f89f8c278a36f9c58443dada99681699a46bd2d4 Mon Sep 17 00:00:00 2001
+From e3e0a05b223ce7d103b773397de771cd16c41f07 Mon Sep 17 00:00:00 2001
 From: Arun Iyengar <aiyengar1990@gmail.com>
 Date: Tue, 3 Nov 2026 01:52:21 +0000
-Subject: [PATCH 2286/2312] media: uapi: add AVS stateless decoder pixel format
- and controls
+Subject: [PATCH] media: uapi: add AVS stateless decoder pixel format and
+ controls
 
 Add a stateless decoding interface for AVS1 (GB/T 20090.2, the JiZhun
 profile) and AVS+ (GY/T 257.1, the Guangdian or broadcasting profile):
@@ -32,7 +32,6 @@ masks, ranges, the required references of P and B pictures, and zeroed
 reserved fields. The structures have no holes: 16, 64 and 32 bytes, with
 the same layout on 32 and 64-bit ABIs.
 
-Assisted-by: LLM
 Signed-off-by: Arun Iyengar <aiyengar1990@gmail.com>
 ---
  .../userspace-api/media/v4l/biblio.rst        |  20 ++
@@ -81,10 +80,10 @@ index 562afd850ff4..ced1a87f2bb9 100644
  
  AV1
 diff --git a/Documentation/userspace-api/media/v4l/ext-ctrls-codec-stateless.rst b/Documentation/userspace-api/media/v4l/ext-ctrls-codec-stateless.rst
-index 7d51b95072b5..24fd594db6cd 100644
+index 84adfdb99ed3..14c6ff372315 100644
 --- a/Documentation/userspace-api/media/v4l/ext-ctrls-codec-stateless.rst
 +++ b/Documentation/userspace-api/media/v4l/ext-ctrls-codec-stateless.rst
-@@ -5056,3 +5056,265 @@ AV1 Tx mode as described in section 6.8.21 "TX mode semantics" of :ref:`av1`.
+@@ -5070,3 +5070,265 @@ AV1 Tx mode as described in section 6.8.21 "TX mode semantics" of :ref:`av1`.
      * - __u8
        - ``reserved[6]``
        - Applications and drivers must set this to zero.
@@ -705,10 +704,10 @@ index d049e21e3bdc..1bfde61d66ac 100644
  	void *p;
  	const void *p_const;
 diff --git a/include/uapi/linux/v4l2-controls.h b/include/uapi/linux/v4l2-controls.h
-index a0ca498cf4b8..fb0cc5eb3c44 100644
+index 5b86f217c1ea..6b698ab2be7b 100644
 --- a/include/uapi/linux/v4l2-controls.h
 +++ b/include/uapi/linux/v4l2-controls.h
-@@ -3993,6 +3993,174 @@ struct v4l2_ctrl_avs2_alf {
+@@ -4001,6 +4001,174 @@ struct v4l2_ctrl_avs2_alf {
  	__u8	reserved[6];
  };
  

@@ -1,0 +1,68 @@
+From 2534b16f5f7639f7357e5706a24ae65998589228 Mon Sep 17 00:00:00 2001
+From: Arun Iyengar <aiyengar1990@gmail.com>
+Date: Fri, 6 Nov 2026 12:14:37 +0000
+Subject: [PATCH 2364/2409] media: verisilicon: rockchip: vpu2: decode 16CIF
+ H.263 pictures
+
+The largest H.263 source format, 16CIF, is 1408x1152: 1152 lines, more
+than the 1088 the VDPU2 coded formats allow, so those streams cannot be
+decoded although the picture has fewer macroblocks than a 1920x1088 one.
+The vendor library decodes the five standard source formats on this
+decoder, 16CIF included, and the height register field (in macroblocks)
+has room for it.
+
+Allow 1152 lines for V4L2_PIX_FMT_H263_SLICE. Sorenson Spark and MPEG-4
+keep the 1920x1088 limit.
+
+Signed-off-by: Arun Iyengar <aiyengar1990@gmail.com>
+---
+ drivers/media/platform/verisilicon/hantro_hw.h       | 1 +
+ drivers/media/platform/verisilicon/rockchip_vpu_hw.c | 6 +++---
+ 2 files changed, 4 insertions(+), 3 deletions(-)
+
+diff --git a/drivers/media/platform/verisilicon/hantro_hw.h b/drivers/media/platform/verisilicon/hantro_hw.h
+index ceaf0dd05f2c..7b6874365aba 100644
+--- a/drivers/media/platform/verisilicon/hantro_hw.h
++++ b/drivers/media/platform/verisilicon/hantro_hw.h
+@@ -32,6 +32,7 @@
+ #define FMT_HD_HEIGHT		720
+ #define FMT_FHD_WIDTH		1920
+ #define FMT_FHD_HEIGHT		1088
++#define FMT_16CIF_HEIGHT	1152
+ #define FMT_UHD_WIDTH		3840
+ #define FMT_UHD_HEIGHT		2160
+ #define FMT_4K_WIDTH		4096
+diff --git a/drivers/media/platform/verisilicon/rockchip_vpu_hw.c b/drivers/media/platform/verisilicon/rockchip_vpu_hw.c
+index 109ab2ee57b3..f5c771cf85c7 100644
+--- a/drivers/media/platform/verisilicon/rockchip_vpu_hw.c
++++ b/drivers/media/platform/verisilicon/rockchip_vpu_hw.c
+@@ -357,7 +357,7 @@ static const struct hantro_fmt rockchip_vdpu2_dec_fmts[] = {
+ 			.max_width = FMT_FHD_WIDTH,
+ 			.step_width = MB_DIM,
+ 			.min_height = FMT_MIN_HEIGHT,
+-			.max_height = FMT_FHD_HEIGHT,
++			.max_height = FMT_16CIF_HEIGHT,
+ 			.step_height = MB_DIM,
+ 		},
+ 	},
+@@ -468,7 +468,7 @@ static const struct hantro_fmt rk3588_vpu121_avsd_dec_fmts[] = {
+ 			.max_width = FMT_FHD_WIDTH,
+ 			.step_width = MB_DIM,
+ 			.min_height = FMT_MIN_HEIGHT,
+-			.max_height = FMT_FHD_HEIGHT,
++			.max_height = FMT_16CIF_HEIGHT,
+ 			.step_height = MB_DIM,
+ 		},
+ 	},
+@@ -574,7 +574,7 @@ static const struct hantro_fmt rk3399_vpu_dec_fmts[] = {
+ 			.max_width = FMT_FHD_WIDTH,
+ 			.step_width = MB_DIM,
+ 			.min_height = FMT_MIN_HEIGHT,
+-			.max_height = FMT_FHD_HEIGHT,
++			.max_height = FMT_16CIF_HEIGHT,
+ 			.step_height = MB_DIM,
+ 		},
+ 	},
+-- 
+2.55.0
+

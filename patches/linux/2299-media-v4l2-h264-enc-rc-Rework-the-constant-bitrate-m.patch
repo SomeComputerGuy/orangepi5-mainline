@@ -39,7 +39,6 @@ improves by 0.2-0.6 dB, the first P picture after an IDR goes from up to
 20 times to at most 1.4 times the median P size, and the encode speed is
 unchanged.
 
-Assisted-by: LLM
 Signed-off-by: Arun Iyengar <aiyengar1990@gmail.com>
 ---
  drivers/media/v4l2-core/v4l2-h264-enc-rc.c | 426 +++++++++++----------

@@ -19,7 +19,6 @@ for both the source info and the destination start corner.
 
 Fixes: f7e7b48e6d79 ("[media] rockchip/rga: v4l2 m2m support")
 Cc: stable@vger.kernel.org
-Assisted-by: LLM
 Signed-off-by: Arun Iyengar <aiyengar1990@gmail.com>
 ---
  drivers/media/platform/rockchip/rga/rga-hw.c | 34 ++++++++++++++------

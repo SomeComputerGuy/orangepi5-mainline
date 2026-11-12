@@ -1,0 +1,61 @@
+From a2951064ccf485aa2775701654a2976eeb95b3e6 Mon Sep 17 00:00:00 2001
+From: Arun Iyengar <aiyengar1990@gmail.com>
+Date: Tue, 10 Nov 2026 01:20:17 +0000
+Subject: [PATCH 2369/2409] media: verisilicon: rockchip: Limit the JPEG
+ encoder to 8176x8176
+
+The Rockchip JPEG encoders advertise frame sizes up to 8192x8192, but
+both register layouts take the picture size in 9-bit macroblock counts:
+
+ - VEPU2 (RK3399, RK3568, PX30, RK3588 VEPU121): enc_width is bits 16:8
+   and enc_height bits 28:20 of the encoder start register.
+   rockchip_vpu2_jpeg_enc_run() masks the counts with 0x1ff, so an 8192
+   pixel (512 macroblock) dimension is programmed as 0 macroblocks.
+   Setting the bit above each field on an RK3588 VEPU121 did not give a
+   512 macroblock picture either, so the fields really are 9 bits wide.
+ - H1 (RK3066, RK3288): the height count starts at bit 10 and the width
+   count at bit 19, so a 512 macroblock height runs into the width field.
+
+Limit the shared format table to 511 macroblocks, 8176 pixels, so
+userspace gets the largest size the hardware can encode instead of a
+corrupt or timed out frame.
+
+Signed-off-by: Arun Iyengar <aiyengar1990@gmail.com>
+---
+ drivers/media/platform/verisilicon/rockchip_vpu_hw.c | 11 +++++++++--
+ 1 file changed, 9 insertions(+), 2 deletions(-)
+
+diff --git a/drivers/media/platform/verisilicon/rockchip_vpu_hw.c b/drivers/media/platform/verisilicon/rockchip_vpu_hw.c
+index a6aedec6d240..1728fd0bfd62 100644
+--- a/drivers/media/platform/verisilicon/rockchip_vpu_hw.c
++++ b/drivers/media/platform/verisilicon/rockchip_vpu_hw.c
+@@ -21,6 +21,13 @@
+ 
+ #define ROCKCHIP_VPU981_MIN_SIZE 64
+ 
++/*
++ * The H1 and VEPU2 JPEG encoders take the picture size in macroblocks in
++ * 9-bit register fields, so 511 macroblocks (8176 pixels) is the largest
++ * width and height they can encode.
++ */
++#define ROCKCHIP_VPU_JPEG_ENC_MAX_SIZE (511 * MB_DIM)
++
+ /*
+  * Supported formats.
+  */
+@@ -53,10 +60,10 @@ static const struct hantro_fmt rockchip_vpu_enc_fmts[] = {
+ 		.header_size = JPEG_HEADER_SIZE,
+ 		.frmsize = {
+ 			.min_width = 96,
+-			.max_width = 8192,
++			.max_width = ROCKCHIP_VPU_JPEG_ENC_MAX_SIZE,
+ 			.step_width = MB_DIM,
+ 			.min_height = 32,
+-			.max_height = 8192,
++			.max_height = ROCKCHIP_VPU_JPEG_ENC_MAX_SIZE,
+ 			.step_height = MB_DIM,
+ 		},
+ 	},
+-- 
+2.55.0
+

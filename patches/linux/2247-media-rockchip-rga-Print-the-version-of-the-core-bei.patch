@@ -14,7 +14,6 @@ that field is not set yet, so the message shows 0x00.00:
 Print the version that was just read.
 
 Fixes: 88ac1cdf8235 ("media: rockchip: rga: bind all cores to the master")
-Assisted-by: LLM
 Signed-off-by: Arun Iyengar <aiyengar1990@gmail.com>
 ---
  drivers/media/platform/rockchip/rga/rga.c | 2 +-

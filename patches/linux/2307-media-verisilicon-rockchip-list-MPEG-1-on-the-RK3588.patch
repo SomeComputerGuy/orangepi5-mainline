@@ -13,7 +13,6 @@ Add the MPEG-1 format to the copy, in the VDPU2 list order, and check at
 build time that the copy has every VDPU2 format plus AVS, so that a
 later VDPU2 format cannot be forgotten there.
 
-Assisted-by: LLM
 Signed-off-by: Arun Iyengar <aiyengar1990@gmail.com>
 ---
  .../platform/verisilicon/rockchip_vpu_hw.c    | 22 +++++++++++++++++--

@@ -1,0 +1,208 @@
+From 2adb862e6d7fcaf215b8574fa8f8a8e9683fa1e8 Mon Sep 17 00:00:00 2001
+From: Arun Iyengar <aiyengar1990@gmail.com>
+Date: Sun, 1 Nov 2026 21:25:16 +0000
+Subject: [PATCH] media: verisilicon: Reinitialize the IOMMU after resetting an
+ encoder core
+
+A Rockchip encoder core that faulted on an unmapped IOVA leaves its
+IOMMU with the fault pending, and pulsing the reset lines of the core,
+as the previous patch does, can leave the IOMMU out of sync with what
+its driver expects. The IOMMU is only reinitialized when it runtime
+suspends and resumes, which doesn't happen between back-to-back jobs,
+so the next jobs can run with a broken IOMMU.
+
+Do like rkvdec: allocate an empty paging domain at probe, and after the
+reset pulse attach it and detach it again, which returns the device to
+its default DMA domain. The IOMMU driver reinitializes the IOMMU on each
+domain change (on Rockchip: stall, force reset, program the directory
+table and enable paging), and the default domain keeps all the existing
+mappings. This runs in the watchdog work, right after the core was
+stopped and reset, while the timed out job still holds the runtime PM
+reference.
+
+Only do it there, where the core is known to be idle, and only for a
+device with reset lines whose current domain is a DMA domain, the one
+the detach returns to: not with an identity domain or with the ARM32
+DMA mapping domains. If the attach fails, the IOMMU driver may leave the
+IOMMU without translation (rockchip-iommu falls back to its identity
+domain), so refuse all further jobs of the device instead of letting
+the core access memory with untranslated addresses.
+
+Signed-off-by: Arun Iyengar <aiyengar1990@gmail.com>
+---
+ drivers/media/platform/verisilicon/hantro.h   |  5 ++
+ .../media/platform/verisilicon/hantro_drv.c   | 82 +++++++++++++++++++
+ .../media/platform/verisilicon/hantro_hw.h    |  1 +
+ .../platform/verisilicon/rockchip_vpu_hw.c    |  6 +-
+ 4 files changed, 93 insertions(+), 1 deletion(-)
+
+diff --git a/drivers/media/platform/verisilicon/hantro.h b/drivers/media/platform/verisilicon/hantro.h
+index 2a3a0fc3e355..a19720290b3c 100644
+--- a/drivers/media/platform/verisilicon/hantro.h
++++ b/drivers/media/platform/verisilicon/hantro.h
+@@ -222,6 +222,9 @@ enum hantro_core_role {
+  * @role:		Role of this instance in a multi-core device.
+  * @attached_domain:	IOMMU domain of the main core that this secondary
+  *			core is attached to, if any.
++ * @empty_domain:	Empty IOMMU domain, used to reinitialize the IOMMU after
++ *			a reset of the core. NULL if not needed.
++ * @iommu_lost:		The IOMMU couldn't be reinitialized, no job can run.
+  */
+ struct hantro_dev {
+ 	struct v4l2_device v4l2_dev;
+@@ -249,6 +252,8 @@ struct hantro_dev {
+ 	spinlock_t cores_lock; /* protects the core list and curr_ctx */
+ 	enum hantro_core_role role;
+ 	struct iommu_domain *attached_domain;
++	struct iommu_domain *empty_domain;
++	bool iommu_lost;
+ };
+ 
+ /**
+diff --git a/drivers/media/platform/verisilicon/hantro_drv.c b/drivers/media/platform/verisilicon/hantro_drv.c
+index d823be18d270..bfff13c723f5 100644
+--- a/drivers/media/platform/verisilicon/hantro_drv.c
++++ b/drivers/media/platform/verisilicon/hantro_drv.c
+@@ -161,6 +161,47 @@ void hantro_irq_done(struct hantro_dev *vpu,
+ 	}
+ }
+ 
++/*
++ * Pulsing the reset lines of a core can also reset its IOMMU, behind the back
++ * of the IOMMU driver. Attach the empty domain and detach it again to return
++ * to the default DMA domain: the IOMMU driver then fully reinitializes the
++ * IOMMU, and the default domain keeps all its mappings. Called after the core
++ * was reset, so the IOMMU can be stalled. A secondary core attached to the
++ * domain of the main core is detached from it first, and attached to it again
++ * at the end.
++ *
++ * If the IOMMU can't be attached to the empty domain, its driver may leave it
++ * without translation. Refuse all later jobs on the core then, rather than let
++ * the core access memory with untranslated addresses.
++ */
++void hantro_iommu_restore(struct hantro_dev *vpu)
++{
++	int ret;
++
++	if (!vpu->empty_domain)
++		return;
++
++	if (vpu->attached_domain)
++		iommu_detach_device(vpu->attached_domain, vpu->dev);
++
++	ret = iommu_attach_device(vpu->empty_domain, vpu->dev);
++	if (ret) {
++		dev_err(vpu->dev, "Failed to reinitialize the IOMMU (%d), refusing further jobs\n",
++			ret);
++		vpu->iommu_lost = true;
++		return;
++	}
++
++	iommu_detach_device(vpu->empty_domain, vpu->dev);
++
++	if (vpu->attached_domain) {
++		ret = iommu_attach_device(vpu->attached_domain, vpu->dev);
++		if (ret)
++			dev_err(vpu->dev, "Failed to attach back to the IOMMU domain of the main core: %d\n",
++				ret);
++	}
++}
++
+ void hantro_watchdog(struct work_struct *work)
+ {
+ 	struct hantro_dev *vpu;
+@@ -227,6 +268,9 @@ static void device_run(void *priv)
+ 	if (WARN_ON_ONCE(!core))
+ 		goto err_cancel_job;
+ 
++	if (unlikely(core->iommu_lost))
++		goto err_cancel_job;
++
+ 	ret = pm_runtime_resume_and_get(core->dev);
+ 	if (ret < 0)
+ 		goto err_cancel_job;
+@@ -1162,6 +1206,40 @@ static struct v4l2_m2m_dev *hantro_get_v4l2_m2m_dev(struct hantro_dev *vpu)
+ 	return v4l2_m2m_init(&vpu_m2m_ops);
+ }
+ 
++static void hantro_free_empty_domain(void *data)
++{
++	iommu_domain_free(data);
++}
++
++static int hantro_alloc_empty_domain(struct hantro_dev *vpu)
++{
++	struct iommu_domain *domain;
++
++	/*
++	 * Only needed if the core can be reset, and only possible with a DMA
++	 * domain to return to.
++	 */
++	if (!vpu->resets)
++		return 0;
++
++	domain = iommu_get_domain_for_dev(vpu->dev);
++	if (!domain || !iommu_is_dma_domain(domain))
++		return 0;
++
++	domain = iommu_paging_domain_alloc(vpu->dev);
++	if (IS_ERR(domain)) {
++		/* Not fatal, the IOMMU just won't be restored after a reset. */
++		dev_warn(vpu->dev, "Failed to allocate an empty IOMMU domain: %pe\n",
++			 domain);
++		return 0;
++	}
++
++	vpu->empty_domain = domain;
++
++	return devm_add_action_or_reset(vpu->dev, hantro_free_empty_domain,
++					domain);
++}
++
+ /*
+  * Acquire and initialize the hardware resources of one VPU instance:
+  * clocks, resets, registers, interrupts and runtime PM.
+@@ -1201,6 +1279,10 @@ static int hantro_hw_init(struct hantro_dev *vpu)
+ 	if (IS_ERR(vpu->resets))
+ 		return PTR_ERR(vpu->resets);
+ 
++	ret = hantro_alloc_empty_domain(vpu);
++	if (ret)
++		return ret;
++
+ 	num_bases = vpu->variant->num_regs ?: 1;
+ 	vpu->reg_bases = devm_kcalloc(&pdev->dev, num_bases,
+ 				      sizeof(*vpu->reg_bases), GFP_KERNEL);
+diff --git a/drivers/media/platform/verisilicon/hantro_hw.h b/drivers/media/platform/verisilicon/hantro_hw.h
+index 920721726d5f..f04261809780 100644
+--- a/drivers/media/platform/verisilicon/hantro_hw.h
++++ b/drivers/media/platform/verisilicon/hantro_hw.h
+@@ -432,6 +432,7 @@ extern const struct hantro_postproc_ops rockchip_vpu981_postproc_ops;
+ extern const u32 hantro_vp8_dec_mc_filter[8][6];
+ 
+ void hantro_watchdog(struct work_struct *work);
++void hantro_iommu_restore(struct hantro_dev *vpu);
+ void hantro_irq_done(struct hantro_dev *vpu,
+ 		     enum vb2_buffer_state result);
+ void hantro_start_prepare_run(struct hantro_ctx *ctx);
+diff --git a/drivers/media/platform/verisilicon/rockchip_vpu_hw.c b/drivers/media/platform/verisilicon/rockchip_vpu_hw.c
+index 9602bc741f10..a0c427ef561a 100644
+--- a/drivers/media/platform/verisilicon/rockchip_vpu_hw.c
++++ b/drivers/media/platform/verisilicon/rockchip_vpu_hw.c
+@@ -492,8 +492,12 @@ static void rockchip_vpu_enc_hw_reset(struct hantro_dev *vpu)
+ 	udelay(5);
+ 
+ 	ret = reset_control_deassert(vpu->resets);
+-	if (ret)
++	if (ret) {
+ 		dev_err(vpu->dev, "Failed to deassert resets: %d\n", ret);
++		return;
++	}
++
++	hantro_iommu_restore(vpu);
+ }
+ 
+ static void rockchip_vpu1_enc_reset(struct hantro_ctx *ctx)
+-- 
+2.55.0
+

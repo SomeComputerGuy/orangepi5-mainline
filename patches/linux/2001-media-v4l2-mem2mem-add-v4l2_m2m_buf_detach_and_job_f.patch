@@ -21,7 +21,6 @@ a job that holds its capture buffer for the next one isn't detached,
 and the caller finishes it with v4l2_m2m_buf_done_and_job_finish() as
 before.
 
-Assisted-by: LLM
 Signed-off-by: Arun Iyengar <aiyengar1990@gmail.com>
 ---
  drivers/media/v4l2-core/v4l2-mem2mem.c | 38 ++++++++++++++++++++++++++

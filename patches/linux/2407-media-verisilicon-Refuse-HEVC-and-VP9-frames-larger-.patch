@@ -1,0 +1,93 @@
+From 67de7e5e8689b1a0eec36df45163a905d7e573b8 Mon Sep 17 00:00:00 2001
+From: Arun Iyengar <aiyengar1990@gmail.com>
+Date: Thu, 12 Nov 2026 07:46:24 +0000
+Subject: [PATCH 2407/2409] media: verisilicon: Refuse HEVC and VP9 frames
+ larger than the formats
+
+The G2 HEVC and VP9 decoders program the hardware with the picture size
+of the SPS and of the VP9 frame header. Both come from userspace and are
+hardly compared with the formats: only an HEVC stream that is decoded
+straight into NV12_4L4 buffers must match the CAPTURE format, the other
+HEVC streams and VP9 are not checked at all.
+
+The decoder writes the frame and its motion vectors into one buffer,
+which is sized for the formats and in which the offsets of the chroma
+and of the motion vectors are computed from the width and height of the
+formats. The VP9 tile edge and segment map buffers are sized for the
+largest VP9 format. A frame that is larger than the formats does not fit
+in these buffers.
+
+Refuse such a frame when the job starts, next to the check of the
+CAPTURE buffer. The size is compared with the reference frame format,
+which is what the buffer layout is computed from. Frames that are
+smaller than the formats, as a VP9 stream has when it scales down on an
+inter frame, are still accepted.
+
+Fixes: cb5dd5a0fa51 ("media: hantro: Introduce G2/HEVC decoder")
+Fixes: e2da465455ce ("media: hantro: Support VP9 on the G2 core")
+Cc: stable@vger.kernel.org
+(k17 port of b4/hantro-dec-size-check b2b2c6b2c4d2.)
+
+Signed-off-by: Arun Iyengar <aiyengar1990@gmail.com>
+---
+ .../media/platform/verisilicon/hantro_drv.c   | 37 ++++++++++++++++++-
+ 1 file changed, 36 insertions(+), 1 deletion(-)
+
+diff --git a/drivers/media/platform/verisilicon/hantro_drv.c b/drivers/media/platform/verisilicon/hantro_drv.c
+index 5d5cffef1164..d058381670e0 100644
+--- a/drivers/media/platform/verisilicon/hantro_drv.c
++++ b/drivers/media/platform/verisilicon/hantro_drv.c
+@@ -268,6 +268,40 @@ static bool hantro_dec_dst_buf_fits(struct hantro_ctx *ctx,
+ 	return true;
+ }
+ 
++/*
++ * The HEVC and VP9 decoders are programmed with the frame size of the SPS and
++ * of the frame header, and write a frame of that size into buffers that are
++ * made for the size of the formats. The other decoders are programmed with
++ * the size of the formats, or check the frame size themselves.
++ */
++static bool hantro_dec_frame_fits(struct hantro_ctx *ctx)
++{
++	const struct v4l2_ctrl_hevc_sps *sps;
++	const struct v4l2_ctrl_vp9_frame *frame;
++	u32 width, height;
++
++	switch (ctx->vpu_src_fmt->fourcc) {
++	case V4L2_PIX_FMT_HEVC_SLICE:
++		sps = hantro_get_ctrl(ctx, V4L2_CID_STATELESS_HEVC_SPS);
++		if (!sps)
++			return true;
++		width = sps->pic_width_in_luma_samples;
++		height = sps->pic_height_in_luma_samples;
++		break;
++	case V4L2_PIX_FMT_VP9_FRAME:
++		frame = hantro_get_ctrl(ctx, V4L2_CID_STATELESS_VP9_FRAME);
++		if (!frame)
++			return true;
++		width = frame->frame_width_minus_1 + 1;
++		height = frame->frame_height_minus_1 + 1;
++		break;
++	default:
++		return true;
++	}
++
++	return width <= ctx->ref_fmt.width && height <= ctx->ref_fmt.height;
++}
++
+ static void device_run(void *priv)
+ {
+ 	struct hantro_ctx *ctx = priv;
+@@ -305,7 +339,8 @@ static void device_run(void *priv)
+ 	 */
+ 	v4l2_ctrl_request_setup(src->vb2_buf.req_obj.req, &ctx->ctrl_handler);
+ 
+-	if (!ctx->is_encoder && !hantro_dec_dst_buf_fits(ctx, dst))
++	if (!ctx->is_encoder &&
++	    (!hantro_dec_dst_buf_fits(ctx, dst) || !hantro_dec_frame_fits(ctx)))
+ 		goto err_clk_disable;
+ 
+ 	if (ctx->codec_ops->run(ctx))
+-- 
+2.55.0
+

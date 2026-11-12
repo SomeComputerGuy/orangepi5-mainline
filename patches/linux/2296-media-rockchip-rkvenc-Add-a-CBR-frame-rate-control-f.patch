@@ -1,8 +1,8 @@
-From 6002987615136fff0297121d7c66cecf3cc7fc47 Mon Sep 17 00:00:00 2001
+From d2d0fe778dc985f39d4eab0b11e702579cd150e5 Mon Sep 17 00:00:00 2001
 From: Arun Iyengar <aiyengar1990@gmail.com>
 Date: Thu, 5 Nov 2026 16:59:33 +0000
-Subject: [PATCH 2296/2312] media: rockchip: rkvenc: Add a CBR frame rate
- control for H.264
+Subject: [PATCH] media: rockchip: rkvenc: Add a CBR frame rate control for
+ H.264
 
 H.264 CBR used the generic mode of the H.264 encode core, which does not
 work with the VEPU580 row rate control:
@@ -33,15 +33,14 @@ Board results (RK3588S, 1080p60 and 2160p30 clips of 120-300 pictures,
 to -0.6..+2.5%, and PSNR-Y improves by 0.7-3.6 dB at 1080p with the row
 rate control left as it is.
 
-Assisted-by: LLM
 Signed-off-by: Arun Iyengar <aiyengar1990@gmail.com>
 ---
  .../media/platform/rockchip/rkvenc/Makefile   |   1 +
- .../platform/rockchip/rkvenc/rkvenc-h264.c    | 104 +++++++-
+ .../platform/rockchip/rkvenc/rkvenc-h264.c    |  98 +++++++-
  .../platform/rockchip/rkvenc/rkvenc-hevc.c    |  12 -
  .../platform/rockchip/rkvenc/rkvenc-rc.c      | 228 ++++++++++++++++++
- .../media/platform/rockchip/rkvenc/rkvenc.h   |  54 +++++
- 5 files changed, 381 insertions(+), 18 deletions(-)
+ .../media/platform/rockchip/rkvenc/rkvenc.h   |  52 ++++
+ 5 files changed, 376 insertions(+), 15 deletions(-)
  create mode 100644 drivers/media/platform/rockchip/rkvenc/rkvenc-rc.c
 
 diff --git a/drivers/media/platform/rockchip/rkvenc/Makefile b/drivers/media/platform/rockchip/rkvenc/Makefile
@@ -55,7 +54,7 @@ index d092543e339b..d40fb3f58d87 100644
 +		rkvenc-rc.o \
  		rkvenc-vepu580.o
 diff --git a/drivers/media/platform/rockchip/rkvenc/rkvenc-h264.c b/drivers/media/platform/rockchip/rkvenc/rkvenc-h264.c
-index 50e233cf1272..68653c5fc901 100644
+index 227d341d060b..68653c5fc901 100644
 --- a/drivers/media/platform/rockchip/rkvenc/rkvenc-h264.c
 +++ b/drivers/media/platform/rockchip/rkvenc/rkvenc-h264.c
 @@ -170,6 +170,95 @@ static int rkvenc_h264_rec_buffer_free(struct v4l2_h264_enc *enc,
@@ -179,16 +178,9 @@ index 50e233cf1272..68653c5fc901 100644
  	return 0;
  }
  
-@@ -382,17 +474,17 @@ static int rkvenc_h264_run(struct rkvenc_ctx *ctx, struct rkvenc_core *core,
- 	vepu580_setup_h264_tuning(ctx->dev, core, intra);
- 
- 	/*
--	 * In CBR mode the frame size target from the common rate control is
--	 * handed to the hardware row rate control, which adapts the QP of
--	 * each macroblock row by up to the row_rc_qp_range parameter.
-+	 * In CBR mode the frame size target of the rate control is handed to
-+	 * the hardware row rate control, which adapts the QP of each
-+	 * macroblock row by up to the row_rc_qp_range parameter.
+@@ -386,13 +478,13 @@ static int rkvenc_h264_run(struct rkvenc_ctx *ctx, struct rkvenc_core *core,
+ 	 * the hardware row rate control, which adapts the QP of each
+ 	 * macroblock row by up to the row_rc_qp_range parameter.
  	 */
 -	h264->hw_rc = rc->mode && rc->mode->type == V4L2_H264_ENC_RC_TYPE_CBR &&
 +	h264->hw_rc = rkvenc_h264_rc_cbr(state) &&
@@ -460,10 +452,10 @@ index 000000000000..f0a584967eea
 +	rc->qp_q8 = clamp(rc->qp_q8, qp_min * 256, qp_max * 256);
 +}
 diff --git a/drivers/media/platform/rockchip/rkvenc/rkvenc.h b/drivers/media/platform/rockchip/rkvenc/rkvenc.h
-index a060c1d9bb9b..b2b4849beda6 100644
+index 9a1e5e1d71a2..b2b4849beda6 100644
 --- a/drivers/media/platform/rockchip/rkvenc/rkvenc.h
 +++ b/drivers/media/platform/rockchip/rkvenc/rkvenc.h
-@@ -197,11 +197,65 @@ struct rkvenc_dev {
+@@ -197,13 +197,65 @@ struct rkvenc_dev {
  	u32 *h264_scl;
  };
  
@@ -519,9 +511,9 @@ index a060c1d9bb9b..b2b4849beda6 100644
 +
  /**
   * struct rkvenc_h264_ctx - H.264 per-context state
-+ * @enc: H.264 stateless encode core
+  * @enc: H.264 stateless encode core
 + * @rc: constant bitrate rate control
-+ * @hw_rc: the current picture uses the hardware row rate control
+  * @hw_rc: the current picture uses the hardware row rate control
   */
  struct rkvenc_h264_ctx {
  	struct v4l2_h264_enc enc;

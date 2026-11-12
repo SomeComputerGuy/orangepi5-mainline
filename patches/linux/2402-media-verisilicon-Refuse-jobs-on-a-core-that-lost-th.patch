@@ -1,0 +1,37 @@
+From a71209e49346b27dc054cf6b08b09e01b3a24e26 Mon Sep 17 00:00:00 2001
+From: Arun Iyengar <aiyengar1990@gmail.com>
+Date: Tue, 10 Nov 2026 08:52:55 +0000
+Subject: [PATCH 2402/2409] media: verisilicon: Refuse jobs on a core that lost
+ the main IOMMU domain
+
+fixup for the k17 multi-core support with the hantro-robust v2 restore: a
+secondary core that could not attach back to the IOMMU domain of the main
+core after a restore would run jobs with its own domain, where none of
+the buffers are mapped. Refuse its jobs like after a failed restore.
+
+Signed-off-by: Arun Iyengar <aiyengar1990@gmail.com>
+---
+ drivers/media/platform/verisilicon/hantro_drv.c | 6 ++++--
+ 1 file changed, 4 insertions(+), 2 deletions(-)
+
+diff --git a/drivers/media/platform/verisilicon/hantro_drv.c b/drivers/media/platform/verisilicon/hantro_drv.c
+index 9de601619270..3e15cf6557b4 100644
+--- a/drivers/media/platform/verisilicon/hantro_drv.c
++++ b/drivers/media/platform/verisilicon/hantro_drv.c
+@@ -196,9 +196,11 @@ void hantro_iommu_restore(struct hantro_dev *vpu)
+ 
+ 	if (vpu->attached_domain) {
+ 		ret = iommu_attach_device(vpu->attached_domain, vpu->dev);
+-		if (ret)
+-			dev_err(vpu->dev, "Failed to attach back to the IOMMU domain of the main core: %d\n",
++		if (ret) {
++			dev_err(vpu->dev, "Failed to attach back to the IOMMU domain of the main core (%d), refusing further jobs\n",
+ 				ret);
++			vpu->iommu_lost = true;
++		}
+ 	}
+ }
+ 
+-- 
+2.55.0
+

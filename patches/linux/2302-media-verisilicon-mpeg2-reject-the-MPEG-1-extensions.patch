@@ -1,8 +1,8 @@
-From a5e5416ffe21c9d6b8dc19352304e1cd56949c8b Mon Sep 17 00:00:00 2001
+From ddc9ba9101471a3a1dc596792a67915f5320468b Mon Sep 17 00:00:00 2001
 From: Arun Iyengar <aiyengar1990@gmail.com>
 Date: Thu, 5 Nov 2026 06:49:24 +0000
-Subject: [PATCH 2302/2312] media: verisilicon: mpeg2: reject the MPEG-1
- extensions of the uAPI
+Subject: [PATCH] media: verisilicon: mpeg2: reject the MPEG-1 extensions of
+ the uAPI
 
 The MPEG-2 controls can now describe MPEG-1 sequences
 (V4L2_MPEG2_SEQ_FLAG_MPEG1), full pel motion vectors and D-pictures,
@@ -16,17 +16,16 @@ and can fall back to software decoding. The MPEG-2 sequence and picture
 controls had no control ops so far; give them the driver's ops so that
 try_ctrl runs for them.
 
-Assisted-by: LLM
 Signed-off-by: Arun Iyengar <aiyengar1990@gmail.com>
 ---
  drivers/media/platform/verisilicon/hantro_drv.c | 16 ++++++++++++++++
  1 file changed, 16 insertions(+)
 
 diff --git a/drivers/media/platform/verisilicon/hantro_drv.c b/drivers/media/platform/verisilicon/hantro_drv.c
-index a4bdc63a2355..4e50168dbb8f 100644
+index e590e689ab68..e2f12d11bf04 100644
 --- a/drivers/media/platform/verisilicon/hantro_drv.c
 +++ b/drivers/media/platform/verisilicon/hantro_drv.c
-@@ -392,6 +392,20 @@ static int hantro_try_ctrl(struct v4l2_ctrl *ctrl)
+@@ -400,6 +400,20 @@ static int hantro_try_ctrl(struct v4l2_ctrl *ctrl)
  
  		if (sequence->bit_depth != 8 && sequence->bit_depth != 10)
  			return -EINVAL;
@@ -47,7 +46,7 @@ index a4bdc63a2355..4e50168dbb8f 100644
  	} else if (ctrl->id == V4L2_CID_STATELESS_AVS_SEQUENCE) {
  		const struct v4l2_ctrl_avs_sequence *seq = ctrl->p_new.p_avs_sequence;
  
-@@ -670,11 +684,13 @@ static const struct hantro_ctrl controls[] = {
+@@ -678,11 +692,13 @@ static const struct hantro_ctrl controls[] = {
  		.codec = HANTRO_MPEG2_DECODER,
  		.cfg = {
  			.id = V4L2_CID_STATELESS_MPEG2_SEQUENCE,

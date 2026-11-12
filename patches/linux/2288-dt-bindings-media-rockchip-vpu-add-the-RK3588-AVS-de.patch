@@ -16,7 +16,6 @@ named "avsd", rather than as a node of its own: the driver then runs it
 as one more function of that device, in the same job queue. The RK3328
 has the same block at 0xff351000, next to its VPU.
 
-Assisted-by: LLM
 Signed-off-by: Arun Iyengar <aiyengar1990@gmail.com>
 ---
  .../bindings/media/rockchip-vpu.yaml          | 24 ++++++++++++++++++-

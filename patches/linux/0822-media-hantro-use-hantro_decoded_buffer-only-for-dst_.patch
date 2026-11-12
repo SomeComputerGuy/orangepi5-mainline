@@ -1,4 +1,4 @@
-From 28214dfca7e39b696cb85bf994d6431fea8f73ee Mon Sep 17 00:00:00 2001
+From 34856cccf686b734374bf58ec25e916fafa2cb32 Mon Sep 17 00:00:00 2001
 From: Marco Felsch <m.felsch@pengutronix.de>
 Date: Fri, 22 May 2026 12:16:49 +0200
 Subject: [PATCH] media: hantro: use hantro_decoded_buffer only for dst_vq
@@ -14,10 +14,10 @@ Link: https://patch.msgid.link/20260522101653.2565125-11-paulk@sys-base.io
  1 file changed, 4 insertions(+), 1 deletion(-)
 
 diff --git a/drivers/media/platform/verisilicon/hantro_drv.c b/drivers/media/platform/verisilicon/hantro_drv.c
-index d47d85cfd..8890d4cd0 100644
+index bfff13c723f5..ddeb69858b9f 100644
 --- a/drivers/media/platform/verisilicon/hantro_drv.c
 +++ b/drivers/media/platform/verisilicon/hantro_drv.c
-@@ -341,7 +341,10 @@ queue_init(void *priv, struct vb2_queue *src_vq, struct vb2_queue *dst_vq)
+@@ -349,7 +349,10 @@ queue_init(void *priv, struct vb2_queue *src_vq, struct vb2_queue *dst_vq)
  	dst_vq->io_modes = VB2_MMAP | VB2_DMABUF;
  	dst_vq->drv_priv = ctx;
  	dst_vq->ops = &hantro_queue_ops;
@@ -29,3 +29,6 @@ index d47d85cfd..8890d4cd0 100644
  	dst_vq->timestamp_flags = V4L2_BUF_FLAG_TIMESTAMP_COPY;
  	dst_vq->lock = &ctx->dev->vpu_mutex;
  	dst_vq->dev = ctx->dev->v4l2_dev.dev;
+-- 
+2.55.0
+

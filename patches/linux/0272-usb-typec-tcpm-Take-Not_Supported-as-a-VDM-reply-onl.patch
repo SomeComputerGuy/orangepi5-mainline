@@ -29,7 +29,6 @@ Only take the Message as the reply in VDM_STATE_BUSY. If the VDM is still
 to be sent, ignore the Message and let the VDM go out.
 
 Fixes: f1fbd950b59b ("usb: typec: tcpm: Fix wrong handling for Not_Supported in VDM AMS")
-Assisted-by: LLM
 Signed-off-by: Arun Iyengar <aiyengar1990@gmail.com>
 ---
  drivers/usb/typec/tcpm/tcpm.c | 13 ++++++++++++-

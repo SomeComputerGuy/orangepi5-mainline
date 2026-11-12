@@ -1,8 +1,8 @@
-From ecade429d6b9bede8d2f3600bebee24b28457286 Mon Sep 17 00:00:00 2001
+From f7f7447f1bfff1d4ab0fffc2ceb31ac7ebe72e9c Mon Sep 17 00:00:00 2001
 From: Arun Iyengar <aiyengar1990@gmail.com>
 Date: Thu, 5 Nov 2026 18:34:38 +0000
-Subject: [PATCH 2305/2312] media: verisilicon: rockchip: vpu2: advertise
- MPEG-1 as V4L2_PIX_FMT_MPEG1_SLICE
+Subject: [PATCH] media: verisilicon: rockchip: vpu2: advertise MPEG-1 as
+ V4L2_PIX_FMT_MPEG1_SLICE
 
 The VPU2 decoders decode MPEG-1, but applications cannot find that out
 from the MPEG-2 coded format. Enumerate V4L2_PIX_FMT_MPEG1_SLICE on the
@@ -16,7 +16,6 @@ so the G1 based decoders and the VPU2 MPEG-2 format reject them as
 before. A decoding job whose sequence control disagrees with the coded
 format, which can happen after the format changed, fails.
 
-Assisted-by: LLM
 Signed-off-by: Arun Iyengar <aiyengar1990@gmail.com>
 ---
  drivers/media/platform/verisilicon/hantro.h   |  3 --
@@ -27,7 +26,7 @@ Signed-off-by: Arun Iyengar <aiyengar1990@gmail.com>
  5 files changed, 36 insertions(+), 11 deletions(-)
 
 diff --git a/drivers/media/platform/verisilicon/hantro.h b/drivers/media/platform/verisilicon/hantro.h
-index 1ef5118b551c..614b02a22618 100644
+index 0526e02eab5e..ddb015ca877d 100644
 --- a/drivers/media/platform/verisilicon/hantro.h
 +++ b/drivers/media/platform/verisilicon/hantro.h
 @@ -82,8 +82,6 @@ struct hantro_irq {
@@ -48,10 +47,10 @@ index 1ef5118b551c..614b02a22618 100644
  	const struct of_device_id *shared_devices;
  };
 diff --git a/drivers/media/platform/verisilicon/hantro_drv.c b/drivers/media/platform/verisilicon/hantro_drv.c
-index 5bedb3e3971d..30feb34e8a4f 100644
+index 99d59d45c3de..dbda62ef07d4 100644
 --- a/drivers/media/platform/verisilicon/hantro_drv.c
 +++ b/drivers/media/platform/verisilicon/hantro_drv.c
-@@ -398,8 +398,9 @@ static int hantro_try_ctrl(struct v4l2_ctrl *ctrl)
+@@ -406,8 +406,9 @@ static int hantro_try_ctrl(struct v4l2_ctrl *ctrl)
  	} else if (ctrl->id == V4L2_CID_STATELESS_MPEG2_SEQUENCE) {
  		const struct v4l2_ctrl_mpeg2_sequence *seq = ctrl->p_new.p_mpeg2_sequence;
  
@@ -62,7 +61,7 @@ index 5bedb3e3971d..30feb34e8a4f 100644
  			return -EINVAL;
  	} else if (ctrl->id == V4L2_CID_STATELESS_MPEG2_PICTURE) {
  		const struct v4l2_ctrl_mpeg2_picture *pic = ctrl->p_new.p_mpeg2_picture;
-@@ -410,7 +411,7 @@ static int hantro_try_ctrl(struct v4l2_ctrl *ctrl)
+@@ -418,7 +419,7 @@ static int hantro_try_ctrl(struct v4l2_ctrl *ctrl)
  		/* Full pel vectors only exist in MPEG-1 */
  		if (pic->flags & (V4L2_MPEG2_PIC_FLAG_FULL_PEL_FORWARD |
  				  V4L2_MPEG2_PIC_FLAG_FULL_PEL_BACKWARD) &&
@@ -72,10 +71,10 @@ index 5bedb3e3971d..30feb34e8a4f 100644
  	} else if (ctrl->id == V4L2_CID_STATELESS_AVS_SEQUENCE) {
  		const struct v4l2_ctrl_avs_sequence *seq = ctrl->p_new.p_avs_sequence;
 diff --git a/drivers/media/platform/verisilicon/hantro_v4l2.c b/drivers/media/platform/verisilicon/hantro_v4l2.c
-index d86807bba484..942c93bee066 100644
+index 40487ee632d4..a4fc76da0f29 100644
 --- a/drivers/media/platform/verisilicon/hantro_v4l2.c
 +++ b/drivers/media/platform/verisilicon/hantro_v4l2.c
-@@ -597,6 +597,7 @@ hantro_update_requires_request(struct hantro_ctx *ctx, u32 fourcc)
+@@ -598,6 +598,7 @@ hantro_update_requires_request(struct hantro_ctx *ctx, u32 fourcc)
  	case V4L2_PIX_FMT_JPEG:
  		ctx->fh.m2m_ctx->out_q_ctx.q.requires_requests = false;
  		break;
@@ -83,7 +82,7 @@ index d86807bba484..942c93bee066 100644
  	case V4L2_PIX_FMT_MPEG2_SLICE:
  	case V4L2_PIX_FMT_VP8_FRAME:
  	case V4L2_PIX_FMT_H264_SLICE:
-@@ -626,6 +627,7 @@ hantro_update_requires_hold_capture_buf(struct hantro_ctx *ctx, u32 fourcc)
+@@ -627,6 +628,7 @@ hantro_update_requires_hold_capture_buf(struct hantro_ctx *ctx, u32 fourcc)
  		vq->subsystem_flags &= ~(VB2_V4L2_FL_SUPPORTS_M2M_HOLD_CAPTURE_BUF);
  		break;
  	case V4L2_PIX_FMT_H264_SLICE:
@@ -111,7 +110,7 @@ index dc0154fd1538..714ebd7d638a 100644
  		    pic->flags & (V4L2_MPEG2_PIC_FLAG_FULL_PEL_FORWARD |
  				  V4L2_MPEG2_PIC_FLAG_FULL_PEL_BACKWARD))
 diff --git a/drivers/media/platform/verisilicon/rockchip_vpu_hw.c b/drivers/media/platform/verisilicon/rockchip_vpu_hw.c
-index 5c6018ac4696..57b5ef76b204 100644
+index 3da2d009fefa..b3ccaf066072 100644
 --- a/drivers/media/platform/verisilicon/rockchip_vpu_hw.c
 +++ b/drivers/media/platform/verisilicon/rockchip_vpu_hw.c
 @@ -309,6 +309,19 @@ static const struct hantro_fmt rockchip_vdpu2_dec_fmts[] = {
@@ -154,7 +153,7 @@ index 5c6018ac4696..57b5ef76b204 100644
  	{
  		.fourcc = V4L2_PIX_FMT_VP8_FRAME,
  		.codec_mode = HANTRO_MODE_VP8_DEC,
-@@ -965,7 +991,6 @@ const struct hantro_variant rk3399_vpu_variant = {
+@@ -981,7 +1007,6 @@ const struct hantro_variant rk3399_vpu_variant = {
  	.num_dec_fmts = ARRAY_SIZE(rk3399_vpu_dec_fmts),
  	.codec = HANTRO_JPEG_ENCODER | HANTRO_MPEG2_DECODER |
  		 HANTRO_VP8_DECODER,
@@ -162,7 +161,7 @@ index 5c6018ac4696..57b5ef76b204 100644
  	.codec_ops = rk3399_vpu_codec_ops,
  	.irqs = rockchip_vpu2_irqs,
  	.num_irqs = ARRAY_SIZE(rockchip_vpu2_irqs),
-@@ -1011,7 +1036,6 @@ const struct hantro_variant rk3568_vpu_variant = {
+@@ -1027,7 +1052,6 @@ const struct hantro_variant rk3568_vpu_variant = {
  	.num_dec_fmts = ARRAY_SIZE(rockchip_vdpu2_dec_fmts),
  	.codec = HANTRO_MPEG2_DECODER |
  		 HANTRO_VP8_DECODER | HANTRO_H264_DECODER,
@@ -170,7 +169,7 @@ index 5c6018ac4696..57b5ef76b204 100644
  	.codec_ops = rk3399_vpu_codec_ops,
  	.irqs = rockchip_vdpu2_irqs,
  	.num_irqs = ARRAY_SIZE(rockchip_vdpu2_irqs),
-@@ -1034,7 +1058,6 @@ const struct hantro_variant rk3588_vpu121_variant = {
+@@ -1050,7 +1074,6 @@ const struct hantro_variant rk3588_vpu121_variant = {
  	.num_dec_fmts = ARRAY_SIZE(rockchip_vdpu2_dec_fmts),
  	.codec = HANTRO_H264_ENCODER | HANTRO_MPEG2_DECODER |
  		 HANTRO_VP8_DECODER | HANTRO_H264_DECODER,
@@ -178,7 +177,7 @@ index 5c6018ac4696..57b5ef76b204 100644
  	.codec_ops = rk3588_vpu121_codec_ops,
  	.irqs = rk3588_vpu121_irqs,
  	.num_irqs = ARRAY_SIZE(rk3588_vpu121_irqs),
-@@ -1070,7 +1093,6 @@ const struct hantro_variant px30_vpu_variant = {
+@@ -1086,7 +1109,6 @@ const struct hantro_variant px30_vpu_variant = {
  	.num_dec_fmts = ARRAY_SIZE(rockchip_vdpu2_dec_fmts),
  	.codec = HANTRO_JPEG_ENCODER | HANTRO_MPEG2_DECODER |
  		 HANTRO_VP8_DECODER | HANTRO_H264_DECODER,

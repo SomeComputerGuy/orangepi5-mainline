@@ -1,8 +1,7 @@
-From dc1848653cd90ceaf796c9c0d701fc65f3dae72a Mon Sep 17 00:00:00 2001
+From 78ed654b436d99b17b32f7beb58882e40239c62b Mon Sep 17 00:00:00 2001
 From: Arun Iyengar <aiyengar1990@gmail.com>
 Date: Thu, 5 Nov 2026 10:52:47 +0000
-Subject: [PATCH 2291/2312] media: uapi: h264: add stateless MVC decoding
- controls
+Subject: [PATCH] media: uapi: h264: add stateless MVC decoding controls
 
 Add what a stateless decoder needs to decode H.264 Multiview Video
 Coding (Annex H; the Stereo High and Multiview High profiles) on top of
@@ -33,7 +32,6 @@ temporal ones (H.8.2.1).
 The controls take the IDs at the stateless codec base + 9 and + 10 and
 the control types 0x0207 and 0x0208.
 
-Assisted-by: LLM
 Signed-off-by: Arun Iyengar <aiyengar1990@gmail.com>
 ---
  .../media/v4l/ext-ctrls-codec-stateless.rst   | 176 +++++++++++++++++-
@@ -48,7 +46,7 @@ Signed-off-by: Arun Iyengar <aiyengar1990@gmail.com>
  9 files changed, 343 insertions(+), 2 deletions(-)
 
 diff --git a/Documentation/userspace-api/media/v4l/ext-ctrls-codec-stateless.rst b/Documentation/userspace-api/media/v4l/ext-ctrls-codec-stateless.rst
-index 24fd594db6cd..9c1e2d014c1e 100644
+index 14c6ff372315..1ab6f084bb6e 100644
 --- a/Documentation/userspace-api/media/v4l/ext-ctrls-codec-stateless.rst
 +++ b/Documentation/userspace-api/media/v4l/ext-ctrls-codec-stateless.rst
 @@ -664,7 +664,15 @@ Stateless Codec Control ID
@@ -297,10 +295,10 @@ index 59145cf75eed..57807dde18e0 100644
        - n/a
        - n/a
 diff --git a/drivers/media/v4l2-core/v4l2-ctrls-core.c b/drivers/media/v4l2-core/v4l2-ctrls-core.c
-index 5cb2e3217e43..39c9f4c7020a 100644
+index 84154824480f..3f6ee53b92b1 100644
 --- a/drivers/media/v4l2-core/v4l2-ctrls-core.c
 +++ b/drivers/media/v4l2-core/v4l2-ctrls-core.c
-@@ -471,6 +471,12 @@ void v4l2_ctrl_type_op_log(const struct v4l2_ctrl *ctrl)
+@@ -472,6 +472,12 @@ void v4l2_ctrl_type_op_log(const struct v4l2_ctrl *ctrl)
  	case V4L2_CTRL_TYPE_H264_ENCODE_PARAMS:
  		pr_cont("H264_ENCODE_PARAMS");
  		break;
@@ -313,7 +311,7 @@ index 5cb2e3217e43..39c9f4c7020a 100644
  	case V4L2_CTRL_TYPE_FWHT_PARAMS:
  		pr_cont("FWHT_PARAMS");
  		break;
-@@ -1464,6 +1470,8 @@ static int std_validate_compound(const struct v4l2_ctrl *ctrl, u32 idx,
+@@ -1465,6 +1471,8 @@ static int std_validate_compound(const struct v4l2_ctrl *ctrl, u32 idx,
  	struct v4l2_ctrl_h264_slice_params *p_h264_slice_params;
  	struct v4l2_ctrl_h264_decode_params *p_h264_dec_params;
  	struct v4l2_ctrl_h264_encode_params *p_h264_enc_params;
@@ -322,7 +320,7 @@ index 5cb2e3217e43..39c9f4c7020a 100644
  	struct v4l2_ctrl_hevc_ext_sps_lt_rps *p_hevc_lt_rps;
  	struct v4l2_ctrl_hevc_ext_sps_st_rps *p_hevc_st_rps;
  	struct v4l2_ctrl_hevc_sps *p_hevc_sps;
-@@ -1685,11 +1693,55 @@ static int std_validate_compound(const struct v4l2_ctrl *ctrl, u32 idx,
+@@ -1686,11 +1694,55 @@ static int std_validate_compound(const struct v4l2_ctrl *ctrl, u32 idx,
  			struct v4l2_h264_dpb_entry *dpb_entry =
  				&p_h264_dec_params->dpb[i];
  
@@ -378,7 +376,7 @@ index 5cb2e3217e43..39c9f4c7020a 100644
  	case V4L2_CTRL_TYPE_H264_ENCODE_PARAMS:
  		p_h264_enc_params = p;
  
-@@ -2654,6 +2706,12 @@ static struct v4l2_ctrl *v4l2_ctrl_new(struct v4l2_ctrl_handler *hdl,
+@@ -2655,6 +2707,12 @@ static struct v4l2_ctrl *v4l2_ctrl_new(struct v4l2_ctrl_handler *hdl,
  	case V4L2_CTRL_TYPE_H264_ENCODE_PARAMS:
  		elem_size = sizeof(struct v4l2_ctrl_h264_encode_params);
  		break;
@@ -441,7 +439,7 @@ index 1bfde61d66ac..3e23125cac5b 100644
  	struct v4l2_ctrl_hevc_sps *p_hevc_sps;
  	struct v4l2_ctrl_hevc_pps *p_hevc_pps;
 diff --git a/include/uapi/linux/v4l2-controls.h b/include/uapi/linux/v4l2-controls.h
-index fb0cc5eb3c44..e56dd768d8cb 100644
+index 6b698ab2be7b..d92c272ad029 100644
 --- a/include/uapi/linux/v4l2-controls.h
 +++ b/include/uapi/linux/v4l2-controls.h
 @@ -1642,6 +1642,7 @@ struct v4l2_ctrl_h264_slice_params {

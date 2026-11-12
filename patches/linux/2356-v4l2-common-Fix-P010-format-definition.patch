@@ -1,0 +1,38 @@
+From 201ddf5247ab76fe3f700902e3bc60f3910aa59a Mon Sep 17 00:00:00 2001
+From: Nicolas Dufresne <nicolas.dufresne@collabora.com>
+Date: Fri, 6 Nov 2026 13:46:02 +0000
+Subject: [PATCH 2356/2409] v4l2: common: Fix P010 format definition
+
+Correct the subsampling divider and unpack the bytes per pixel values.
+P010 is a 4:2:0 subsampled format but was previously encoded as 4:2:2,
+and the bytes per pixel value was being hacked to compensate.
+
+Fixes: 5374d8fb75f3132 ("media: Add P010 video format")
+Signed-off-by: Nicolas Dufresne <nicolas.dufresne@collabora.com>
+[Arun: backport of the mainline fix (in torvalds/master after v7.3) to
+ 7.3. For even frame sizes and a stride alignment of 1 bytesperline and
+ sizeimage don't change (luma 2*w*h + chroma w*h); the old entry
+ under-sized the chroma plane by one row for odd heights and doubled the
+ luma stride alignment of v4l2_fill_pixfmt_mp_aligned() (RGA3: 32
+ instead of 16 bytes).]
+Signed-off-by: Arun Iyengar <aiyengar1990@gmail.com>
+---
+ drivers/media/v4l2-core/v4l2-common.c | 2 +-
+ 1 file changed, 1 insertion(+), 1 deletion(-)
+
+diff --git a/drivers/media/v4l2-core/v4l2-common.c b/drivers/media/v4l2-core/v4l2-common.c
+index 65db7340ad38..4de8aa3ef7d2 100644
+--- a/drivers/media/v4l2-core/v4l2-common.c
++++ b/drivers/media/v4l2-core/v4l2-common.c
+@@ -323,7 +323,7 @@ const struct v4l2_format_info *v4l2_format_info(u32 format)
+ 		{ .format = V4L2_PIX_FMT_NV20,    .pixel_enc = V4L2_PIXEL_ENC_YUV, .mem_planes = 1, .comp_planes = 2, .bpp = { 5, 10, 0, 0 }, .bpp_div = { 4, 4, 1, 1 }, .hdiv = 2, .vdiv = 1 },
+ 		{ .format = V4L2_PIX_FMT_NV24,    .pixel_enc = V4L2_PIXEL_ENC_YUV, .mem_planes = 1, .comp_planes = 2, .bpp = { 1, 2, 0, 0 }, .bpp_div = { 1, 1, 1, 1 }, .hdiv = 1, .vdiv = 1 },
+ 		{ .format = V4L2_PIX_FMT_NV42,    .pixel_enc = V4L2_PIXEL_ENC_YUV, .mem_planes = 1, .comp_planes = 2, .bpp = { 1, 2, 0, 0 }, .bpp_div = { 1, 1, 1, 1 }, .hdiv = 1, .vdiv = 1 },
+-		{ .format = V4L2_PIX_FMT_P010,    .pixel_enc = V4L2_PIXEL_ENC_YUV, .mem_planes = 1, .comp_planes = 2, .bpp = { 2, 2, 0, 0 }, .bpp_div = { 1, 1, 1, 1 }, .hdiv = 2, .vdiv = 1 },
++		{ .format = V4L2_PIX_FMT_P010,    .pixel_enc = V4L2_PIXEL_ENC_YUV, .mem_planes = 1, .comp_planes = 2, .bpp = { 2, 4, 0, 0 }, .bpp_div = { 1, 1, 1, 1 }, .hdiv = 2, .vdiv = 2 },
+ 		{ .format = V4L2_PIX_FMT_P012,    .pixel_enc = V4L2_PIXEL_ENC_YUV, .mem_planes = 1, .comp_planes = 2, .bpp = { 2, 4, 0, 0 }, .bpp_div = { 1, 1, 1, 1 }, .hdiv = 2, .vdiv = 2 },
+ 
+ 		{ .format = V4L2_PIX_FMT_YUV410,  .pixel_enc = V4L2_PIXEL_ENC_YUV, .mem_planes = 1, .comp_planes = 3, .bpp = { 1, 1, 1, 0 }, .bpp_div = { 1, 1, 1, 1 }, .hdiv = 4, .vdiv = 4 },
+-- 
+2.55.0
+

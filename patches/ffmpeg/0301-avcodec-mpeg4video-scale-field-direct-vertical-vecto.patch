@@ -12,7 +12,6 @@ unit whenever the frame-unit quotient was odd.
 
 vcon_ge_1_asp_l4 vs. 14496-5 vm_dec: 32571 luma MBs off by > 4 -> 0.
 
-Assisted-by: LLM
 Signed-off-by: Arun Iyengar <aiyengar1990@gmail.com>
 ---
  libavcodec/mpeg4video.c | 15 +++++++++------

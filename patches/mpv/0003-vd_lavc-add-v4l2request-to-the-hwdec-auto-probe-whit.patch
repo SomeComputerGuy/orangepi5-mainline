@@ -24,8 +24,6 @@ v4l2request is as safe to probe as drm:
 Place it right after drm (and v4l2request-copy after drm-copy), i.e.
 after vaapi/nvdec/vulkan, so systems with a native GPU decoder behave
 exactly as before.
-
-Assisted-by: LLM
 ---
  DOCS/interface-changes/hwdec-v4l2request-auto.txt | 1 +
  DOCS/man/options.rst                              | 4 ++++

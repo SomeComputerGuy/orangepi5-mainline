@@ -32,7 +32,6 @@ in bypass cannot stall), release the stall while any bank is stalled
 and disable paging while any bank translates. When all banks agree,
 which is the normal case, nothing changes.
 
-Assisted-by: LLM
 Signed-off-by: Arun Iyengar <aiyengar1990@gmail.com>
 ---
  drivers/iommu/rockchip-iommu.c | 63 ++++++++++++++++++++++++++--------

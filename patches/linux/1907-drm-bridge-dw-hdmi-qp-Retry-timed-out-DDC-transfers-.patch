@@ -19,7 +19,6 @@ transfer with stale status before the data is ready.
 
 (cherry picked from commit a9399a23f3066f866d955eabd88c52781b46ce82)
 
-Assisted-by: LLM
 Signed-off-by: Arun Iyengar <aiyengar1990@gmail.com>
 ---
  drivers/gpu/drm/bridge/synopsys/dw-hdmi-qp.c | 19 +++++++++++++++++--

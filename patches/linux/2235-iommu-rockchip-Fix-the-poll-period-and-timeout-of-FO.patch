@@ -20,7 +20,6 @@ video decoder IOMMU whose master has not gone idle.
 Poll every RK_MMU_POLL_PERIOD_US for up to RK_MMU_FORCE_RESET_TIMEOUT_US.
 
 Fixes: 0416bf6479ac ("iommu/rockchip: Use iopoll helpers to wait for hardware")
-Assisted-by: LLM
 Signed-off-by: Arun Iyengar <aiyengar1990@gmail.com>
 ---
  drivers/iommu/rockchip-iommu.c | 4 ++--

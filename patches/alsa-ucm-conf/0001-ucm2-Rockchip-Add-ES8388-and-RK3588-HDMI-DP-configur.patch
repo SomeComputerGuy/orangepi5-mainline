@@ -25,8 +25,6 @@ Add UCM for two kinds of simple-audio-card found on RK3588 boards:
 Tested on an Orange Pi 5 with alsaucm and PipeWire 1.6 (ACP): both
 cards get their HiFi profiles, HDMI plays, the ES8388 profile follows the
 jack control, and alsactl init applies the boot sequence on first boot.
-
-Assisted-by: LLM
 ---
  ucm2/Rockchip/es8388/HiFi.conf                | 73 +++++++++++++++++++
  ucm2/Rockchip/es8388/es8388.conf              | 34 +++++++++

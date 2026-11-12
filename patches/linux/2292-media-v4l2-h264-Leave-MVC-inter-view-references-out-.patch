@@ -10,7 +10,6 @@ the DPB come after them (H.8.2.1), in an order which the subset SPS
 gives: leave them out of the lists the builder makes, for the driver to
 append.
 
-Assisted-by: LLM
 Signed-off-by: Arun Iyengar <aiyengar1990@gmail.com>
 ---
  drivers/media/v4l2-core/v4l2-h264.c | 14 ++++++++++++--

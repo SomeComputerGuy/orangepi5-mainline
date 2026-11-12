@@ -1,7 +1,7 @@
-From 286be6ab5c6246aa6b1c5eee3c49fd67f152afa0 Mon Sep 17 00:00:00 2001
+From 6eeaaa2cb9c26b454a2bb05dd60d301540e53698 Mon Sep 17 00:00:00 2001
 From: Arun Iyengar <aiyengar1990@gmail.com>
 Date: Thu, 5 Nov 2026 06:49:56 +0000
-Subject: [PATCH 2303/2312] media: verisilicon: rockchip: vpu2: decode MPEG-1
+Subject: [PATCH] media: verisilicon: rockchip: vpu2: decode MPEG-1
 
 The VPU2 (VDPU2) decoder has an MPEG-1 mode next to its MPEG-2 mode:
 decoding mode 6 instead of 5, with the same buffers, quantiser table
@@ -28,7 +28,6 @@ the sequence control.
 Tested on RK3588 (VPU121) with the MPEG-1 bitstreams of the ISO/IEC
 13818-4 conformance suite through FFmpeg's v4l2-request hwaccel.
 
-Assisted-by: LLM
 Signed-off-by: Arun Iyengar <aiyengar1990@gmail.com>
 ---
  drivers/media/platform/verisilicon/hantro.h   |  3 +++
@@ -38,7 +37,7 @@ Signed-off-by: Arun Iyengar <aiyengar1990@gmail.com>
  4 files changed, 36 insertions(+), 9 deletions(-)
 
 diff --git a/drivers/media/platform/verisilicon/hantro.h b/drivers/media/platform/verisilicon/hantro.h
-index 614b02a22618..1ef5118b551c 100644
+index ddb015ca877d..0526e02eab5e 100644
 --- a/drivers/media/platform/verisilicon/hantro.h
 +++ b/drivers/media/platform/verisilicon/hantro.h
 @@ -82,6 +82,8 @@ struct hantro_irq {
@@ -59,10 +58,10 @@ index 614b02a22618..1ef5118b551c 100644
  	const struct of_device_id *shared_devices;
  };
 diff --git a/drivers/media/platform/verisilicon/hantro_drv.c b/drivers/media/platform/verisilicon/hantro_drv.c
-index 4e50168dbb8f..5bedb3e3971d 100644
+index e2f12d11bf04..99d59d45c3de 100644
 --- a/drivers/media/platform/verisilicon/hantro_drv.c
 +++ b/drivers/media/platform/verisilicon/hantro_drv.c
-@@ -363,6 +363,9 @@ queue_init(void *priv, struct vb2_queue *src_vq, struct vb2_queue *dst_vq)
+@@ -371,6 +371,9 @@ queue_init(void *priv, struct vb2_queue *src_vq, struct vb2_queue *dst_vq)
  
  static int hantro_try_ctrl(struct v4l2_ctrl *ctrl)
  {
@@ -72,7 +71,7 @@ index 4e50168dbb8f..5bedb3e3971d 100644
  	if (ctrl->id == V4L2_CID_STATELESS_H264_SPS) {
  		const struct v4l2_ctrl_h264_sps *sps = ctrl->p_new.p_h264_sps;
  
-@@ -395,16 +398,19 @@ static int hantro_try_ctrl(struct v4l2_ctrl *ctrl)
+@@ -403,16 +406,19 @@ static int hantro_try_ctrl(struct v4l2_ctrl *ctrl)
  	} else if (ctrl->id == V4L2_CID_STATELESS_MPEG2_SEQUENCE) {
  		const struct v4l2_ctrl_mpeg2_sequence *seq = ctrl->p_new.p_mpeg2_sequence;
  
@@ -151,10 +150,10 @@ index 57907dd5ea9c..dc0154fd1538 100644
  
  	rockchip_vpu2_mpeg2_dec_set_quantisation(vpu, ctx);
 diff --git a/drivers/media/platform/verisilicon/rockchip_vpu_hw.c b/drivers/media/platform/verisilicon/rockchip_vpu_hw.c
-index aab79ec511bf..5c6018ac4696 100644
+index addc08148d9f..3da2d009fefa 100644
 --- a/drivers/media/platform/verisilicon/rockchip_vpu_hw.c
 +++ b/drivers/media/platform/verisilicon/rockchip_vpu_hw.c
-@@ -965,6 +965,7 @@ const struct hantro_variant rk3399_vpu_variant = {
+@@ -981,6 +981,7 @@ const struct hantro_variant rk3399_vpu_variant = {
  	.num_dec_fmts = ARRAY_SIZE(rk3399_vpu_dec_fmts),
  	.codec = HANTRO_JPEG_ENCODER | HANTRO_MPEG2_DECODER |
  		 HANTRO_VP8_DECODER,
@@ -162,7 +161,7 @@ index aab79ec511bf..5c6018ac4696 100644
  	.codec_ops = rk3399_vpu_codec_ops,
  	.irqs = rockchip_vpu2_irqs,
  	.num_irqs = ARRAY_SIZE(rockchip_vpu2_irqs),
-@@ -1010,6 +1011,7 @@ const struct hantro_variant rk3568_vpu_variant = {
+@@ -1026,6 +1027,7 @@ const struct hantro_variant rk3568_vpu_variant = {
  	.num_dec_fmts = ARRAY_SIZE(rockchip_vdpu2_dec_fmts),
  	.codec = HANTRO_MPEG2_DECODER |
  		 HANTRO_VP8_DECODER | HANTRO_H264_DECODER,
@@ -170,7 +169,7 @@ index aab79ec511bf..5c6018ac4696 100644
  	.codec_ops = rk3399_vpu_codec_ops,
  	.irqs = rockchip_vdpu2_irqs,
  	.num_irqs = ARRAY_SIZE(rockchip_vdpu2_irqs),
-@@ -1032,6 +1034,7 @@ const struct hantro_variant rk3588_vpu121_variant = {
+@@ -1048,6 +1050,7 @@ const struct hantro_variant rk3588_vpu121_variant = {
  	.num_dec_fmts = ARRAY_SIZE(rockchip_vdpu2_dec_fmts),
  	.codec = HANTRO_H264_ENCODER | HANTRO_MPEG2_DECODER |
  		 HANTRO_VP8_DECODER | HANTRO_H264_DECODER,
@@ -178,7 +177,7 @@ index aab79ec511bf..5c6018ac4696 100644
  	.codec_ops = rk3588_vpu121_codec_ops,
  	.irqs = rk3588_vpu121_irqs,
  	.num_irqs = ARRAY_SIZE(rk3588_vpu121_irqs),
-@@ -1067,6 +1070,7 @@ const struct hantro_variant px30_vpu_variant = {
+@@ -1083,6 +1086,7 @@ const struct hantro_variant px30_vpu_variant = {
  	.num_dec_fmts = ARRAY_SIZE(rockchip_vdpu2_dec_fmts),
  	.codec = HANTRO_JPEG_ENCODER | HANTRO_MPEG2_DECODER |
  		 HANTRO_VP8_DECODER | HANTRO_H264_DECODER,

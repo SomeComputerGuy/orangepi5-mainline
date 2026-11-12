@@ -11,7 +11,6 @@ direct mode" change the decoded B pictures of SMM0005 (frames 9, 11, ...,
 decoder. The FATE reference is FFmpeg's own earlier output, so update it.
 All other FATE tests are unchanged.
 
-Assisted-by: LLM
 Signed-off-by: Arun Iyengar <aiyengar1990@gmail.com>
 ---
  tests/ref/fate/vc1test_smm0005 | 14 +++++++-------

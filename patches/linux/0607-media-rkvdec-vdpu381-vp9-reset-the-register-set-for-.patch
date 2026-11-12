@@ -21,7 +21,6 @@ values from earlier frames leak into later ones:
 Clear the register set before programming each frame, as the H.264 and
 HEVC VDPU381 backends already do.
 
-Assisted-by: LLM
 Signed-off-by: Arun Iyengar <aiyengar1990@gmail.com>
 ---
  .../media/platform/rockchip/rkvdec/rkvdec-vdpu381-vp9.c    | 7 +++++++

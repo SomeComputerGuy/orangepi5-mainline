@@ -36,7 +36,6 @@ Bit-exact on the 12 PKU AVS2 conformance streams (416x240 to 1080p,
 all-intra, low delay and random access, ALF and SAO on) and 5 xavs2
 streams (1080p and 2160p).
 
-Assisted-by: LLM
 Signed-off-by: Arun Iyengar <aiyengar1990@gmail.com>
 ---
  .../media/platform/rockchip/rkvdec/Makefile   |   1 +

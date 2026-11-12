@@ -26,7 +26,6 @@ so the "clean slate" that tcpm_init() asks for never happens.
 If the delay has not expired yet, re-arm the timer for the time left
 and return, as tcpm_send_queued_message() already does.
 
-Assisted-by: LLM
 Signed-off-by: Arun Iyengar <aiyengar1990@gmail.com>
 ---
  drivers/usb/typec/tcpm/tcpm.c | 12 ++++++++++++

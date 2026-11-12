@@ -1,0 +1,46 @@
+From 847cd394143e778982e8bd63d69f4385718c8066 Mon Sep 17 00:00:00 2001
+From: Yao Zi <me@ziyao.cc>
+Date: Thu, 5 Nov 2026 00:12:56 +0000
+Subject: [PATCH] pmdomain: rockchip: Only put clocks that have been
+ successfully obtained
+
+Since pd->num_clks represents the number of clocks described in
+devicetree, invoking clk_bulk_put() with it will put invalid pointers
+when some clocks cannot be obtained, triggering a warning in CCF like,
+
+  WARNING: drivers/clk/clk.c:4844 at __clk_put+0xf8/0x12c, CPU#0: swapper/0/1
+  Call trace:
+    __clk_put+0xf8/0x12c (P)
+    clk_put+0x10/0x20
+    clk_bulk_put+0x38/0x60
+    rockchip_pm_add_one_domain+0x2b0/0x468
+    rockchip_pm_domain_probe+0xd4/0x2f0
+    platform_probe+0x80/0xac
+    ...
+
+Invoke clk_bulk_put() with the counter used in the loop of obtaining
+clocks instead.
+
+Fixes: d8b384777066 ("pmdomain: rockchip: fix clock leak on domain probe failure")
+Signed-off-by: Yao Zi <me@ziyao.cc>
+Cc: stable@vger.kernel.org
+---
+ drivers/pmdomain/rockchip/pm-domains.c | 2 +-
+ 1 file changed, 1 insertion(+), 1 deletion(-)
+
+diff --git a/drivers/pmdomain/rockchip/pm-domains.c b/drivers/pmdomain/rockchip/pm-domains.c
+index e193f978d5f3..538e7e2d148e 100644
+--- a/drivers/pmdomain/rockchip/pm-domains.c
++++ b/drivers/pmdomain/rockchip/pm-domains.c
+@@ -931,7 +931,7 @@ static int rockchip_pm_add_one_domain(struct rockchip_pmu *pmu,
+ err_unprepare_clocks:
+ 	clk_bulk_unprepare(pd->num_clks, pd->clks);
+ err_put_clocks:
+-	clk_bulk_put(pd->num_clks, pd->clks);
++	clk_bulk_put(i, pd->clks);
+ 	return error;
+ }
+ 
+-- 
+2.55.0
+

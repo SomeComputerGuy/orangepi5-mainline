@@ -1,0 +1,68 @@
+From 87283d7e9e8395d962852db9d3198c43892b8608 Mon Sep 17 00:00:00 2001
+From: Nicolas Frattaroli <nicolas.frattaroli@collabora.com>
+Date: Sat, 7 Nov 2026 20:27:13 +0000
+Subject: [PATCH 2324/2409] drm/connector: Add drm_display_info_is_vrr_capable
+
+Add a function to return whether a sink, as described by a
+drm_display_info struct, is capable of receiving VRR signals.
+
+For HDMI sinks, this can just check the HDMI specific vrr_capable field,
+which is set by the EDID parsing code. For other types of displays, the
+generally agreed-upon method appears to be to check whether the monitor
+range's minimum frequency is above 0.
+
+Signed-off-by: Nicolas Frattaroli <nicolas.frattaroli@collabora.com>
+[Arun: ported from the RFC series "VRR Target Rate Limiter KMS uAPI and
+ Implementation" (dri-devel, 2026-09-21) onto v7.3]
+Signed-off-by: Arun Iyengar <aiyengar1990@gmail.com>
+---
+ drivers/gpu/drm/drm_connector.c | 19 +++++++++++++++++++
+ include/drm/drm_connector.h     |  2 ++
+ 2 files changed, 21 insertions(+)
+
+diff --git a/drivers/gpu/drm/drm_connector.c b/drivers/gpu/drm/drm_connector.c
+index de168c77be64..0c88d560e2a8 100644
+--- a/drivers/gpu/drm/drm_connector.c
++++ b/drivers/gpu/drm/drm_connector.c
+@@ -1378,6 +1378,25 @@ int drm_display_info_set_bus_formats(struct drm_display_info *info,
+ }
+ EXPORT_SYMBOL(drm_display_info_set_bus_formats);
+ 
++/**
++ * drm_display_info_is_vrr_capable - Check whether sink is VRR capable
++ * @info: pointer to a &struct drm_display_info representing the sink
++ *
++ * Check whether the sink supports variable refresh rate signals.
++ *
++ * Returns:
++ * - true if variable refresh rate is supported by the sink
++ * - false otherwise
++ */
++bool drm_display_info_is_vrr_capable(const struct drm_display_info *info)
++{
++	if (info->is_hdmi)
++		return info->hdmi.vrr_capable;
++
++	return info->monitor_range.min_vfreq > 0;
++}
++EXPORT_SYMBOL(drm_display_info_is_vrr_capable);
++
+ /* Optional connector properties. */
+ static const struct drm_prop_enum_list drm_scaling_mode_enum_list[] = {
+ 	{ DRM_MODE_SCALE_NONE, "None" },
+diff --git a/include/drm/drm_connector.h b/include/drm/drm_connector.h
+index ddea47d1c6b6..d7b3b3a3a4a9 100644
+--- a/include/drm/drm_connector.h
++++ b/include/drm/drm_connector.h
+@@ -1005,6 +1005,8 @@ int drm_display_info_set_bus_formats(struct drm_display_info *info,
+ 				     const u32 *formats,
+ 				     unsigned int num_formats);
+ 
++bool drm_display_info_is_vrr_capable(const struct drm_display_info *info);
++
+ /**
+  * struct drm_connector_tv_margins - TV connector related margins
+  *
+-- 
+2.55.0
+

@@ -1,7 +1,7 @@
-From 075187e39e22ba980b02e4c1bc0e170894e2715d Mon Sep 17 00:00:00 2001
+From fa8a881608a36eebbc412879db5ac994a64c1647 Mon Sep 17 00:00:00 2001
 From: Arun Iyengar <aiyengar1990@gmail.com>
 Date: Thu, 29 Oct 2026 22:37:21 +0000
-Subject: [PATCH 4/8] media: verisilicon: Find the second MPEG-2 field without
+Subject: [PATCH] media: verisilicon: Find the second MPEG-2 field without
  top_field_first
 
 The second field of a field-coded P frame can predict from the first
@@ -28,7 +28,9 @@ V4L2_BUF_FLAG_M2M_HOLD_CAPTURE_BUF. Track that in the context and use
 it in both back-ends. This also replaces the VPU2 back-end's test of
 V4L2_MPEG2_PIC_TOP_FIELD, a picture_structure value, against the flags.
 
-Assisted-by: LLM
+Fixes: ceaac6dc5b7a ("media: rockchip/vpu: Add support for MPEG-2 decoding on RK3288")
+Fixes: 879dee56a40c ("media: rockchip/vpu: Add MPEG2 decoding support to RK3399")
+Cc: stable@vger.kernel.org
 Signed-off-by: Arun Iyengar <aiyengar1990@gmail.com>
 ---
  .../verisilicon/hantro_g1_mpeg2_dec.c         |  8 ++---
@@ -38,7 +40,7 @@ Signed-off-by: Arun Iyengar <aiyengar1990@gmail.com>
  4 files changed, 47 insertions(+), 8 deletions(-)
 
 diff --git a/drivers/media/platform/verisilicon/hantro_g1_mpeg2_dec.c b/drivers/media/platform/verisilicon/hantro_g1_mpeg2_dec.c
-index e0d6bd0a6..bb2871ec4 100644
+index e0d6bd0a6e44..bb2871ec4b9b 100644
 --- a/drivers/media/platform/verisilicon/hantro_g1_mpeg2_dec.c
 +++ b/drivers/media/platform/verisilicon/hantro_g1_mpeg2_dec.c
 @@ -97,6 +97,9 @@ hantro_g1_mpeg2_dec_set_buffers(struct hantro_dev *vpu, struct hantro_ctx *ctx,
@@ -64,7 +66,7 @@ index e0d6bd0a6..bb2871ec4 100644
  		vdpu_write_relaxed(vpu, forward_addr, G1_REG_REFER1_BASE);
  	} else if (pic->picture_structure == V4L2_MPEG2_PIC_TOP_FIELD) {
 diff --git a/drivers/media/platform/verisilicon/hantro_hw.h b/drivers/media/platform/verisilicon/hantro_hw.h
-index 505ca6f06..58fc19e3c 100644
+index 4529d5e8a6e9..0db3e66d5b02 100644
 --- a/drivers/media/platform/verisilicon/hantro_hw.h
 +++ b/drivers/media/platform/verisilicon/hantro_hw.h
 @@ -191,9 +191,14 @@ struct hantro_hevc_dec_hw_ctx {
@@ -82,7 +84,7 @@ index 505ca6f06..58fc19e3c 100644
  };
  
  /**
-@@ -607,6 +612,9 @@ int hantro_g1_mpeg2_dec_run(struct hantro_ctx *ctx);
+@@ -608,6 +613,9 @@ int hantro_g1_mpeg2_dec_run(struct hantro_ctx *ctx);
  int rockchip_vpu2_mpeg2_dec_run(struct hantro_ctx *ctx);
  void hantro_mpeg2_dec_copy_qtable(u8 *qtable,
  				  const struct v4l2_ctrl_mpeg2_quantisation *ctrl);
@@ -93,7 +95,7 @@ index 505ca6f06..58fc19e3c 100644
  void hantro_mpeg2_dec_exit(struct hantro_ctx *ctx);
  
 diff --git a/drivers/media/platform/verisilicon/hantro_mpeg2.c b/drivers/media/platform/verisilicon/hantro_mpeg2.c
-index 04e545eb0..e5d70c64d 100644
+index 04e545eb0a83..e5d70c64d7a7 100644
 --- a/drivers/media/platform/verisilicon/hantro_mpeg2.c
 +++ b/drivers/media/platform/verisilicon/hantro_mpeg2.c
 @@ -35,10 +35,41 @@ void hantro_mpeg2_dec_copy_qtable(u8 *qtable,
@@ -139,7 +141,7 @@ index 04e545eb0..e5d70c64d 100644
  	ctx->mpeg2_dec.qtable.cpu =
  		dma_alloc_coherent(vpu->dev,
 diff --git a/drivers/media/platform/verisilicon/rockchip_vpu2_hw_mpeg2_dec.c b/drivers/media/platform/verisilicon/rockchip_vpu2_hw_mpeg2_dec.c
-index 50a3a3eea..57907dd5e 100644
+index 50a3a3eeaa00..57907dd5ea9c 100644
 --- a/drivers/media/platform/verisilicon/rockchip_vpu2_hw_mpeg2_dec.c
 +++ b/drivers/media/platform/verisilicon/rockchip_vpu2_hw_mpeg2_dec.c
 @@ -100,6 +100,9 @@ rockchip_vpu2_mpeg2_dec_set_buffers(struct hantro_dev *vpu,

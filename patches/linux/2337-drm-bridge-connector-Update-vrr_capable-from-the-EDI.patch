@@ -1,0 +1,109 @@
+From e84d5eb730b2c64f6c91f71efd72efc31503668d Mon Sep 17 00:00:00 2001
+From: Arun Iyengar <aiyengar1990@gmail.com>
+Date: Sat, 7 Nov 2026 23:20:19 +0000
+Subject: [PATCH 2337/2409] drm/bridge-connector: Update vrr_capable from the
+ EDID
+
+The "vrr_capable" connector property tells userspace whether it may
+enable a variable refresh rate on the CRTC. For bridge connectors that
+are not HDMI connectors nothing ever sets it, so a driver that attaches
+it leaves it at 0.
+
+It describes the sink, so set it where the bridge connector updates the
+display info from the EDID. Whether a sink can do VRR depends on more
+than the EDID for some links: a DisplayPort sink must also be able to
+ignore the timing in the MSA, which only its DPCD tells. Add an optional
+&drm_bridge_funcs.vrr_capable callback for the bridge that reads the
+EDID to decide, and fall back to drm_display_info_is_vrr_capable()
+without it. HDMI bridge connectors keep the update in the HDMI state
+helper.
+
+Signed-off-by: Arun Iyengar <aiyengar1990@gmail.com>
+---
+ .../gpu/drm/display/drm_bridge_connector.c    | 24 +++++++++++++++++++
+ include/drm/drm_bridge.h                      | 20 ++++++++++++++++
+ 2 files changed, 44 insertions(+)
+
+diff --git a/drivers/gpu/drm/display/drm_bridge_connector.c b/drivers/gpu/drm/display/drm_bridge_connector.c
+index 68083a8d1339..161479711f94 100644
+--- a/drivers/gpu/drm/display/drm_bridge_connector.c
++++ b/drivers/gpu/drm/display/drm_bridge_connector.c
+@@ -344,6 +344,28 @@ static int drm_bridge_connector_force_ctx(struct drm_connector *connector,
+ 	return 0;
+ }
+ 
++/*
++ * The vrr_capable property describes the sink, so it follows the EDID: update
++ * it whenever display_info changes, for the connectors that attached it.
++ */
++static void drm_bridge_connector_update_vrr_capable(struct drm_connector *connector,
++						    struct drm_bridge *bridge)
++{
++	bool capable;
++
++	if (!connector->vrr_capable_property)
++		return;
++
++	if (connector->status != connector_status_connected)
++		capable = false;
++	else if (bridge->funcs->vrr_capable)
++		capable = bridge->funcs->vrr_capable(bridge, connector);
++	else
++		capable = drm_display_info_is_vrr_capable(&connector->display_info);
++
++	drm_connector_set_vrr_capable_property(connector, capable);
++}
++
+ static int drm_bridge_connector_get_modes_edid(struct drm_connector *connector,
+ 					       struct drm_bridge *bridge)
+ {
+@@ -360,6 +382,7 @@ static int drm_bridge_connector_get_modes_edid(struct drm_connector *connector,
+ 	}
+ 
+ 	drm_edid_connector_update(connector, drm_edid);
++	drm_bridge_connector_update_vrr_capable(connector, bridge);
+ 	n = drm_edid_connector_add_modes(connector);
+ 
+ 	drm_edid_free(drm_edid);
+@@ -367,6 +390,7 @@ static int drm_bridge_connector_get_modes_edid(struct drm_connector *connector,
+ 
+ no_edid:
+ 	drm_edid_connector_update(connector, NULL);
++	drm_bridge_connector_update_vrr_capable(connector, bridge);
+ 	return 0;
+ }
+ 
+diff --git a/include/drm/drm_bridge.h b/include/drm/drm_bridge.h
+index 37ef89f3cb19..584d69dbd4bd 100644
+--- a/include/drm/drm_bridge.h
++++ b/include/drm/drm_bridge.h
+@@ -497,6 +497,26 @@ struct drm_bridge_funcs {
+ 	const struct drm_edid *(*edid_read)(struct drm_bridge *bridge,
+ 					    struct drm_connector *connector);
+ 
++	/**
++	 * @vrr_capable:
++	 *
++	 * Tell whether the sink can be driven with a variable refresh rate
++	 * through this bridge. The bridge connector calls it on the bridge
++	 * that reads the EDID (&DRM_BRIDGE_OP_EDID), right after updating
++	 * &drm_connector.display_info from the EDID, and sets the
++	 * "vrr_capable" connector property from it, if the connector has
++	 * that property.
++	 *
++	 * This callback is optional. Without it, the property follows
++	 * drm_display_info_is_vrr_capable().
++	 *
++	 * RETURNS:
++	 *
++	 * True if the sink supports a variable refresh rate on this link.
++	 */
++	bool (*vrr_capable)(struct drm_bridge *bridge,
++			    struct drm_connector *connector);
++
+ 	/**
+ 	 * @hpd_notify:
+ 	 *
+-- 
+2.55.0
+

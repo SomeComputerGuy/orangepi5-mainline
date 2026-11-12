@@ -35,7 +35,6 @@ cannot race with STREAMON.
 This drops include/uapi/linux/rockchip-iep.h and the
 V4L2_CID_USER_ROCKCHIP_IEP_BASE range, which have no other users.
 
-Assisted-by: LLM checkpatch
 Signed-off-by: Arun Iyengar <aiyengar1990@gmail.com>
 ---
  MAINTAINERS                               |  1 -

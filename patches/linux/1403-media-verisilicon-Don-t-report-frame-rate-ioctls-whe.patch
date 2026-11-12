@@ -1,7 +1,7 @@
-From 35e81f4b490a54c911234ebb3ac160aae2172a30 Mon Sep 17 00:00:00 2001
+From 157df6dc734b95c47baaa940da0ee778217a5e1e Mon Sep 17 00:00:00 2001
 From: Arun Iyengar <aiyengar1990@gmail.com>
 Date: Thu, 29 Oct 2026 22:27:25 +0000
-Subject: [PATCH 3/8] media: verisilicon: Don't report frame rate ioctls when
+Subject: [PATCH] media: verisilicon: Don't report frame rate ioctls when
  encoding JPEG
 
 The frame interval and streaming parameter ioctls for encoders are
@@ -20,7 +20,6 @@ buffer type. On encoders that also do video, like the RK3588 VPU121,
 return -ENOTTY from them while the CAPTURE format is JPEG.
 
 Fixes: ced67ee1fffe ("media: verisilicon: Add common encoder parm and frameintervals ioctls")
-Assisted-by: LLM
 Signed-off-by: Arun Iyengar <aiyengar1990@gmail.com>
 ---
  .../media/platform/verisilicon/hantro_drv.c   | 21 +++++++++++++++++++
@@ -28,10 +27,10 @@ Signed-off-by: Arun Iyengar <aiyengar1990@gmail.com>
  2 files changed, 40 insertions(+)
 
 diff --git a/drivers/media/platform/verisilicon/hantro_drv.c b/drivers/media/platform/verisilicon/hantro_drv.c
-index bb40fed10..973ac1f05 100644
+index 8ba7cee56ceb..2d7ea42d2629 100644
 --- a/drivers/media/platform/verisilicon/hantro_drv.c
 +++ b/drivers/media/platform/verisilicon/hantro_drv.c
-@@ -1099,6 +1099,22 @@ static void hantro_detach_func(struct hantro_func *func)
+@@ -1107,6 +1107,22 @@ static void hantro_detach_func(struct hantro_func *func)
  	media_entity_cleanup(&func->vdev.entity);
  }
  
@@ -54,7 +53,7 @@ index bb40fed10..973ac1f05 100644
  static int hantro_add_func(struct hantro_dev *vpu, unsigned int funcid)
  {
  	const struct of_device_id *match;
-@@ -1131,6 +1147,11 @@ static int hantro_add_func(struct hantro_dev *vpu, unsigned int funcid)
+@@ -1139,6 +1155,11 @@ static int hantro_add_func(struct hantro_dev *vpu, unsigned int funcid)
  		vpu->encoder = func;
  		v4l2_disable_ioctl(vfd, VIDIOC_TRY_DECODER_CMD);
  		v4l2_disable_ioctl(vfd, VIDIOC_DECODER_CMD);
@@ -67,7 +66,7 @@ index bb40fed10..973ac1f05 100644
  		vpu->decoder = func;
  		v4l2_disable_ioctl(vfd, VIDIOC_TRY_ENCODER_CMD);
 diff --git a/drivers/media/platform/verisilicon/hantro_v4l2.c b/drivers/media/platform/verisilicon/hantro_v4l2.c
-index 156170805..6b4a23bea 100644
+index e2843d0de716..1092cb4e6652 100644
 --- a/drivers/media/platform/verisilicon/hantro_v4l2.c
 +++ b/drivers/media/platform/verisilicon/hantro_v4l2.c
 @@ -213,6 +213,16 @@ static int vidioc_enum_framesizes(struct file *file, void *priv,
@@ -97,7 +96,7 @@ index 156170805..6b4a23bea 100644
  	if (fival->index > 0)
  		return -EINVAL;
  
-@@ -846,6 +859,9 @@ static int vidioc_g_parm(struct file *file, void *priv,
+@@ -847,6 +860,9 @@ static int vidioc_g_parm(struct file *file, void *priv,
  	struct hantro_ctx *ctx = file_to_ctx(file);
  	struct v4l2_fract *timeperframe;
  
@@ -107,7 +106,7 @@ index 156170805..6b4a23bea 100644
  	if (V4L2_TYPE_IS_OUTPUT(parm->type)) {
  		timeperframe = &ctx->src_timeperframe;
  		parm->parm.output.capability = V4L2_CAP_TIMEPERFRAME;
-@@ -867,6 +883,9 @@ static int vidioc_s_parm(struct file *file, void *priv,
+@@ -868,6 +884,9 @@ static int vidioc_s_parm(struct file *file, void *priv,
  	struct v4l2_fract *timeperframe_ctx;
  	struct v4l2_fract *timeperframe;
  

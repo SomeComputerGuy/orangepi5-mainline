@@ -1,4 +1,4 @@
-From 285cee34b2371be5ca592640e81fd4f3fd568094 Mon Sep 17 00:00:00 2001
+From cacc9e1c0a33d51d0f027da6dcca0022056f4528 Mon Sep 17 00:00:00 2001
 From: Arun Iyengar <aiyengar1990@gmail.com>
 Date: Thu, 29 Oct 2026 12:59:52 +0000
 Subject: [PATCH] media: verisilicon: Add H.264 encoding to the Rockchip VEPU2
@@ -64,7 +64,6 @@ The meaning of the hardware slice header and of the stream offset
 registers was checked against the Rockchip MPP userspace driver
 (hal_h264e_vepu2_v2.c), no code was taken from it.
 
-Assisted-by: LLM
 Signed-off-by: Arun Iyengar <aiyengar1990@gmail.com>
 ---
  drivers/media/platform/verisilicon/Kconfig    |   1 +
@@ -78,7 +77,7 @@ Signed-off-by: Arun Iyengar <aiyengar1990@gmail.com>
  create mode 100644 drivers/media/platform/verisilicon/rockchip_vpu2_hw_h264_enc.c
 
 diff --git a/drivers/media/platform/verisilicon/Kconfig b/drivers/media/platform/verisilicon/Kconfig
-index 3272a24db..ae186a848 100644
+index 3272a24db71d..ae186a848e24 100644
 --- a/drivers/media/platform/verisilicon/Kconfig
 +++ b/drivers/media/platform/verisilicon/Kconfig
 @@ -12,6 +12,7 @@ config VIDEO_HANTRO
@@ -90,7 +89,7 @@ index 3272a24db..ae186a848 100644
  	select V4L2_VP9
  	help
 diff --git a/drivers/media/platform/verisilicon/Makefile b/drivers/media/platform/verisilicon/Makefile
-index f6f019d04..194b2d568 100644
+index f6f019d04ff0..194b2d568719 100644
 --- a/drivers/media/platform/verisilicon/Makefile
 +++ b/drivers/media/platform/verisilicon/Makefile
 @@ -29,6 +29,7 @@ hantro-vpu-$(CONFIG_VIDEO_HANTRO_SAMA5D4) += \
@@ -102,7 +101,7 @@ index f6f019d04..194b2d568 100644
  		rockchip_vpu2_hw_mpeg2_dec.o \
  		rockchip_vpu2_hw_vp8_dec.o \
 diff --git a/drivers/media/platform/verisilicon/hantro.h b/drivers/media/platform/verisilicon/hantro.h
-index 2d5b3d374..bb758a228 100644
+index 8c9a31b7e32b..301e27c2dded 100644
 --- a/drivers/media/platform/verisilicon/hantro.h
 +++ b/drivers/media/platform/verisilicon/hantro.h
 @@ -32,6 +32,7 @@ struct hantro_codec_ops;
@@ -150,17 +149,17 @@ index 2d5b3d374..bb758a228 100644
 + * @no_encoder:		The interrupt of the encoder isn't described, the
 + *			encoder is not exposed.
   * @empty_domain:	Empty IOMMU domain, used to reinitialize the IOMMU after
-  *			a timeout. NULL if the VPU isn't behind an IOMMU.
-  */
-@@ -251,6 +259,7 @@ struct hantro_dev {
+  *			a reset of the core. NULL if not needed.
+  * @iommu_lost:		The IOMMU couldn't be reinitialized, no job can run.
+@@ -252,6 +260,7 @@ struct hantro_dev {
  	spinlock_t cores_lock; /* protects the core list and curr_ctx */
  	enum hantro_core_role role;
  	struct iommu_domain *attached_domain;
 +	bool no_encoder;
  	struct iommu_domain *empty_domain;
+ 	bool iommu_lost;
  };
- 
-@@ -318,6 +327,7 @@ struct hantro_ctx {
+@@ -320,6 +329,7 @@ struct hantro_ctx {
  	/* Specific for particular codec modes. */
  	union {
  		struct hantro_h264_dec_hw_ctx h264_dec;
@@ -169,10 +168,10 @@ index 2d5b3d374..bb758a228 100644
  		struct hantro_vp8_dec_hw_ctx vp8_dec;
  		struct hantro_hevc_dec_hw_ctx hevc_dec;
 diff --git a/drivers/media/platform/verisilicon/hantro_drv.c b/drivers/media/platform/verisilicon/hantro_drv.c
-index a3dde312c..bb40fed10 100644
+index 3e2c9f1b29ba..8ba7cee56ceb 100644
 --- a/drivers/media/platform/verisilicon/hantro_drv.c
 +++ b/drivers/media/platform/verisilicon/hantro_drv.c
-@@ -539,6 +539,118 @@ static const struct hantro_ctrl controls[] = {
+@@ -547,6 +547,118 @@ static const struct hantro_ctrl controls[] = {
  			 */
  			.flags = V4L2_CTRL_FLAG_READ_ONLY,
  		},
@@ -291,7 +290,7 @@ index a3dde312c..bb40fed10 100644
  	}, {
  		.codec = HANTRO_MPEG2_DECODER,
  		.cfg = {
-@@ -821,6 +933,7 @@ static const struct of_device_id of_hantro_match[] = {
+@@ -829,6 +941,7 @@ static const struct of_device_id of_hantro_match[] = {
  	{ .compatible = "rockchip,rk3568-vepu", .data = &rk3568_vepu_variant, },
  	{ .compatible = "rockchip,rk3568-vpu", .data = &rk3568_vpu_variant, },
  	{ .compatible = "rockchip,rk3588-vepu121", .data = &rk3588_vepu121_variant, },
@@ -299,7 +298,7 @@ index a3dde312c..bb40fed10 100644
  	{ .compatible = "rockchip,rk3588-av1-vpu", .data = &rk3588_vpu981_variant, },
  #endif
  #ifdef CONFIG_VIDEO_HANTRO_IMX8M
-@@ -1056,7 +1169,7 @@ static int hantro_add_func(struct hantro_dev *vpu, unsigned int funcid)
+@@ -1064,7 +1177,7 @@ static int hantro_add_func(struct hantro_dev *vpu, unsigned int funcid)
  
  static int hantro_add_enc_func(struct hantro_dev *vpu)
  {
@@ -327,7 +326,7 @@ index a3dde312c..bb40fed10 100644
  			irq = platform_get_irq_byname(vpu->pdev, irq_name);
  		} else {
 diff --git a/drivers/media/platform/verisilicon/hantro_hw.h b/drivers/media/platform/verisilicon/hantro_hw.h
-index cbc161593..505ca6f06 100644
+index 2dbd4bb7ab11..4529d5e8a6e9 100644
 --- a/drivers/media/platform/verisilicon/hantro_hw.h
 +++ b/drivers/media/platform/verisilicon/hantro_hw.h
 @@ -12,6 +12,7 @@
@@ -372,7 +371,7 @@ index cbc161593..505ca6f06 100644
  extern const struct hantro_variant rk3588_vepu121_variant;
  extern const struct hantro_variant rk3588_vpu981_variant;
  extern const struct hantro_variant sama5d4_vdec_variant;
-@@ -445,6 +466,11 @@ int rockchip_vpu2_jpeg_enc_run(struct hantro_ctx *ctx);
+@@ -446,6 +467,11 @@ int rockchip_vpu2_jpeg_enc_run(struct hantro_ctx *ctx);
  void hantro_h1_jpeg_enc_done(struct hantro_ctx *ctx);
  void rockchip_vpu2_jpeg_enc_done(struct hantro_ctx *ctx);
  
@@ -386,7 +385,7 @@ index cbc161593..505ca6f06 100644
  u16 hantro_h264_get_ref_nbr(struct hantro_ctx *ctx,
 diff --git a/drivers/media/platform/verisilicon/rockchip_vpu2_hw_h264_enc.c b/drivers/media/platform/verisilicon/rockchip_vpu2_hw_h264_enc.c
 new file mode 100644
-index 000000000..853ddd9ab
+index 000000000000..853ddd9abb50
 --- /dev/null
 +++ b/drivers/media/platform/verisilicon/rockchip_vpu2_hw_h264_enc.c
 @@ -0,0 +1,725 @@
@@ -1116,7 +1115,7 @@ index 000000000..853ddd9ab
 +	v4l2_h264_enc_complete(enc, dst_buf);
 +}
 diff --git a/drivers/media/platform/verisilicon/rockchip_vpu_hw.c b/drivers/media/platform/verisilicon/rockchip_vpu_hw.c
-index 621619d4f..9d9baa8eb 100644
+index a0c427ef561a..0b9ec4b362c5 100644
 --- a/drivers/media/platform/verisilicon/rockchip_vpu_hw.c
 +++ b/drivers/media/platform/verisilicon/rockchip_vpu_hw.c
 @@ -62,6 +62,46 @@ static const struct hantro_fmt rockchip_vpu_enc_fmts[] = {
@@ -1166,7 +1165,7 @@ index 621619d4f..9d9baa8eb 100644
  static const struct hantro_fmt rockchip_vpu1_postproc_fmts[] = {
  	{
  		.fourcc = V4L2_PIX_FMT_YUYV,
-@@ -635,6 +675,34 @@ static const struct hantro_codec_ops rk3568_vepu_codec_ops[] = {
+@@ -651,6 +691,34 @@ static const struct hantro_codec_ops rk3568_vepu_codec_ops[] = {
  	},
  };
  
@@ -1201,7 +1200,7 @@ index 621619d4f..9d9baa8eb 100644
  static const struct hantro_codec_ops rk3588_vpu981_codec_ops[] = {
  	[HANTRO_MODE_AV1_DEC] = {
  		.run = rockchip_vpu981_av1_dec_run,
-@@ -665,6 +733,12 @@ static const struct hantro_irq rockchip_vpu2_irqs[] = {
+@@ -681,6 +749,12 @@ static const struct hantro_irq rockchip_vpu2_irqs[] = {
  	{ "vdpu", rockchip_vpu2_vdpu_irq },
  };
  
@@ -1214,7 +1213,7 @@ index 621619d4f..9d9baa8eb 100644
  static const struct hantro_irq rk3568_vepu_irqs[] = {
  	{ "vepu", rockchip_vpu2_vepu_irq },
  };
-@@ -833,6 +907,28 @@ const struct hantro_variant rk3568_vpu_variant = {
+@@ -849,6 +923,28 @@ const struct hantro_variant rk3568_vpu_variant = {
  	.num_clocks = ARRAY_SIZE(rockchip_vpu_clk_names)
  };
  
@@ -1243,3 +1242,6 @@ index 621619d4f..9d9baa8eb 100644
  const struct hantro_variant px30_vpu_variant = {
  	.enc_offset = 0x0,
  	.enc_fmts = rockchip_vpu_enc_fmts,
+-- 
+2.55.0
+

@@ -1,0 +1,94 @@
+From fdf31d2734fbfe05dbcaf7cd7444233e5acb16c3 Mon Sep 17 00:00:00 2001
+From: Arun Iyengar <aiyengar1990@gmail.com>
+Date: Tue, 10 Nov 2026 07:42:04 +0000
+Subject: [PATCH 2393/2409] media: rockchip: iep: Pad the OUTPUT buffers by a
+ constant page, use the PM ops macros
+
+The OUTPUT sizeimage tail padding came from a writable debug module
+parameter (src_tail, 4096 bytes) that changes the sizeimage userspace
+sees. Make it the constant IEP_SRC_TAIL (SZ_4K, the same value), and use
+SYSTEM_SLEEP_PM_OPS()/RUNTIME_PM_OPS() instead of the deprecated SET_*
+variants. No functional change with the default parameter value.
+
+This is the code of the upstream series; squash into "media: rockchip:
+add IEP2 deinterlacer driver" when patches/linux is regenerated.
+
+Signed-off-by: Arun Iyengar <aiyengar1990@gmail.com>
+---
+ drivers/media/platform/rockchip/iep/iep.c | 13 ++++---------
+ drivers/media/platform/rockchip/iep/iep.h |  7 +++++++
+ 2 files changed, 11 insertions(+), 9 deletions(-)
+
+diff --git a/drivers/media/platform/rockchip/iep/iep.c b/drivers/media/platform/rockchip/iep/iep.c
+index 247856aeaf31..4d3b1dc9951f 100644
+--- a/drivers/media/platform/rockchip/iep/iep.c
++++ b/drivers/media/platform/rockchip/iep/iep.c
+@@ -42,10 +42,6 @@
+ /* Unclaimed shared interrupts during a job before it is aborted */
+ #define IEP_MAX_FOREIGN_IRQS	4
+ 
+-/* DEBUG-ONLY (not for commit): OUTPUT tail padding experiment */
+-static unsigned int src_tail = 4096;
+-module_param(src_tail, uint, 0644);
+-
+ static const struct iep_fmt iep_formats[] = {
+ 	{
+ 		.fourcc = V4L2_PIX_FMT_NV12,
+@@ -910,7 +906,7 @@ static int iep_try_fmt_vid_out(struct file *file, void *priv,
+ 		pix->quantization = V4L2_QUANTIZATION_DEFAULT;
+ 	}
+ 
+-	iep_fill_pix(pix, fmt, src_tail);
++	iep_fill_pix(pix, fmt, IEP_SRC_TAIL);
+ 
+ 	return 0;
+ }
+@@ -1114,7 +1110,7 @@ static int iep_open(struct file *file)
+ 	ctx->src_fmt.height = 576;
+ 	ctx->src_fmt.field = V4L2_FIELD_INTERLACED_TB;
+ 	ctx->src_fmt.colorspace = V4L2_COLORSPACE_SMPTE170M;
+-	iep_fill_pix(&ctx->src_fmt, ctx->fmt, src_tail);
++	iep_fill_pix(&ctx->src_fmt, ctx->fmt, IEP_SRC_TAIL);
+ 
+ 	ctx->dst_fmt = ctx->src_fmt;
+ 	ctx->dst_fmt.field = V4L2_FIELD_NONE;
+@@ -1330,9 +1326,8 @@ static void iep_remove(struct platform_device *pdev)
+ }
+ 
+ static const struct dev_pm_ops iep_pm_ops = {
+-	SET_SYSTEM_SLEEP_PM_OPS(pm_runtime_force_suspend,
+-				pm_runtime_force_resume)
+-	SET_RUNTIME_PM_OPS(iep_runtime_suspend, iep_runtime_resume, NULL)
++	SYSTEM_SLEEP_PM_OPS(pm_runtime_force_suspend, pm_runtime_force_resume)
++	RUNTIME_PM_OPS(iep_runtime_suspend, iep_runtime_resume, NULL)
+ };
+ 
+ static const struct of_device_id iep_of_match[] = {
+diff --git a/drivers/media/platform/rockchip/iep/iep.h b/drivers/media/platform/rockchip/iep/iep.h
+index 488be95a494f..3dcf16969d7e 100644
+--- a/drivers/media/platform/rockchip/iep/iep.h
++++ b/drivers/media/platform/rockchip/iep/iep.h
+@@ -9,6 +9,7 @@
+ #include <linux/clk.h>
+ #include <linux/mutex.h>
+ #include <linux/reset.h>
++#include <linux/sizes.h>
+ #include <linux/spinlock.h>
+ #include <linux/workqueue.h>
+ 
+@@ -33,6 +34,12 @@
+ #define IEP_MAX_STRIDE		(0xffff * 4)
+ #define IEP_STRIDE_ALIGN	16
+ 
++/*
++ * The IEP2 reads past the end of the OUTPUT buffer. The BSP maps a spare
++ * page behind it; here the OUTPUT sizeimage is padded by that much instead.
++ */
++#define IEP_SRC_TAIL		SZ_4K
++
+ /*
+  * V4L2_CID_DEINTERLACING_MODE menu items. The algorithm and the output rate
+  * are one menu, as in other deinterlacers: frame rate outputs one CAPTURE
+-- 
+2.55.0
+

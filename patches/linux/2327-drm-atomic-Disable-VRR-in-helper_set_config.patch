@@ -1,0 +1,36 @@
+From b76fca2dd3093800fc9a930a7a793d7bcd9e2561 Mon Sep 17 00:00:00 2001
+From: Nicolas Frattaroli <nicolas.frattaroli@collabora.com>
+Date: Sat, 7 Nov 2026 20:28:35 +0000
+Subject: [PATCH 2327/2409] drm/atomic: Disable VRR in helper_set_config
+
+The in-kernel DRM clients do not know how to deal with VRR properties.
+This means that a DRM client that does, exits, and does not clean up
+after itself, will leave the KMS fbdev console non-functional.
+
+Address this by simply setting crtc_state->vrr_enabled to false in
+__drm_atomic_helper_set_config.
+
+Signed-off-by: Nicolas Frattaroli <nicolas.frattaroli@collabora.com>
+[Arun: ported from the RFC series "VRR Target Rate Limiter KMS uAPI and
+ Implementation" (dri-devel, 2026-09-21) onto v7.3]
+Signed-off-by: Arun Iyengar <aiyengar1990@gmail.com>
+---
+ drivers/gpu/drm/drm_atomic.c | 2 ++
+ 1 file changed, 2 insertions(+)
+
+diff --git a/drivers/gpu/drm/drm_atomic.c b/drivers/gpu/drm/drm_atomic.c
+index e5c8ef06caed..0df1e57691c0 100644
+--- a/drivers/gpu/drm/drm_atomic.c
++++ b/drivers/gpu/drm/drm_atomic.c
+@@ -2037,6 +2037,8 @@ int __drm_atomic_helper_set_config(struct drm_mode_set *set,
+ 
+ 	crtc_state->active = true;
+ 
++	crtc_state->vrr_enabled = false;
++
+ 	ret = drm_atomic_set_crtc_for_plane(primary_state, crtc);
+ 	if (ret != 0)
+ 		return ret;
+-- 
+2.55.0
+

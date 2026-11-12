@@ -1,0 +1,90 @@
+From 5a8b932082a4acb2b8cf18a52117b90cd4745b06 Mon Sep 17 00:00:00 2001
+From: Arun Iyengar <aiyengar1990@gmail.com>
+Date: Tue, 10 Nov 2026 01:41:30 +0000
+Subject: [PATCH 2385/2409] media: v4l2-core: Fix all-intra streams in the
+ encode CBR rate control
+
+All-intra streams (an IDR period of 1) have two problems in the constant
+bitrate rate control:
+
+- the QP state, which is the QP of the P pictures, is limited to the QP
+  range, and the I pictures are coded the I QP delta below it, so they
+  never reach the highest QP: at targets that need it the bitrate stays
+  far above the target (2.3 times at 1080p30 and 1 Mbit/s with QP 49
+  instead of 51);
+- the start QP is estimated for an I picture of a GOP of two seconds,
+  which gets about nine times the nominal size, so the first pictures of
+  an all-intra stream come out several times their size until the state
+  has climbed: the largest one second window of a 1080p30 stream at
+  4 Mbit/s is 1.55 times the bitrate.
+
+Shift the range of the state by the I QP delta in all-intra streams, and
+when the second picture is an I picture again, set the state from the
+size of the first one at its QP. In a host simulation against a model
+encoder (sizes halving every 6 QP, 720p and 1080p, 256 kbit/s to
+20 Mbit/s), the all-intra bitrate is then within 0.1% of the target
+wherever QP 51 can reach it, and the largest one second window drops to
+1.02-1.11 times the bitrate (was up to 1.88). Streams with P pictures are
+not changed.
+
+Signed-off-by: Arun Iyengar <aiyengar1990@gmail.com>
+---
+ drivers/media/v4l2-core/v4l2-enc-cbr.c | 27 +++++++++++++++++++++++---
+ 1 file changed, 24 insertions(+), 3 deletions(-)
+
+diff --git a/drivers/media/v4l2-core/v4l2-enc-cbr.c b/drivers/media/v4l2-core/v4l2-enc-cbr.c
+index 28826e32c418..87db60469182 100644
+--- a/drivers/media/v4l2-core/v4l2-enc-cbr.c
++++ b/drivers/media/v4l2-core/v4l2-enc-cbr.c
+@@ -239,8 +239,22 @@ int v4l2_enc_cbr_begin(struct v4l2_enc_cbr *cbr, u32 bitrate,
+ 
+ 	if (intra) {
+ 		/* An I picture closes the GOP: its length is the IDR period. */
+-		if (cbr->seen_i)
++		if (cbr->seen_i) {
++			/*
++			 * The second picture of an all-intra stream: the size
++			 * of the first one at its QP tells the QP of the
++			 * nominal size better than the start estimate, which
++			 * assumed a GOP with P pictures.
++			 */
++			if (!cbr->gop && !cbr->since_i)
++				cbr->qp_q8 = clamp_t(int, (cbr->qp_pic +
++						 cbr->qp_delta_intra) * 256 +
++						 6 * (cbr_log2_q8(cbr->i_bits) -
++						      cbr_log2_q8(nominal)),
++						 (qp_min + cbr->qp_delta_intra) * 256,
++						 (qp_max + cbr->qp_delta_intra) * 256);
+ 			cbr->gop = cbr->since_i + 1;
++		}
+ 		cbr->since_i = 0;
+ 		cbr->seen_i = true;
+ 	}
+@@ -381,7 +395,7 @@ void v4l2_enc_cbr_end(struct v4l2_enc_cbr *cbr, u64 bits,
+ 	unsigned int fps = cbr_fps(timeperframe);
+ 	s64 limit = cbr->nominal * CBR_BUFFER_SECONDS * fps;
+ 	unsigned int ratio;
+-	int err, step;
++	int err, step, shift;
+ 	s64 cap, add;
+ 
+ 	if (!cbr->bitrate || !cbr->target_bits)
+@@ -452,7 +466,14 @@ void v4l2_enc_cbr_end(struct v4l2_enc_cbr *cbr, u64 bits,
+ 		cbr->qp_q8 += cbr->gop == 1 ? step : step / 4;
+ 	}
+ 
+-	cbr->qp_q8 = clamp_t(int, cbr->qp_q8, qp_min * 256, qp_max * 256);
++	/*
++	 * The state is the QP of the P pictures. All-intra streams code their
++	 * pictures at the state less the I QP delta, so they need the QP range
++	 * shifted up by it to reach the highest QP.
++	 */
++	shift = cbr->gop == 1 ? cbr->qp_delta_intra : 0;
++	cbr->qp_q8 = clamp_t(int, cbr->qp_q8, (qp_min + shift) * 256,
++			     (qp_max + shift) * 256);
+ 
+ 	pr_debug("+ v4l2-enc-cbr: end");
+ 	pr_debug("  size: %llu bits, target: %llu bits, qp error: %d/256, qp: %d/256",
+-- 
+2.55.0
+

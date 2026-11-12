@@ -15,7 +15,6 @@ decoders may drop the parameter sets.
 Write them with nal_ref_idc 3, as other encoders do. Access unit
 delimiters keep 0, which the specification requires for them.
 
-Assisted-by: LLM
 Signed-off-by: Arun Iyengar <aiyengar1990@gmail.com>
 ---
  drivers/media/v4l2-core/v4l2-h264-enc-rbsp.c | 4 ++--

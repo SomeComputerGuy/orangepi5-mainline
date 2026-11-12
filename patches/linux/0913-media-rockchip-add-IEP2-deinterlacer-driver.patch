@@ -54,7 +54,6 @@ GPL-2.0+ OR MIT, Ding Wei and Alpha Lin, Rockchip) and from the values
 the MPP userspace library programs. The V4L2 buffer handling follows
 the sun8i-di driver.
 
-Assisted-by: LLM
 Signed-off-by: Arun Iyengar <aiyengar1990@gmail.com>
 ---
  MAINTAINERS                                   |    9 +

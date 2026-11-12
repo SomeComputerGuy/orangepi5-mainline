@@ -16,8 +16,6 @@ the kernel still considers them enabled, the first PHY register access
 after resume stalls the bus.
 
 Advance the index after the PHP gate register in both functions.
-
-Assisted-by: LLM
 ---
  plat/rockchip/rk3588/drivers/pmu/pmu.c | 4 ++--
  1 file changed, 2 insertions(+), 2 deletions(-)

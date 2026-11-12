@@ -37,8 +37,6 @@ playbin3 with video-sink = fpsdisplaysink, whose video-sink is
 Before: 72 frames dropped in 36 s (54.8 fps) with the console cursor
 blinking. After: 0 dropped, 59.95 fps, the screen around the video is
 black, and the console comes back when the pipeline stops.
-
-Assisted-by: LLM
 ---
  sys/kms/gstkmssink.c | 88 +++++++++++++++++++++++++++++++++++++-------
  1 file changed, 75 insertions(+), 13 deletions(-)

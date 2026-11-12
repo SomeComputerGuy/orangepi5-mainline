@@ -14,7 +14,6 @@ Pass -@ to dtc for the Orange Pi 5, its M.2 SATA variant and the
 Orange Pi 5B, like the Allwinner and MediaTek Makefiles do for boards
 with add-on connectors.
 
-Assisted-by: LLM
 Signed-off-by: Arun Iyengar <aiyengar1990@gmail.com>
 ---
  arch/arm64/boot/dts/rockchip/Makefile | 7 +++++++

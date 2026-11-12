@@ -1,8 +1,7 @@
-From ff68d6e5f9f5de968955a25177596e198e235bc6 Mon Sep 17 00:00:00 2001
+From 1bc222cab992281aa12c88a4af51fd4384558b6c Mon Sep 17 00:00:00 2001
 From: Arun Iyengar <aiyengar1990@gmail.com>
 Date: Thu, 5 Nov 2026 11:48:01 +0000
-Subject: [PATCH 2276/2312] drm/rockchip: vop2: Set up the overlay from a list
- of windows
+Subject: [PATCH] drm/rockchip: vop2: Set up the overlay from a list of windows
 
 The overlay setup of a video port takes its windows and their plane
 states from the planes of its CRTC, and the layers of each video port
@@ -16,7 +15,6 @@ mixer and alpha setup, and keep the layers each video port currently
 has in OVL_PORT_SEL in ovl_layers, protected by ovl_lock. No functional
 change.
 
-Assisted-by: LLM
 Signed-off-by: Arun Iyengar <aiyengar1990@gmail.com>
 ---
  drivers/gpu/drm/rockchip/rockchip_drm_drv.h  |   2 +
@@ -39,10 +37,10 @@ index f2af4ea97b5f..859ca483313a 100644
  /*
   * display output interface supported by rockchip lcdc
 diff --git a/drivers/gpu/drm/rockchip/rockchip_drm_vop2.c b/drivers/gpu/drm/rockchip/rockchip_drm_vop2.c
-index fbda6a42d01b..1d1bb4e53187 100644
+index 4968e2d7f70a..bb12a77eabf7 100644
 --- a/drivers/gpu/drm/rockchip/rockchip_drm_vop2.c
 +++ b/drivers/gpu/drm/rockchip/rockchip_drm_vop2.c
-@@ -3803,6 +3803,7 @@ static int vop2_create_crtcs(struct vop2 *vop2)
+@@ -3829,6 +3829,7 @@ static int vop2_create_crtcs(struct vop2 *vop2)
  
  		if (vp->crtc.port)
  			vp->nlayers = vop2_data->win_size / nvps;
@@ -50,7 +48,7 @@ index fbda6a42d01b..1d1bb4e53187 100644
  	}
  
  	return 0;
-@@ -3979,6 +3980,9 @@ static int vop2_bind(struct device *dev, struct device *master, void *data)
+@@ -4005,6 +4006,9 @@ static int vop2_bind(struct device *dev, struct device *master, void *data)
  	if (!vop2_data)
  		return -ENODEV;
  
@@ -61,7 +59,7 @@ index fbda6a42d01b..1d1bb4e53187 100644
  	alloc_size = struct_size(vop2, win, vop2_data->win_size);
  	vop2 = devm_kzalloc(dev, alloc_size, GFP_KERNEL);
 diff --git a/drivers/gpu/drm/rockchip/rockchip_drm_vop2.h b/drivers/gpu/drm/rockchip/rockchip_drm_vop2.h
-index 42ed10b3d569..714136c2e325 100644
+index 4d3e3a1e1171..2e8d01a23fcf 100644
 --- a/drivers/gpu/drm/rockchip/rockchip_drm_vop2.h
 +++ b/drivers/gpu/drm/rockchip/rockchip_drm_vop2.h
 @@ -337,6 +337,11 @@ struct vop2_video_port {
@@ -77,7 +75,7 @@ index 42ed10b3d569..714136c2e325 100644
  	/** @irq_lock: protects @vblank_enabled and @post_buf_empty_masked */
  	spinlock_t irq_lock;
 diff --git a/drivers/gpu/drm/rockchip/rockchip_vop2_reg.c b/drivers/gpu/drm/rockchip/rockchip_vop2_reg.c
-index b2becaa2b442..f5f07f0f4f3f 100644
+index 179538dd511c..03163c079a56 100644
 --- a/drivers/gpu/drm/rockchip/rockchip_vop2_reg.c
 +++ b/drivers/gpu/drm/rockchip/rockchip_vop2_reg.c
 @@ -54,6 +54,12 @@ struct vop2_alpha_config {

@@ -1,0 +1,67 @@
+From 2dd77cbe5494b7fdace3e0ba661e455411db7e0a Mon Sep 17 00:00:00 2001
+From: Arun Iyengar <aiyengar1990@gmail.com>
+Date: Fri, 30 Oct 2026 08:43:19 +0000
+Subject: [PATCH 2353/2409] media: rkvdec: Don't let TRY_FMT move the motion
+ vector buffer
+
+rkvdec_fill_decoded_pixfmt() is shared by VIDIOC_TRY_FMT and the code
+that sets the CAPTURE format, and it stores the offset of the co-located
+motion vectors in the context. A VIDIOC_TRY_FMT with a different size
+therefore moves the motion vectors of the format in use: the decoder
+then writes them at an offset that matches neither the CAPTURE buffers
+nor what it reads back for the references, which can be past the end
+of a buffer.
+
+Compute the offset only when the CAPTURE format is set or reset.
+
+Signed-off-by: Arun Iyengar <aiyengar1990@gmail.com>
+---
+ drivers/media/platform/rockchip/rkvdec/rkvdec.c | 15 ++++++++++++++-
+ 1 file changed, 14 insertions(+), 1 deletion(-)
+
+diff --git a/drivers/media/platform/rockchip/rkvdec/rkvdec.c b/drivers/media/platform/rockchip/rkvdec/rkvdec.c
+index 2bc98de4250c..0efe55344ca5 100644
+--- a/drivers/media/platform/rockchip/rkvdec/rkvdec.c
++++ b/drivers/media/platform/rockchip/rkvdec/rkvdec.c
+@@ -135,10 +135,21 @@ static void rkvdec_fill_decoded_pixfmt(struct rkvdec_ctx *ctx,
+ 		plane->bytesperline = aligned_bpl;
+ 	}
+ 
+-	ctx->colmv_offset = plane->sizeimage;
+ 	plane->sizeimage += variant->ops->colmv_size(pix_mp->width, pix_mp->height);
+ }
+ 
++/*
++ * The co-located motion vectors follow the pixel data of a decoded buffer.
++ * Only a format that is set (not one that is tried) moves them.
++ */
++static void rkvdec_update_colmv_offset(struct rkvdec_ctx *ctx)
++{
++	const struct v4l2_pix_format_mplane *pix_mp = &ctx->decoded_fmt.fmt.pix_mp;
++
++	ctx->colmv_offset = pix_mp->plane_fmt[0].sizeimage -
++		ctx->dev->variant->ops->colmv_size(pix_mp->width, pix_mp->height);
++}
++
+ static void rkvdec_reset_fmt(struct rkvdec_ctx *ctx, struct v4l2_format *f,
+ 			     u32 fourcc)
+ {
+@@ -162,6 +173,7 @@ static void rkvdec_reset_decoded_fmt(struct rkvdec_ctx *ctx)
+ 	f->fmt.pix_mp.width = ctx->coded_fmt.fmt.pix_mp.width;
+ 	f->fmt.pix_mp.height = ctx->coded_fmt.fmt.pix_mp.height;
+ 	rkvdec_fill_decoded_pixfmt(ctx, &f->fmt.pix_mp);
++	rkvdec_update_colmv_offset(ctx);
+ }
+ 
+ static int rkvdec_try_ctrl(struct v4l2_ctrl *ctrl)
+@@ -937,6 +949,7 @@ static int rkvdec_s_capture_fmt(struct file *file, void *priv,
+ 		return ret;
+ 
+ 	ctx->decoded_fmt = *f;
++	rkvdec_update_colmv_offset(ctx);
+ 	return 0;
+ }
+ 
+-- 
+2.55.0
+

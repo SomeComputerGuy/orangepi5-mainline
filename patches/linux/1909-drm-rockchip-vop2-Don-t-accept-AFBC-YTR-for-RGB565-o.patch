@@ -1,7 +1,7 @@
-From bdd5de87eb98a421dc0b10fe28d5c3935378418c Mon Sep 17 00:00:00 2001
+From 914d02e4dcf39b71f07041b1a85c8582a2203272 Mon Sep 17 00:00:00 2001
 From: Arun Iyengar <aiyengar1990@gmail.com>
 Date: Sun, 1 Nov 2026 06:06:09 +0000
-Subject: [PATCH 09/33] drm/rockchip: vop2: Don't accept AFBC YTR for RGB565 on
+Subject: [PATCH] drm/rockchip: vop2: Don't accept AFBC YTR for RGB565 on
  RK3588
 
 The Cluster windows of the RK3588 VOP2 advertise every AFBC modifier
@@ -25,16 +25,14 @@ BGR565 case could not be tested (Mesa can't import BGR565 dma-bufs),
 it's rejected as well because the decoder is configured identically
 for both formats, apart from the R/B swap after decoding.
 
-(cherry picked from commit fd527a25fc45d393c0d2bf6a321da2e82e90a7f3)
-
-Assisted-by: LLM
+Fixes: 5a028e8f062f ("drm/rockchip: vop2: Add support for rk3588")
 Signed-off-by: Arun Iyengar <aiyengar1990@gmail.com>
 ---
  drivers/gpu/drm/rockchip/rockchip_drm_vop2.c | 12 ++++++++++++
  1 file changed, 12 insertions(+)
 
 diff --git a/drivers/gpu/drm/rockchip/rockchip_drm_vop2.c b/drivers/gpu/drm/rockchip/rockchip_drm_vop2.c
-index 7e3578010c41..746cfb1f7b92 100644
+index c0daba996f61..227d734f3b0c 100644
 --- a/drivers/gpu/drm/rockchip/rockchip_drm_vop2.c
 +++ b/drivers/gpu/drm/rockchip/rockchip_drm_vop2.c
 @@ -407,6 +407,18 @@ static bool rockchip_vop2_mod_supported(struct drm_plane *plane, u32 format,

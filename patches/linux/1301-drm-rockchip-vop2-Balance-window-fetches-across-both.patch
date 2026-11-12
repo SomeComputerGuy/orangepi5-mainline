@@ -47,7 +47,6 @@ stays enabled, so an active layer is never moved.
 
 This is only enabled for RK3588, where it was measured.
 
-Assisted-by: LLM
 Signed-off-by: Arun Iyengar <aiyengar1990@gmail.com>
 ---
  drivers/gpu/drm/rockchip/rockchip_drm_vop2.c | 99 +++++++++++++++++++-

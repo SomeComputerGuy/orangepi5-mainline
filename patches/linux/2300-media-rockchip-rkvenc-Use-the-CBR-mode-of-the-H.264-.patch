@@ -14,7 +14,6 @@ Drop the private copy and hand the size target of the core to the
 hardware row rate control again. The HEVC rate control keeps its log2
 helper.
 
-Assisted-by: LLM
 Signed-off-by: Arun Iyengar <aiyengar1990@gmail.com>
 ---
  .../media/platform/rockchip/rkvenc/Makefile   |   1 -

@@ -16,7 +16,6 @@ userspace, and only once all cores are known.
 
 No functional change intended.
 
-Assisted-by: LLM
 Signed-off-by: Arun Iyengar <aiyengar1990@gmail.com>
 ---
  .../media/platform/verisilicon/hantro_drv.c   | 152 +++++++++++-------

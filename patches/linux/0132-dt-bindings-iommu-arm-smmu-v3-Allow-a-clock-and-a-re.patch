@@ -1,0 +1,49 @@
+From 07808cde6637224c7832d5766582970cf96aeec2 Mon Sep 17 00:00:00 2001
+From: Arun Iyengar <aiyengar1990@gmail.com>
+Date: Tue, 10 Nov 2026 07:34:04 +0000
+Subject: [PATCH] dt-bindings: iommu: arm,smmu-v3: Allow a clock and a reset
+
+Some SoCs feed the SMMUv3 from a clock that the OS controls. On the
+Rockchip RK3588 the MMU-600 for PCIe runs from ACLK_MMU_PCIE, whose only
+other consumers are the PCIe controllers. When no PCIe controller is
+enabled, the clock framework gates it as unused, and the SMMU can no
+longer be accessed. The same SMMU also has a reset line in the CRU,
+SRST_A_MMU_PCIE.
+
+Allow a single clock and a single reset, so that both can be described.
+The architecture defines no clock or reset inputs; the MMU-600 TRM lists
+one clock and one reset signal, and the one integration that needs this
+has one of each. An implementation with more clocks or resets can add
+them with names and a specific compatible.
+
+Link: https://support.arm.com/documentation/100310/0202/Signal-descriptions/Clock-and-reset-signals
+Signed-off-by: Arun Iyengar <aiyengar1990@gmail.com>
+---
+ .../devicetree/bindings/iommu/arm,smmu-v3.yaml        | 11 +++++++++++
+ 1 file changed, 11 insertions(+)
+
+diff --git a/Documentation/devicetree/bindings/iommu/arm,smmu-v3.yaml b/Documentation/devicetree/bindings/iommu/arm,smmu-v3.yaml
+index d5609eb5ceb0..cbcbea59a48d 100644
+--- a/Documentation/devicetree/bindings/iommu/arm,smmu-v3.yaml
++++ b/Documentation/devicetree/bindings/iommu/arm,smmu-v3.yaml
+@@ -63,6 +63,17 @@ properties:
+ 
+   msi-parent: true
+ 
++  clocks:
++    maxItems: 1
++    description:
++      Clock of the SMMU's register and memory interfaces, on SoCs where the
++      OS has to keep it running.
++
++  resets:
++    maxItems: 1
++    description:
++      Reset of the SMMU, on SoCs where it is controlled by the OS.
++
+   power-domains:
+     maxItems: 1
+ 
+-- 
+2.55.0
+

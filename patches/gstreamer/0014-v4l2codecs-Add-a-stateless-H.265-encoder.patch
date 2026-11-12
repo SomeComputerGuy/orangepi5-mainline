@@ -18,7 +18,6 @@ rate control.
 
 The output is Main profile; the kernel picks the lowest level that fits.
 
-Assisted-by: LLM
 Signed-off-by: Arun Iyengar <aiyengar1990@gmail.com>
 ---
  sys/v4l2codecs/gstv4l2codech265enc.c | 404 +++++++++++++++++++++++++++

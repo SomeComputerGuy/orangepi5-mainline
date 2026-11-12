@@ -1,8 +1,8 @@
-From f5f2760c711e242f0ea5f9f9f80f9e7e71702a34 Mon Sep 17 00:00:00 2001
+From 98979dce08e569de2ef8539b6e7967433795be36 Mon Sep 17 00:00:00 2001
 From: Arun Iyengar <aiyengar1990@gmail.com>
 Date: Tue, 3 Nov 2026 00:54:26 +0000
-Subject: [PATCH 2243/2271] pmdomain: rockchip: remove subdomain links before
- the domains on error
+Subject: [PATCH] pmdomain: rockchip: remove subdomain links before the domains
+ on error
 
 When rockchip_pm_domain_probe() fails after some domains were
 registered, for example because a clock of a nested domain is not
@@ -31,17 +31,16 @@ does not.
 
 Fixes: 79d12b7a7f22 ("soc: rockchip: power-domain: use pm_genpd_remove in error cleanup")
 Cc: stable@vger.kernel.org
-Assisted-by: LLM
 Signed-off-by: Arun Iyengar <aiyengar1990@gmail.com>
 ---
  drivers/pmdomain/rockchip/pm-domains.c | 46 ++++++++++++++++++++++++++
  1 file changed, 46 insertions(+)
 
 diff --git a/drivers/pmdomain/rockchip/pm-domains.c b/drivers/pmdomain/rockchip/pm-domains.c
-index f9ae3547079c..69bfbe9b0b3a 100644
+index 3b51cb699910..b831d9b59222 100644
 --- a/drivers/pmdomain/rockchip/pm-domains.c
 +++ b/drivers/pmdomain/rockchip/pm-domains.c
-@@ -971,12 +971,58 @@ static void rockchip_pm_remove_one_domain(struct rockchip_pm_domain *pd)
+@@ -969,12 +969,58 @@ static void rockchip_pm_remove_one_domain(struct rockchip_pm_domain *pd)
  	/* devm will free our memory */
  }
  

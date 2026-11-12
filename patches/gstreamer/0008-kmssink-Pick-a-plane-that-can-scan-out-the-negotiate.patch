@@ -38,8 +38,6 @@ After: "plane 47 can't show video/x-raw(memory:DMABuf) ... using plane
 59", NV12 on Esmart0, 2185 frames in 36 s with 0 dropped (59.94 fps),
 no POST_BUF_EMPTY; with force-modesetting=true the primary (plane 35) is
 the first pick, the sink moves to plane 59 and sets the mode, 0 dropped.
-
-Assisted-by: LLM
 ---
  sys/kms/gstkmssink.c | 218 +++++++++++++++++++++++++++++++++++++------
  sys/kms/gstkmssink.h |   2 +

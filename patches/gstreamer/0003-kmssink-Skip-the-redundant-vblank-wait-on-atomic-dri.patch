@@ -22,8 +22,6 @@ universal planes, which would change the automatic plane selection.
 Cursor planes are excluded, as legacy cursor updates don't wait for
 vblank. The wait is kept when the fd comes from the application, and in
 modesetting mode, where the vsync is the page flip itself.
-
-Assisted-by: LLM
 ---
  sys/kms/gstkmssink.c | 57 ++++++++++++++++++++++++++++++++++++++++----
  sys/kms/gstkmssink.h |  2 ++

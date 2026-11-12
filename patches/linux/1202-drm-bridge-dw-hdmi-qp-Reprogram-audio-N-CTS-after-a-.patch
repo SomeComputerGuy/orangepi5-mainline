@@ -18,7 +18,6 @@ atomic_enable, once the new TMDS/FRL rate is known, and whenever the
 FRL rate changes. A mutex serializes this with the audio callbacks.
 dw-hdmi does the same through hdmi_set_clk_regenerator() on modeset.
 
-Assisted-by: LLM
 Signed-off-by: Arun Iyengar <aiyengar1990@gmail.com>
 ---
  drivers/gpu/drm/bridge/synopsys/dw-hdmi-qp.c | 35 +++++++++++++++++++-

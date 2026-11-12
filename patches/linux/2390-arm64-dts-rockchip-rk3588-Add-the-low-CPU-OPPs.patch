@@ -1,0 +1,108 @@
+From 646a7fc5e55d72a8f67725dfa53cd9dedc440637 Mon Sep 17 00:00:00 2001
+From: SuperKali <hello@superkali.me>
+Date: Thu, 3 Apr 2025 05:59:12 +0000
+Subject: [PATCH 2390/2409] arm64: dts: rockchip: rk3588: Add the low CPU OPPs
+
+The RK3588 CPU OPP tables start at 1008 MHz for the Cortex-A55 cluster
+and at 1200 MHz for the two Cortex-A76 clusters, so an idle system
+never runs the CPUs below that.
+
+Add the 408, 600 and 816 MHz OPPs to all three clusters and 1008 MHz to
+the A76 clusters, at the lowest voltage of the existing tables (675 mV),
+as Rockchip's vendor kernel does. Use 408 MHz as the suspend OPP of the
+A76 clusters, which have none so far, again as in the vendor kernel.
+The A55 cluster keeps its 1416 MHz suspend OPP.
+
+Signed-off-by: SuperKali <hello@superkali.me>
+[arun: no opp-suspend on the A55 408 MHz OPP (the table already has one at 1416 MHz, like the vendor kernel); commit message written]
+Link: https://github.com/armbian/build/blob/e5a400aef/patch/kernel/archive/rockchip64-7.3/rk3588-0025-add-missing-op-nodes.patch
+Signed-off-by: Arun Iyengar <aiyengar1990@gmail.com>
+---
+ arch/arm64/boot/dts/rockchip/rk3588-opp.dtsi | 57 ++++++++++++++++++++
+ 1 file changed, 57 insertions(+)
+
+diff --git a/arch/arm64/boot/dts/rockchip/rk3588-opp.dtsi b/arch/arm64/boot/dts/rockchip/rk3588-opp.dtsi
+index af706f0102bd..0fc43b01aea3 100644
+--- a/arch/arm64/boot/dts/rockchip/rk3588-opp.dtsi
++++ b/arch/arm64/boot/dts/rockchip/rk3588-opp.dtsi
+@@ -5,6 +5,21 @@ cluster0_opp_table: opp-table-cluster0 {
+ 		compatible = "operating-points-v2";
+ 		opp-shared;
+ 
++		opp-408000000 {
++			opp-hz = /bits/ 64 <408000000>;
++			opp-microvolt = <675000 675000 950000>;
++			clock-latency-ns = <40000>;
++		};
++		opp-600000000 {
++			opp-hz = /bits/ 64 <600000000>;
++			opp-microvolt = <675000 675000 950000>;
++			clock-latency-ns = <40000>;
++		};
++		opp-816000000 {
++			opp-hz = /bits/ 64 <816000000>;
++			opp-microvolt = <675000 675000 950000>;
++			clock-latency-ns = <40000>;
++		};
+ 		opp-1008000000 {
+ 			opp-hz = /bits/ 64 <1008000000>;
+ 			opp-microvolt = <675000 675000 950000>;
+@@ -37,6 +52,27 @@ cluster1_opp_table: opp-table-cluster1 {
+ 		compatible = "operating-points-v2";
+ 		opp-shared;
+ 
++		opp-408000000 {
++			opp-hz = /bits/ 64 <408000000>;
++			opp-microvolt = <675000 675000 1000000>;
++			clock-latency-ns = <40000>;
++			opp-suspend;
++		};
++		opp-600000000 {
++			opp-hz = /bits/ 64 <600000000>;
++			opp-microvolt = <675000 675000 1000000>;
++			clock-latency-ns = <40000>;
++		};
++		opp-816000000 {
++			opp-hz = /bits/ 64 <816000000>;
++			opp-microvolt = <675000 675000 1000000>;
++			clock-latency-ns = <40000>;
++		};
++		opp-1008000000 {
++			opp-hz = /bits/ 64 <1008000000>;
++			opp-microvolt = <675000 675000 1000000>;
++			clock-latency-ns = <40000>;
++		};
+ 		opp-1200000000 {
+ 			opp-hz = /bits/ 64 <1200000000>;
+ 			opp-microvolt = <675000 675000 1000000>;
+@@ -78,6 +114,27 @@ cluster2_opp_table: opp-table-cluster2 {
+ 		compatible = "operating-points-v2";
+ 		opp-shared;
+ 
++		opp-408000000 {
++			opp-hz = /bits/ 64 <408000000>;
++			opp-microvolt = <675000 675000 1000000>;
++			clock-latency-ns = <40000>;
++			opp-suspend;
++		};
++		opp-600000000 {
++			opp-hz = /bits/ 64 <600000000>;
++			opp-microvolt = <675000 675000 1000000>;
++			clock-latency-ns = <40000>;
++		};
++		opp-816000000 {
++			opp-hz = /bits/ 64 <816000000>;
++			opp-microvolt = <675000 675000 1000000>;
++			clock-latency-ns = <40000>;
++		};
++		opp-1008000000 {
++			opp-hz = /bits/ 64 <1008000000>;
++			opp-microvolt = <675000 675000 1000000>;
++			clock-latency-ns = <40000>;
++		};
+ 		opp-1200000000 {
+ 			opp-hz = /bits/ 64 <1200000000>;
+ 			opp-microvolt = <675000 675000 1000000>;
+-- 
+2.55.0
+

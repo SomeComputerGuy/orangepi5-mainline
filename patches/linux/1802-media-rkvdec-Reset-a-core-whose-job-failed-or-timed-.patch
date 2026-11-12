@@ -54,7 +54,6 @@ Tested on RK3588 with KASAN, timeouts forced around the frame time,
 faults injected in the address registers, corrupted streams and the
 fluster suites.
 
-Assisted-by: LLM
 Signed-off-by: Arun Iyengar <aiyengar1990@gmail.com>
 ---
  .../rockchip/rkvdec/rkvdec-vdpu381-regs.h     |   4 +

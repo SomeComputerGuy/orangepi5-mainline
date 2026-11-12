@@ -15,7 +15,6 @@ The display driver now chooses the parent of each source itself (as the
 vendor kernel does, which sets the same flag). Set
 CLK_SET_RATE_NO_REPARENT, so that a rate change only sets the divider.
 
-Assisted-by: LLM
 Signed-off-by: Arun Iyengar <aiyengar1990@gmail.com>
 ---
  drivers/clk/rockchip/clk-rk3588.c | 12 ++++++++----

@@ -23,7 +23,6 @@ only then, since until then the watchdog may complete the job and the
 next one may start on the core. The core keeps its variant and its
 rkvdec device, so the IOMMU restore doesn't need a context either.
 
-Assisted-by: LLM
 Signed-off-by: Arun Iyengar <aiyengar1990@gmail.com>
 ---
  .../media/platform/rockchip/rkvdec/rkvdec.c   | 63 ++++++++++++-------

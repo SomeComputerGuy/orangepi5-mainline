@@ -21,7 +21,6 @@ mid-grey levels crushed to black.
 Pick the BT.2020 code from the output encoding, as the downstream
 Rockchip driver does.
 
-Assisted-by: LLM
 Signed-off-by: Arun Iyengar <aiyengar1990@gmail.com>
 ---
  drivers/gpu/drm/bridge/synopsys/dw-dp.c | 14 +++++++++++---

@@ -1,0 +1,52 @@
+From 1708599e364e6c746aefc2f631fed77255a87148 Mon Sep 17 00:00:00 2001
+From: Arun Iyengar <aiyengar1990@gmail.com>
+Date: Sat, 7 Nov 2026 23:23:00 +0000
+Subject: [PATCH 2341/2409] drm/edid: Parse the ALLM support of HDMI sinks
+
+An HDMI 2.1 sink that supports Auto Low Latency Mode sets the ALLM bit in
+byte 8 of its HDMI Forum VSDB. The source then asks it for its lowest
+latency mode with the ALLM_Mode bit of the HDMI Forum vendor specific
+InfoFrame. DRM_EDID_ALLM was defined but not parsed: store it in
+drm_hdmi_info.
+
+Signed-off-by: Arun Iyengar <aiyengar1990@gmail.com>
+---
+ drivers/gpu/drm/drm_edid.c  | 4 ++++
+ include/drm/drm_connector.h | 6 ++++++
+ 2 files changed, 10 insertions(+)
+
+diff --git a/drivers/gpu/drm/drm_edid.c b/drivers/gpu/drm/drm_edid.c
+index 81c427a881e9..353a1f991a87 100644
+--- a/drivers/gpu/drm/drm_edid.c
++++ b/drivers/gpu/drm/drm_edid.c
+@@ -6331,6 +6331,10 @@ static void drm_parse_hdmi_forum_scds(struct drm_connector *connector,
+ 		dsc_support = true;
+ 	}
+ 
++	/* hf_scds[8] is payload byte 8: it is present if the payload has 8 bytes */
++	if (cea_db_payload_len(hf_scds) >= 8)
++		hdmi->allm = hf_scds[8] & DRM_EDID_ALLM;
++
+ 	drm_parse_vrr_info(hdmi, hf_scds);
+ 
+ 	/* A non-zero VRRmin is what declares HDMI VRR support */
+diff --git a/include/drm/drm_connector.h b/include/drm/drm_connector.h
+index 74a96dd89094..879022ba108b 100644
+--- a/include/drm/drm_connector.h
++++ b/include/drm/drm_connector.h
+@@ -346,6 +346,12 @@ struct drm_hdmi_info {
+ 
+ 	/** @vrr_capable: The sink supports variable refresh rate */
+ 	bool vrr_capable;
++
++	/**
++	 * @allm: The sink supports Auto Low Latency Mode (ALLM), signalled in
++	 * the HDMI Forum vendor specific InfoFrame
++	 */
++	bool allm;
+ };
+ 
+ /**
+-- 
+2.55.0
+

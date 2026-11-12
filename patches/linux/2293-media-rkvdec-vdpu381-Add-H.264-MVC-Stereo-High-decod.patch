@@ -27,7 +27,6 @@ The hardware IDR bit is only set for IDR pictures of the base view: with
 it, the hardware uses no references, but an IDR view component of the
 non-base view still predicts from the base view.
 
-Assisted-by: LLM
 Signed-off-by: Arun Iyengar <aiyengar1990@gmail.com>
 ---
  .../rockchip/rkvdec/rkvdec-h264-common.c      | 131 +++++++++++++++++-

@@ -31,7 +31,6 @@ Discover Modes to the port partner are retried: a partner that never
 answered Discover Identity may not support Structured VDMs at all, and
 SOP' discovery is left as it is.
 
-Assisted-by: LLM
 Signed-off-by: Arun Iyengar <aiyengar1990@gmail.com>
 ---
  drivers/usb/typec/tcpm/tcpm.c | 36 ++++++++++++++++++++++++++++++++++-

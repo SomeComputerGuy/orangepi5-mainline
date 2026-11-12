@@ -10,7 +10,6 @@ used until linux/v4l2-controls.h and linux/videodev2.h provide them. They
 keep the kernel uAPI SPDX licence line rather than an FFmpeg licence
 header, so add them to the list of files without a standard header.
 
-Assisted-by: LLM
 Signed-off-by: Arun Iyengar <aiyengar1990@gmail.com>
 ---
  tests/ref/fate/source | 4 ++++

@@ -18,7 +18,6 @@ held while it is used, as dw_hdmi_qp_hpd_notify() does.
 
 (cherry picked from commit 82d2cf66e4d1032e581c9425da9e24d427e2b1ef)
 
-Assisted-by: LLM
 Signed-off-by: Arun Iyengar <aiyengar1990@gmail.com>
 ---
  drivers/gpu/drm/bridge/synopsys/dw-hdmi-qp.c | 71 ++++++++++++++------

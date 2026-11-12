@@ -41,7 +41,6 @@ Rockchip BSP kernel, drivers/video/rockchip/mpp/mpp_rkvdec2_link.c
 (soft CCU mode) and the MPP userspace register definitions
 (mpp/hal/rkdec/vdpu34x_com.h, SWREG28_MULTIPLY_CORE_CTRL).
 
-Assisted-by: LLM
 Signed-off-by: Arun Iyengar <aiyengar1990@gmail.com>
 ---
  .../media/platform/rockchip/rkvdec/Makefile   |   1 +

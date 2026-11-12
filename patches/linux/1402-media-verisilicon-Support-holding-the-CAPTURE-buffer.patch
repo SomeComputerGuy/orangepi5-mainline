@@ -1,8 +1,8 @@
-From 8a581d2faa88bac13202453082a58ad952da6e13 Mon Sep 17 00:00:00 2001
+From 3a9d1c6c6e6bc59ed682a3ce0b1c2ad0e9115958 Mon Sep 17 00:00:00 2001
 From: Arun Iyengar <aiyengar1990@gmail.com>
 Date: Thu, 29 Oct 2026 22:00:29 +0000
-Subject: [PATCH 2/8] media: verisilicon: Support holding the CAPTURE buffer
- for MPEG-2
+Subject: [PATCH] media: verisilicon: Support holding the CAPTURE buffer for
+ MPEG-2
 
 An MPEG-2 frame can be coded as two field pictures, each decoded by its
 own request. Both fields have to land in the same CAPTURE buffer: the
@@ -23,17 +23,18 @@ Allow holding the CAPTURE buffer for MPEG-2 too. Job completion goes
 through v4l2_m2m_buf_done_and_job_finish(), which already keeps a held
 CAPTURE buffer queued until the last field has been decoded.
 
-Assisted-by: LLM
+Fixes: 340ce50f75a6 ("media: hantro: Enable HOLD_CAPTURE_BUF for H.264")
+Cc: stable@vger.kernel.org
 Signed-off-by: Arun Iyengar <aiyengar1990@gmail.com>
 ---
  drivers/media/platform/verisilicon/hantro_v4l2.c | 2 +-
  1 file changed, 1 insertion(+), 1 deletion(-)
 
 diff --git a/drivers/media/platform/verisilicon/hantro_v4l2.c b/drivers/media/platform/verisilicon/hantro_v4l2.c
-index dacffed93..156170805 100644
+index 35c226b0c3b9..e2843d0de716 100644
 --- a/drivers/media/platform/verisilicon/hantro_v4l2.c
 +++ b/drivers/media/platform/verisilicon/hantro_v4l2.c
-@@ -594,13 +594,13 @@ hantro_update_requires_hold_capture_buf(struct hantro_ctx *ctx, u32 fourcc)
+@@ -595,13 +595,13 @@ hantro_update_requires_hold_capture_buf(struct hantro_ctx *ctx, u32 fourcc)
  
  	switch (fourcc) {
  	case V4L2_PIX_FMT_JPEG:

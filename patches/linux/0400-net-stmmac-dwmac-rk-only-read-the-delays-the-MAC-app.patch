@@ -23,7 +23,6 @@ Only parse the delay values that will actually be used, so the error is
 reserved for device trees that really lack a required delay. Behaviour
 for "rgmii", "rgmii-rxid" and "rgmii-txid" is unchanged.
 
-Assisted-by: LLM
 Signed-off-by: Arun Iyengar <aiyengar1990@gmail.com>
 ---
  .../net/ethernet/stmicro/stmmac/dwmac-rk.c    | 47 ++++++++++++-------

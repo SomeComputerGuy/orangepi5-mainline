@@ -27,7 +27,6 @@ dclk_vop0_src and dclk_vop3 (up to 128) and 5 bits on dclk_vop1_src and
 dclk_vop2_src (up to 32), which limits how far below a parent's rate
 each video port can go.
 
-Assisted-by: LLM
 Signed-off-by: Arun Iyengar <aiyengar1990@gmail.com>
 ---
  drivers/clk/rockchip/clk-rk3588.c | 12 ++++++++----

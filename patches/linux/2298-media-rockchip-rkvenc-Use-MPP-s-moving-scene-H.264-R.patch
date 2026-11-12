@@ -20,7 +20,6 @@ table one entry lower than MPP (index 5, lambda / 2^(1/3)). At a fixed QP
 fewer bits for the same PSNR-Y than the still-scene set with MPP's
 lambda.
 
-Assisted-by: LLM
 Signed-off-by: Arun Iyengar <aiyengar1990@gmail.com>
 ---
  .../platform/rockchip/rkvenc/rkvenc-h264.c    |  3 +-

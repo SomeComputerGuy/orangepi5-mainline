@@ -20,7 +20,6 @@ present, and not at all when the Type-C side reports HPD low.
 
 (cherry picked from commit 0e525158e7de122acaefc626e9704bd4c84e2b1e)
 
-Assisted-by: LLM
 Signed-off-by: Arun Iyengar <aiyengar1990@gmail.com>
 ---
  drivers/gpu/drm/bridge/synopsys/dw-dp.c | 15 ++++++++++++---

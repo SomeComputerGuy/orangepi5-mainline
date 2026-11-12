@@ -1,4 +1,4 @@
-From a5f92dc4f1a1b794b276a561a8164371b02fe677 Mon Sep 17 00:00:00 2001
+From c6816b683203d29ad61e908b891703b857197ca1 Mon Sep 17 00:00:00 2001
 From: Arun Iyengar <aiyengar1990@gmail.com>
 Date: Thu, 29 Oct 2026 16:47:17 +0000
 Subject: [PATCH] arm64: dts: rockchip: set the RK806 reset mode on Orange Pi 5
@@ -31,14 +31,13 @@ reset, the PWRCTRL pins are configured as "pin_fun0" (no function) and
 the TSADC uses CRU mode for its over-temperature reset. This property
 only fixes the behaviour for the cases where the PMIC is reset.
 
-Assisted-by: LLM
 Signed-off-by: Arun Iyengar <aiyengar1990@gmail.com>
 ---
  arch/arm64/boot/dts/rockchip/rk3588s-orangepi-5.dtsi | 2 ++
  1 file changed, 2 insertions(+)
 
 diff --git a/arch/arm64/boot/dts/rockchip/rk3588s-orangepi-5.dtsi b/arch/arm64/boot/dts/rockchip/rk3588s-orangepi-5.dtsi
-index fd0efa8d1..352e0552f 100644
+index f87b70820778..0752006eda13 100644
 --- a/arch/arm64/boot/dts/rockchip/rk3588s-orangepi-5.dtsi
 +++ b/arch/arm64/boot/dts/rockchip/rk3588s-orangepi-5.dtsi
 @@ -7,6 +7,7 @@
@@ -49,7 +48,7 @@ index fd0efa8d1..352e0552f 100644
  #include "rk3588s.dtsi"
  
  / {
-@@ -334,6 +335,7 @@ rk806: pmic@0 {
+@@ -335,6 +336,7 @@ rk806: pmic@0 {
  				<&rk806_dvs2_null>, <&rk806_dvs3_null>;
  		spi-max-frequency = <1000000>;
  		system-power-controller;
@@ -57,3 +56,6 @@ index fd0efa8d1..352e0552f 100644
  
  		vcc1-supply = <&vcc5v0_sys>;
  		vcc2-supply = <&vcc5v0_sys>;
+-- 
+2.55.0
+

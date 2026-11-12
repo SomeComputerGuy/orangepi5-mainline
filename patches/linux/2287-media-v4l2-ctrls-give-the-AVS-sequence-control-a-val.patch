@@ -1,8 +1,8 @@
-From 1646c068ef0634b399f91767828e35ecfa323513 Mon Sep 17 00:00:00 2001
+From f24ccff269ca0531437dcac67a217437a783d8d5 Mon Sep 17 00:00:00 2001
 From: Arun Iyengar <aiyengar1990@gmail.com>
 Date: Thu, 5 Nov 2026 12:48:11 +0000
-Subject: [PATCH 2287/2312] media: v4l2-ctrls: give the AVS sequence control a
- valid default
+Subject: [PATCH] media: v4l2-ctrls: give the AVS sequence control a valid
+ default
 
 validate_avs_sequence() refuses a zero horizontal_size or vertical_size,
 but the default value of V4L2_CID_STATELESS_AVS_SEQUENCE left both at
@@ -12,28 +12,25 @@ one, and VIDIOC_TRY_EXT_CTRLS on the current values failed with -EINVAL
 
 Default to QCIF, as the AVS2 sequence control does.
 
-Assisted-by: LLM
 Signed-off-by: Arun Iyengar <aiyengar1990@gmail.com>
 ---
- drivers/media/v4l2-core/v4l2-ctrls-core.c | 4 +++-
- 1 file changed, 3 insertions(+), 1 deletion(-)
+ drivers/media/v4l2-core/v4l2-ctrls-core.c | 3 +++
+ 1 file changed, 3 insertions(+)
 
 diff --git a/drivers/media/v4l2-core/v4l2-ctrls-core.c b/drivers/media/v4l2-core/v4l2-ctrls-core.c
-index 9837ee1b1520..5cb2e3217e43 100644
+index 9837ee1b1520..84154824480f 100644
 --- a/drivers/media/v4l2-core/v4l2-ctrls-core.c
 +++ b/drivers/media/v4l2-core/v4l2-ctrls-core.c
-@@ -219,8 +219,10 @@ static void std_init_compound(const struct v4l2_ctrl *ctrl, u32 idx,
- 	case V4L2_CTRL_TYPE_AVS_SEQUENCE:
- 		p_avs_sequence = p;
- 
--		/* 8-bit 4:2:0 progressive JiZhun profile */
-+		/* 8-bit 4:2:0 progressive JiZhun profile, QCIF */
+@@ -223,6 +223,9 @@ static void std_init_compound(const struct v4l2_ctrl *ctrl, u32 idx,
  		p_avs_sequence->profile_id = V4L2_AVS_PROFILE_JIZHUN;
-+		p_avs_sequence->horizontal_size = 176;
-+		p_avs_sequence->vertical_size = 144;
  		p_avs_sequence->chroma_format = 1;
  		p_avs_sequence->sample_precision = 1;
++		/* QCIF, the smallest standard picture size */
++		p_avs_sequence->horizontal_size = 176;
++		p_avs_sequence->vertical_size = 144;
  		p_avs_sequence->flags =
+ 			V4L2_AVS_SEQUENCE_FLAG_PROGRESSIVE_SEQUENCE;
+ 		break;
 -- 
 2.55.0
 

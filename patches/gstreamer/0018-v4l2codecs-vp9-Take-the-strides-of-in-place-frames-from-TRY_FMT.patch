@@ -18,7 +18,6 @@ output buffers; the plane offsets stay those of the buffer. For the
 coded size this is the format itself, so nothing changes for streams
 without inter frame resizes.
 
-Assisted-by: LLM
 Signed-off-by: Arun Iyengar <aiyengar1990@gmail.com>
 ---
  sys/v4l2codecs/gstv4l2codecvp9dec.c | 40 +++++++++++++++++++++---

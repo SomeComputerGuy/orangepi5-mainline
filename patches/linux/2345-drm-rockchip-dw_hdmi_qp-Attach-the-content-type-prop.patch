@@ -1,0 +1,32 @@
+From 14559889b21ab31f154f5cfc1c85713c1bd3f232 Mon Sep 17 00:00:00 2001
+From: Arun Iyengar <aiyengar1990@gmail.com>
+Date: Sat, 7 Nov 2026 23:24:49 +0000
+Subject: [PATCH 2345/2409] drm/rockchip: dw_hdmi_qp: Attach the "content type"
+ property
+
+Let userspace set the content type of the HDMI output. The HDMI state
+helper sends it in the AVI InfoFrame and, for game content on a sink
+that supports it, enables Auto Low Latency Mode.
+
+Signed-off-by: Arun Iyengar <aiyengar1990@gmail.com>
+---
+ drivers/gpu/drm/rockchip/dw_hdmi_qp-rockchip.c | 3 +++
+ 1 file changed, 3 insertions(+)
+
+diff --git a/drivers/gpu/drm/rockchip/dw_hdmi_qp-rockchip.c b/drivers/gpu/drm/rockchip/dw_hdmi_qp-rockchip.c
+index c576dd7a78af..d5fe7f21f29f 100644
+--- a/drivers/gpu/drm/rockchip/dw_hdmi_qp-rockchip.c
++++ b/drivers/gpu/drm/rockchip/dw_hdmi_qp-rockchip.c
+@@ -955,6 +955,9 @@ static int dw_hdmi_qp_rockchip_bind(struct device *dev, struct device *master,
+ 
+ 	drm_connector_attach_colorspace_property(connector);
+ 
++	/* Sent in the AVI InfoFrame; "Game" also enables ALLM */
++	drm_connector_attach_content_type_property(connector);
++
+ 	if (hdmi->limited_range_rgb) {
+ 		ret = drm_connector_attach_broadcast_rgb_property(connector);
+ 		if (ret)
+-- 
+2.55.0
+

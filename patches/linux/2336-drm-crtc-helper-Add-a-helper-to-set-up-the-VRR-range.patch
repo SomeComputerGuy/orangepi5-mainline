@@ -1,0 +1,106 @@
+From 2936d039067f1245a58b6b363c3c5572b2911fec Mon Sep 17 00:00:00 2001
+From: Arun Iyengar <aiyengar1990@gmail.com>
+Date: Sat, 7 Nov 2026 23:19:53 +0000
+Subject: [PATCH 2336/2409] drm/crtc-helper: Add a helper to set up the VRR
+ range of a mode
+
+The VRR state of a CRTC holds the vtotal of the mode at the highest and
+at the lowest refresh rate, between which the CRTC driver stretches the
+vertical front porch. Only the HDMI state helper fills it in, from the
+VRR range of the HDMI Forum VSDB.
+
+Other sinks, such as DisplayPort Adaptive-Sync monitors, have their range
+in the EDID monitor range. Add drm_crtc_helper_vrr_set_range() for the
+encoders and bridges of those: it fills in the two vtotals for a mode
+whose refresh rate is within the range of the sink, the mode's own being
+the highest, and fails with the state cleared otherwise.
+
+Signed-off-by: Arun Iyengar <aiyengar1990@gmail.com>
+---
+ drivers/gpu/drm/drm_crtc_helper.c | 56 +++++++++++++++++++++++++++++++
+ include/drm/drm_crtc_helper.h     |  3 ++
+ 2 files changed, 59 insertions(+)
+
+diff --git a/drivers/gpu/drm/drm_crtc_helper.c b/drivers/gpu/drm/drm_crtc_helper.c
+index 4ffb3b0b7878..f3b3e493aa94 100644
+--- a/drivers/gpu/drm/drm_crtc_helper.c
++++ b/drivers/gpu/drm/drm_crtc_helper.c
+@@ -901,6 +901,62 @@ bool drm_crtc_helper_vrr_vsync(struct drm_crtc_state *crtc_state)
+ }
+ EXPORT_SYMBOL(drm_crtc_helper_vrr_vsync);
+ 
++static u32 drm_crtc_helper_vrr_vtotal(const struct drm_display_mode *mode,
++				      unsigned int vfreq)
++{
++	return div_u64(mul_u32_u32(mode->crtc_clock, 1000),
++		       mode->crtc_htotal * vfreq);
++}
++
++/**
++ * drm_crtc_helper_vrr_set_range - Set up the VRR state for a refresh rate range
++ * @crtc_state: CRTC state with the mode to drive at a variable refresh rate
++ * @min_vfreq: lowest refresh rate of the sink, in Hz
++ * @max_vfreq: highest refresh rate of the sink, in Hz
++ *
++ * A sink with a variable refresh rate (DisplayPort Adaptive-Sync, HDMI VRR)
++ * shows a frame when it arrives: the source varies the refresh rate with the
++ * length of the vertical front porch of the mode. Compute the vtotal of the
++ * adjusted mode of @crtc_state at its own refresh rate, the highest one, and
++ * at the lowest refresh rate of the sink, as &drm_crtc_vrr_state.base_vtotal and
++ * &drm_crtc_vrr_state.max_vtotal. Encoder or bridge drivers call this from
++ * their atomic_check when &drm_crtc_state.vrr_enabled is set, so that the
++ * CRTC driver can stretch the frames between those two.
++ *
++ * The VRR state is cleared on failure.
++ *
++ * Returns:
++ * 0 on success, -EINVAL if the refresh rate of the mode is outside of the
++ * range of the sink or the range is empty for this mode.
++ */
++int drm_crtc_helper_vrr_set_range(struct drm_crtc_state *crtc_state,
++				  unsigned int min_vfreq,
++				  unsigned int max_vfreq)
++{
++	const struct drm_display_mode *mode = &crtc_state->adjusted_mode;
++	struct drm_crtc_vrr_state *vrr = &crtc_state->vrr_state;
++	int refresh = drm_mode_vrefresh(mode);
++	u32 base_vtotal, max_vtotal;
++
++	memset(vrr, 0, sizeof(*vrr));
++
++	if (!min_vfreq || min_vfreq >= max_vfreq || !mode->crtc_htotal ||
++	    refresh < min_vfreq || refresh > max_vfreq)
++		return -EINVAL;
++
++	base_vtotal = max_t(u32, drm_crtc_helper_vrr_vtotal(mode, refresh),
++			    mode->crtc_vtotal);
++	max_vtotal = drm_crtc_helper_vrr_vtotal(mode, min_vfreq);
++	if (max_vtotal <= base_vtotal || max_vtotal > U16_MAX)
++		return -EINVAL;
++
++	vrr->base_vtotal = base_vtotal;
++	vrr->max_vtotal = max_vtotal;
++
++	return 0;
++}
++EXPORT_SYMBOL(drm_crtc_helper_vrr_set_range);
++
+ static int drm_helper_choose_encoder_dpms(struct drm_encoder *encoder)
+ {
+ 	int dpms = DRM_MODE_DPMS_OFF;
+diff --git a/include/drm/drm_crtc_helper.h b/include/drm/drm_crtc_helper.h
+index 0c8c11ea36dd..a9921c0ebe06 100644
+--- a/include/drm/drm_crtc_helper.h
++++ b/include/drm/drm_crtc_helper.h
+@@ -65,5 +65,8 @@ int drm_helper_force_disable_all(struct drm_device *dev);
+ 
+ bool drm_crtc_helper_vrr_flush(struct drm_crtc_state *crtc_state);
+ bool drm_crtc_helper_vrr_vsync(struct drm_crtc_state *crtc_state);
++int drm_crtc_helper_vrr_set_range(struct drm_crtc_state *crtc_state,
++				  unsigned int min_vfreq,
++				  unsigned int max_vfreq);
+ 
+ #endif
+-- 
+2.55.0
+

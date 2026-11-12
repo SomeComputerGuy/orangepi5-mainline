@@ -17,7 +17,6 @@ switching between MPEG-1 and MPEG-2 sequences renegotiates. This also
 fixes a NULL pointer dereference of the sequence extension when it is
 absent.
 
-Assisted-by: LLM
 Signed-off-by: Arun Iyengar <aiyengar1990@gmail.com>
 ---
  sys/v4l2codecs/gstv4l2codecmpeg2dec.c | 52 +++++++++++++++++++++++++--

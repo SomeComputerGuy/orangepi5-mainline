@@ -43,7 +43,6 @@ pm_runtime_resume_and_get() and clk_bulk_enable() failure paths, which
 had the same request completion problem. It does nothing for buffers
 that aren't part of a request.
 
-Assisted-by: LLM
 Signed-off-by: Arun Iyengar <aiyengar1990@gmail.com>
 ---
  drivers/media/platform/verisilicon/hantro_drv.c     | 10 +++++++++-

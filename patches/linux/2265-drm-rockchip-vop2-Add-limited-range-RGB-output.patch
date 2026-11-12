@@ -1,7 +1,7 @@
-From 06f131f4743d0583f3b7c930d0c18bfdfb1c9e25 Mon Sep 17 00:00:00 2001
+From 84be7bde590024035df5b565b1cde32977585735 Mon Sep 17 00:00:00 2001
 From: Arun Iyengar <aiyengar1990@gmail.com>
 Date: Tue, 3 Nov 2026 05:33:55 +0000
-Subject: [PATCH 2265/2271] drm/rockchip: vop2: Add limited range RGB output
+Subject: [PATCH] drm/rockchip: vop2: Add limited range RGB output
 
 The HDMI state helper decides per commit whether RGB goes out in the
 full or the limited quantization range
@@ -28,7 +28,6 @@ The flag is cleared when the CRTC state is duplicated, as the encoder's
 atomic_check sets it again on every modeset, and a video port that moves
 to another encoder must not keep it.
 
-Assisted-by: LLM
 Signed-off-by: Arun Iyengar <aiyengar1990@gmail.com>
 ---
  drivers/gpu/drm/rockchip/rockchip_drm_drv.h  |  2 +
@@ -50,10 +49,10 @@ index 7dd63a4ba25b..7bf9a8262258 100644
  	/* VOP2: rate to program into the dedicated video PLL for the DCLK, 0 if none */
  	unsigned long dclk_pll_rate;
 diff --git a/drivers/gpu/drm/rockchip/rockchip_drm_vop2.c b/drivers/gpu/drm/rockchip/rockchip_drm_vop2.c
-index b41d37b5249d..3eff2967ebde 100644
+index e7499aee6274..990ea11f3e37 100644
 --- a/drivers/gpu/drm/rockchip/rockchip_drm_vop2.c
 +++ b/drivers/gpu/drm/rockchip/rockchip_drm_vop2.c
-@@ -2294,6 +2294,59 @@ static void vop2_crtc_protect_dclk_pll(struct vop2_video_port *vp)
+@@ -2319,6 +2319,59 @@ static void vop2_crtc_protect_dclk_pll(struct vop2_video_port *vp)
  		vp->pll_v0_held = true;
  }
  
@@ -113,7 +112,7 @@ index b41d37b5249d..3eff2967ebde 100644
  static void vop2_crtc_atomic_enable(struct drm_crtc *crtc,
  				    struct drm_atomic_commit *state)
  {
-@@ -2473,6 +2526,7 @@ static void vop2_crtc_atomic_enable(struct drm_crtc *crtc,
+@@ -2498,6 +2551,7 @@ static void vop2_crtc_atomic_enable(struct drm_crtc *crtc,
  	vop2_crtc_protect_dclk_pll(vp);
  
  	vop2_post_config(crtc, true, crtc_state, old_crtc_state);
@@ -121,7 +120,7 @@ index b41d37b5249d..3eff2967ebde 100644
  
  	vop2_cfg_done(vp);
  
-@@ -3312,6 +3366,9 @@ static struct drm_crtc_state *vop2_crtc_duplicate_state(struct drm_crtc *crtc)
+@@ -3338,6 +3392,9 @@ static struct drm_crtc_state *vop2_crtc_duplicate_state(struct drm_crtc *crtc)
  
  	__drm_atomic_helper_crtc_duplicate_state(crtc, &vcstate->base);
  

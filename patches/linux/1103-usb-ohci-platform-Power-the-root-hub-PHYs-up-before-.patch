@@ -34,7 +34,6 @@ which happened to hide the problem) wedged on every attempt before,
 with the PHYs powered around an unmodified ohci_resume() it resumes
 cleanly.
 
-Assisted-by: LLM
 Signed-off-by: Arun Iyengar <aiyengar1990@gmail.com>
 ---
  drivers/usb/host/ohci-platform.c | 20 ++++++++++++++++++++

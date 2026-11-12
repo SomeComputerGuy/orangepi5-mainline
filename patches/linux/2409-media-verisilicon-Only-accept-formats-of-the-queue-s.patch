@@ -1,0 +1,66 @@
+From d42a7f0788afe6e3a264ed12e954fbbbdba9e206 Mon Sep 17 00:00:00 2001
+From: Arun Iyengar <aiyengar1990@gmail.com>
+Date: Tue, 10 Nov 2026 08:33:49 +0000
+Subject: [PATCH 2409/2409] media: verisilicon: Only accept formats of the
+ queue's kind in TRY_FMT
+
+The format tables of the Hantro variants hold both the coded formats and
+the raw ones (codec_mode HANTRO_MODE_NONE). vidioc_enum_fmt() and
+hantro_get_default_fmt() filter them by kind, but hantro_try_fmt() looks
+the requested pixelformat up in the whole table. It therefore accepts a
+raw format on the coded queue and a coded format on the raw queue, and
+hantro_set_fmt_out() and hantro_set_fmt_cap() store it as
+ctx->vpu_src_fmt or ctx->vpu_dst_fmt.
+
+On an RK3588 running a 7.3 based kernel, a user who is only a member of
+the video group can set a raw format on the coded queue of the VEPU121
+JPEG encoder and of the VPU981 AV1 decoder with VIDIOC_S_FMT. When the
+application leaves sizeimage at zero, the driver computes it from the
+header size and the depth of the format. A raw format has neither, so
+the sizeimage of the coded queue stays zero, and the next VIDIOC_REQBUFS
+on that queue fails with -EINVAL after
+
+  WARNING: drivers/media/common/videobuf2/videobuf2-core.c:951 at vb2_core_reqbufs+0x1ac/0x530 [videobuf2_common]
+
+which is the WARN_ON(!plane_sizes[i]) check. With panic_on_warn set,
+this is enough for such a user to panic the machine.
+
+From reading the code, the wrong format can do more harm than that:
+hantro_start_streaming() takes the codec mode from the format of the
+coded queue and uses it as the index into the codec_ops array of the
+variant, and HANTRO_MODE_NONE is -1. This was not observed. In the test
+above, which left sizeimage at zero, no buffer could be allocated on the
+coded queue and VIDIOC_STREAMON failed with -EINVAL too, so the index
+was never used. It has not been established whether another sequence
+gets that far.
+
+Treat a format of the wrong kind like an unknown one and fall back to
+the default format of the queue. With this change VIDIOC_S_FMT returns
+the default coded format on the nodes above.
+
+Fixes: 775fec69008d ("media: add Rockchip VPU JPEG encoder driver")
+Reported-by: Sashiko <sashiko-bot@kernel.org>
+Closes: https://sashiko.dev/#/patchset/20261110-hantro-jpeg-enc-fixes-v1-0-fc4dc7e985d2@gmail.com?part=1
+Cc: stable@vger.kernel.org
+Signed-off-by: Arun Iyengar <aiyengar1990@gmail.com>
+---
+ drivers/media/platform/verisilicon/hantro_v4l2.c | 3 +++
+ 1 file changed, 3 insertions(+)
+
+diff --git a/drivers/media/platform/verisilicon/hantro_v4l2.c b/drivers/media/platform/verisilicon/hantro_v4l2.c
+index 09063b2511f3..6c8eed8d1ad9 100644
+--- a/drivers/media/platform/verisilicon/hantro_v4l2.c
++++ b/drivers/media/platform/verisilicon/hantro_v4l2.c
+@@ -400,6 +400,9 @@ static int hantro_try_fmt(const struct hantro_ctx *ctx,
+ 	vpu_debug(4, "trying format %p4cc\n", &pix_mp->pixelformat);
+ 
+ 	fmt = hantro_find_format(ctx, pix_mp->pixelformat);
++	/* The format list mixes coded and raw formats, only take the right kind */
++	if (fmt && coded != (fmt->codec_mode != HANTRO_MODE_NONE))
++		fmt = NULL;
+ 	/* A 4:0:0 stream is decoded to a 4:0:0 format only, and vice versa */
+ 	if (fmt && !coded && !ctx->is_encoder &&
+ 	    fmt->monochrome != ctx->monochrome)
+-- 
+2.55.0
+

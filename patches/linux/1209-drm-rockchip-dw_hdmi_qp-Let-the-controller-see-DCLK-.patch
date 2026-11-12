@@ -24,7 +24,6 @@ disabled and before it is enabled again, so wait there until the
 controller reports the input clock as stopped. If the CRTC was already
 off, the clock is already reported stopped and this returns immediately.
 
-Assisted-by: LLM
 Signed-off-by: Arun Iyengar <aiyengar1990@gmail.com>
 ---
  drivers/gpu/drm/rockchip/dw_hdmi_qp-rockchip.c | 16 ++++++++++++++++

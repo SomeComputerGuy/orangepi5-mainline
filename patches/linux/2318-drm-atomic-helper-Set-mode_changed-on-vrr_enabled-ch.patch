@@ -1,0 +1,45 @@
+From 19645e92066fd241c6365e2fbfe0f036118ad023 Mon Sep 17 00:00:00 2001
+From: Nicolas Frattaroli <nicolas.frattaroli@collabora.com>
+Date: Sat, 7 Nov 2026 20:26:24 +0000
+Subject: [PATCH 2318/2409] drm/atomic-helper: Set mode_changed on vrr_enabled
+ change
+
+A change in whether VRR is enabled or not on a CRTC will be of interest
+to any VRR implementation, as they may need to recalculate certain
+internal state in response. So far, this was handled ad-hoc in the
+drivers that implement VRR.
+
+Handle this in the common DRM atomic core by setting the mode_changed
+flag when this occurs. The rationale for using mode_changed is that VRR
+is deeply intertwined with the current mode with regards to its timing.
+Consequently, any component that cares about a mode change is likely
+also going to care about VRR being enabled/disabled.
+
+Signed-off-by: Nicolas Frattaroli <nicolas.frattaroli@collabora.com>
+[Arun: ported from the RFC series "VRR Target Rate Limiter KMS uAPI and
+ Implementation" (dri-devel, 2026-09-21) onto v7.3]
+Signed-off-by: Arun Iyengar <aiyengar1990@gmail.com>
+---
+ drivers/gpu/drm/drm_atomic_helper.c | 6 ++++++
+ 1 file changed, 6 insertions(+)
+
+diff --git a/drivers/gpu/drm/drm_atomic_helper.c b/drivers/gpu/drm/drm_atomic_helper.c
+index 285aac3554df..0ecb6767792e 100644
+--- a/drivers/gpu/drm/drm_atomic_helper.c
++++ b/drivers/gpu/drm/drm_atomic_helper.c
+@@ -694,6 +694,12 @@ drm_atomic_helper_check_modeset(struct drm_device *dev,
+ 			new_crtc_state->active_changed = true;
+ 		}
+ 
++		if (old_crtc_state->vrr_enabled != new_crtc_state->vrr_enabled) {
++			drm_dbg_atomic(dev, "[CRTC:%d:%s] VRR changed\n",
++				       crtc->base.id, crtc->name);
++			new_crtc_state->mode_changed = true;
++		}
++
+ 		if (new_crtc_state->enable != has_connectors) {
+ 			drm_dbg_atomic(dev, "[CRTC:%d:%s] enabled/connectors mismatch (%d/%d)\n",
+ 				       crtc->base.id, crtc->name,
+-- 
+2.55.0
+

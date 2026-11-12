@@ -1,0 +1,299 @@
+From a5aabbb71f689cc8d26bb48580dc012614da1e8b Mon Sep 17 00:00:00 2001
+From: Arun Iyengar <aiyengar1990@gmail.com>
+Date: Fri, 30 Oct 2026 10:39:13 +0000
+Subject: [PATCH 2366/2409] media: verisilicon: Decode monochrome H.264 to GREY
+ on Rockchip
+
+The G1 and VDPU2 decoders write the direct mode motion vectors of a
+4:0:0 (monochrome) H.264 picture right after its luma plane: they write
+no chroma (the driver programs the motion vector offset for that, and
+the vendor's MPP outputs these pictures as YUV400). The driver still
+offers NV12 only, so the chroma plane userspace gets holds motion vectors.
+HPCAMOLQ_BRCM_B and HPCVMOLQ_BRCM_B of the JVT-FR-EXT conformance suite
+fail with bit-exact luma.
+
+Track whether the stream is 4:0:0 from the SPS, and offer GREY, and only
+GREY, for those streams on the Rockchip G1/VDPU2 variants.
+
+Signed-off-by: Arun Iyengar <aiyengar1990@gmail.com>
+---
+ drivers/media/platform/verisilicon/hantro.h   |  5 ++
+ .../media/platform/verisilicon/hantro_drv.c   | 33 ++++++++++-
+ .../media/platform/verisilicon/hantro_v4l2.c  | 32 +++++++++--
+ .../platform/verisilicon/rockchip_vpu_hw.c    | 56 +++++++++++++++++++
+ 4 files changed, 120 insertions(+), 6 deletions(-)
+
+diff --git a/drivers/media/platform/verisilicon/hantro.h b/drivers/media/platform/verisilicon/hantro.h
+index 4400c4049ae6..6aa808f17ee0 100644
+--- a/drivers/media/platform/verisilicon/hantro.h
++++ b/drivers/media/platform/verisilicon/hantro.h
+@@ -303,6 +303,7 @@ struct hantro_dev {
+  * @ctrl_handler:	Control handler used to register controls.
+  * @jpeg_quality:	User-specified JPEG compression quality.
+  * @bit_depth:		Bit depth of current frame
++ * @monochrome:		The stream is 4:0:0 (H.264), the decoder writes luma only
+  * @need_postproc:	Set to true if the bitstream features require to
+  *			use the post-processor.
+  *
+@@ -338,6 +339,7 @@ struct hantro_ctx {
+ 	struct v4l2_ctrl_handler ctrl_handler;
+ 	int jpeg_quality;
+ 	int bit_depth;
++	bool monochrome;
+ 
+ 	const struct hantro_codec_ops *codec_ops;
+ 	struct hantro_postproc_ctx postproc;
+@@ -369,6 +371,8 @@ struct hantro_ctx {
+  * @frmsize:	Supported range of frame sizes (only for bitstream formats).
+  * @postprocessed: Indicates if this format needs the post-processor.
+  * @match_depth: Indicates if format bit depth must match video bit depth
++ * @monochrome: Decoded format of 4:0:0 streams only, the other decoded
++ *		formats are for streams with chroma only
+  */
+ struct hantro_fmt {
+ 	char *name;
+@@ -380,6 +384,7 @@ struct hantro_fmt {
+ 	struct v4l2_frmsize_stepwise frmsize;
+ 	bool postprocessed;
+ 	bool match_depth;
++	bool monochrome;
+ };
+ 
+ struct hantro_reg {
+diff --git a/drivers/media/platform/verisilicon/hantro_drv.c b/drivers/media/platform/verisilicon/hantro_drv.c
+index 8943dac33706..c376f913a39c 100644
+--- a/drivers/media/platform/verisilicon/hantro_drv.c
++++ b/drivers/media/platform/verisilicon/hantro_drv.c
+@@ -471,6 +471,32 @@ static int hantro_jpeg_s_ctrl(struct v4l2_ctrl *ctrl)
+ 	return 0;
+ }
+ 
++static int hantro_h264_s_ctrl(struct v4l2_ctrl *ctrl)
++{
++	struct hantro_ctx *ctx;
++	bool monochrome;
++	int ret;
++
++	ctx = container_of(ctrl->handler,
++			   struct hantro_ctx, ctrl_handler);
++
++	switch (ctrl->id) {
++	case V4L2_CID_STATELESS_H264_SPS:
++		/* A 4:0:0 picture has no chroma plane, see hantro_fmt.monochrome */
++		monochrome = ctrl->p_new.p_h264_sps->chroma_format_idc == 0;
++		if (ctx->monochrome == monochrome)
++			return 0;
++
++		ctx->monochrome = monochrome;
++		ret = hantro_reset_raw_fmt(ctx, ctx->bit_depth, HANTRO_AUTO_POSTPROC);
++		if (ret)
++			ctx->monochrome = !monochrome;
++		return ret;
++	default:
++		return -EINVAL;
++	}
++}
++
+ static int hantro_vp9_s_ctrl(struct v4l2_ctrl *ctrl)
+ {
+ 	struct hantro_ctx *ctx;
+@@ -552,6 +578,11 @@ static const struct v4l2_ctrl_ops hantro_ctrl_ops = {
+ 	.try_ctrl = hantro_try_ctrl,
+ };
+ 
++static const struct v4l2_ctrl_ops hantro_h264_ctrl_ops = {
++	.try_ctrl = hantro_try_ctrl,
++	.s_ctrl = hantro_h264_s_ctrl,
++};
++
+ static const struct v4l2_ctrl_ops hantro_jpeg_ctrl_ops = {
+ 	.s_ctrl = hantro_jpeg_s_ctrl,
+ };
+@@ -774,7 +805,7 @@ static const struct hantro_ctrl controls[] = {
+ 		.codec = HANTRO_H264_DECODER,
+ 		.cfg = {
+ 			.id = V4L2_CID_STATELESS_H264_SPS,
+-			.ops = &hantro_ctrl_ops,
++			.ops = &hantro_h264_ctrl_ops,
+ 		},
+ 	}, {
+ 		.codec = HANTRO_H264_DECODER,
+diff --git a/drivers/media/platform/verisilicon/hantro_v4l2.c b/drivers/media/platform/verisilicon/hantro_v4l2.c
+index 116cd4b9f9d3..eaa0a853ba5c 100644
+--- a/drivers/media/platform/verisilicon/hantro_v4l2.c
++++ b/drivers/media/platform/verisilicon/hantro_v4l2.c
+@@ -109,6 +109,21 @@ hantro_check_depth_match(const struct hantro_fmt *fmt, int bit_depth)
+ 	return fmt_depth == bit_depth;
+ }
+ 
++/*
++ * A decoded (CAPTURE) format of a decoder suits the stream if its bit depth
++ * does and it is a 4:0:0 format exactly when the stream is 4:0:0.
++ */
++static bool
++hantro_check_fmt_match(const struct hantro_ctx *ctx,
++		       const struct hantro_fmt *fmt, int bit_depth)
++{
++	if (!ctx->is_encoder && fmt->codec_mode == HANTRO_MODE_NONE &&
++	    fmt->monochrome != ctx->monochrome)
++		return false;
++
++	return hantro_check_depth_match(fmt, bit_depth);
++}
++
+ static const struct hantro_fmt *
+ hantro_find_format(const struct hantro_ctx *ctx, u32 fourcc)
+ {
+@@ -156,7 +171,7 @@ hantro_get_default_fmt(const struct hantro_ctx *ctx, bool bitstream,
+ 	for (i = 0; i < num_fmts; i++) {
+ 		if (bitstream == (formats[i].codec_mode !=
+ 				  HANTRO_MODE_NONE) &&
+-		    hantro_check_depth_match(&formats[i], bit_depth))
++		    hantro_check_fmt_match(ctx, &formats[i], bit_depth))
+ 			return &formats[i];
+ 	}
+ 
+@@ -164,7 +179,7 @@ hantro_get_default_fmt(const struct hantro_ctx *ctx, bool bitstream,
+ 	for (i = 0; i < num_fmts; i++) {
+ 		if (bitstream == (formats[i].codec_mode !=
+ 				  HANTRO_MODE_NONE) &&
+-		    hantro_check_depth_match(&formats[i], bit_depth))
++		    hantro_check_fmt_match(ctx, &formats[i], bit_depth))
+ 			return &formats[i];
+ 	}
+ 
+@@ -301,7 +316,7 @@ static int vidioc_enum_fmt(struct file *file, void *priv,
+ 
+ 		if (skip_mode_none == mode_none)
+ 			continue;
+-		if (!hantro_check_depth_match(fmt, ctx->bit_depth) && !enum_all_formats)
++		if (!hantro_check_fmt_match(ctx, fmt, ctx->bit_depth) && !enum_all_formats)
+ 			continue;
+ 		if (j == index) {
+ 			f->pixelformat = fmt->fourcc;
+@@ -321,7 +336,7 @@ static int vidioc_enum_fmt(struct file *file, void *priv,
+ 	for (i = 0; i < num_fmts; i++) {
+ 		fmt = &formats[i];
+ 
+-		if (!hantro_check_depth_match(fmt, ctx->bit_depth) && !enum_all_formats)
++		if (!hantro_check_fmt_match(ctx, fmt, ctx->bit_depth) && !enum_all_formats)
+ 			continue;
+ 		if (j == index) {
+ 			f->pixelformat = fmt->fourcc;
+@@ -385,6 +400,10 @@ static int hantro_try_fmt(const struct hantro_ctx *ctx,
+ 	vpu_debug(4, "trying format %p4cc\n", &pix_mp->pixelformat);
+ 
+ 	fmt = hantro_find_format(ctx, pix_mp->pixelformat);
++	/* A 4:0:0 stream is decoded to a 4:0:0 format only, and vice versa */
++	if (fmt && !coded && !ctx->is_encoder &&
++	    fmt->monochrome != ctx->monochrome)
++		fmt = NULL;
+ 	if (!fmt) {
+ 		fmt = hantro_get_default_fmt(ctx, coded, HANTRO_DEFAULT_BIT_DEPTH, HANTRO_AUTO_POSTPROC);
+ 		pix_mp->pixelformat = fmt->fourcc;
+@@ -717,10 +736,13 @@ static int hantro_set_fmt_out(struct hantro_ctx *ctx,
+ 	 * Note that hantro_reset_raw_fmt() also propagates size
+ 	 * changes to the raw format.
+ 	 */
+-	if (!ctx->is_encoder)
++	if (!ctx->is_encoder) {
++		/* A new stream: assume chroma until its H.264 SPS says otherwise */
++		ctx->monochrome = false;
+ 		hantro_reset_raw_fmt(ctx,
+ 				     hantro_get_format_depth(pix_mp->pixelformat),
+ 				     need_postproc);
++	}
+ 
+ 	/* Colorimetry information are always propagated. */
+ 	ctx->dst_fmt.colorspace = pix_mp->colorspace;
+diff --git a/drivers/media/platform/verisilicon/rockchip_vpu_hw.c b/drivers/media/platform/verisilicon/rockchip_vpu_hw.c
+index f5c771cf85c7..0666bc671cd9 100644
+--- a/drivers/media/platform/verisilicon/rockchip_vpu_hw.c
++++ b/drivers/media/platform/verisilicon/rockchip_vpu_hw.c
+@@ -175,6 +175,20 @@ static const struct hantro_fmt rk3066_vpu_dec_fmts[] = {
+ 			.step_height = MB_DIM,
+ 		},
+ 	},
++	{
++		/* 4:0:0 H.264: the decoder writes no chroma plane */
++		.fourcc = V4L2_PIX_FMT_GREY,
++		.codec_mode = HANTRO_MODE_NONE,
++		.monochrome = true,
++		.frmsize = {
++			.min_width = FMT_MIN_WIDTH,
++			.max_width = FMT_FHD_WIDTH,
++			.step_width = MB_DIM,
++			.min_height = FMT_MIN_HEIGHT,
++			.max_height = FMT_FHD_HEIGHT,
++			.step_height = MB_DIM,
++		},
++	},
+ 	{
+ 		.fourcc = V4L2_PIX_FMT_H264_SLICE,
+ 		.codec_mode = HANTRO_MODE_H264_DEC,
+@@ -229,6 +243,20 @@ static const struct hantro_fmt rk3288_vpu_dec_fmts[] = {
+ 			.step_height = MB_DIM,
+ 		},
+ 	},
++	{
++		/* 4:0:0 H.264: the decoder writes no chroma plane */
++		.fourcc = V4L2_PIX_FMT_GREY,
++		.codec_mode = HANTRO_MODE_NONE,
++		.monochrome = true,
++		.frmsize = {
++			.min_width = FMT_MIN_WIDTH,
++			.max_width = FMT_4K_WIDTH,
++			.step_width = MB_DIM,
++			.min_height = FMT_MIN_HEIGHT,
++			.max_height = FMT_4K_HEIGHT,
++			.step_height = MB_DIM,
++		},
++	},
+ 	{
+ 		.fourcc = V4L2_PIX_FMT_H264_SLICE,
+ 		.codec_mode = HANTRO_MODE_H264_DEC,
+@@ -283,6 +311,20 @@ static const struct hantro_fmt rockchip_vdpu2_dec_fmts[] = {
+ 			.step_height = MB_DIM,
+ 		},
+ 	},
++	{
++		/* 4:0:0 H.264: the decoder writes no chroma plane */
++		.fourcc = V4L2_PIX_FMT_GREY,
++		.codec_mode = HANTRO_MODE_NONE,
++		.monochrome = true,
++		.frmsize = {
++			.min_width = FMT_MIN_WIDTH,
++			.max_width = FMT_FHD_WIDTH,
++			.step_width = MB_DIM,
++			.min_height = FMT_MIN_HEIGHT,
++			.max_height = FMT_FHD_HEIGHT,
++			.step_height = MB_DIM,
++		},
++	},
+ 	{
+ 		.fourcc = V4L2_PIX_FMT_H264_SLICE,
+ 		.codec_mode = HANTRO_MODE_H264_DEC,
+@@ -394,6 +436,20 @@ static const struct hantro_fmt rk3588_vpu121_avsd_dec_fmts[] = {
+ 			.step_height = MB_DIM,
+ 		},
+ 	},
++	{
++		/* 4:0:0 H.264: the decoder writes no chroma plane */
++		.fourcc = V4L2_PIX_FMT_GREY,
++		.codec_mode = HANTRO_MODE_NONE,
++		.monochrome = true,
++		.frmsize = {
++			.min_width = FMT_MIN_WIDTH,
++			.max_width = FMT_FHD_WIDTH,
++			.step_width = MB_DIM,
++			.min_height = FMT_MIN_HEIGHT,
++			.max_height = FMT_FHD_HEIGHT,
++			.step_height = MB_DIM,
++		},
++	},
+ 	{
+ 		.fourcc = V4L2_PIX_FMT_H264_SLICE,
+ 		.codec_mode = HANTRO_MODE_H264_DEC,
+-- 
+2.55.0
+

@@ -40,8 +40,6 @@ Reproducer: an HTTP server with Range support serving an MP4, then 30 starts of
     queue ! v4l2slh265dec ! queue ! waylandsink
 On an Orange Pi 5 (GStreamer 1.28.7, libsoup 3): 15/30 instant failures
 before, 0/30 after. Playback and seeking are otherwise unchanged.
-
-Assisted-by: LLM
 ---
  ext/soup/gstsouphttpsrc.c | 20 ++++++++++++++++++++
  ext/soup/gstsouphttpsrc.h |  1 +

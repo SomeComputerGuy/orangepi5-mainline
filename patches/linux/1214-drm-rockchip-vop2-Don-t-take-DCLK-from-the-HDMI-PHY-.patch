@@ -16,7 +16,6 @@ The HDMI encoder already records the link mode in the CRTC state
 the DCLK source selection into a helper so that atomic_check can make
 the same decision.
 
-Assisted-by: LLM
 Signed-off-by: Arun Iyengar <aiyengar1990@gmail.com>
 ---
  drivers/gpu/drm/rockchip/rockchip_drm_vop2.c | 101 +++++++++++--------

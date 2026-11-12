@@ -8,7 +8,6 @@ RSHIFT(x, 0) evaluates to x - 1 for negative x (the rounding term
 (1 << 0) >> 1 is 0, but the negative branch still subtracts 1). With
 a == 0 the GMC1 sum is exact, so use it unshifted.
 
-Assisted-by: LLM
 Signed-off-by: Arun Iyengar <aiyengar1990@gmail.com>
 ---
  libavcodec/mpeg4videodec.c | 3 ++-

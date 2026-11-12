@@ -39,7 +39,6 @@ encoders by Michael Grzeschik, Denis Shimizu and Paul Kocialkowski
 (gstreamer MR !5676 and the v4l2codecs/h264enc branch of Paul
 Kocialkowski), which uses the same uAPI; the element itself is new.
 
-Assisted-by: LLM
 Signed-off-by: Arun Iyengar <aiyengar1990@gmail.com>
 ---
  sys/v4l2codecs/gstv4l2codecbaseenc.c | 1051 ++++++++++++++++++++++++++

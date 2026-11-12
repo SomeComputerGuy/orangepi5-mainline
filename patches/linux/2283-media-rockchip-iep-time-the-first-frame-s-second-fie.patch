@@ -25,7 +25,6 @@ previous frame and times the earlier field at the midpoint between the
 two inputs, and rcar_fdp1 and ti-vpe give both fields of an interlaced
 buffer the buffer's timestamp, so no implementation invents the period.
 
-Assisted-by: LLM
 Signed-off-by: Arun Iyengar <aiyengar1990@gmail.com>
 ---
  drivers/media/platform/rockchip/iep/iep.c | 38 ++++++++++++++++++++---

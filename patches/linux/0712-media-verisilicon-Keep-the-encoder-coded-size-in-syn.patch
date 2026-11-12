@@ -1,4 +1,4 @@
-From 919da5a41557c417877739fd216bbe7fff16c40e Mon Sep 17 00:00:00 2001
+From d10a54cc7af5d5c44c13934499e3b38669d382d3 Mon Sep 17 00:00:00 2001
 From: Arun Iyengar <aiyengar1990@gmail.com>
 Date: Thu, 29 Oct 2026 12:01:59 +0000
 Subject: [PATCH] media: verisilicon: Keep the encoder coded size in sync with
@@ -34,17 +34,17 @@ With this, the coded size can only differ from the OUTPUT size by the
 crop set through VIDIOC_S_SELECTION, which is restricted to the last
 macroblock.
 
-Assisted-by: LLM
+Fixes: 953aaa1492c5 ("media: rockchip/vpu: Prepare things to support decoders")
 Signed-off-by: Arun Iyengar <aiyengar1990@gmail.com>
 ---
  .../media/platform/verisilicon/hantro_v4l2.c  | 26 +++++++++++++++++++
  1 file changed, 26 insertions(+)
 
 diff --git a/drivers/media/platform/verisilicon/hantro_v4l2.c b/drivers/media/platform/verisilicon/hantro_v4l2.c
-index c022b978f..731182cde 100644
+index f1a0ab32b575..c905079bd98b 100644
 --- a/drivers/media/platform/verisilicon/hantro_v4l2.c
 +++ b/drivers/media/platform/verisilicon/hantro_v4l2.c
-@@ -541,6 +541,7 @@ static int hantro_set_fmt_out(struct hantro_ctx *ctx,
+@@ -542,6 +542,7 @@ static int hantro_set_fmt_out(struct hantro_ctx *ctx,
  			      struct v4l2_pix_format_mplane *pix_mp,
  			      bool need_postproc)
  {
@@ -52,7 +52,7 @@ index c022b978f..731182cde 100644
  	struct vb2_queue *vq;
  	int ret;
  
-@@ -560,16 +561,41 @@ static int hantro_set_fmt_out(struct hantro_ctx *ctx,
+@@ -561,16 +562,41 @@ static int hantro_set_fmt_out(struct hantro_ctx *ctx,
  			return -EBUSY;
  		}
  	} else {
@@ -94,3 +94,6 @@ index c022b978f..731182cde 100644
  
  	/*
  	 * Current raw format might have become invalid with newly
+-- 
+2.55.0
+

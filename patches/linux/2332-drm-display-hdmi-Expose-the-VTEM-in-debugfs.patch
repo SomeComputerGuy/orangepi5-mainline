@@ -1,0 +1,41 @@
+From a5a93dc6b4f52d160759ab5f88d8ce8ab301e22d Mon Sep 17 00:00:00 2001
+From: Arun Iyengar <aiyengar1990@gmail.com>
+Date: Sat, 7 Nov 2026 20:33:18 +0000
+Subject: [PATCH 2332/2409] drm/display: hdmi: Expose the VTEM in debugfs
+
+Add the VTEM EMP to the connector's debugfs infoframes directory, like
+the other packets the HDMI state helper generates, so that the VRR
+signalling (VRR_EN, M_CONST, Base_Vfront, Base_Refresh_Rate) of the
+committed state can be checked.
+
+Signed-off-by: Arun Iyengar <aiyengar1990@gmail.com>
+---
+ drivers/gpu/drm/display/drm_hdmi_state_helper.c | 5 +++++
+ 1 file changed, 5 insertions(+)
+
+diff --git a/drivers/gpu/drm/display/drm_hdmi_state_helper.c b/drivers/gpu/drm/display/drm_hdmi_state_helper.c
+index 2ddc73298fe2..38e32d174f3d 100644
+--- a/drivers/gpu/drm/display/drm_hdmi_state_helper.c
++++ b/drivers/gpu/drm/display/drm_hdmi_state_helper.c
+@@ -1426,6 +1426,7 @@ DEFINE_INFOFRAME_FILE(avi);
+ DEFINE_INFOFRAME_FILE(hdmi);
+ DEFINE_INFOFRAME_FILE(hdr_drm);
+ DEFINE_INFOFRAME_FILE(spd);
++DEFINE_INFOFRAME_FILE(vtem);
+ 
+ static int create_hdmi_infoframe_files(struct drm_connector *connector,
+ 				       struct dentry *parent)
+@@ -1452,6 +1453,10 @@ static int create_hdmi_infoframe_files(struct drm_connector *connector,
+ 	if (ret)
+ 		return ret;
+ 
++	ret = create_hdmi_vtem_infoframe_file(connector, parent);
++	if (ret)
++		return ret;
++
+ 	return 0;
+ }
+ 
+-- 
+2.55.0
+

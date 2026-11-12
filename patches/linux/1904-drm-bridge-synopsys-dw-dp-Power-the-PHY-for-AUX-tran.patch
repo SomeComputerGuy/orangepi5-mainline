@@ -29,7 +29,6 @@ time, and skip it if HPD is already low again: the unplug event follows.
 Fixes: 86eecc3a9c2e ("drm/bridge: synopsys: Add DW DPTX Controller support library")
 (cherry picked from commit af91bbbc8ceac8b993a9115187f7c674e87bf158)
 
-Assisted-by: LLM
 Signed-off-by: Arun Iyengar <aiyengar1990@gmail.com>
 ---
  drivers/gpu/drm/bridge/synopsys/dw-dp.c | 108 ++++++++++++++++--------

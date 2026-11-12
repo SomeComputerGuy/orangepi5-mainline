@@ -22,7 +22,6 @@ with a real control handler and a fake CAPTURE buffer, and check:
 - the control validation of the encode parameters, including its default
   value.
 
-Assisted-by: LLM
 Signed-off-by: Arun Iyengar <aiyengar1990@gmail.com>
 ---
  drivers/media/v4l2-core/.kunitconfig          |   1 +

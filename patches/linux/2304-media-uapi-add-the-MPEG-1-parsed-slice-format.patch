@@ -18,7 +18,6 @@ quantisation controls unchanged; V4L2_MPEG2_SEQ_FLAG_MPEG1 is set with
 the new format and only with it, so that the controls keep describing
 the bitstream on their own.
 
-Assisted-by: LLM
 Signed-off-by: Arun Iyengar <aiyengar1990@gmail.com>
 ---
  .../media/v4l/ext-ctrls-codec-stateless.rst   |  8 ++++---

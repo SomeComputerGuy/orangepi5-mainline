@@ -14,8 +14,6 @@ Document an optional "pll_v0" clock for that PLL, after the HDMI PHY PLL
 clocks. RK3588S has no HDMI1 PHY, so there it directly follows
 pll_hdmiphy0.
 
-
-Assisted-by: LLM
 Signed-off-by: Arun Iyengar <aiyengar1990@gmail.com>
 ---
  .../bindings/display/rockchip/rockchip-vop2.yaml       | 10 ++++++++--

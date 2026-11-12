@@ -16,7 +16,6 @@ Skip the 4:2:0 formats for modes that are neither 4:2:0-only nor
 4:2:0-also, as dw_dp_bridge_mode_valid() already does when it sizes the
 minimum bandwidth, and as the downstream Rockchip driver and i915 do.
 
-Assisted-by: LLM
 Signed-off-by: Arun Iyengar <aiyengar1990@gmail.com>
 ---
  drivers/gpu/drm/bridge/synopsys/dw-dp.c | 2 +-

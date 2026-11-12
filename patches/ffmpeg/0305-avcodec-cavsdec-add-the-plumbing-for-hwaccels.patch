@@ -26,7 +26,6 @@ The Guangdian profile is accepted in the sequence header but, without a
 hwaccel, refused as before; the software decoder's output is unchanged
 (FATE cavs and the bunny and test card references).
 
-Assisted-by: LLM
 Signed-off-by: Arun Iyengar <aiyengar1990@gmail.com>
 ---
  libavcodec/cavs.c    |   3 +

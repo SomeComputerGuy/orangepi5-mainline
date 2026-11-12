@@ -1,8 +1,8 @@
-From 696b11e2abd04402cacc08de3af63daa903b264d Mon Sep 17 00:00:00 2001
+From fd63fa4a51f4b10dec32021a3cf0431b8ef31c59 Mon Sep 17 00:00:00 2001
 From: Arun Iyengar <aiyengar1990@gmail.com>
 Date: Sun, 1 Nov 2026 06:27:00 +0000
-Subject: [PATCH 16/33] media: verisilicon: Check every VPU981 AV1 tile column
- buffer before reusing them
+Subject: [PATCH] media: verisilicon: Check every VPU981 AV1 tile column buffer
+ before reusing them
 
 rockchip_vpu981_av1_dec_tiles_reallocate() keeps the five tile column
 buffers (deblocking data and control, CDEF, super-res, loop restoration)
@@ -28,9 +28,7 @@ Compare each buffer with the size the current frame needs and clear the
 sizes together with the buffers.
 
 Fixes: 727a400686a2 ("media: verisilicon: Add Rockchip AV1 decoder")
-(cherry picked from commit e762ac80417fa7ab3f8dec77e84e67293f8d103e)
-
-Assisted-by: LLM
+Cc: stable@vger.kernel.org
 Signed-off-by: Arun Iyengar <aiyengar1990@gmail.com>
 ---
  .../verisilicon/rockchip_vpu981_hw_av1_dec.c  | 34 +++++++++++++++----

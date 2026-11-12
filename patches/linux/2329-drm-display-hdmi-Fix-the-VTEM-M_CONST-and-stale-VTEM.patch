@@ -1,0 +1,65 @@
+From 63247173ffbe9748ca9e79f900edd1096e9a5b3b Mon Sep 17 00:00:00 2001
+From: Arun Iyengar <aiyengar1990@gmail.com>
+Date: Sat, 7 Nov 2026 20:31:17 +0000
+Subject: [PATCH 2329/2409] drm/display: hdmi: Fix the VTEM M_CONST and stale
+ VTEMs
+
+Two problems in the VTEM generation:
+
+- M_CONST was set from vrr_state.dynamic, which is only set by the vblank
+  helper after the commit that computed the VTEM, so a game mode VRR VTEM
+  went out with M_CONST = 1 after enabling VRR. M_CONST = 1 tells the sink
+  that the source keeps the frame rate constant, which game mode VRR does
+  not: its frame rate follows the page flips. Always send M_CONST = 0
+  for game mode VRR, as the Rockchip vendor kernel does.
+- The VTEM was only written or cleared for VRR capable sinks. Replacing a
+  VRR capable sink with one without VRR left the old VTEM running. The
+  generator already leaves the VTEM unset for sinks without VRR and for
+  connectors without VTEM support, so always let write_or_clear_infoframe()
+  handle it.
+
+Signed-off-by: Arun Iyengar <aiyengar1990@gmail.com>
+---
+ .../gpu/drm/display/drm_hdmi_state_helper.c   | 19 +++++++++++++------
+ 1 file changed, 13 insertions(+), 6 deletions(-)
+
+diff --git a/drivers/gpu/drm/display/drm_hdmi_state_helper.c b/drivers/gpu/drm/display/drm_hdmi_state_helper.c
+index 7793d41b2d31..747002d5552a 100644
+--- a/drivers/gpu/drm/display/drm_hdmi_state_helper.c
++++ b/drivers/gpu/drm/display/drm_hdmi_state_helper.c
+@@ -950,7 +950,11 @@ static int hdmi_generate_emp_infoframe_vtem(const struct drm_connector *connecto
+ 
+ 	vtem->game_vrr_en = true;
+ 
+-	vtem->m_const = !vrr->dynamic;
++	/*
++	 * Game mode VRR: the frame rate follows the source's page flips, so
++	 * it is not constant. M_CONST would tell the sink that it is.
++	 */
++	vtem->m_const = false;
+ 
+ 	return 0;
+ }
+@@ -1604,11 +1608,14 @@ int drm_atomic_helper_connector_hdmi_update_infoframes(struct drm_connector *con
+ 			goto out;
+ 	}
+ 
+-	if (info->hdmi.vrr_capable)
+-		ret = write_or_clear_infoframe(connector,
+-					&funcs->vtem, "VTEM",
+-					&old_conn_state->hdmi.infoframes.vtem,
+-					&new_conn_state->hdmi.infoframes.vtem);
++	/*
++	 * Not only for VRR capable sinks: the VTEM of a previous VRR capable
++	 * sink has to be stopped when a sink without VRR is plugged in.
++	 */
++	ret = write_or_clear_infoframe(connector,
++				       &funcs->vtem, "VTEM",
++				       &old_conn_state->hdmi.infoframes.vtem,
++				       &new_conn_state->hdmi.infoframes.vtem);
+ 
+ out:
+ 	mutex_unlock(&connector->hdmi.infoframes.lock);
+-- 
+2.55.0
+

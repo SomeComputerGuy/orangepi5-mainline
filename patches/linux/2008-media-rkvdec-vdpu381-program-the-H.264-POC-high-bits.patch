@@ -19,7 +19,6 @@ frame picture that have no reference, which point at the current buffer.
 Also don't give a new stream the film index of a stream that just ended,
 in case the CCU still tracks frames of the old one.
 
-Assisted-by: LLM
 Signed-off-by: Arun Iyengar <aiyengar1990@gmail.com>
 ---
  .../media/platform/rockchip/rkvdec/rkvdec-ccu.c  |  2 +-

@@ -18,7 +18,6 @@ Subject: [PATCH 31/33] media: rkvdec: fix two races around job completion and
   see that core idle and reset it while the job was being set up on it.
   Check it in rkvdec_job_start(), under the lock that takes the core.
 
-Assisted-by: LLM
 Signed-off-by: Arun Iyengar <aiyengar1990@gmail.com>
 ---
  .../media/platform/rockchip/rkvdec/rkvdec.c   | 56 +++++++++++++------

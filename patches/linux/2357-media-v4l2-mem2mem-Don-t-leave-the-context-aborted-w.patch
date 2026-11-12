@@ -1,0 +1,73 @@
+From 33e8c7db6c5c3e3196900c8be1fe2e92e911ac65 Mon Sep 17 00:00:00 2001
+From: Arun Iyengar <aiyengar1990@gmail.com>
+Date: Fri, 6 Nov 2026 00:31:03 +0000
+Subject: [PATCH 2357/2409] media: v4l2-mem2mem: Don't leave the context
+ aborted when STREAMOFF fails
+
+v4l2_m2m_streamoff() cancels the job of the context before it asks vb2 to
+stop the queue. v4l2_m2m_cancel_job() sets TRANS_ABORT, and only the
+successful path clears the job flags again. If vb2_streamoff() fails, for
+instance because the buffer type is not the type of the queue (an
+OUTPUT/CAPTURE single-planar type on a multi-planar device), the error is
+returned with TRANS_ABORT still set, and __v4l2_m2m_try_queue() refuses
+to schedule the context from then on: every buffer queued afterwards
+stays queued, no job is ever run and nothing is logged. A STREAMOFF of
+both queues with the right types and a new STREAMON do not clear the
+flag either, so the file handle stays unusable.
+
+A VA-API driver that resets pooled decoder file handles by stopping all
+four OUTPUT/CAPTURE buffer types ran into this on RK3588: the next decode
+context on the handle (the AV1 decoder for 4K streams) queued requests
+the hardware never saw and timed out waiting for them.
+
+Reject a buffer type the queue does not have before touching the job
+state, and clear TRANS_ABORT again (and reschedule the context, whose
+queued job may have been dropped by the cancel) if vb2 refuses the call.
+
+Signed-off-by: Arun Iyengar <aiyengar1990@gmail.com>
+---
+ drivers/media/v4l2-core/v4l2-mem2mem.c | 22 +++++++++++++++++++---
+ 1 file changed, 19 insertions(+), 3 deletions(-)
+
+diff --git a/drivers/media/v4l2-core/v4l2-mem2mem.c b/drivers/media/v4l2-core/v4l2-mem2mem.c
+index a2a8748a63e8..c9dfed5b4c4b 100644
+--- a/drivers/media/v4l2-core/v4l2-mem2mem.c
++++ b/drivers/media/v4l2-core/v4l2-mem2mem.c
+@@ -1004,15 +1004,31 @@ int v4l2_m2m_streamoff(struct file *file, struct v4l2_m2m_ctx *m2m_ctx,
+ 	unsigned long flags_job, flags;
+ 	int ret;
+ 
++	q_ctx = get_queue_ctx(m2m_ctx, type);
++	m2m_dev = m2m_ctx->m2m_dev;
++
++	/*
++	 * v4l2_m2m_cancel_job() marks the context as aborted, and only a
++	 * successful STREAMOFF clears that again. Refuse a buffer type the
++	 * queue does not have before cancelling anything, and undo the abort
++	 * if vb2 refuses the call, or the context could never run a job again.
++	 */
++	if (type != q_ctx->q.type)
++		return -EINVAL;
++
+ 	/* wait until the current context is dequeued from job_queue */
+ 	v4l2_m2m_cancel_job(m2m_ctx);
+ 
+-	q_ctx = get_queue_ctx(m2m_ctx, type);
+ 	ret = vb2_streamoff(&q_ctx->q, type);
+-	if (ret)
++	if (ret) {
++		spin_lock_irqsave(&m2m_dev->job_spinlock, flags_job);
++		m2m_ctx->job_flags &= ~TRANS_ABORT;
++		spin_unlock_irqrestore(&m2m_dev->job_spinlock, flags_job);
++		/* A job cancelled from the queue above is still due. */
++		v4l2_m2m_try_schedule(m2m_ctx);
+ 		return ret;
++	}
+ 
+-	m2m_dev = m2m_ctx->m2m_dev;
+ 	spin_lock_irqsave(&m2m_dev->job_spinlock, flags_job);
+ 	/* We should not be scheduled anymore, since we're dropping a queue. */
+ 	if (m2m_ctx->job_flags & TRANS_QUEUED)
+-- 
+2.55.0
+

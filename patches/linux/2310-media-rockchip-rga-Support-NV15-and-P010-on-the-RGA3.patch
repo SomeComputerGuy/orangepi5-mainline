@@ -13,7 +13,6 @@ the RGA2.
 Add both formats to the RGA3 on the OUTPUT and CAPTURE queues. The width
 of 10-bit YUV must be aligned to 4 pixels.
 
-Assisted-by: LLM
 Signed-off-by: Arun Iyengar <aiyengar1990@gmail.com>
 ---
  drivers/media/platform/rockchip/rga/rga3-hw.c | 31 ++++++++++++++++++-

@@ -12,7 +12,6 @@ cycle resets the register.
 Clear FLT_CONFIG1 instead, as the Rockchip vendor driver does once
 training passes.
 
-Assisted-by: LLM
 Signed-off-by: Arun Iyengar <aiyengar1990@gmail.com>
 ---
  drivers/gpu/drm/bridge/synopsys/dw-hdmi-qp.c | 9 ++++++++-

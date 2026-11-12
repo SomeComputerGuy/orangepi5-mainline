@@ -1,0 +1,55 @@
+From fca884f6f2c98d7cc3380dd3e1465c57defa97de Mon Sep 17 00:00:00 2001
+From: Arun Iyengar <aiyengar1990@gmail.com>
+Date: Tue, 10 Nov 2026 08:10:27 +0000
+Subject: [PATCH 2396/2409] usb: dwc3: rockchip: Keep the host bus across
+ suspend-to-idle on RK3588
+
+On RK3588 nothing powers the USB3 controllers down in suspend-to-idle:
+this glue has no system sleep work of its own, the controllers are
+either in PD_USB, which has GENPD_FLAG_ACTIVE_WAKEUP and so stays on for
+a device on the awake path, or (USB3OTG2) in no power domain at all.
+Tearing the core down there only ends the power sessions of the
+suspended devices: on an Orange Pi 5 a SanDisk Extreme drive and a card
+reader behind a USB3 hub are disconnected and enumerated again after
+every resume, which kills a filesystem mounted on them.
+
+Set keep_host_bus_in_s2idle for RK3588, so the core keeps the suspended
+bus in suspend-to-idle. RK3576 is left as it is: its second controller
+is in PD_PHP, which is switched off in suspend-to-idle.
+
+Signed-off-by: Arun Iyengar <aiyengar1990@gmail.com>
+---
+ drivers/usb/dwc3/dwc3-rockchip.c | 10 ++++++++++
+ 1 file changed, 10 insertions(+)
+
+diff --git a/drivers/usb/dwc3/dwc3-rockchip.c b/drivers/usb/dwc3/dwc3-rockchip.c
+index 65d17536af14..c96b2ac1a62d 100644
+--- a/drivers/usb/dwc3/dwc3-rockchip.c
++++ b/drivers/usb/dwc3/dwc3-rockchip.c
+@@ -4,6 +4,7 @@
+ #include <linux/platform_device.h>
+ #include <linux/phy/rockchip-usbdp.h>
+ #include <linux/pm_runtime.h>
++#include <linux/property.h>
+ #include "glue.h"
+ #include "io.h"
+ 
+@@ -153,6 +154,15 @@ static int dwc3_rockchip_probe(struct platform_device *pdev)
+ 	probe_data.res = res;
+ 	probe_data.properties = DWC3_DEFAULT_PROPERTIES;
+ 
++	/*
++	 * On RK3588 nothing powers the controllers down in suspend-to-idle:
++	 * this glue does not touch them, and they are either in PD_USB, which
++	 * stays on for a device on the awake path, or in no power domain.
++	 * (On RK3576 the second controller is in PD_PHP, which does not.)
++	 */
++	if (device_is_compatible(&pdev->dev, "rockchip,rk3588-dwc3"))
++		probe_data.properties.keep_host_bus_in_s2idle = true;
++
+ 	return dwc3_core_probe(&probe_data);
+ }
+ 
+-- 
+2.55.0
+

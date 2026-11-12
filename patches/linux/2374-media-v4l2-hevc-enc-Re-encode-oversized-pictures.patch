@@ -1,0 +1,89 @@
+From 992765016a843a39c9503755029ab816f366ef0a Mon Sep 17 00:00:00 2001
+From: Arun Iyengar <aiyengar1990@gmail.com>
+Date: Tue, 10 Nov 2026 01:25:03 +0000
+Subject: [PATCH 2374/2409] media: v4l2-hevc-enc: Re-encode oversized pictures
+
+A scene change in a P picture can make it many times larger than its size
+target, and the peak bitrate around it can then exceed what a decoder
+buffer of the stream takes. v4l2-enc-cbr can ask for a second pass of such
+a picture at a higher QP (v4l2_enc_cbr_reencode()).
+
+Provide v4l2_hevc_enc_reencode() in the HEVC encode core for drivers whose
+hardware writes the slice header: called after the hardware finished a
+picture and before v4l2_hevc_enc_complete(), it returns true with the new
+QP in enc->qp when the constant bitrate mode wants the picture encoded
+again. Hardware that takes the slice header from the core cannot use it:
+that header holds the QP of the first pass.
+
+Signed-off-by: Arun Iyengar <aiyengar1990@gmail.com>
+---
+ drivers/media/v4l2-core/v4l2-hevc-enc.c | 39 +++++++++++++++++++++++++
+ include/media/v4l2-hevc-enc.h           |  2 ++
+ 2 files changed, 41 insertions(+)
+
+diff --git a/drivers/media/v4l2-core/v4l2-hevc-enc.c b/drivers/media/v4l2-core/v4l2-hevc-enc.c
+index 2e0ba832b868..d49cee336558 100644
+--- a/drivers/media/v4l2-core/v4l2-hevc-enc.c
++++ b/drivers/media/v4l2-core/v4l2-hevc-enc.c
+@@ -1369,6 +1369,45 @@ static int ref_complete(struct v4l2_hevc_enc *enc, u64 timestamp)
+ 	return 0;
+ }
+ 
++/**
++ * v4l2_hevc_enc_reencode() - decide on encoding the picture a second time
++ * @enc: the core context
++ * @bytesused: size of the encoded picture in bytes, with the headers the core
++ *	       wrote
++ *
++ * In the constant bitrate mode of the core, a picture far above its size
++ * target can be encoded again with a higher QP (see v4l2_enc_cbr_reencode()).
++ * Drivers that can run the hardware again for the same picture call it after
++ * the hardware finished it and before v4l2_hevc_enc_complete(). If it returns
++ * true, @enc->qp holds the new QP and the driver encodes the picture again,
++ * with the same size target and the same headers, writing the slice data
++ * from the same offset. Only for hardware that writes the slice header
++ * (V4L2_HEVC_ENC_FLAG_HW_SLICE_HEADER): the slice header of the core holds the
++ * QP of the first pass.
++ *
++ * Return: true if the picture is to be encoded again.
++ */
++bool v4l2_hevc_enc_reencode(struct v4l2_hevc_enc *enc, unsigned int bytesused)
++{
++	struct v4l2_hevc_enc_state *state = &enc->state_active;
++	bool intra = state->encode.slice_type == V4L2_HEVC_SLICE_TYPE_I;
++	int qp_max = intra ? state->qp_max_i : state->qp_max;
++
++	if (!(enc->flags & V4L2_HEVC_ENC_FLAG_HW_SLICE_HEADER) ||
++	    !rc_core_cbr(enc, state))
++		return false;
++
++	if (!v4l2_enc_cbr_reencode(&enc->cbr, (u64)bytesused * 8,
++				   &state->timeperframe, enc->qp,
++				   min(qp_max, 51)))
++		return false;
++
++	enc->qp = rc_clamp_qp(state, v4l2_enc_cbr_qp(&enc->cbr));
++
++	return true;
++}
++EXPORT_SYMBOL_GPL(v4l2_hevc_enc_reencode);
++
+ /**
+  * v4l2_hevc_enc_complete() - complete the encode run of a picture
+  * @enc: the core context
+diff --git a/include/media/v4l2-hevc-enc.h b/include/media/v4l2-hevc-enc.h
+index f1d3da3269f1..5be449e5ec03 100644
+--- a/include/media/v4l2-hevc-enc.h
++++ b/include/media/v4l2-hevc-enc.h
+@@ -285,6 +285,8 @@ int v4l2_hevc_enc_init(struct v4l2_hevc_enc *enc);
+ void v4l2_hevc_enc_exit(struct v4l2_hevc_enc *enc);
+ int v4l2_hevc_enc_step(struct v4l2_hevc_enc *enc,
+ 		       struct vb2_v4l2_buffer *buffer);
++bool v4l2_hevc_enc_reencode(struct v4l2_hevc_enc *enc,
++			    unsigned int bytesused);
+ int v4l2_hevc_enc_complete(struct v4l2_hevc_enc *enc,
+ 			   struct vb2_v4l2_buffer *buffer,
+ 			   const struct v4l2_stateless_encode_stats *stats);
+-- 
+2.55.0
+

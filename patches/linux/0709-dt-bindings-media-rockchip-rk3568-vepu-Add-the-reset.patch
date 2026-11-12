@@ -10,7 +10,6 @@ registers can't stop.
 
 Describe them as optional, so that existing device trees stay valid.
 
-Assisted-by: LLM
 Signed-off-by: Arun Iyengar <aiyengar1990@gmail.com>
 ---
  .../bindings/media/rockchip,rk3568-vepu.yaml           | 10 ++++++++++

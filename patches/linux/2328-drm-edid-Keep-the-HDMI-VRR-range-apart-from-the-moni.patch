@@ -1,0 +1,125 @@
+From 1460f1c6ae660199776c700e33e0ffd13de82d1f Mon Sep 17 00:00:00 2001
+From: Arun Iyengar <aiyengar1990@gmail.com>
+Date: Sat, 7 Nov 2026 20:30:17 +0000
+Subject: [PATCH 2328/2409] drm/edid: Keep the HDMI VRR range apart from the
+ monitor range
+
+drm_parse_vrr_info() stored VRRmin/VRRmax of the HDMI Forum VSDB in
+display_info.monitor_range, but only if that was still empty, and then
+derived hdmi.vrr_capable from monitor_range.min_vfreq. That has three
+problems:
+
+- The payload length checks were off by one: hf_scds[n] is payload byte
+  n, so VRRmin (byte 9) is there with a 9 byte payload and VRRmax (byte
+  10) with a 10 byte one. A sink with a 10 byte HF-VSDB, the usual
+  length without DSC, lost its VRRmax.
+- A "range limits only" display range descriptor fills monitor_range as
+  well. Whichever was parsed first won, so the HDMI VRR range could be
+  replaced by the descriptor's range, which says what the sink accepts
+  as fixed rates, not how far it can vary the refresh rate.
+- It made such a sink HDMI VRR capable even when it has no VRRmin in
+  its HF-VSDB.
+
+Store VRRmin and VRRmax in drm_hdmi_info of their own, leave
+monitor_range to the range descriptor, and only call the sink VRR
+capable when its HF-VSDB has a non-zero VRRmin. The HDMI state helper
+takes the VRR range from the new fields.
+
+Signed-off-by: Arun Iyengar <aiyengar1990@gmail.com>
+---
+ .../gpu/drm/display/drm_hdmi_state_helper.c   |  4 ++--
+ drivers/gpu/drm/drm_edid.c                    | 24 ++++++++-----------
+ include/drm/drm_connector.h                   | 10 ++++++++
+ 3 files changed, 22 insertions(+), 16 deletions(-)
+
+diff --git a/drivers/gpu/drm/display/drm_hdmi_state_helper.c b/drivers/gpu/drm/display/drm_hdmi_state_helper.c
+index 56391a52d48b..7793d41b2d31 100644
+--- a/drivers/gpu/drm/display/drm_hdmi_state_helper.c
++++ b/drivers/gpu/drm/display/drm_hdmi_state_helper.c
+@@ -1115,9 +1115,9 @@ static int hdmi_validate_vrr(struct drm_connector *connector,
+ 	const struct drm_display_mode *mode = &new_crtc_state->mode;
+ 	struct drm_device *dev = connector->dev;
+ 	int mode_refresh, vfront, ret;
+-	u32 min_vfreq_n = info->monitor_range.min_vfreq;
++	u32 min_vfreq_n = info->hdmi.vrr_min_vfreq;
+ 	u32 min_vfreq_d = 1;
+-	u32 max_vfreq_n = info->monitor_range.max_vfreq;
++	u32 max_vfreq_n = info->hdmi.vrr_max_vfreq;
+ 	u32 max_vfreq_d = 1;
+ 
+ 	/* Save on the expensive vic lookup, if nothing else. */
+diff --git a/drivers/gpu/drm/drm_edid.c b/drivers/gpu/drm/drm_edid.c
+index c425eb05108f..81c427a881e9 100644
+--- a/drivers/gpu/drm/drm_edid.c
++++ b/drivers/gpu/drm/drm_edid.c
+@@ -6254,23 +6254,21 @@ static void drm_parse_dsc_info(struct drm_hdmi_dsc_cap *hdmi_dsc,
+ 		hdmi_dsc->total_chunk_kbytes = hf_scds[13] & DRM_EDID_DSC_TOTAL_CHUNK_KBYTES;
+ }
+ 
+-static void drm_parse_vrr_info(struct drm_display_info *info, const u8 *hf_scds)
++static void drm_parse_vrr_info(struct drm_hdmi_info *hdmi, const u8 *hf_scds)
+ {
+-	struct drm_monitor_range_info *range = &info->monitor_range;
+ 	const int pld_len = cea_db_payload_len(hf_scds);
+ 
+-	if (pld_len < 10)
++	/* hf_scds[n] is payload byte n: it is present if pld_len >= n */
++	if (pld_len < 9)
+ 		return;
+ 
+-	if (!range->min_vfreq)
+-		range->min_vfreq = FIELD_GET(DRM_EDID_VRR_MIN_MASK, hf_scds[9]);
++	hdmi->vrr_min_vfreq = FIELD_GET(DRM_EDID_VRR_MIN_MASK, hf_scds[9]);
+ 
+-	if (pld_len < 11)
++	if (pld_len < 10)
+ 		return;
+ 
+-	if (!range->max_vfreq)
+-		range->max_vfreq = (FIELD_GET(DRM_EDID_VRR_MAX_UPPER_MASK, hf_scds[9]) << 8) |
+-				    hf_scds[10];
++	hdmi->vrr_max_vfreq = (FIELD_GET(DRM_EDID_VRR_MAX_UPPER_MASK, hf_scds[9]) << 8) |
++			      hf_scds[10];
+ }
+ 
+ /* Sink Capability Data Structure */
+@@ -6333,12 +6331,10 @@ static void drm_parse_hdmi_forum_scds(struct drm_connector *connector,
+ 		dsc_support = true;
+ 	}
+ 
+-	drm_parse_vrr_info(info, hf_scds);
++	drm_parse_vrr_info(hdmi, hf_scds);
+ 
+-	if (info->monitor_range.min_vfreq > 0)
+-		hdmi->vrr_capable = true;
+-	else
+-		hdmi->vrr_capable = false;
++	/* A non-zero VRRmin is what declares HDMI VRR support */
++	hdmi->vrr_capable = hdmi->vrr_min_vfreq > 0;
+ 
+ 	drm_dbg_kms(connector->dev,
+ 		    "[CONNECTOR:%d:%s] HF-VSDB: max TMDS clock: %d KHz, HDMI 2.1 support: %s, DSC 1.2 support: %s\n",
+diff --git a/include/drm/drm_connector.h b/include/drm/drm_connector.h
+index d7b3b3a3a4a9..74a96dd89094 100644
+--- a/include/drm/drm_connector.h
++++ b/include/drm/drm_connector.h
+@@ -334,6 +334,16 @@ struct drm_hdmi_info {
+ 	/** @dsc_cap: DSC capabilities of the sink */
+ 	struct drm_hdmi_dsc_cap dsc_cap;
+ 
++	/** @vrr_min_vfreq: VRRmin of the HF-VSDB, in Hz */
++	u16 vrr_min_vfreq;
++
++	/**
++	 * @vrr_max_vfreq: VRRmax of the HF-VSDB, in Hz. 0 means that the sink
++	 * gave no maximum: the base refresh rate of the mode is the maximum
++	 * then.
++	 */
++	u16 vrr_max_vfreq;
++
+ 	/** @vrr_capable: The sink supports variable refresh rate */
+ 	bool vrr_capable;
+ };
+-- 
+2.55.0
+

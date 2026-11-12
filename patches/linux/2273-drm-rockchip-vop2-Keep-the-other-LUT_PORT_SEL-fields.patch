@@ -1,8 +1,8 @@
-From 4ae6335080ce9d05b1a9db458e4affdff789a0e0 Mon Sep 17 00:00:00 2001
+From b0a18aaf6f0cc10a65a03bb97ee6f8fbf75c0252 Mon Sep 17 00:00:00 2001
 From: Arun Iyengar <aiyengar1990@gmail.com>
 Date: Thu, 5 Nov 2026 11:44:14 +0000
-Subject: [PATCH 2273/2312] drm/rockchip: vop2: Keep the other LUT_PORT_SEL
- fields on gamma LUT updates
+Subject: [PATCH] drm/rockchip: vop2: Keep the other LUT_PORT_SEL fields on
+ gamma LUT updates
 
 On RK3588 the gamma LUT of a video port is written through a window that
 GAMMA_AHB_WRITE_SEL in SYS_CTRL_LUT_PORT_SEL selects. The register also
@@ -12,17 +12,18 @@ the whole register clears.
 
 Only update the write select field.
 
-Assisted-by: LLM
+Fixes: 4f537776340d ("rockchip/drm: vop2: add support for gamma LUT")
+Reviewed-by: Chaoyi Chen <chaoyi.chen@rock-chips.com>
 Signed-off-by: Arun Iyengar <aiyengar1990@gmail.com>
 ---
  drivers/gpu/drm/rockchip/rockchip_drm_vop2.c | 5 +++--
  1 file changed, 3 insertions(+), 2 deletions(-)
 
 diff --git a/drivers/gpu/drm/rockchip/rockchip_drm_vop2.c b/drivers/gpu/drm/rockchip/rockchip_drm_vop2.c
-index 315ea16acb04..2e7c190eca91 100644
+index 7d06092aad97..8b710e371b33 100644
 --- a/drivers/gpu/drm/rockchip/rockchip_drm_vop2.c
 +++ b/drivers/gpu/drm/rockchip/rockchip_drm_vop2.c
-@@ -2046,8 +2046,9 @@ static void vop2_crtc_atomic_set_gamma_seamless(struct vop2 *vop2,
+@@ -2071,8 +2071,9 @@ static void vop2_crtc_atomic_set_gamma_seamless(struct vop2 *vop2,
  						struct vop2_video_port *vp,
  						struct drm_crtc *crtc)
  {

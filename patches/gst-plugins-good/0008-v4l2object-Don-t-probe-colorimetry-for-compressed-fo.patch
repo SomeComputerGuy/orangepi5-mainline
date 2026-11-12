@@ -33,8 +33,6 @@ Reproducer (Aluratek UHD 4K camera, RK3588 rkjpegd):
     v4l2jpegdec ! fakevideosink
 fails with not-negotiated before the change and decodes every frame
 after it.
-
-Assisted-by: LLM
 ---
  sys/v4l2/gstv4l2object.c | 14 ++++++++++++++
  1 file changed, 14 insertions(+)

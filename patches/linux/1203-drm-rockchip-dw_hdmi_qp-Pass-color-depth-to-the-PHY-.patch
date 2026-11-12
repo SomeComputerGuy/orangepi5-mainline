@@ -24,7 +24,6 @@ Compute the PHY bpc once for both link modes, keeping the existing 8 bpc
 override for YUV422, and remember it so that FRL rate changes during
 link training preserve it.
 
-Assisted-by: LLM
 Signed-off-by: Arun Iyengar <aiyengar1990@gmail.com>
 ---
  .../gpu/drm/rockchip/dw_hdmi_qp-rockchip.c    | 24 ++++++++++++-------

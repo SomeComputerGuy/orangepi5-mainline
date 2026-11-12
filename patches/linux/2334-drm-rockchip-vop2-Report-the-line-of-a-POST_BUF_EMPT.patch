@@ -1,0 +1,74 @@
+From d9998f3874523e2fbc01654853b871417ca6cdf9 Mon Sep 17 00:00:00 2001
+From: Arun Iyengar <aiyengar1990@gmail.com>
+Date: Sat, 7 Nov 2026 22:45:29 +0000
+Subject: [PATCH 2334/2409] drm/rockchip: vop2: Report the line of a
+ POST_BUF_EMPTY underflow
+
+A POST_BUF_EMPTY error only says that a video port ran out of pixels,
+not where in the frame. Read the vertical counter of the video port and
+add the line to the message: an underflow at the first active lines
+points at the fetch start, one in the blanking at the timing, one in the
+middle of the frame at the memory bandwidth.
+
+Signed-off-by: Arun Iyengar <aiyengar1990@gmail.com>
+---
+ drivers/gpu/drm/rockchip/rockchip_drm_vop2.c | 14 ++++++++++++--
+ drivers/gpu/drm/rockchip/rockchip_drm_vop2.h |  3 +++
+ 2 files changed, 15 insertions(+), 2 deletions(-)
+
+diff --git a/drivers/gpu/drm/rockchip/rockchip_drm_vop2.c b/drivers/gpu/drm/rockchip/rockchip_drm_vop2.c
+index 022e79bd2bd8..2a5e7556960c 100644
+--- a/drivers/gpu/drm/rockchip/rockchip_drm_vop2.c
++++ b/drivers/gpu/drm/rockchip/rockchip_drm_vop2.c
+@@ -3493,6 +3493,16 @@ static void vop2_crtc_atomic_begin(struct drm_crtc *crtc,
+ 	vop2->ops->setup_overlay(vp);
+ }
+ 
++/*
++ * The line the video port scans out now, counted from the start of the
++ * vertical sync pulse (RK3568/RK3588 only).
++ */
++static u32 vop2_vp_read_vcnt(struct vop2_video_port *vp)
++{
++	return FIELD_GET(RK3568_SYS_STATUS__DSP_VCNT,
++			 vop2_readl(vp->vop2, RK3568_SYS_STATUS(vp->id)));
++}
++
+ /*
+  * Set the vtotal of the frame being scanned out, with immediate effect: a
+  * vtotal at or below the current line ends the frame now, a larger one
+@@ -4342,8 +4352,8 @@ static irqreturn_t vop2_isr(int irq, void *data)
+ 			if (irqs & VP_INT_POST_BUF_EMPTY) {
+ 				vop2_crtc_handle_post_buf_empty(vp);
+ 				drm_err_ratelimited(vop2->drm,
+-						    "POST_BUF_EMPTY irq err at vp%d\n",
+-						    vp->id);
++						    "POST_BUF_EMPTY irq err at vp%d line %u\n",
++						    vp->id, vop2_vp_read_vcnt(vp));
+ 				ret = IRQ_HANDLED;
+ 			}
+ 		}
+diff --git a/drivers/gpu/drm/rockchip/rockchip_drm_vop2.h b/drivers/gpu/drm/rockchip/rockchip_drm_vop2.h
+index 83febc0e643d..099a2226a088 100644
+--- a/drivers/gpu/drm/rockchip/rockchip_drm_vop2.h
++++ b/drivers/gpu/drm/rockchip/rockchip_drm_vop2.h
+@@ -622,6 +622,7 @@ enum dst_factor_mode {
+ #define RK3568_OTP_WIN_EN			0x050
+ #define RK3568_LUT_PORT_SEL			0x058
+ #define RK3568_SYS_STATUS0			0x060
++#define RK3568_SYS_STATUS(vp)			(0x060 + (vp) * 0x4)
+ #define RK3568_VP_LINE_FLAG(vp)			(0x70 + (vp) * 0x4)
+ #define RK3568_SYS0_INT_EN			0x80
+ #define RK3568_SYS0_INT_CLR			0x84
+@@ -873,6 +874,8 @@ enum dst_factor_mode {
+ 
+ #define RK3588_VP_DSP_CTRL__GAMMA_UPDATE_EN		BIT(22)
+ 
++#define RK3568_SYS_STATUS__DSP_VCNT		GENMASK(28, 16)
++
+ #define RK3568_VP_DSP_VTOTAL_VS_END__DSP_VTOTAL	GENMASK(28, 16)
+ #define RK3568_VP_DSP_VTOTAL_VS_END__IMD		BIT(15)
+ 
+-- 
+2.55.0
+

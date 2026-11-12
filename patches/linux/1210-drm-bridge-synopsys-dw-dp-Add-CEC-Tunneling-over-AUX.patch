@@ -24,7 +24,6 @@ The helpers are no-ops unless CONFIG_DRM_DISPLAY_DP_AUX_CEC is enabled,
 and the adapter is only created when the sink advertises the CEC
 tunneling capability in the DPCD.
 
-Assisted-by: LLM
 Signed-off-by: Arun Iyengar <aiyengar1990@gmail.com>
 ---
  drivers/gpu/drm/bridge/synopsys/dw-dp.c | 33 +++++++++++++++++++++++++++++++--

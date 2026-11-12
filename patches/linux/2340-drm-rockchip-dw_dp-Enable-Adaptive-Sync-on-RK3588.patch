@@ -1,0 +1,55 @@
+From 2359d93c111ee6235c4c0374f857b44e706a55b8 Mon Sep 17 00:00:00 2001
+From: Arun Iyengar <aiyengar1990@gmail.com>
+Date: Sat, 7 Nov 2026 23:21:36 +0000
+Subject: [PATCH 2340/2409] drm/rockchip: dw_dp: Enable Adaptive-Sync on RK3588
+
+The RK3588 VOP2 varies the refresh rate of a video port with VRR_ENABLED,
+as it does for HDMI. Attach the "vrr_capable" property to the DP
+connectors, which lets the DW DP bridge offer Adaptive-Sync to sinks
+that support it. RK3576 does not stretch frames from its interrupt
+handler yet, so leave it without.
+
+Signed-off-by: Arun Iyengar <aiyengar1990@gmail.com>
+---
+ drivers/gpu/drm/rockchip/dw_dp-rockchip.c | 11 +++++++++++
+ 1 file changed, 11 insertions(+)
+
+diff --git a/drivers/gpu/drm/rockchip/dw_dp-rockchip.c b/drivers/gpu/drm/rockchip/dw_dp-rockchip.c
+index 50dc2a28eb9c..b08179b1460d 100644
+--- a/drivers/gpu/drm/rockchip/dw_dp-rockchip.c
++++ b/drivers/gpu/drm/rockchip/dw_dp-rockchip.c
+@@ -38,6 +38,8 @@ struct rockchip_dw_dp_plat_data {
+ 	u32 max_link_rate;
+ 	u8 pixel_mode;
+ 	u32 hpd_reg[ROCKCHIP_MAX_CTRLS];
++	/* The VOP2 can vary the refresh rate of its video ports */
++	bool supports_vrr;
+ };
+ 
+ struct rockchip_dw_dp {
+@@ -250,6 +252,14 @@ static int dw_dp_rockchip_bind(struct device *dev, struct device *master, void *
+ 
+ 	drm_connector_attach_colorspace_property(connector);
+ 
++	if (dp->pdata->supports_vrr) {
++		ret = drm_connector_attach_vrr_capable_property(connector);
++		if (ret) {
++			dw_dp_unbind(dp->base);
++			return ret;
++		}
++	}
++
+ 	return 0;
+ }
+ 
+@@ -358,6 +368,7 @@ static const struct rockchip_dw_dp_plat_data rk3588_dp_plat_data = {
+ 	.max_link_rate = 810000,
+ 	.pixel_mode = DW_DP_MP_QUAD_PIXEL,
+ 	.hpd_reg = {0x0000, 0x0008},
++	.supports_vrr = true,
+ };
+ 
+ static const struct rockchip_dw_dp_plat_data rk3576_dp_plat_data = {
+-- 
+2.55.0
+

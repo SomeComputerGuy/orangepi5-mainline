@@ -1,4 +1,4 @@
-From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
+From 04f15b2c96f096ef0520075945a4565b9db5831e Mon Sep 17 00:00:00 2001
 From: Arun Iyengar <aiyengar1990@gmail.com>
 Date: Thu, 29 Oct 2026 13:12:17 +0000
 Subject: [PATCH] arm64: dts: rockchip: Add USB-C DP AltMode for Orange Pi 5/5B
@@ -24,18 +24,16 @@ DP capable sinks/adapters.
 VP2 is used as on the ROCK 5B family, leaving VP0 for HDMI0 and VP1
 free.
 
-Based on the ROCK 5B family support from Sebastian Reichel:
-Link: https://gitlab.collabora.com/hardware-enablement/rockchip-3588/linux/-/commit/7983809d4d2c5a6c39d936ed3140e378a3257ebd
-Link: https://gitlab.collabora.com/hardware-enablement/rockchip-3588/linux/-/commit/c2d2e2b10a55c4d740a2faf1526a70c4f19da047
+Modelled on Sebastian Reichel's ROCK 5B family DP Alt Mode support in
+the Collabora rockchip-3588 tree.
 
-Assisted-by: LLM
 Signed-off-by: Arun Iyengar <aiyengar1990@gmail.com>
 ---
  .../dts/rockchip/rk3588s-orangepi-5-5b.dtsi   | 89 ++++++++++++++++---
  1 file changed, 78 insertions(+), 11 deletions(-)
 
 diff --git a/arch/arm64/boot/dts/rockchip/rk3588s-orangepi-5-5b.dtsi b/arch/arm64/boot/dts/rockchip/rk3588s-orangepi-5-5b.dtsi
-index 8d9fad010..ff81b355a 100644
+index 8d9fad010092..ff81b355a29e 100644
 --- a/arch/arm64/boot/dts/rockchip/rk3588s-orangepi-5-5b.dtsi
 +++ b/arch/arm64/boot/dts/rockchip/rk3588s-orangepi-5-5b.dtsi
 @@ -69,6 +69,22 @@ vbus_typec: regulator-vbus-typec {
@@ -181,3 +179,6 @@ index 8d9fad010..ff81b355a 100644
 +		remote-endpoint = <&dp0_in_vp2>;
  	};
  };
+-- 
+2.55.0
+

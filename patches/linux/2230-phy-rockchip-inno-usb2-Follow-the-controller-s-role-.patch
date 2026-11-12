@@ -37,7 +37,6 @@ work left the current stage's sources on D+/D- and the detection state
 stuck, so that it never completed after the next phy_init().
 
 Fixes: 3a7db8e9edef ("phy: phy-rockchip-inno-usb2: add rk3588 support")
-Assisted-by: LLM
 Signed-off-by: Arun Iyengar <aiyengar1990@gmail.com>
 ---
  drivers/phy/rockchip/phy-rockchip-inno-usb2.c | 156 +++++++++++++++++-

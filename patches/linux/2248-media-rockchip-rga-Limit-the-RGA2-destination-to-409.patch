@@ -28,7 +28,6 @@ CAPTURE queue. RGA2 gets 4096x4096. RGA3 keeps its current limit
 format comes from the destination limit, so it is valid on both queues.
 
 Fixes: f7e7b48e6d79 ("[media] rockchip/rga: v4l2 m2m support")
-Assisted-by: LLM
 Signed-off-by: Arun Iyengar <aiyengar1990@gmail.com>
 ---
  drivers/media/platform/rockchip/rga/rga-hw.c  | 2 ++

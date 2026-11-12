@@ -28,7 +28,6 @@ while the CRTC state it leaves untouched is a copy of the committed one.
 Drop it: the link configuration is cheap to derive, and phy_configure()
 only records it for the next power-on anyway.
 
-Assisted-by: LLM
 Signed-off-by: Arun Iyengar <aiyengar1990@gmail.com>
 ---
  drivers/gpu/drm/rockchip/dw_hdmi_qp-rockchip.c | 7 -------

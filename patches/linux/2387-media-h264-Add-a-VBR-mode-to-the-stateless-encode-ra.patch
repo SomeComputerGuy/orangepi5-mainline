@@ -1,0 +1,77 @@
+From 60b9d32cb13f3ce59c23fa2eabb77829e398ad7a Mon Sep 17 00:00:00 2001
+From: Arun Iyengar <aiyengar1990@gmail.com>
+Date: Tue, 10 Nov 2026 01:45:17 +0000
+Subject: [PATCH 2387/2409] media: h264: Add a VBR mode to the stateless encode
+ rate control
+
+The core reads V4L2_CID_MPEG_VIDEO_BITRATE and _BITRATE_PEAK for
+V4L2_MPEG_VIDEO_BITRATE_MODE_VBR, but has no mode for it, so a driver
+offering VBR fails the first picture with -EINVAL.
+
+Add one with the encode rate control and its peak bitrate: the bitrate is
+met on average and every second stays within the peak (a peak below the
+bitrate counts as the bitrate). Drivers offer it with the VBR entry of
+V4L2_CID_MPEG_VIDEO_BITRATE_MODE and V4L2_CID_MPEG_VIDEO_BITRATE_PEAK.
+
+Signed-off-by: Arun Iyengar <aiyengar1990@gmail.com>
+---
+ drivers/media/v4l2-core/v4l2-h264-enc-rc.c | 24 ++++++++++++++++++++++
+ drivers/media/v4l2-core/v4l2-h264-enc.c    |  3 ++-
+ 2 files changed, 26 insertions(+), 1 deletion(-)
+
+diff --git a/drivers/media/v4l2-core/v4l2-h264-enc-rc.c b/drivers/media/v4l2-core/v4l2-h264-enc-rc.c
+index c4f1718ead0e..691c80c2a950 100644
+--- a/drivers/media/v4l2-core/v4l2-h264-enc-rc.c
++++ b/drivers/media/v4l2-core/v4l2-h264-enc-rc.c
+@@ -218,10 +218,34 @@ static const struct v4l2_h264_enc_rc_mode cbr_mode = {
+ 	.complete	= cbr_complete,
+ };
+ 
++/*
++ * Variable bitrate mode: the same rate control with the peak bitrate, which
++ * meets the bitrate on average and keeps every second within the peak.
++ */
++static int vbr_measure(struct v4l2_h264_enc_rc *rc, unsigned long *size)
++{
++	struct v4l2_h264_enc_state *state = rc->state;
++
++	v4l2_enc_cbr_set_peak(&rc->cbr, max(state->bitrate_peak,
++					    state->bitrate));
++
++	return cbr_measure(rc, size);
++}
++
++static const struct v4l2_h264_enc_rc_mode vbr_mode = {
++	.name		= "variable bitrate",
++	.type		= V4L2_H264_ENC_RC_TYPE_VBR,
++	.init		= cbr_init,
++	.measure	= vbr_measure,
++	.estimate	= cbr_estimate,
++	.complete	= cbr_complete,
++};
++
+ static const struct v4l2_h264_enc_rc_mode *modes[] = {
+ 	&direct_mode,
+ 	&cq_mode,
+ 	&cbr_mode,
++	&vbr_mode,
+ };
+ 
+ static int mode_prepare(struct v4l2_h264_enc_rc *rc)
+diff --git a/drivers/media/v4l2-core/v4l2-h264-enc.c b/drivers/media/v4l2-core/v4l2-h264-enc.c
+index 9745c0e85ee5..66473231df94 100644
+--- a/drivers/media/v4l2-core/v4l2-h264-enc.c
++++ b/drivers/media/v4l2-core/v4l2-h264-enc.c
+@@ -1273,7 +1273,8 @@ static int rc_step(struct v4l2_h264_enc *enc)
+ 	if (rc->mode) {
+ 		pr_debug("  rc mode: %s", rc->mode->name);
+ 
+-		if (rc->mode->type == V4L2_H264_ENC_RC_TYPE_CBR) {
++		if (rc->mode->type == V4L2_H264_ENC_RC_TYPE_CBR ||
++		    rc->mode->type == V4L2_H264_ENC_RC_TYPE_VBR) {
+ 			pr_debug("  rc bitrate: %u bits/s", state->bitrate);
+ 			pr_debug("  rc target: %lu bytes", rc->size);
+ 		}
+-- 
+2.55.0
+

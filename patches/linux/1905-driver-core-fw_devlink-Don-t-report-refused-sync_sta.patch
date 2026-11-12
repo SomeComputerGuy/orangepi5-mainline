@@ -17,7 +17,6 @@ for links that matter for probe ordering.
 
 (cherry picked from commit 15c769d8567ef979cc4e22f3c00b667252077fae)
 
-Assisted-by: LLM
 Signed-off-by: Arun Iyengar <aiyengar1990@gmail.com>
 ---
  drivers/base/core.c | 16 ++++++++++++++--

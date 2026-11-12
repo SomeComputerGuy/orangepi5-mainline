@@ -23,7 +23,6 @@ with a USB-C DP/USB3 dongle, answer it with a Not_Supported of its own:
 Drop unexpected Structured VDM responses instead, and log them.
 
 Fixes: a20dcf53ea98 ("usb: typec: tcpm: Respond Not_Supported if no snk_vdo")
-Assisted-by: LLM
 Signed-off-by: Arun Iyengar <aiyengar1990@gmail.com>
 ---
  drivers/usb/typec/tcpm/tcpm.c | 10 ++++++++++

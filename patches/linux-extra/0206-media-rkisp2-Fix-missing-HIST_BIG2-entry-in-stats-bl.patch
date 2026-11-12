@@ -11,8 +11,6 @@ rkisp2_stats_hist_read(). W=1 flags the duplicate designated initializer
 (-Woverride-init). Replace the second HIST_BIG1 with HIST_BIG2.
 
 To be squashed into "media: rkisp2: Add statistics capture video node".
-
-Assisted-by: LLM
 ---
  drivers/media/platform/rockchip/rkisp2/rkisp2-stats.c | 2 +-
  1 file changed, 1 insertion(+), 1 deletion(-)

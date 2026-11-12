@@ -17,7 +17,6 @@ Send an out-of-band "connected" event once the new configuration has
 been applied to the mux, so that the DisplayPort driver can check the
 link status and retrain.
 
-Assisted-by: LLM
 Signed-off-by: Arun Iyengar <aiyengar1990@gmail.com>
 ---
  drivers/usb/typec/altmodes/displayport.c | 15 +++++++++++++++

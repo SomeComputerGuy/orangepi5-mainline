@@ -1,4 +1,4 @@
-From d0d37988693036d5f98342d09243c1a41decf074 Mon Sep 17 00:00:00 2001
+From bda8c625ecc65cbba2238caed141dbdcec278177 Mon Sep 17 00:00:00 2001
 From: Arun Iyengar <aiyengar1990@gmail.com>
 Date: Thu, 29 Oct 2026 12:03:23 +0000
 Subject: [PATCH] media: verisilicon: Report fixed JPEG colorimetry on the
@@ -18,21 +18,21 @@ also makes v4l2-compliance fail on the encoder:
 The colorimetry of JPEG is fixed and the hardware doesn't convert the
 samples. When the coded format is JPEG, report sRGB primaries and
 transfer function with full range BT.601 Y'CbCr on both queues, as the
-mediatek and imx JPEG encoders do, and ignore what the application
-asks for. Other coded formats keep propagating the colorimetry set by
+mtk-jpeg and imx-jpeg drivers do, and ignore what the application asks
+for. Other coded formats keep propagating the colorimetry set by
 the application, which they signal in the bitstream.
 
-Assisted-by: LLM
+Fixes: 775fec69008d ("media: add Rockchip VPU JPEG encoder driver")
 Signed-off-by: Arun Iyengar <aiyengar1990@gmail.com>
 ---
  drivers/media/platform/verisilicon/hantro_v4l2.c | 13 +++++++++++++
  1 file changed, 13 insertions(+)
 
 diff --git a/drivers/media/platform/verisilicon/hantro_v4l2.c b/drivers/media/platform/verisilicon/hantro_v4l2.c
-index 731182cde..2761d37af 100644
+index c905079bd98b..6a0340a700d6 100644
 --- a/drivers/media/platform/verisilicon/hantro_v4l2.c
 +++ b/drivers/media/platform/verisilicon/hantro_v4l2.c
-@@ -406,6 +406,19 @@ static int hantro_try_fmt(const struct hantro_ctx *ctx,
+@@ -407,6 +407,19 @@ static int hantro_try_fmt(const struct hantro_ctx *ctx,
  			*sizeimage = max_size;
  	}
  
@@ -52,3 +52,6 @@ index 731182cde..2761d37af 100644
  	return 0;
  }
  
+-- 
+2.55.0
+

@@ -18,7 +18,6 @@ Round up the page count of each plane and stop before index max_desc.
 
 Fixes: a61ff67ffb9d ("media: rockchip: rga: rework buffer handling for multi-planar formats")
 Cc: stable@vger.kernel.org
-Assisted-by: LLM
 Signed-off-by: Arun Iyengar <aiyengar1990@gmail.com>
 ---
  drivers/media/platform/rockchip/rga/rga-buf.c | 10 ++++++----

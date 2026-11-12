@@ -11,8 +11,6 @@ clocks the system PLLs cannot be divided down to, and hold its rate while
 a pixel clock runs from it. Let it compute its settings for rates outside
 the rate table.
 
-
-Assisted-by: LLM
 Signed-off-by: Arun Iyengar <aiyengar1990@gmail.com>
 ---
  drivers/clk/rockchip/clk-rk3588.c | 3 ++-

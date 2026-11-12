@@ -19,7 +19,6 @@ Neither uAPI is merged in mainline Linux yet. The structures match the
 kernel the image ships, and the encoders check the control sizes at
 registration, so a kernel with a different layout is not used.
 
-Assisted-by: LLM
 Signed-off-by: Arun Iyengar <aiyengar1990@gmail.com>
 ---
  sys/v4l2codecs/linux/v4l2-controls.h | 222 +++++++++++++++++++++++++++

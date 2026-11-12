@@ -19,7 +19,6 @@ Only then hand D-pictures to the device; otherwise refuse them with a
 stream error, like a software decoder does. MPEG-2 streams never get
 D-pictures. Same rule as the FFmpeg V4L2 Request MPEG-1 hwaccel.
 
-Assisted-by: LLM
 Signed-off-by: Arun Iyengar <aiyengar1990@gmail.com>
 ---
  sys/v4l2codecs/gstv4l2codecmpeg2dec.c | 48 +++++++++++++++++++++++++++

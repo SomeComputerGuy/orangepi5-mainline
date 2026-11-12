@@ -1,8 +1,7 @@
-From c158f2b784f1104bfaf28bd0d8189b0989d1625d Mon Sep 17 00:00:00 2001
+From d268a7a92effb503aa6d6517acb94492ff478942 Mon Sep 17 00:00:00 2001
 From: Arun Iyengar <aiyengar1990@gmail.com>
 Date: Wed, 4 Nov 2026 18:46:09 +0000
-Subject: [PATCH 2263/2271] usb: typec: fusb302: Toggle with the default Rp
- current
+Subject: [PATCH] usb: typec: fusb302: Toggle with the default Rp current
 
 tcpm_start_toggling() programs the Rp current that tcpm asks for, which
 is the current of the source PDO (Rp 3.0A on boards that can source
@@ -19,17 +18,24 @@ Unattached sources may advertise any Rp level, and tcpm sets the
 configured level through set_cc() once the port is attached, so always
 toggle with the default current.
 
-Assisted-by: LLM
 Signed-off-by: Arun Iyengar <aiyengar1990@gmail.com>
 ---
- drivers/usb/typec/tcpm/fusb302.c | 13 +++++++++++--
- 1 file changed, 11 insertions(+), 2 deletions(-)
+ drivers/usb/typec/tcpm/fusb302.c | 21 +++++++++++++++++++--
+ 1 file changed, 19 insertions(+), 2 deletions(-)
 
 diff --git a/drivers/usb/typec/tcpm/fusb302.c b/drivers/usb/typec/tcpm/fusb302.c
-index 3f11e60489a4..3ac99ea2d050 100644
+index 3f11e60489a4..8130223fa5b8 100644
 --- a/drivers/usb/typec/tcpm/fusb302.c
 +++ b/drivers/usb/typec/tcpm/fusb302.c
-@@ -944,10 +944,19 @@ static int tcpm_start_toggling(struct tcpc_dev *dev,
+@@ -99,6 +99,7 @@ struct fusb302_chip {
+ 	/* chip status */
+ 	enum toggling_mode toggling_mode;
+ 	enum src_current_status src_current_status;
++	enum src_current_status toggling_src_current;
+ 	bool intr_togdone;
+ 	bool intr_bc_lvl;
+ 	bool intr_comp_chng;
+@@ -944,10 +945,19 @@ static int tcpm_start_toggling(struct tcpc_dev *dev,
  	}
  
  	mutex_lock(&chip->lock);
@@ -39,10 +45,10 @@ index 3f11e60489a4..3ac99ea2d050 100644
 +	 * Some sinks (seen with a Genesys Logic based USB-C to DisplayPort
 +	 * cable) present an Rd that the FUSB302 toggle state machine does
 +	 * not detect while it drives the high (3.0 A) Rp current, so they
-+	 * are only found when toggling starts from the sink side. Unattached
-+	 * sources may advertise any Rp level, and tcpm sets the configured
-+	 * level through set_cc() once the port is attached.
++	 * are only found when toggling starts from the sink side. The
++	 * requested current is restored when toggling finds a sink.
 +	 */
++	chip->toggling_src_current = cc_src_current[cc];
 +	ret = fusb302_set_src_current(chip, SRC_CURRENT_DEFAULT);
  	if (ret < 0) {
  		fusb302_log(chip, "unable to set src current %s, ret=%d",
@@ -51,6 +57,20 @@ index 3f11e60489a4..3ac99ea2d050 100644
  		goto done;
  	}
  	ret = fusb302_set_toggling(chip, mode);
+@@ -1359,6 +1369,13 @@ static int fusb302_handle_togdone_src(struct fusb302_chip *chip,
+ 			    typec_cc_status_name[cc2]);
+ 		return fusb302_set_toggling(chip, toggling_mode);
+ 	}
++	/* advertise the requested Rp current now that a sink is attached */
++	ret = fusb302_set_src_current(chip, chip->toggling_src_current);
++	if (ret < 0) {
++		fusb302_log(chip, "cannot set src current, ret=%d", ret);
++		return ret;
++	}
++	rd_mda = rd_mda_value[chip->src_current_status];
+ 	/* set polarity and pull_up, pull_down */
+ 	ret = fusb302_set_cc_polarity_and_pull(chip, cc_polarity, true, false);
+ 	if (ret < 0) {
 -- 
 2.55.0
 

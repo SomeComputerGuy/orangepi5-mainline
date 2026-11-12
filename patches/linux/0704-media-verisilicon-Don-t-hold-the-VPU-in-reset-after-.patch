@@ -1,0 +1,77 @@
+From 4ea0b9b90b1889f84595ab3cc32ff3f62b302247 Mon Sep 17 00:00:00 2001
+From: Arun Iyengar <aiyengar1990@gmail.com>
+Date: Thu, 29 Oct 2026 12:20:32 +0000
+Subject: [PATCH] media: verisilicon: Don't hold the VPU in reset after remove
+
+On the RK3588, the resets of the AV1 decoder include the AXI and APB
+bus interface resets (SRST_A_AV1_BIU, SRST_P_AV1_BIU), which also cover
+the Verisilicon IOMMU of the decoder. When the driver is unbound, the
+driver core runtime resumes the device and, through the runtime PM
+device link, its IOMMU. hantro_remove() then asserts the resets, and
+when the IOMMU autosuspends 100 ms later, vsi_iommu_suspend() writes to
+its registers while they are held in reset, which raises an SError and
+panics the system:
+
+  SError Interrupt on CPU4, code 0x00000000be000411 -- SError
+  Workqueue: pm pm_runtime_work
+  Call trace:
+   clk_disable+0x30/0x90 (P)
+   clk_bulk_disable+0x44/0x90
+   vsi_iommu_suspend+0x4c/0xc8 [vsi_iommu]
+   pm_generic_runtime_suspend+0x38/0x80
+   genpd_runtime_suspend+0xc4/0x348
+   ...
+  Kernel panic - not syncing: Asynchronous SError Interrupt
+
+This was hit when reloading the module, unless the decoder happened to
+be probed again within the autosuspend delay of its IOMMU.
+
+The IOMMU is not the only one to access the bus interface after remove.
+Commit 8e26d4c20ed2 ("media: hantro: disable runtime PM before hardware
+teardown") moved the assert after the runtime PM teardown because the
+power domain code faulted on it when powering the domain off. With the
+resets left asserted, the same domain code runs again when the domain
+is powered on for the next bind, before hantro_probe() deasserts the
+resets, and when the domain is powered off after a failed probe.
+
+A runtime suspended VPU has its resets deasserted and its clocks off.
+Leave it in that state on remove and on the probe error path instead of
+asserting the resets; hantro_probe() deasserts them anyway.
+
+Fixes: ea71631b7129 ("media: hantro: add support for reset lines")
+Cc: stable@vger.kernel.org
+Signed-off-by: Arun Iyengar <aiyengar1990@gmail.com>
+---
+ drivers/media/platform/verisilicon/hantro_drv.c | 5 +----
+ 1 file changed, 1 insertion(+), 4 deletions(-)
+
+diff --git a/drivers/media/platform/verisilicon/hantro_drv.c b/drivers/media/platform/verisilicon/hantro_drv.c
+index 7bd6a7c156cd..adbf00173454 100644
+--- a/drivers/media/platform/verisilicon/hantro_drv.c
++++ b/drivers/media/platform/verisilicon/hantro_drv.c
+@@ -1271,13 +1271,11 @@ static int hantro_hw_init(struct hantro_dev *vpu)
+ 	ret = clk_bulk_prepare(vpu->variant->num_clocks, vpu->clocks);
+ 	if (ret) {
+ 		dev_err(&pdev->dev, "Failed to prepare clocks\n");
+-		goto err_rst_assert;
++		goto err_pm_disable;
+ 	}
+ 
+ 	return 0;
+ 
+-err_rst_assert:
+-	reset_control_assert(vpu->resets);
+ err_pm_disable:
+ 	pm_runtime_dont_use_autosuspend(vpu->dev);
+ 	pm_runtime_disable(vpu->dev);
+@@ -1287,7 +1285,6 @@ static int hantro_hw_init(struct hantro_dev *vpu)
+ static void hantro_hw_cleanup(struct hantro_dev *vpu)
+ {
+ 	clk_bulk_unprepare(vpu->variant->num_clocks, vpu->clocks);
+-	reset_control_assert(vpu->resets);
+ 	pm_runtime_dont_use_autosuspend(vpu->dev);
+ 	pm_runtime_disable(vpu->dev);
+ }
+-- 
+2.55.0
+

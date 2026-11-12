@@ -1,3 +1,4 @@
+From aa6f4cff5ce8a9cb98ccf98493db4ba08f52ebee Mon Sep 17 00:00:00 2001
 From: Sascha Hauer <s.hauer@pengutronix.de>
 Date: Mon, 24 Aug 2026 08:39:36 +0200
 Subject: [PATCH] media: verisilicon: Allow the EOS event to be subscribed
@@ -35,15 +36,14 @@ Assisted-by: Claude:claude-opus-5
 Signed-off-by: Sascha Hauer <s.hauer@pengutronix.de>
 Link: https://patch.msgid.link/20260824-rk3588-jpegdec-v1-3-180a30a2852d@pengutronix.de
 ---
----
  drivers/media/platform/verisilicon/hantro_v4l2.c | 13 ++++++++++++-
  1 file changed, 12 insertions(+), 1 deletion(-)
 
 diff --git a/drivers/media/platform/verisilicon/hantro_v4l2.c b/drivers/media/platform/verisilicon/hantro_v4l2.c
-index 83af9fa1ce949..9e19daffe0075 100644
+index 1092cb4e6652..6e2598b3a18d 100644
 --- a/drivers/media/platform/verisilicon/hantro_v4l2.c
 +++ b/drivers/media/platform/verisilicon/hantro_v4l2.c
-@@ -765,6 +765,17 @@ static int vidioc_encoder_cmd(struct file *file, void *priv,
+@@ -940,6 +940,17 @@ static int vidioc_encoder_cmd(struct file *file, void *priv,
  	return 0;
  }
  
@@ -61,7 +61,7 @@ index 83af9fa1ce949..9e19daffe0075 100644
  const struct v4l2_ioctl_ops hantro_ioctl_ops = {
  	.vidioc_querycap = vidioc_querycap,
  	.vidioc_enum_framesizes = vidioc_enum_framesizes,
-@@ -787,7 +798,7 @@ const struct v4l2_ioctl_ops hantro_ioctl_ops = {
+@@ -963,7 +974,7 @@ const struct v4l2_ioctl_ops hantro_ioctl_ops = {
  	.vidioc_remove_bufs = v4l2_m2m_ioctl_remove_bufs,
  	.vidioc_expbuf = v4l2_m2m_ioctl_expbuf,
  
@@ -70,7 +70,6 @@ index 83af9fa1ce949..9e19daffe0075 100644
  	.vidioc_unsubscribe_event = v4l2_event_unsubscribe,
  
  	.vidioc_streamon = v4l2_m2m_ioctl_streamon,
-
 -- 
-2.47.3
+2.55.0
 

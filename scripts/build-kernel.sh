@@ -9,11 +9,11 @@ SRC=$OPI5_SRC/linux BUILD=$TOP/build/linux
 # ccache entries and kbuild's incremental state) and only differ in what is
 # checked out and where the debs go:
 #   OPI5_REF=<ref in src/linux>  build that commit's tree instead of v7.3 + patches/linux
-#   OPI5_PKGREV=<rev>           package revision (default 16): a number is a release,
+#   OPI5_PKGREV=<rev>           package revision (default 17): a number is a release,
 #                               <kernelversion>+opi5.<rev>; with letters a test kernel, <kernelversion>-<rev>
 #   OPI5_OUT=<dir>              output directory (default out; tests: out/test)
 OUT=${OPI5_OUT:-$TOP/out}
-OPI5_REF=${OPI5_REF:-} OPI5_PKGREV=${OPI5_PKGREV:-16}
+OPI5_REF=${OPI5_REF:-} OPI5_PKGREV=${OPI5_PKGREV:-17}
 export ARCH=arm64 CROSS_COMPILE=aarch64-linux-gnu-
 # Two builds in the same O= directory corrupt each other's objects
 mkdir -p "$TOP/build"

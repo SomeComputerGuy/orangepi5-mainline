@@ -1,0 +1,219 @@
+From 6e7d9352f8a5de79de02df143c9c8ceea849f73d Mon Sep 17 00:00:00 2001
+From: Arun Iyengar <aiyengar1990@gmail.com>
+Date: Fri, 6 Nov 2026 00:43:36 +0000
+Subject: [PATCH 2358/2409] media: rockchip: rga: Honour the crop and compose
+ rectangles on the RGA3
+
+The RGA3 reads the whole source picture size into its actual size
+register and writes the crop size into the source size register, and it
+never programs the actual offset. A crop rectangle that doesn't start at
+the origin then converts the top left part of the picture instead. The
+destination size is the whole frame, so the compose rectangle is ignored
+as well.
+
+Program the window as the hardware expects it: the source size is the
+picture, the actual offset and size are the crop rectangle. The
+destination size is the size of the compose rectangle. Without a second
+window the write channel has no offset, so the compose rectangle of the
+RGA3 starts at the origin: a new RGA_FEATURE_DST_OFFSET says whether a
+core can place it anywhere, as the RGA2 can.
+
+Neither core aligned the rectangles: chroma planes need the offset and
+the size of a YUV rectangle aligned to 2 pixels, and the RGA3 needs the
+horizontal offset and the width of 10-bit YUV aligned to 4 pixels (TRM
+part 2, 5.6.3). Adjust the rectangle in VIDIOC_S_SELECTION accordingly.
+
+Fixes: 24a63d4c9d3c ("media: rockchip: rga: add rga3 support")
+Signed-off-by: Arun Iyengar <aiyengar1990@gmail.com>
+---
+ drivers/media/platform/rockchip/rga/rga-hw.c  |  3 +-
+ drivers/media/platform/rockchip/rga/rga.c     | 19 +++++++
+ drivers/media/platform/rockchip/rga/rga.h     |  7 +++
+ drivers/media/platform/rockchip/rga/rga3-hw.c | 53 ++++++++++++-------
+ 4 files changed, 63 insertions(+), 19 deletions(-)
+
+diff --git a/drivers/media/platform/rockchip/rga/rga-hw.c b/drivers/media/platform/rockchip/rga/rga-hw.c
+index 628ec88b1dc8..62e8b2c2b3d3 100644
+--- a/drivers/media/platform/rockchip/rga/rga-hw.c
++++ b/drivers/media/platform/rockchip/rga/rga-hw.c
+@@ -614,7 +614,8 @@ const struct rga_hw rga2_hw = {
+ 	.stride_alignment = 4,
+ 	.features = RGA_FEATURE_FLIP
+ 		  | RGA_FEATURE_ROTATE
+-		  | RGA_FEATURE_BG_COLOR,
++		  | RGA_FEATURE_BG_COLOR
++		  | RGA_FEATURE_DST_OFFSET,
+ 
+ 	.setup_cmdbuf = rga_hw_setup_cmdbuf,
+ 	.start = rga_hw_start,
+diff --git a/drivers/media/platform/rockchip/rga/rga.c b/drivers/media/platform/rockchip/rga/rga.c
+index c6ba1ba11d61..12b5da26624b 100644
+--- a/drivers/media/platform/rockchip/rga/rga.c
++++ b/drivers/media/platform/rockchip/rga/rga.c
+@@ -787,6 +787,25 @@ static int vidioc_s_selection(struct file *file, void *priv,
+ 		return -EINVAL;
+ 	}
+ 
++	/*
++	 * Both cores need the offset and the size of a YUV rectangle aligned
++	 * to the chroma subsampling, some formats need more. Without an
++	 * offset of the destination, compose rectangles start at the origin.
++	 */
++	if (v4l2_is_format_yuv(v4l2_format_info(f->pix.pixelformat))) {
++		s->r.left = ALIGN_DOWN(s->r.left, 2);
++		s->r.top = ALIGN_DOWN(s->r.top, 2);
++		s->r.width = ALIGN_DOWN(s->r.width, 2);
++		s->r.height = ALIGN_DOWN(s->r.height, 2);
++	}
++	if (rga->hw->align_rect)
++		rga->hw->align_rect(f->fmt, &s->r);
++	if (s->target == V4L2_SEL_TGT_COMPOSE &&
++	    !(rga->hw->features & RGA_FEATURE_DST_OFFSET)) {
++		s->r.left = 0;
++		s->r.top = 0;
++	}
++
+ 	if (s->r.left + s->r.width > f->pix.width ||
+ 	    s->r.top + s->r.height > f->pix.height ||
+ 	    s->r.width < rga->hw->min_width || s->r.height < rga->hw->min_height) {
+diff --git a/drivers/media/platform/rockchip/rga/rga.h b/drivers/media/platform/rockchip/rga/rga.h
+index de6fbf5e193b..7245941314f8 100644
+--- a/drivers/media/platform/rockchip/rga/rga.h
++++ b/drivers/media/platform/rockchip/rga/rga.h
+@@ -191,6 +191,8 @@ enum rga_irq_status {
+ #define RGA_FEATURE_FLIP	BIT(0)
+ #define RGA_FEATURE_ROTATE	BIT(1)
+ #define RGA_FEATURE_BG_COLOR	BIT(2)
++/* The destination rectangle (compose) can start anywhere in the frame */
++#define RGA_FEATURE_DST_OFFSET	BIT(3)
+ 
+ struct rga_hw {
+ 	const char *card_type;
+@@ -221,6 +223,11 @@ struct rga_hw {
+ 	 * 90 or 270 degrees.
+ 	 */
+ 	bool (*can_rotate_90)(const void *in_fmt);
++	/*
++	 * Optional, aligns a crop or compose rectangle further than the
++	 * common alignment of YUV rectangles to 2 pixels.
++	 */
++	void (*align_rect)(const void *fmt, struct v4l2_rect *r);
+ 	struct rockchip_rga_version (*get_version)(struct rga_core *core);
+ 	void *(*adjust_and_map_format)(struct rga_ctx *ctx,
+ 				       struct v4l2_pix_format_mplane *format,
+diff --git a/drivers/media/platform/rockchip/rga/rga3-hw.c b/drivers/media/platform/rockchip/rga/rga3-hw.c
+index 95259dace82b..f59b7f0ee5c7 100644
+--- a/drivers/media/platform/rockchip/rga/rga3-hw.c
++++ b/drivers/media/platform/rockchip/rga/rga3-hw.c
+@@ -74,6 +74,19 @@ static bool rga3_can_rotate_90(const void *in_fmt)
+ 	       fmt->hw_format != RGA3_COLOR_FMT_YUV422_10B;
+ }
+ 
++/*
++ * The offset and the width of a 10-bit YUV window must be aligned to 4 pixels
++ * (TRM part 2, 5.6.3), the common code aligns YUV rectangles to 2 pixels.
++ */
++static void rga3_align_rect(const void *fmt, struct v4l2_rect *r)
++{
++	if (!rga3_is_yuv10b(fmt))
++		return;
++
++	r->left = ALIGN_DOWN(r->left, 4);
++	r->width = ALIGN_DOWN(r->width, 4);
++}
++
+ /*
+  * Map the transformations to the RGA3 command buffer: the orientation, the
+  * scaling settings and a fixed alpha value.
+@@ -105,7 +118,6 @@ static void rga3_cmd_set_trans_info(struct rga_ctx *ctx)
+ 	}
+ 
+ 	/*
+-	 * Support basic input cropping to support 1088px inputs.
+ 	 * The window rotates before it scales, so a rotated source is
+ 	 * scaled with its width and height swapped.
+ 	 */
+@@ -116,8 +128,8 @@ static void rga3_cmd_set_trans_info(struct rga_ctx *ctx)
+ 		src_h = ctx->in.crop.height;
+ 		src_w = ctx->in.crop.width;
+ 	}
+-	dst_h = ctx->out.pix.height;
+-	dst_w = ctx->out.pix.width;
++	dst_h = ctx->out.crop.height;
++	dst_w = ctx->out.crop.width;
+ 
+ 	reg = RGA3_WIN0_RD_CTRL - RGA3_FIRST_CMD_REG;
+ 	cmd[reg >> 2] |= FIELD_PREP(RGA3_WIN_ROT, rot)
+@@ -184,19 +196,13 @@ static void rga3_cmd_set_win0_format(struct rga_ctx *ctx)
+ 	const struct rga3_fmt *in = ctx->in.fmt;
+ 	const struct rga3_fmt *out = ctx->out.fmt;
+ 	const struct v4l2_format_info *in_fmt, *out_fmt;
+-	unsigned int act_h, act_w, src_h, src_w;
++	const struct v4l2_rect *crop = &ctx->in.crop;
+ 	bool r2y, y2r;
+ 	u8 rd_format;
+ 	const struct v4l2_pix_format_mplane *csc_pix;
+ 	u8 csc_mode;
+ 	unsigned int reg;
+ 
+-	act_h = ctx->in.pix.height;
+-	act_w = ctx->in.pix.width;
+-	/* Support basic input cropping to support 1088px inputs */
+-	src_h = ctx->in.crop.height;
+-	src_w = ctx->in.crop.width;
+-
+ 	in_fmt = v4l2_format_info(in->fourcc);
+ 	out_fmt = v4l2_format_info(out->fourcc);
+ 	r2y = v4l2_is_format_rgb(in_fmt) && v4l2_is_format_yuv(out_fmt);
+@@ -248,13 +254,19 @@ static void rga3_cmd_set_win0_format(struct rga_ctx *ctx)
+ 	else
+ 		cmd[reg >> 2] = ctx->in.pix.plane_fmt[0].bytesperline >> 2;
+ 
+-	/* set size */
+-	reg = RGA3_WIN0_ACT_SIZE - RGA3_FIRST_CMD_REG;
+-	cmd[reg >> 2] = FIELD_PREP(RGA3_WIDTH, act_w)
+-		      | FIELD_PREP(RGA3_HEIGHT, act_h);
++	/*
++	 * The source size is the whole picture, the window reads the crop
++	 * rectangle of it: the actual offset and size.
++	 */
+ 	reg = RGA3_WIN0_SRC_SIZE - RGA3_FIRST_CMD_REG;
+-	cmd[reg >> 2] = FIELD_PREP(RGA3_WIDTH, src_w)
+-		      | FIELD_PREP(RGA3_HEIGHT, src_h);
++	cmd[reg >> 2] = FIELD_PREP(RGA3_WIDTH, ctx->in.pix.width)
++		      | FIELD_PREP(RGA3_HEIGHT, ctx->in.pix.height);
++	reg = RGA3_WIN0_ACT_OFF - RGA3_FIRST_CMD_REG;
++	cmd[reg >> 2] = FIELD_PREP(RGA3_WIDTH, crop->left)
++		      | FIELD_PREP(RGA3_HEIGHT, crop->top);
++	reg = RGA3_WIN0_ACT_SIZE - RGA3_FIRST_CMD_REG;
++	cmd[reg >> 2] = FIELD_PREP(RGA3_WIDTH, crop->width)
++		      | FIELD_PREP(RGA3_HEIGHT, crop->height);
+ }
+ 
+ /* Map the output pixel format to the command buffer */
+@@ -267,8 +279,12 @@ static void rga3_cmd_set_wr_format(struct rga_ctx *ctx)
+ 	u8 wr_format;
+ 	unsigned int reg;
+ 
+-	dst_h = ctx->out.pix.height;
+-	dst_w = ctx->out.pix.width;
++	/*
++	 * Without a second window the write channel has no offset, the
++	 * compose rectangle starts at the origin of the frame.
++	 */
++	dst_h = ctx->out.crop.height;
++	dst_w = ctx->out.crop.width;
+ 
+ 	out_fmt = v4l2_format_info(out->fourcc);
+ 
+@@ -615,6 +631,7 @@ const struct rga_hw rga3_hw = {
+ 	.handle_irq = rga3_handle_irq,
+ 	.reset = rga3_soft_reset,
+ 	.can_rotate_90 = rga3_can_rotate_90,
++	.align_rect = rga3_align_rect,
+ 	.get_version = rga3_get_version,
+ 	.enum_format = rga3_enum_format,
+ 	.adjust_and_map_format = rga3_adjust_and_map_format,
+-- 
+2.55.0
+

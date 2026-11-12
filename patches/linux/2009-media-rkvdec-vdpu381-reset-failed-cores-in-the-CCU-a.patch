@@ -23,7 +23,6 @@ the IOMMU of the core could no longer stall. Two fixes:
   and start a frame in CCU mode only once no earlier frame in flight has
   a reference with its POC.
 
-Assisted-by: LLM
 Signed-off-by: Arun Iyengar <aiyengar1990@gmail.com>
 ---
  .../platform/rockchip/rkvdec/rkvdec-ccu.c     | 18 ++++++

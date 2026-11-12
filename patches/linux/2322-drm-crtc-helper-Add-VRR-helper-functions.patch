@@ -1,0 +1,126 @@
+From eb5cd8ce8d63c60be765a6ed406f6c01682cad08 Mon Sep 17 00:00:00 2001
+From: Nicolas Frattaroli <nicolas.frattaroli@collabora.com>
+Date: Sat, 7 Nov 2026 20:26:25 +0000
+Subject: [PATCH 2322/2409] drm/crtc-helper: Add VRR helper functions
+
+VRR needs to change the vertical front porch timing to change the duration
+of a frame. Add two helpers to aid in this.
+
+drm_crtc_helper_vrr_flush should be called when the source has a new
+frame ready to present. It adjusts the internal VRR state, and returns
+whether the current vtotal has been changed. Callers can then adjust
+their hardware state as is necessary.
+
+drm_crtc_helper_vrr_vsync should be called in the vblank interrupt
+handler. It adjusts the internal VRR state, and returns whether the
+current vtotal has been changed. Callers can then adjust their hardware
+state as is necessary.
+
+Co-developed-by: Derek Foreman <derek.foreman@collabora.com>
+Signed-off-by: Derek Foreman <derek.foreman@collabora.com>
+Signed-off-by: Nicolas Frattaroli <nicolas.frattaroli@collabora.com>
+[Arun: ported from the RFC series "VRR Target Rate Limiter KMS uAPI and
+ Implementation" (dri-devel, 2026-09-21) onto v7.3]
+Signed-off-by: Arun Iyengar <aiyengar1990@gmail.com>
+---
+ drivers/gpu/drm/drm_crtc_helper.c | 63 +++++++++++++++++++++++++++++++
+ include/drm/drm_crtc_helper.h     |  4 ++
+ 2 files changed, 67 insertions(+)
+
+diff --git a/drivers/gpu/drm/drm_crtc_helper.c b/drivers/gpu/drm/drm_crtc_helper.c
+index 4a8cfe046e4a..4ffb3b0b7878 100644
+--- a/drivers/gpu/drm/drm_crtc_helper.c
++++ b/drivers/gpu/drm/drm_crtc_helper.c
+@@ -838,6 +838,69 @@ int drm_crtc_helper_set_config(struct drm_mode_set *set,
+ }
+ EXPORT_SYMBOL(drm_crtc_helper_set_config);
+ 
++/**
++ * drm_crtc_helper_vrr_flush - Update VRR state on frame ready
++ * @crtc_state: pointer to &struct drm_crtc_state of CRTC that has a new frame ready
++ *
++ * Update the VRR state by communicating that a frame is ready on
++ * @crtc_state.crtc.
++ *
++ * Should be called from the @crtc_state.crtc &drm_crtc_helper_funcs.atomic_flush
++ * hook.
++ *
++ * Returns:
++ * - %true if @crtc_state.vrr_state.cur_vtotal changed
++ * - %false otherwise
++ */
++bool drm_crtc_helper_vrr_flush(struct drm_crtc_state *crtc_state)
++{
++	struct drm_crtc_vrr_state *vrr = &crtc_state->vrr_state;
++
++	if (!crtc_state->vrr_enabled) {
++		if (vrr->cur_vtotal) {
++			vrr->cur_vtotal = 0;
++			return true;
++		}
++		return false;
++	}
++
++	if (vrr->cur_vtotal == vrr->base_vtotal)
++		return false;
++
++	vrr->cur_vtotal = vrr->base_vtotal;
++
++	return true;
++}
++EXPORT_SYMBOL(drm_crtc_helper_vrr_flush);
++
++/**
++ * drm_crtc_helper_vrr_vsync - Update VRR state on vblank end
++ * @crtc_state: pointer to &struct drm_crtc_state of CRTC the vblank occurred on
++ *
++ * Update the VRR state by communicating that a vertical blank has ended and a
++ * new frame is about to start.
++ *
++ * Returns:
++ *  - %true if @crtc_state.vrr_state.cur_vtotal changed
++ *  - %false otherwise
++ */
++bool drm_crtc_helper_vrr_vsync(struct drm_crtc_state *crtc_state)
++{
++	struct drm_crtc_vrr_state *vrr = &crtc_state->vrr_state;
++	u16 old_vtotal = vrr->cur_vtotal;
++
++	if (!crtc_state->vrr_enabled)
++		vrr->cur_vtotal = 0;
++	else
++		vrr->cur_vtotal = vrr->max_vtotal;
++
++	if (abs_diff(vrr->cur_vtotal, old_vtotal) > 1)
++		vrr->dynamic = true;
++
++	return old_vtotal != vrr->cur_vtotal;
++}
++EXPORT_SYMBOL(drm_crtc_helper_vrr_vsync);
++
+ static int drm_helper_choose_encoder_dpms(struct drm_encoder *encoder)
+ {
+ 	int dpms = DRM_MODE_DPMS_OFF;
+diff --git a/include/drm/drm_crtc_helper.h b/include/drm/drm_crtc_helper.h
+index 855da5733c47..0c8c11ea36dd 100644
+--- a/include/drm/drm_crtc_helper.h
++++ b/include/drm/drm_crtc_helper.h
+@@ -44,6 +44,7 @@ struct drm_encoder;
+ struct drm_framebuffer;
+ struct drm_mode_set;
+ struct drm_modeset_acquire_ctx;
++struct drm_crtc_state;
+ 
+ void drm_helper_disable_unused_functions(struct drm_device *dev);
+ int drm_crtc_helper_set_config(struct drm_mode_set *set,
+@@ -62,4 +63,7 @@ int drm_helper_connector_dpms(struct drm_connector *connector, int mode);
+ void drm_helper_resume_force_mode(struct drm_device *dev);
+ int drm_helper_force_disable_all(struct drm_device *dev);
+ 
++bool drm_crtc_helper_vrr_flush(struct drm_crtc_state *crtc_state);
++bool drm_crtc_helper_vrr_vsync(struct drm_crtc_state *crtc_state);
++
+ #endif
+-- 
+2.55.0
+

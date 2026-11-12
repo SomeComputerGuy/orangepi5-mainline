@@ -14,7 +14,6 @@ driver and add the two controls it exposes:
 The base is placed at 0x1260, leaving room for the IT6625 range
 (0x1250) that is queued for v7.4.
 
-Assisted-by: LLM
 Signed-off-by: Arun Iyengar <aiyengar1990@gmail.com>
 ---
  include/uapi/linux/rockchip-iep.h  | 43 ++++++++++++++++++++++++++++++

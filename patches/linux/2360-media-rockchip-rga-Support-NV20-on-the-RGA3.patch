@@ -1,0 +1,37 @@
+From 78120f7123adba27a19e8d4f6162d0f18e8ef7d9 Mon Sep 17 00:00:00 2001
+From: Arun Iyengar <aiyengar1990@gmail.com>
+Date: Fri, 6 Nov 2026 00:44:50 +0000
+Subject: [PATCH 2360/2409] media: rockchip: rga: Support NV20 on the RGA3
+
+The RGA3 reads and writes 10-bit YUV 4:2:2 with two planes in the
+compact layout of NV20 (4 samples in 5 bytes), the format the Rockchip
+video decoder outputs for 10-bit 4:2:2 HEVC: picture format 3 with the
+compact bit set, as for NV15 with 4:2:0. Add it on both queues.
+
+The width is aligned to 4 pixels like NV15, and as YUV 4:2:2 it can only
+be flipped, not rotated by 90 or 270 degrees (TRM part 2, 5.6.3).
+
+Signed-off-by: Arun Iyengar <aiyengar1990@gmail.com>
+---
+ drivers/media/platform/rockchip/rga/rga3-hw.c | 5 +++++
+ 1 file changed, 5 insertions(+)
+
+diff --git a/drivers/media/platform/rockchip/rga/rga3-hw.c b/drivers/media/platform/rockchip/rga/rga3-hw.c
+index 77fec0d32699..fd9b10235d15 100644
+--- a/drivers/media/platform/rockchip/rga/rga3-hw.c
++++ b/drivers/media/platform/rockchip/rga/rga3-hw.c
+@@ -473,6 +473,11 @@ static struct rga3_fmt rga3_formats[] = {
+ 		.hw_format = RGA3_COLOR_FMT_YUV420_10B,
+ 		.yuv10b_endian = 1,
+ 	},
++	{
++		.fourcc = V4L2_PIX_FMT_NV20,
++		.hw_format = RGA3_COLOR_FMT_YUV422_10B,
++		.yuv10b_compact = 1,
++	},
+ 	{
+ 		.fourcc = V4L2_PIX_FMT_NV16M,
+ 		.hw_format = RGA3_COLOR_FMT_YUV422,
+-- 
+2.55.0
+

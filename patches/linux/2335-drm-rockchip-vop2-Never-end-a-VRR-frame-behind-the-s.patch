@@ -1,0 +1,113 @@
+From 5f9a5b906a0dd29a297ef595f90a63872b560e6a Mon Sep 17 00:00:00 2001
+From: Arun Iyengar <aiyengar1990@gmail.com>
+Date: Sat, 7 Nov 2026 23:19:09 +0000
+Subject: [PATCH 2335/2409] drm/rockchip: vop2: Never end a VRR frame behind
+ the scan position
+
+When a new frame is ready, atomic_flush() ends the stretched front porch
+of the frame being scanned out by writing the vtotal of the highest
+refresh rate with immediate effect. If the frame has already been
+stretched beyond that, the new vtotal is below the current line, and the
+video port has to notice that it is past the end of the frame.
+
+Most of the time it does and starts the next frame. Rarely it does not
+do that cleanly. On a 1080p240 HDMI mode (VRR range 48-240 Hz), page
+flips at 165 Hz gave two underflows in 40 s in one run and none in 120 s
+in another; flips at random rates between 40 and 300 Hz gave one in
+120 s (about 8300 flips). A trace of that one: the vtotal write at line
+3623 was followed 21 us later by a frame start interrupt that already
+saw line 37 (other early ends see line 3-31, consistent with 3.7 us per
+line since the write), and then by a POST_BUF_EMPTY underflow at line
+41, the first active line: the new frame lost most of its vertical
+blanking and with it the time to fetch its first line. Flips with VRR
+off at 120 and 240 Hz (no vtotal writes) showed no underflow.
+
+The TRM only says that the IMD bit makes the vtotal valid immediately,
+not what happens to a vtotal already passed. Do not rely on it: program
+the vtotal of the highest refresh rate if the scan position has not
+reached it yet, otherwise a vtotal a few lines past the current line, so
+that the video port ends the frame through its normal end of frame
+compare. The cost is at most 4 lines of latency (15 us at 1080p240).
+Never exceed the vtotal of the lowest refresh rate.
+
+Signed-off-by: Arun Iyengar <aiyengar1990@gmail.com>
+---
+ drivers/gpu/drm/rockchip/rockchip_drm_vop2.c | 42 +++++++++++++++++---
+ 1 file changed, 37 insertions(+), 5 deletions(-)
+
+diff --git a/drivers/gpu/drm/rockchip/rockchip_drm_vop2.c b/drivers/gpu/drm/rockchip/rockchip_drm_vop2.c
+index 2a5e7556960c..67467184758e 100644
+--- a/drivers/gpu/drm/rockchip/rockchip_drm_vop2.c
++++ b/drivers/gpu/drm/rockchip/rockchip_drm_vop2.c
+@@ -3504,9 +3504,17 @@ static u32 vop2_vp_read_vcnt(struct vop2_video_port *vp)
+ }
+ 
+ /*
+- * Set the vtotal of the frame being scanned out, with immediate effect: a
+- * vtotal at or below the current line ends the frame now, a larger one
+- * stretches its vertical front porch. Called with the event_lock held.
++ * Lines between the scan position and a vtotal written to end a stretched
++ * VRR frame early, so that the write lands well before the video port gets
++ * there, also with the latency of the register write.
++ */
++#define VOP2_VRR_END_MARGIN	4
++
++/*
++ * Set the vtotal of the frame being scanned out, with immediate effect: it
++ * stretches or shortens the vertical front porch of the current frame. The
++ * caller makes sure that it is past the current line.
++ * Called with the event_lock held.
+  */
+ static void vop2_vp_set_vrr_vtotal(struct vop2_video_port *vp, u16 vtotal)
+ {
+@@ -3527,6 +3535,30 @@ static void vop2_vp_set_vrr_vtotal(struct vop2_video_port *vp, u16 vtotal)
+ 	vp->vrr_cur_vtotal = vtotal;
+ }
+ 
++/*
++ * End the stretched front porch of the VRR frame being scanned out as early
++ * as allowed: at the vtotal of the highest refresh rate, or a few lines past
++ * the current line when the frame has already been stretched beyond that.
++ *
++ * A vtotal at or below the current line also ends the frame at once, but
++ * that relies on the video port noticing that it is already past the end of
++ * the frame. Some of those frames start with a part of their vertical
++ * blanking missing, too short for the fetch of the first active line, and
++ * the video port underflows (POST_BUF_EMPTY at the first active line). Only
++ * ever program a vtotal the video port still has to reach. Called with the
++ * event_lock held.
++ */
++static void vop2_vp_end_vrr_frame(struct vop2_video_port *vp)
++{
++	u32 end = vop2_vp_read_vcnt(vp) + VOP2_VRR_END_MARGIN;
++
++	/* Close to the maximum vtotal, the frame ends there on its own */
++	end = max_t(u32, end, vp->vrr_base_vtotal);
++	end = min_t(u32, end, vp->vrr_max_vtotal);
++
++	vop2_vp_set_vrr_vtotal(vp, end);
++}
++
+ static void vop2_crtc_atomic_flush(struct drm_crtc *crtc,
+ 				   struct drm_atomic_commit *state)
+ {
+@@ -3554,14 +3586,14 @@ static void vop2_crtc_atomic_flush(struct drm_crtc *crtc,
+ 	/*
+ 	 * VRR: the new frame is ready (the configuration is marked done
+ 	 * above), so end the stretched front porch of the current frame at the
+-	 * earliest point, the vtotal of the highest refresh rate. The next
++	 * earliest point (vop2_vp_end_vrr_frame()). The next
+ 	 * frame start stretches it again (vop2_vp_handle_vblank()).
+ 	 */
+ 	vp->vrr_active = vp->enabled && crtc_state->vrr_enabled;
+ 	if (vp->vrr_active) {
+ 		vp->vrr_base_vtotal = crtc_state->vrr_state.base_vtotal;
+ 		vp->vrr_max_vtotal = crtc_state->vrr_state.max_vtotal;
+-		vop2_vp_set_vrr_vtotal(vp, vp->vrr_base_vtotal);
++		vop2_vp_end_vrr_frame(vp);
+ 	}
+ 
+ 	if (crtc->state->event) {
+-- 
+2.55.0
+

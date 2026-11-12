@@ -1,4 +1,4 @@
-From 643c5c41ca2589c2e3f075cff867c68391fb002c Mon Sep 17 00:00:00 2001
+From cda59335e68e51d1104ec005ce18f67d5e64d3e2 Mon Sep 17 00:00:00 2001
 From: Arun Iyengar <aiyengar1990@gmail.com>
 Date: Thu, 29 Oct 2026 13:14:58 +0000
 Subject: [PATCH] dt-bindings: media: Add the Rockchip VEPU580 video encoder
@@ -12,16 +12,16 @@ groups the cores under software-only "mpp-service" and "ccu" nodes, nothing
 in the hardware ties the cores together, so how they are used (one job per
 core, or both cores on one stream) is left to the operating system.
 
-Assisted-by: LLM
 Signed-off-by: Arun Iyengar <aiyengar1990@gmail.com>
 ---
  .../media/rockchip,rk3588-vepu580.yaml        | 93 +++++++++++++++++++
- 1 file changed, 93 insertions(+)
+ MAINTAINERS                                   |  7 ++
+ 2 files changed, 100 insertions(+)
  create mode 100644 Documentation/devicetree/bindings/media/rockchip,rk3588-vepu580.yaml
 
 diff --git a/Documentation/devicetree/bindings/media/rockchip,rk3588-vepu580.yaml b/Documentation/devicetree/bindings/media/rockchip,rk3588-vepu580.yaml
 new file mode 100644
-index 000000000..2b52b17de
+index 000000000000..2b52b17de93d
 --- /dev/null
 +++ b/Documentation/devicetree/bindings/media/rockchip,rk3588-vepu580.yaml
 @@ -0,0 +1,93 @@
@@ -118,3 +118,24 @@ index 000000000..2b52b17de
 +            iommus = <&vepu580_0_mmu>;
 +        };
 +    };
+diff --git a/MAINTAINERS b/MAINTAINERS
+index 782389bd5cd3..1eec3eb3f8c6 100644
+--- a/MAINTAINERS
++++ b/MAINTAINERS
+@@ -23755,6 +23755,13 @@ S:	Maintained
+ F:	Documentation/devicetree/bindings/sound/rockchip,rk3576-sai.yaml
+ F:	sound/soc/rockchip/rockchip_sai.*
+ 
++ROCKCHIP VEPU580 VIDEO ENCODER DRIVER
++M:	Arun Iyengar <aiyengar1990@gmail.com>
++L:	linux-media@vger.kernel.org
++L:	linux-rockchip@lists.infradead.org
++S:	Maintained
++F:	Documentation/devicetree/bindings/media/rockchip,rk3588-vepu580.yaml
++
+ ROCKER DRIVER
+ M:	Jiri Pirko <jiri@resnulli.us>
+ L:	netdev@vger.kernel.org
+-- 
+2.55.0
+

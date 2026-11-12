@@ -15,8 +15,6 @@ integer multiple of the frame rate, within 0.05% so that 59.94 Hz and
 60 Hz are told apart. Otherwise, or if the frame rate is unknown, keep
 using the first mode of the video size. The connector mode list is
 sorted with the preferred and highest refresh modes first.
-
-Assisted-by: LLM
 ---
  sys/kms/gstkmssink.c | 70 +++++++++++++++++++++++++++++++++++++++-----
  1 file changed, 62 insertions(+), 8 deletions(-)

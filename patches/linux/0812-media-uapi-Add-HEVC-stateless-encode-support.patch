@@ -42,7 +42,6 @@ type, IRAP pictures with P/B slices or used references, P/B pictures
 without a used reference and duplicate references; zero the fields that
 are not coded for the given slice type.
 
-Assisted-by: LLM
 Signed-off-by: Arun Iyengar <aiyengar1990@gmail.com>
 ---
  drivers/media/v4l2-core/v4l2-ctrls-core.c | 194 ++++++++++++++++++++++

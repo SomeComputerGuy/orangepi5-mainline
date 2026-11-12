@@ -40,7 +40,6 @@ This is what the Rockchip BSP does for its video codecs, which mask the
 IOMMU interrupt in their fault handler and leave the fault pending until
 the hardware timeout and reset, but needs no help from the master driver.
 
-Assisted-by: LLM
 Signed-off-by: Arun Iyengar <aiyengar1990@gmail.com>
 ---
  drivers/iommu/rockchip-iommu.c | 108 ++++++++++++++++++++++++++++++++-

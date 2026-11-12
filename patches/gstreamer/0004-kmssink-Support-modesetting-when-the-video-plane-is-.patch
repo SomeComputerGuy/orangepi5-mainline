@@ -23,8 +23,6 @@ the plane type is unknown.
 
 In that case the vblank wait also follows the drmModeSetPlane() rules,
 so it is skipped on atomic drivers like without modesetting.
-
-Assisted-by: LLM
 ---
  sys/kms/gstkmssink.c | 71 ++++++++++++++++++++++++++++++++++++++++----
  sys/kms/gstkmssink.h |  1 +

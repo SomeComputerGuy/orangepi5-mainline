@@ -23,7 +23,6 @@ check on the link being enabled rather than on the last training having
 succeeded, so that a retrain that failed (for example while the sink was
 still settling) is retried on the next IRQ_HPD.
 
-Assisted-by: LLM
 Signed-off-by: Arun Iyengar <aiyengar1990@gmail.com>
 ---
  drivers/gpu/drm/bridge/synopsys/dw-dp.c | 24 +++++++++++++++++++++++-

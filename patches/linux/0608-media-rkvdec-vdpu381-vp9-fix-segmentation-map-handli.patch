@@ -35,7 +35,6 @@ Also keep the previous frame size in the context rather than reading it
 from its CAPTURE buffer, which userspace may have already reused when the
 previous frame is not a reference.
 
-Assisted-by: LLM
 Signed-off-by: Arun Iyengar <aiyengar1990@gmail.com>
 ---
  .../rockchip/rkvdec/rkvdec-vdpu381-regs.h     |  3 +-

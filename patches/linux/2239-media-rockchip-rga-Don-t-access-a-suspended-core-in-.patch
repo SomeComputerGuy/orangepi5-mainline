@@ -26,7 +26,6 @@ Only look at a core that is runtime active, as the Rockchip IOMMU driver
 does for the same line, and leave the interrupt to the other handler
 otherwise.
 
-Assisted-by: LLM
 Signed-off-by: Arun Iyengar <aiyengar1990@gmail.com>
 ---
  drivers/media/platform/rockchip/rga/rga.c | 24 +++++++++++++++++++++--

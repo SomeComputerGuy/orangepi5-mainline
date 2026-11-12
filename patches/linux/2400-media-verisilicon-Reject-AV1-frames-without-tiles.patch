@@ -1,0 +1,45 @@
+From 2bfab52672fcb56faae7ca83786367b169a6b214 Mon Sep 17 00:00:00 2001
+From: Arun Iyengar <aiyengar1990@gmail.com>
+Date: Tue, 10 Nov 2026 08:37:43 +0000
+Subject: [PATCH 2400/2409] media: verisilicon: Reject AV1 frames without tiles
+
+The AV1 control validation only checks the upper bounds of tile_cols
+and tile_rows, and rockchip_vpu981_av1_dec_prepare_run() only checks the
+number of tiles against the tile group entries and the tile buffer, so
+a frame with tile_cols or tile_rows set to 0 is accepted. With no tile
+columns, rockchip_vpu981_av1_dec_tiles_reallocate() computes a size of
+0 for each of the five tile column buffers, which the buffers it has
+always satisfy, so it allocates nothing. On the first frame of a context
+the decoder is then started without tile column buffers (DMA address 0),
+and after a failed allocation with the addresses of the freed ones.
+
+Every AV1 frame has at least one tile, reject frames without any.
+
+Fixes: 65e9f52ffdc8 ("media: verisilicon: Fix auxiliary buffer allocation size")
+Cc: stable@vger.kernel.org
+Signed-off-by: Arun Iyengar <aiyengar1990@gmail.com>
+---
+ .../platform/verisilicon/rockchip_vpu981_hw_av1_dec.c      | 7 +++++++
+ 1 file changed, 7 insertions(+)
+
+diff --git a/drivers/media/platform/verisilicon/rockchip_vpu981_hw_av1_dec.c b/drivers/media/platform/verisilicon/rockchip_vpu981_hw_av1_dec.c
+index 5324ecd76971..5df2dbdb263d 100644
+--- a/drivers/media/platform/verisilicon/rockchip_vpu981_hw_av1_dec.c
++++ b/drivers/media/platform/verisilicon/rockchip_vpu981_hw_av1_dec.c
+@@ -526,6 +526,13 @@ static int rockchip_vpu981_av1_dec_prepare_run(struct hantro_ctx *ctx)
+ 	if (num_tiles > tge->elems || num_tiles > AV1_MAX_TILES)
+ 		return -EINVAL;
+ 
++	/*
++	 * Every AV1 frame has at least one tile. Without tile columns, the
++	 * tile column buffers would be sized to zero and not allocated.
++	 */
++	if (!num_tiles)
++		return -EINVAL;
++
+ 	ctrls->film_grain =
+ 	    hantro_get_ctrl(ctx, V4L2_CID_STATELESS_AV1_FILM_GRAIN);
+ 
+-- 
+2.55.0
+

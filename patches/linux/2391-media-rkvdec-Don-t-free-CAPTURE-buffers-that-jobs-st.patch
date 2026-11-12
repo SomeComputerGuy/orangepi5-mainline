@@ -1,0 +1,123 @@
+From e8c7c6f0e635b96aa3c8275ac5f1598abf07ecdc Mon Sep 17 00:00:00 2001
+From: Arun Iyengar <aiyengar1990@gmail.com>
+Date: Tue, 10 Nov 2026 05:10:45 +0000
+Subject: [PATCH 2391/2409] media: rkvdec: Don't free CAPTURE buffers that jobs
+ still read
+
+The stateless decoder interface lets userspace drop the buffers of
+reference frames once the requests that use them are queued: the driver
+is expected to keep what it needs. rkvdec looks the references up by
+timestamp when a job starts and doesn't hold them, so a reference buffer
+removed with VIDIOC_REMOVE_BUFS while a job reads it is freed under the
+hardware.
+
+FFmpeg and GStreamer do exactly that when a VP9 stream changes its frame
+size between inter frames: the buffers of the earlier size are removed as
+soon as their last frame drops out of the reference list, right after the
+request of the frame that refreshes it was queued. In
+vp90-2-22-svc_1280x720_3 (spatial layers of 320x180, 640x360 and
+1280x720) the 640x360 layer frame that follows the switch to 1280x720
+buffers still predicts from the earlier 640x360 frame: its buffer is
+unmapped while the core decodes, the core fetches from the unmapped
+IOVA (rk_iommu read page faults, a page fault storm, a timeout interrupt)
+and the lower part of that frame and of every frame predicted from it is
+wrong, starting at a row that depends on the timing.
+
+Make VIDIOC_REMOVE_BUFS on the CAPTURE queue wait until no job of the
+context is in flight or ready to run (ready jobs look their references up
+when they start), then remove the buffers. The wait is interruptible and
+only happens when buffers are actually removed, which userspace does on
+frame size changes.
+
+Signed-off-by: Arun Iyengar <aiyengar1990@gmail.com>
+---
+ .../media/platform/rockchip/rkvdec/rkvdec.c   | 59 ++++++++++++++++---
+ 1 file changed, 51 insertions(+), 8 deletions(-)
+
+diff --git a/drivers/media/platform/rockchip/rkvdec/rkvdec.c b/drivers/media/platform/rockchip/rkvdec/rkvdec.c
+index 38a5f0227606..62384eaa19af 100644
+--- a/drivers/media/platform/rockchip/rkvdec/rkvdec.c
++++ b/drivers/media/platform/rockchip/rkvdec/rkvdec.c
+@@ -1092,6 +1092,56 @@ static int rkvdec_enum_capture_fmt(struct file *file, void *priv,
+ 	return 0;
+ }
+ 
++static bool rkvdec_ctx_idle(struct rkvdec_ctx *ctx)
++{
++	guard(spinlock_irqsave)(&ctx->dev->cores_lock);
++
++	return !ctx->num_jobs && !ctx->num_completers;
++}
++
++/*
++ * Have the jobs of @ctx that may read a CAPTURE buffer as a reference all
++ * finished? The references of a job are looked up when it starts, so a job
++ * that is ready to run counts as well.
++ */
++static bool rkvdec_ctx_refs_released(struct rkvdec_ctx *ctx)
++{
++	struct v4l2_m2m_ctx *m2m_ctx = ctx->fh.m2m_ctx;
++
++	if (!rkvdec_ctx_idle(ctx))
++		return false;
++
++	return !vb2_is_streaming(v4l2_m2m_get_src_vq(m2m_ctx)) ||
++	       !vb2_is_streaming(v4l2_m2m_get_dst_vq(m2m_ctx)) ||
++	       !v4l2_m2m_num_src_bufs_ready(m2m_ctx) ||
++	       !v4l2_m2m_num_dst_bufs_ready(m2m_ctx);
++}
++
++/*
++ * A dequeued CAPTURE buffer may still hold the reference frame of a frame
++ * being decoded: the stateless decoder interface lets userspace drop the
++ * buffers of reference frames once the requests that use them are queued,
++ * which FFmpeg and GStreamer do with VIDIOC_REMOVE_BUFS for the buffers of
++ * an earlier frame size. Freeing such a buffer while the hardware reads it
++ * makes it fetch unmapped (or reused) memory: IOMMU page faults and a wrong
++ * frame. Wait for the jobs that may read it first.
++ */
++static int rkvdec_remove_bufs(struct file *file, void *priv,
++			      struct v4l2_remove_buffers *remove)
++{
++	struct rkvdec_ctx *ctx = file_to_rkvdec_ctx(file);
++	int ret;
++
++	if (V4L2_TYPE_IS_CAPTURE(remove->type) && remove->count) {
++		ret = wait_event_interruptible(ctx->jobs_wq,
++					       rkvdec_ctx_refs_released(ctx));
++		if (ret)
++			return ret;
++	}
++
++	return v4l2_m2m_ioctl_remove_bufs(file, priv, remove);
++}
++
+ static const struct v4l2_ioctl_ops rkvdec_ioctl_ops = {
+ 	.vidioc_querycap = rkvdec_querycap,
+ 	.vidioc_enum_framesizes = rkvdec_enum_framesizes,
+@@ -1111,7 +1161,7 @@ static const struct v4l2_ioctl_ops rkvdec_ioctl_ops = {
+ 	.vidioc_dqbuf = v4l2_m2m_ioctl_dqbuf,
+ 	.vidioc_prepare_buf = v4l2_m2m_ioctl_prepare_buf,
+ 	.vidioc_create_bufs = v4l2_m2m_ioctl_create_bufs,
+-	.vidioc_remove_bufs = v4l2_m2m_ioctl_remove_bufs,
++	.vidioc_remove_bufs = rkvdec_remove_bufs,
+ 	.vidioc_expbuf = v4l2_m2m_ioctl_expbuf,
+ 
+ 	.vidioc_subscribe_event = v4l2_ctrl_subscribe_event,
+@@ -1207,13 +1257,6 @@ static void rkvdec_buf_request_complete(struct vb2_buffer *vb)
+ 	v4l2_ctrl_request_complete(vb->req_obj.req, &ctx->ctrl_hdl);
+ }
+ 
+-static bool rkvdec_ctx_idle(struct rkvdec_ctx *ctx)
+-{
+-	guard(spinlock_irqsave)(&ctx->dev->cores_lock);
+-
+-	return !ctx->num_jobs && !ctx->num_completers;
+-}
+-
+ /*
+  * Waits until no job of @ctx is in flight and no completion path uses @ctx
+  * anymore: the caller may free it once this returns.
+-- 
+2.55.0
+

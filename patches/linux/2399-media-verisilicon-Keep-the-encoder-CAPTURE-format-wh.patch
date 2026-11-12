@@ -1,0 +1,46 @@
+From f55808f3d9edb3beb8186b52437ce80e0cc36a4e Mon Sep 17 00:00:00 2001
+From: Arun Iyengar <aiyengar1990@gmail.com>
+Date: Tue, 10 Nov 2026 08:43:51 +0000
+Subject: [PATCH 2399/2409] media: verisilicon: Keep the encoder CAPTURE format
+ while buffers exist
+
+Commit bbd267daf4fc ("media: verisilicon: vp9: Allow to change
+resolution while streaming") dropped the busy check of the CAPTURE queue
+in hantro_set_fmt_cap() to let the decoder change resolutions. On the
+encoder, CAPTURE is the coded queue, and its format can now be changed
+while buffers are allocated, prepared or queued: the new sizeimage, and
+the size of the OUTPUT format reset along with it, no longer match the
+buffers.
+
+Return -EBUSY again for the encoder when the CAPTURE queue is busy, as
+before that commit.
+
+Fixes: bbd267daf4fc ("media: verisilicon: vp9: Allow to change resolution while streaming")
+Cc: stable@vger.kernel.org
+Signed-off-by: Arun Iyengar <aiyengar1990@gmail.com>
+---
+ drivers/media/platform/verisilicon/hantro_v4l2.c | 8 +++++++-
+ 1 file changed, 7 insertions(+), 1 deletion(-)
+
+diff --git a/drivers/media/platform/verisilicon/hantro_v4l2.c b/drivers/media/platform/verisilicon/hantro_v4l2.c
+index eaa0a853ba5c..09063b2511f3 100644
+--- a/drivers/media/platform/verisilicon/hantro_v4l2.c
++++ b/drivers/media/platform/verisilicon/hantro_v4l2.c
+@@ -766,7 +766,13 @@ static int hantro_set_fmt_cap(struct hantro_ctx *ctx,
+ 	int ret;
+ 
+ 	if (ctx->is_encoder) {
+-		struct vb2_queue *peer_vq;
++		struct vb2_queue *vq, *peer_vq;
++
++		/* The CAPTURE buffers are sized for the current coded format. */
++		vq = v4l2_m2m_get_vq(ctx->fh.m2m_ctx,
++				     V4L2_BUF_TYPE_VIDEO_CAPTURE_MPLANE);
++		if (vb2_is_busy(vq))
++			return -EBUSY;
+ 
+ 		/*
+ 		 * Since format change on the CAPTURE queue will reset
+-- 
+2.55.0
+

@@ -21,7 +21,6 @@ picture header, where the parser already puts them.
 Subclasses only see MPEG-1 streams if their sink caps accept
 mpegversion=1, so nothing changes for the existing ones.
 
-Assisted-by: LLM
 Signed-off-by: Arun Iyengar <aiyengar1990@gmail.com>
 ---
  gst-libs/gst/codecs/gstmpeg2decoder.c | 34 +++++++++++++++++++++++++++

@@ -1,0 +1,113 @@
+From d325b31f799fbcad44b69987f3c995f85c00f0db Mon Sep 17 00:00:00 2001
+From: Derek Foreman <derek.foreman@collabora.com>
+Date: Sat, 7 Nov 2026 20:27:13 +0000
+Subject: [PATCH 2323/2409] drm/bridge: synopsys: Add VTEM EMP support
+
+Add code to pack and schedule VTEM EMPs.
+
+Signed-off-by: Derek Foreman <derek.foreman@collabora.com>
+[Arun: ported from the RFC series "VRR Target Rate Limiter KMS uAPI and
+ Implementation" (dri-devel, 2026-09-21) onto v7.3]
+Signed-off-by: Arun Iyengar <aiyengar1990@gmail.com>
+---
+ drivers/gpu/drm/bridge/synopsys/dw-hdmi-qp.c | 50 +++++++++++++++++++-
+ drivers/gpu/drm/bridge/synopsys/dw-hdmi-qp.h |  1 +
+ 2 files changed, 50 insertions(+), 1 deletion(-)
+
+diff --git a/drivers/gpu/drm/bridge/synopsys/dw-hdmi-qp.c b/drivers/gpu/drm/bridge/synopsys/dw-hdmi-qp.c
+index 9405ec1d88db..499faf17cfe0 100644
+--- a/drivers/gpu/drm/bridge/synopsys/dw-hdmi-qp.c
++++ b/drivers/gpu/drm/bridge/synopsys/dw-hdmi-qp.c
+@@ -928,6 +928,15 @@ static int dw_hdmi_qp_bridge_clear_spd_infoframe(struct drm_bridge *bridge)
+ 	return 0;
+ }
+ 
++static int dw_hdmi_qp_bridge_clear_vtem_emp(struct drm_bridge *bridge)
++{
++	struct dw_hdmi_qp *hdmi = bridge->driver_private;
++
++	dw_hdmi_qp_mod(hdmi, 0, PKTSCHED_EMP_VTEM_TX_EN, PKTSCHED_PKT_EN);
++
++	return 0;
++}
++
+ static int dw_hdmi_qp_bridge_clear_audio_infoframe(struct drm_bridge *bridge)
+ {
+ 	struct dw_hdmi_qp *hdmi = bridge->driver_private;
+@@ -1030,6 +1039,42 @@ static int dw_hdmi_qp_bridge_write_spd_infoframe(struct drm_bridge *bridge,
+ 	return 0;
+ }
+ 
++static int dw_hdmi_qp_bridge_write_vtem_emp(struct drm_bridge *bridge,
++					    const u8 *buffer, size_t len)
++{
++	struct dw_hdmi_qp *hdmi = bridge->driver_private;
++	u32 val, i;
++
++	if (len != HDMI_INFOFRAME_SIZE(VTEM)) {
++		dev_err(hdmi->dev, "unsupported vtem emp packet size of %zu\n", len);
++		return -EINVAL;
++	}
++
++	val = buffer[1] << 8 | buffer[2] << 16;
++	dw_hdmi_qp_write(hdmi, val, PKT_EMP_VTEM_CONTENTS0);
++
++	val = buffer[3] | buffer[4] << 8;
++	dw_hdmi_qp_write(hdmi, val, PKT_EMP_VTEM_CONTENTS1);
++
++	val = buffer[8] << 8 | buffer[9] << 16 | buffer[10] << 24;
++	dw_hdmi_qp_write(hdmi, val, PKT_EMP_VTEM_CONTENTS2);
++
++	val = buffer[11] | buffer[12] << 8 | buffer[13] << 16;
++	dw_hdmi_qp_write(hdmi, val, PKT_EMP_VTEM_CONTENTS3);
++
++	/*
++	 * The remaining registers need to explicitly be rewritten even if they
++	 * stay at 0, as per the hardware documentation.
++	 */
++	for (i = PKT_EMP_VTEM_CONTENTS4; i <= PKT_EMP_VTEM_CONTENTS7; i += 4)
++		dw_hdmi_qp_write(hdmi, 0, i);
++
++	dw_hdmi_qp_mod(hdmi, PKTSCHED_EMP_VTEM_TX_EN, PKTSCHED_EMP_VTEM_TX_EN,
++			PKTSCHED_PKT_EN);
++
++	return 0;
++}
++
+ static int dw_hdmi_qp_bridge_write_audio_infoframe(struct drm_bridge *bridge,
+ 						   const u8 *buffer, size_t len)
+ {
+@@ -1278,6 +1323,8 @@ static const struct drm_bridge_funcs dw_hdmi_qp_bridge_funcs = {
+ 	.hdmi_write_hdr_drm_infoframe = dw_hdmi_qp_bridge_write_hdr_drm_infoframe,
+ 	.hdmi_clear_spd_infoframe = dw_hdmi_qp_bridge_clear_spd_infoframe,
+ 	.hdmi_write_spd_infoframe = dw_hdmi_qp_bridge_write_spd_infoframe,
++	.hdmi_clear_vtem_emp = dw_hdmi_qp_bridge_clear_vtem_emp,
++	.hdmi_write_vtem_emp = dw_hdmi_qp_bridge_write_vtem_emp,
+ 	.hdmi_clear_audio_infoframe = dw_hdmi_qp_bridge_clear_audio_infoframe,
+ 	.hdmi_write_audio_infoframe = dw_hdmi_qp_bridge_write_audio_infoframe,
+ 	.hdmi_audio_startup = dw_hdmi_qp_audio_enable,
+@@ -1401,7 +1448,8 @@ struct dw_hdmi_qp *dw_hdmi_qp_bind(struct platform_device *pdev,
+ 			   DRM_BRIDGE_OP_HDMI |
+ 			   DRM_BRIDGE_OP_HDMI_AUDIO |
+ 			   DRM_BRIDGE_OP_HDMI_HDR_DRM_INFOFRAME |
+-			   DRM_BRIDGE_OP_HDMI_SPD_INFOFRAME;
++			   DRM_BRIDGE_OP_HDMI_SPD_INFOFRAME |
++			   DRM_BRIDGE_OP_HDMI_VTEM_EMP;
+ 	hdmi->bridge.of_node = pdev->dev.of_node;
+ 	hdmi->bridge.type = DRM_MODE_CONNECTOR_HDMIA;
+ 	hdmi->bridge.vendor = "Synopsys";
+diff --git a/drivers/gpu/drm/bridge/synopsys/dw-hdmi-qp.h b/drivers/gpu/drm/bridge/synopsys/dw-hdmi-qp.h
+index 2a36a5565b55..33315f2c1d9c 100644
+--- a/drivers/gpu/drm/bridge/synopsys/dw-hdmi-qp.h
++++ b/drivers/gpu/drm/bridge/synopsys/dw-hdmi-qp.h
+@@ -213,6 +213,7 @@
+ #define PKTSCHED_AVI_TX_EN				BIT(13)
+ #define PKTSCHED_VSI_TX_EN				BIT(12)
+ #define PKTSCHED_EMP_CVTEM_TX_EN			BIT(10)
++#define PKTSCHED_EMP_VTEM_TX_EN				BIT(9)
+ #define PKTSCHED_AMD_TX_EN				BIT(8)
+ #define PKTSCHED_GCP_TX_EN				BIT(3)
+ #define PKTSCHED_AUDS_TX_EN				BIT(2)
+-- 
+2.55.0
+

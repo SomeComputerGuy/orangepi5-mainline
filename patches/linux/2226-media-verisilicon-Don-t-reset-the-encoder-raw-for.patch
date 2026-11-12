@@ -1,4 +1,4 @@
-From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
+From 47b24900bd274ec2c47619f97e13ef1694f17a18 Mon Sep 17 00:00:00 2001
 From: Arun Iyengar <aiyengar1990@gmail.com>
 Date: Sun, 1 Nov 2026 22:50:00 +0000
 Subject: [PATCH] media: verisilicon: Don't reset the encoder raw format while
@@ -8,11 +8,11 @@ For an encoder, hantro_set_fmt_cap() allows S_FMT on the CAPTURE queue
 while the OUTPUT queue has buffers as long as the coded pixel format and
 size don't change, and then unconditionally resets the raw format through
 hantro_reset_raw_fmt(). That helper sets ctx->vpu_src_fmt to the default
-raw format before hantro_set_fmt_out() can refuse the change with -EBUSY
-(the OUTPUT queue is busy), so the ioctl fails but leaves the context
-inconsistent: ctx->src_fmt still describes the negotiated raw format
-(e.g. NM12, two planes) while ctx->vpu_src_fmt describes the default one
-(YM12, three planes).
+raw format before hantro_set_fmt_out() refuses the change with -EBUSY
+(the OUTPUT queue is busy). hantro_set_fmt_cap() ignores that error, so
+the ioctl succeeds but leaves the context inconsistent: ctx->src_fmt
+still describes the negotiated raw format (e.g. NM12, two planes) while
+ctx->vpu_src_fmt describes the default one (YM12, three planes).
 
 The next job then programs the hardware with the wrong input format: on
 the RK3588 VEPU121 JPEG encoder the third plane address is never written,
@@ -32,17 +32,23 @@ accepted as the busy check intends. Also restore ctx->vpu_src_fmt in
 hantro_reset_raw_fmt() when hantro_set_fmt_out() fails, so that no other
 caller can leave the two descriptors out of sync.
 
-Fixes: 5980d40276b3 ("media: hantro: Cleanup format negotiation helpers")
-Assisted-by: LLM
+The raw format has been reset under allocated OUTPUT buffers since the
+encoder was added. Since commit 14b4bd01f8e5 ("media: verisilicon:
+Additional fix for the crash when opening the driver") only the
+descriptor is reset, which gives the mismatch described above.
+
+Fixes: 775fec69008d ("media: add Rockchip VPU JPEG encoder driver")
+Fixes: 14b4bd01f8e5 ("media: verisilicon: Additional fix for the crash when opening the driver")
 Signed-off-by: Arun Iyengar <aiyengar1990@gmail.com>
 ---
- drivers/media/platform/verisilicon/hantro_v4l2.c | 32 +++++++++++++++++++++-------
- 1 file changed, 25 insertions(+), 7 deletions(-)
+ .../media/platform/verisilicon/hantro_v4l2.c  | 33 +++++++++++++++----
+ 1 file changed, 26 insertions(+), 7 deletions(-)
 
 diff --git a/drivers/media/platform/verisilicon/hantro_v4l2.c b/drivers/media/platform/verisilicon/hantro_v4l2.c
+index 6e2598b3a18d..6582a15206bd 100644
 --- a/drivers/media/platform/verisilicon/hantro_v4l2.c
 +++ b/drivers/media/platform/verisilicon/hantro_v4l2.c
-@@ -528,7 +528,7 @@
+@@ -529,7 +529,7 @@ hantro_reset_encoded_fmt(struct hantro_ctx *ctx)
  int
  hantro_reset_raw_fmt(struct hantro_ctx *ctx, int bit_depth, bool need_postproc)
  {
@@ -51,7 +57,7 @@ diff --git a/drivers/media/platform/verisilicon/hantro_v4l2.c b/drivers/media/pl
  	struct v4l2_pix_format_mplane raw_fmt, *encoded_fmt;
  	int ret;
  
-@@ -538,6 +538,7 @@
+@@ -539,6 +539,7 @@ hantro_reset_raw_fmt(struct hantro_ctx *ctx, int bit_depth, bool need_postproc)
  
  	if (ctx->is_encoder) {
  		encoded_fmt = &ctx->dst_fmt;
@@ -59,7 +65,7 @@ diff --git a/drivers/media/platform/verisilicon/hantro_v4l2.c b/drivers/media/pl
  		ctx->vpu_src_fmt = raw_vpu_fmt;
  	} else {
  		encoded_fmt = &ctx->src_fmt;
-@@ -554,6 +555,12 @@
+@@ -555,6 +556,12 @@ hantro_reset_raw_fmt(struct hantro_ctx *ctx, int bit_depth, bool need_postproc)
  	if (!ret) {
  		ctx->bit_depth = bit_depth;
  		ctx->need_postproc = need_postproc;
@@ -72,7 +78,7 @@ diff --git a/drivers/media/platform/verisilicon/hantro_v4l2.c b/drivers/media/pl
  	}
  
  	return ret;
-@@ -713,6 +720,7 @@
+@@ -714,6 +721,7 @@ static int hantro_set_fmt_out(struct hantro_ctx *ctx,
  static int hantro_set_fmt_cap(struct hantro_ctx *ctx,
  			      struct v4l2_pix_format_mplane *pix_mp)
  {
@@ -80,7 +86,7 @@ diff --git a/drivers/media/platform/verisilicon/hantro_v4l2.c b/drivers/media/pl
  	int ret;
  
  	if (ctx->is_encoder) {
-@@ -725,11 +733,22 @@
+@@ -726,11 +734,22 @@ static int hantro_set_fmt_cap(struct hantro_ctx *ctx,
  		 */
  		peer_vq = v4l2_m2m_get_vq(ctx->fh.m2m_ctx,
  					  V4L2_BUF_TYPE_VIDEO_OUTPUT_MPLANE);
@@ -108,7 +114,7 @@ diff --git a/drivers/media/platform/verisilicon/hantro_v4l2.c b/drivers/media/pl
  	}
  
  	ret = hantro_try_fmt(ctx, pix_mp, V4L2_BUF_TYPE_VIDEO_CAPTURE_MPLANE);
-@@ -751,7 +770,7 @@
+@@ -752,7 +771,7 @@ static int hantro_set_fmt_cap(struct hantro_ctx *ctx,
  	 * Note that hantro_reset_raw_fmt() also propagates size
  	 * changes to the raw format.
  	 */
@@ -119,3 +125,4 @@ diff --git a/drivers/media/platform/verisilicon/hantro_v4l2.c b/drivers/media/pl
  	/* Colorimetry information are always propagated. */
 -- 
 2.55.0
+

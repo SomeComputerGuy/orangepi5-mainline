@@ -1,0 +1,51 @@
+From 2ffae418dda6f8928619bcd7e3777fb8bdfa7a6d Mon Sep 17 00:00:00 2001
+From: Arun Iyengar <aiyengar1990@gmail.com>
+Date: Thu, 12 Nov 2026 05:18:51 +0000
+Subject: [PATCH 2405/2409] drm/panthor: Suspend devfreq until the GPU is first
+ resumed
+
+panthor_devfreq_init() adds the devfreq device while the GPU is still
+suspended, and the first panthor_device_resume() then calls
+devfreq_resume_device() without a matching devfreq_suspend_device(). The
+devfreq suspend count stays off by one for the lifetime of the device:
+-1 while the GPU is active, 0 while it is runtime suspended.
+
+devfreq_suspend() and devfreq_resume() around a system suspend therefore
+treat a runtime suspended GPU as an active one: devfreq_suspend()
+applies the suspend OPP, if there is one, and devfreq_resume() restarts
+the polling of the simple_ondemand governor, which then sets GPU rates
+while the GPU is still runtime suspended, until its next runtime resume
+and suspend. With the devfreq core keeping a suspended device's
+frequency alone ("PM / devfreq: Do not change the frequency of a
+suspended device"), the unbalanced devfreq_resume() also marks the
+device resumed while the GPU is powered down.
+
+Suspend devfreq right after adding it, as msm_devfreq_init() does, so
+that the devfreq suspend and resume calls pair up.
+
+Fixes: fac9b22df4b1 ("drm/panthor: Add the devfreq logical block")
+Signed-off-by: Arun Iyengar <aiyengar1990@gmail.com>
+---
+ drivers/gpu/drm/panthor/panthor_devfreq.c | 6 ++++++
+ 1 file changed, 6 insertions(+)
+
+diff --git a/drivers/gpu/drm/panthor/panthor_devfreq.c b/drivers/gpu/drm/panthor/panthor_devfreq.c
+index 2249b41ca4af..45ae42dacdcb 100644
+--- a/drivers/gpu/drm/panthor/panthor_devfreq.c
++++ b/drivers/gpu/drm/panthor/panthor_devfreq.c
+@@ -256,6 +256,12 @@ int panthor_devfreq_init(struct panthor_device *ptdev)
+ 		return ret;
+ 	}
+ 
++	/*
++	 * The GPU stays suspended until the first panthor_device_resume(),
++	 * which resumes devfreq. Suspend devfreq to match.
++	 */
++	panthor_devfreq_suspend(ptdev);
++
+ 	cooling = devfreq_cooling_em_register(pdevfreq->devfreq, NULL);
+ 	if (IS_ERR(cooling))
+ 		DRM_DEV_INFO(dev, "Failed to register cooling device\n");
+-- 
+2.55.0
+

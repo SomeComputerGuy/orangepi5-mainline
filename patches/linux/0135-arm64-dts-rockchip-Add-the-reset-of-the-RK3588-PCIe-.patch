@@ -1,0 +1,29 @@
+From c54240e541bb14e81501399fdc2920c2b934f0ac Mon Sep 17 00:00:00 2001
+From: Arun Iyengar <aiyengar1990@gmail.com>
+Date: Thu, 12 Nov 2026 06:02:41 +0000
+Subject: [PATCH] arm64: dts: rockchip: Add the reset of the RK3588 PCIe SMMU
+
+The MMU-600 for the PCIe controllers (mmu600_pcie) has a reset line in
+the CRU, SRST_A_MMU_PCIE, which its node does not describe. Add it, so
+that the node describes both the clock and the reset of the MMU-600.
+
+Signed-off-by: Arun Iyengar <aiyengar1990@gmail.com>
+---
+ arch/arm64/boot/dts/rockchip/rk3588-base.dtsi | 1 +
+ 1 file changed, 1 insertion(+)
+
+diff --git a/arch/arm64/boot/dts/rockchip/rk3588-base.dtsi b/arch/arm64/boot/dts/rockchip/rk3588-base.dtsi
+index ba4dcb9d225e..a3ce7c7fb464 100644
+--- a/arch/arm64/boot/dts/rockchip/rk3588-base.dtsi
++++ b/arch/arm64/boot/dts/rockchip/rk3588-base.dtsi
+@@ -560,6 +560,7 @@ mmu600_pcie: iommu@fc900000 {
+ 			     <GIC_SPI 367 IRQ_TYPE_EDGE_RISING 0>;
+ 		interrupt-names = "eventq", "gerror", "priq", "cmdq-sync";
+ 		clocks = <&cru ACLK_MMU_PCIE>;
++		resets = <&cru SRST_A_MMU_PCIE>;
+ 		#iommu-cells = <1>;
+ 	};
+ 
+-- 
+2.55.0
+

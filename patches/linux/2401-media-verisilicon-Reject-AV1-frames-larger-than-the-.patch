@@ -1,0 +1,63 @@
+From 5d8eee8d47a30ee908b1ede07e7cf704f703779f Mon Sep 17 00:00:00 2001
+From: Arun Iyengar <aiyengar1990@gmail.com>
+Date: Tue, 10 Nov 2026 08:38:24 +0000
+Subject: [PATCH 2401/2409] media: verisilicon: Reject AV1 frames larger than
+ the CAPTURE format
+
+frame_width_minus_1, frame_height_minus_1 and upscaled_width of the AV1
+frame control are not validated against anything, and the decoder is
+programmed with them.
+
+The decoder writes the luma, the chroma and the motion vectors of a
+frame into one buffer. The size of that buffer and the offsets of the
+chroma and of the motion vectors in it are computed from the width and
+height of the CAPTURE format, so a frame that is larger than the format
+does not fit in the buffer the decoder is given.
+
+rockchip_vpu981_av1_dec_tiles_reallocate() also sizes the tile column
+buffers from the frame height in 32-bit arithmetic, which wraps around
+for large heights, while the hardware is given the height as a 13-bit
+number of 8-pixel blocks. The buffers can then be smaller than the
+programmed height needs. For instance, frame_height_minus_1 = 0xffffffc0
+rounds up to a height of 0, so the buffers of the previous frame are
+found big enough and kept, and the decoder is started with a picture
+height of 8185 blocks, 65480 lines.
+
+Reject frames that are wider or taller than the CAPTURE format. The
+format is never larger than the decoder supports, 4096x2304, so this
+covers the heights that wrap as well. Frames that are smaller than the
+format, as streams with spatial layers have, are still accepted.
+
+Fixes: 727a400686a2 ("media: verisilicon: Add Rockchip AV1 decoder")
+Cc: stable@vger.kernel.org
+Signed-off-by: Arun Iyengar <aiyengar1990@gmail.com>
+---
+ .../verisilicon/rockchip_vpu981_hw_av1_dec.c         | 12 ++++++++++++
+ 1 file changed, 12 insertions(+)
+
+diff --git a/drivers/media/platform/verisilicon/rockchip_vpu981_hw_av1_dec.c b/drivers/media/platform/verisilicon/rockchip_vpu981_hw_av1_dec.c
+index 5df2dbdb263d..c42fb59df43d 100644
+--- a/drivers/media/platform/verisilicon/rockchip_vpu981_hw_av1_dec.c
++++ b/drivers/media/platform/verisilicon/rockchip_vpu981_hw_av1_dec.c
+@@ -533,6 +533,18 @@ static int rockchip_vpu981_av1_dec_prepare_run(struct hantro_ctx *ctx)
+ 	if (!num_tiles)
+ 		return -EINVAL;
+ 
++	/*
++	 * The frame size comes from userspace. The decoder writes a frame of
++	 * that size, upscaled to upscaled_width, into buffers that are made
++	 * for the CAPTURE format, so the frame has to fit in that format. As
++	 * the format is within the limits of the decoder, this also keeps the
++	 * frame height in the range the tile column buffers can be sized for.
++	 */
++	if (ctrls->frame->frame_width_minus_1 >= ctx->dst_fmt.width ||
++	    ctrls->frame->frame_height_minus_1 >= ctx->dst_fmt.height ||
++	    ctrls->frame->upscaled_width > ctx->dst_fmt.width)
++		return -EINVAL;
++
+ 	ctrls->film_grain =
+ 	    hantro_get_ctrl(ctx, V4L2_CID_STATELESS_AV1_FILM_GRAIN);
+ 
+-- 
+2.55.0
+

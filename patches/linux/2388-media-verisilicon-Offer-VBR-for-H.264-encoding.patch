@@ -1,0 +1,48 @@
+From a73e964f8e71ca017929f1a739c918c477e5b2a2 Mon Sep 17 00:00:00 2001
+From: Arun Iyengar <aiyengar1990@gmail.com>
+Date: Tue, 10 Nov 2026 01:45:58 +0000
+Subject: [PATCH 2388/2409] media: verisilicon: Offer VBR for H.264 encoding
+
+The H.264 encode core has a variable bitrate mode now. Offer it in
+V4L2_CID_MPEG_VIDEO_BITRATE_MODE and add V4L2_CID_MPEG_VIDEO_BITRATE_PEAK,
+which the core reads for it (default 4 Mbit/s, twice the default
+bitrate). The macroblock rate control of the VEPU2 already takes the size
+target of the variable bitrate pictures as it does for constant bitrate.
+
+Signed-off-by: Arun Iyengar <aiyengar1990@gmail.com>
+---
+ drivers/media/platform/verisilicon/hantro_drv.c | 11 ++++++++++-
+ 1 file changed, 10 insertions(+), 1 deletion(-)
+
+diff --git a/drivers/media/platform/verisilicon/hantro_drv.c b/drivers/media/platform/verisilicon/hantro_drv.c
+index c376f913a39c..9de601619270 100644
+--- a/drivers/media/platform/verisilicon/hantro_drv.c
++++ b/drivers/media/platform/verisilicon/hantro_drv.c
+@@ -723,7 +723,7 @@ static const struct hantro_ctrl controls[] = {
+ 		.codec = HANTRO_H264_ENCODER,
+ 		.cfg = {
+ 			.id = V4L2_CID_MPEG_VIDEO_BITRATE_MODE,
+-			.min = V4L2_MPEG_VIDEO_BITRATE_MODE_CBR,
++			.min = V4L2_MPEG_VIDEO_BITRATE_MODE_VBR,
+ 			.max = V4L2_MPEG_VIDEO_BITRATE_MODE_CQ,
+ 			.def = V4L2_MPEG_VIDEO_BITRATE_MODE_CBR,
+ 		},
+@@ -745,6 +745,15 @@ static const struct hantro_ctrl controls[] = {
+ 			.def = 2000000,
+ 			.step = 1,
+ 		},
++	}, {
++		.codec = HANTRO_H264_ENCODER,
++		.cfg = {
++			.id = V4L2_CID_MPEG_VIDEO_BITRATE_PEAK,
++			.min = 1000,
++			.max = 100000000,
++			.def = 4000000,
++			.step = 1,
++		},
+ 	}, {
+ 		.codec = HANTRO_MPEG2_DECODER,
+ 		.cfg = {
+-- 
+2.55.0
+

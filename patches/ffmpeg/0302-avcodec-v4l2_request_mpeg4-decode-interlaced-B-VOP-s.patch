@@ -8,7 +8,6 @@ Cedrus wraps the vertical field vectors of interlaced B-VOPs to half
 their range and the driver refuses those pictures. Fall back to software
 at init when an interlaced VOL allows B-VOPs (low_delay unset).
 
-Assisted-by: LLM
 Signed-off-by: Arun Iyengar <aiyengar1990@gmail.com>
 ---
  libavcodec/v4l2_request_mpeg4.c | 9 ++++++++-

@@ -25,7 +25,6 @@ disabling the output in a separate commit, recovers it.
 Add dw_hdmi_qp_wait_input_clk_off() for platform drivers to wait for the
 controller to observe the stopped clock before they restart it.
 
-Assisted-by: LLM
 Signed-off-by: Arun Iyengar <aiyengar1990@gmail.com>
 ---
  drivers/gpu/drm/bridge/synopsys/dw-hdmi-qp.c | 33 ++++++++++++++++++++

@@ -1,0 +1,59 @@
+From 33736ab422158a95774a0ed2fc36b554d19dac32 Mon Sep 17 00:00:00 2001
+From: Arun Iyengar <aiyengar1990@gmail.com>
+Date: Tue, 10 Nov 2026 07:33:54 +0000
+Subject: [PATCH 2392/2409] iommu/arm-smmu-v3: Don't leak the CMDQV device on a
+ bad #iommu-cells
+
+arm_smmu_device_dt_probe() only logs a missing or invalid #iommu-cells
+and carries on with ret = -EINVAL. For "nvidia,tegra264-smmu" it then
+calls tegra_cmdqv_dt_probe(), which takes a reference on the CMDQV
+platform device in smmu->impl_dev, and returns the error. That reference
+is only dropped by tegra241_cmdqv_probe() via arm_smmu_impl_probe(),
+which is never reached, so every failed probe leaks it.
+
+Return the error as soon as #iommu-cells is found to be wrong, before
+anything takes a reference.
+
+Fixes: ea69dc4e207b ("iommu/arm-smmu-v3: Add device-tree support for CMDQV driver")
+Signed-off-by: Arun Iyengar <aiyengar1990@gmail.com>
+---
+ drivers/iommu/arm/arm-smmu-v3/arm-smmu-v3.c | 13 +++++++------
+ 1 file changed, 7 insertions(+), 6 deletions(-)
+
+diff --git a/drivers/iommu/arm/arm-smmu-v3/arm-smmu-v3.c b/drivers/iommu/arm/arm-smmu-v3/arm-smmu-v3.c
+index 0e148ec07a42..cdcc4454b22b 100644
+--- a/drivers/iommu/arm/arm-smmu-v3/arm-smmu-v3.c
++++ b/drivers/iommu/arm/arm-smmu-v3/arm-smmu-v3.c
+@@ -5390,14 +5390,15 @@ static int arm_smmu_device_dt_probe(struct platform_device *pdev,
+ {
+ 	struct device *dev = &pdev->dev;
+ 	u32 cells;
+-	int ret = -EINVAL;
+ 
+-	if (of_property_read_u32(dev->of_node, "#iommu-cells", &cells))
++	if (of_property_read_u32(dev->of_node, "#iommu-cells", &cells)) {
+ 		dev_err(dev, "missing #iommu-cells property\n");
+-	else if (cells != 1)
++		return -EINVAL;
++	}
++	if (cells != 1) {
+ 		dev_err(dev, "invalid #iommu-cells value (%d)\n", cells);
+-	else
+-		ret = 0;
++		return -EINVAL;
++	}
+ 
+ 	parse_driver_options(smmu);
+ 
+@@ -5409,7 +5410,7 @@ static int arm_smmu_device_dt_probe(struct platform_device *pdev,
+ 		static_branch_enable(&arm_smmu_erratum_repeat_tlbi_cfgi_key);
+ 	}
+ 
+-	return ret;
++	return 0;
+ }
+ 
+ static unsigned long arm_smmu_resource_size(struct arm_smmu_device *smmu)
+-- 
+2.55.0
+

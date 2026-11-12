@@ -32,7 +32,6 @@ Based on the encoder helper of the work on stateless encoders by Benjamin
 Gaignard, Michael Grzeschik and Paul Kocialkowski (gstreamer MR !5676 and
 the v4l2codecs/h264enc branch of Paul Kocialkowski).
 
-Assisted-by: LLM
 Signed-off-by: Arun Iyengar <aiyengar1990@gmail.com>
 ---
  sys/v4l2codecs/gstv4l2codecallocator.c |  105 +-

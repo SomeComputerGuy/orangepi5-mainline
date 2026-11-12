@@ -1,8 +1,7 @@
-From ea41e6721cf084ede7a928bc2a4a29804274be1c Mon Sep 17 00:00:00 2001
+From 07cf2f391b3cd708ad0bff3dae37dcd1c5e6e2c1 Mon Sep 17 00:00:00 2001
 From: Arun Iyengar <aiyengar1990@gmail.com>
 Date: Thu, 5 Nov 2026 12:45:24 +0000
-Subject: [PATCH 2295/2312] media: verisilicon: Crop H.264 encodes to 2 pixel
- units
+Subject: [PATCH] media: verisilicon: Crop H.264 encodes to 2 pixel units
 
 The OUTPUT crop rectangle of the encoder is the coded picture size. Its
 width is rounded up to a multiple of 4, as the right overfill register
@@ -24,17 +23,16 @@ the SPS crop offset made the decoded picture one line taller, so round
 them up to 2 as well.
 JPEG keeps the 4 pixel rounding.
 
-Assisted-by: LLM
 Signed-off-by: Arun Iyengar <aiyengar1990@gmail.com>
 ---
  drivers/media/platform/verisilicon/hantro_v4l2.c | 10 ++++++++++
  1 file changed, 10 insertions(+)
 
 diff --git a/drivers/media/platform/verisilicon/hantro_v4l2.c b/drivers/media/platform/verisilicon/hantro_v4l2.c
-index 9c98456642d0..d86807bba484 100644
+index 8a2702d31b60..40487ee632d4 100644
 --- a/drivers/media/platform/verisilicon/hantro_v4l2.c
 +++ b/drivers/media/platform/verisilicon/hantro_v4l2.c
-@@ -867,6 +867,16 @@ static int vidioc_s_selection(struct file *file, void *priv,
+@@ -868,6 +868,16 @@ static int vidioc_s_selection(struct file *file, void *priv,
  		rect->top = 0;
  		rect->width = ctx->src_fmt.width;
  		rect->height = ctx->src_fmt.height;

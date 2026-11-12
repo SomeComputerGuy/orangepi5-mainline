@@ -1,0 +1,159 @@
+From 2314831bc180357e7f189981f3f951d143b7d5e7 Mon Sep 17 00:00:00 2001
+From: Derek Foreman <derek.foreman@collabora.com>
+Date: Sat, 7 Nov 2026 20:26:24 +0000
+Subject: [PATCH 2320/2409] drm/bridge: Add VTEM EMP support
+
+Add setters and support bit for VTEM emp to the bridge.
+
+Signed-off-by: Derek Foreman <derek.foreman@collabora.com>
+[Arun: ported from the RFC series "VRR Target Rate Limiter KMS uAPI and
+ Implementation" (dri-devel, 2026-09-21) onto v7.3]
+Signed-off-by: Arun Iyengar <aiyengar1990@gmail.com>
+---
+ .../gpu/drm/display/drm_bridge_connector.c    | 41 +++++++++++++++++++
+ include/drm/drm_bridge.h                      | 29 +++++++++++++
+ include/drm/drm_connector.h                   |  8 ++++
+ 3 files changed, 78 insertions(+)
+
+diff --git a/drivers/gpu/drm/display/drm_bridge_connector.c b/drivers/gpu/drm/display/drm_bridge_connector.c
+index 8df9476b9d95..68083a8d1339 100644
+--- a/drivers/gpu/drm/display/drm_bridge_connector.c
++++ b/drivers/gpu/drm/display/drm_bridge_connector.c
+@@ -726,6 +726,33 @@ static int drm_bridge_connector_frl_set_ffe_level(struct drm_connector *connecto
+ 	return bridge->funcs->hdmi_frl_set_ffe_level(bridge, ffe_level);
+ }
+ 
++static int drm_bridge_connector_clear_vtem_emp(struct drm_connector *connector)
++{
++	struct drm_bridge_connector *bridge_connector =
++		to_drm_bridge_connector(connector);
++	struct drm_bridge *bridge;
++
++	bridge = bridge_connector->bridge_hdmi;
++	if (!bridge)
++		return -EINVAL;
++
++	return bridge->funcs->hdmi_clear_vtem_emp(bridge);
++}
++
++static int drm_bridge_connector_write_vtem_emp(struct drm_connector *connector,
++					       const u8 *buffer, size_t len)
++{
++	struct drm_bridge_connector *bridge_connector =
++		to_drm_bridge_connector(connector);
++	struct drm_bridge *bridge;
++
++	bridge = bridge_connector->bridge_hdmi;
++	if (!bridge)
++		return -EINVAL;
++
++	return bridge->funcs->hdmi_write_vtem_emp(bridge, buffer, len);
++}
++
+ static const struct drm_edid *
+ drm_bridge_connector_read_edid(struct drm_connector *connector)
+ {
+@@ -772,6 +799,11 @@ static const struct drm_connector_infoframe_funcs drm_bridge_connector_hdmi_spd_
+ 	.write_infoframe = drm_bridge_connector_write_spd_infoframe,
+ };
+ 
++static const struct drm_connector_infoframe_funcs drm_bridge_connector_hdmi_vtem_emp = {
++	.clear_infoframe = drm_bridge_connector_clear_vtem_emp,
++	.write_infoframe = drm_bridge_connector_write_vtem_emp,
++};
++
+ static int drm_bridge_connector_audio_startup(struct drm_connector *connector)
+ {
+ 	struct drm_bridge_connector *bridge_connector =
+@@ -1071,6 +1103,11 @@ struct drm_connector *drm_bridge_connector_init(struct drm_device *drm,
+ 			     !bridge->funcs->hdmi_frl_fallback_tmds))
+ 				return ERR_PTR(-EINVAL);
+ 
++			if (bridge->ops & DRM_BRIDGE_OP_HDMI_VTEM_EMP &&
++			    (!bridge->funcs->hdmi_write_vtem_emp ||
++			     !bridge->funcs->hdmi_clear_vtem_emp))
++				return ERR_PTR(-EINVAL);
++
+ 			bridge_connector->bridge_hdmi = drm_bridge_get(bridge);
+ 		}
+ 
+@@ -1233,6 +1270,10 @@ struct drm_connector *drm_bridge_connector_init(struct drm_device *drm,
+ 					drm_bridge_connector_frl_set_ffe_level;
+ 		}
+ 
++		if (bridge_connector->bridge_hdmi->ops & DRM_BRIDGE_OP_HDMI_VTEM_EMP)
++			bridge_connector->hdmi_funcs.vtem =
++				drm_bridge_connector_hdmi_vtem_emp;
++
+ 		ret = drmm_connector_hdmi_init(drm, connector,
+ 					       &drm_bridge_connector_funcs,
+ 					       &bridge_connector->hdmi_funcs,
+diff --git a/include/drm/drm_bridge.h b/include/drm/drm_bridge.h
+index b70bf8d4e05a..37ef89f3cb19 100644
+--- a/include/drm/drm_bridge.h
++++ b/include/drm/drm_bridge.h
+@@ -811,6 +811,29 @@ struct drm_bridge_funcs {
+ 	int (*hdmi_write_spd_infoframe)(struct drm_bridge *bridge,
+ 					const u8 *buffer, size_t len);
+ 
++	/**
++	 * @hdmi_clear_vtem_emp:
++	 *
++	 * This callback clears the emp in the hardware during commit.
++	 *
++	 * This callback is optional but it must be implemented by bridges that
++	 * set the DRM_BRIDGE_OP_HDMI_VTEM_EMP flag in their
++	 * &drm_bridge->ops.
++	 */
++	int (*hdmi_clear_vtem_emp)(struct drm_bridge *bridge);
++
++	/**
++	 * @hdmi_write_spd_infoframe:
++	 *
++	 * Program the emp into the hardware.
++	 *
++	 * This callback is optional but it must be implemented by bridges that
++	 * set the DRM_BRIDGE_OP_HDMI_VTEM_EMP flag in their
++	 * &drm_bridge->ops.
++	 */
++	int (*hdmi_write_vtem_emp)(struct drm_bridge *bridge,
++				   const u8 *buffer, size_t len);
++
+ 	/**
+ 	 * @hdmi_clear_audio_infoframe:
+ 	 *
+@@ -1148,6 +1171,12 @@ enum drm_bridge_ops {
+ 	 * &drm_bridge_funcs->hdmi_clear_spd_infoframe callbacks.
+ 	 */
+ 	DRM_BRIDGE_OP_HDMI_SPD_INFOFRAME = BIT(10),
++	/**
++	 * @DRM_BRIDGE_OP_HDMI_VTEM_EMP: The bridge supports
++	 * &drm_bridge_funcs->hdmi_write_vtem_emp and
++	 * &drm_bridge_funcs->hdmi_clear_vtem_emp callbacks.
++	 */
++	DRM_BRIDGE_OP_HDMI_VTEM_EMP = BIT(11),
+ };
+ 
+ /**
+diff --git a/include/drm/drm_connector.h b/include/drm/drm_connector.h
+index 67191df0cb67..b6d094797af4 100644
+--- a/include/drm/drm_connector.h
++++ b/include/drm/drm_connector.h
+@@ -1707,6 +1707,14 @@ struct drm_connector_hdmi_funcs {
+ 	 * optional.
+ 	 */
+ 	struct drm_connector_infoframe_funcs spd;
++
++	/**
++	 * @vtem:
++	 *
++	 * Set of callbacks for handling the VTEM EMP. These callbacks are
++	 * optional.
++	 */
++	struct drm_connector_infoframe_funcs vtem;
+ };
+ 
+ /**
+-- 
+2.55.0
+

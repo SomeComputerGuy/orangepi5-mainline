@@ -20,7 +20,6 @@ The uAPI is not upstream yet; v4l2-stateless-avs2.h carries a private
 copy of its definitions, skipped when the kernel headers provide them,
 in the same way as the MPEG-4 and VC-1 hwaccels.
 
-Assisted-by: LLM
 Signed-off-by: Arun Iyengar <aiyengar1990@gmail.com>
 ---
  configure                        |   2 +

@@ -50,7 +50,6 @@ injected while streaming ran to their end. Fault-free conversions
 (seven format/scale cases, GStreamer v4l2convert) give the same output,
 bit for bit, as without this patch.
 
-Assisted-by: LLM
 Signed-off-by: Arun Iyengar <aiyengar1990@gmail.com>
 ---
  drivers/media/platform/rockchip/rga/rga-hw.c  |   6 +-

@@ -35,7 +35,6 @@ yet tested on hardware with the fix (the DP sink was moved to HDMI).
 Fixes the runtime PM support added in:
 Link: https://patch.msgid.link/20260806-synopsys-dw-dp-improvements-v11-15-0d508505f383@collabora.com
 
-Assisted-by: LLM
 Signed-off-by: Arun Iyengar <aiyengar1990@gmail.com>
 ---
  drivers/gpu/drm/rockchip/dw_dp-rockchip.c | 1 +

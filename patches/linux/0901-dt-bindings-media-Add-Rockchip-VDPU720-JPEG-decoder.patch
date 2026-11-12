@@ -12,7 +12,6 @@ The resources were taken from the rk3588s.dtsi of the Rockchip vendor
 kernel (rockchip-linux/kernel, develop-6.1), whose node uses the
 "rockchip,rkv-jpeg-decoder-v1" compatible of the vendor MPP framework.
 
-Assisted-by: LLM
 Signed-off-by: Arun Iyengar <aiyengar1990@gmail.com>
 ---
  .../media/rockchip,rk3588-jpeg-decoder.yaml   | 86 +++++++++++++++++++

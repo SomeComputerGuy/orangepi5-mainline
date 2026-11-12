@@ -20,7 +20,6 @@ kernels without the MPEG-1 uAPI reject it for every driver). Take the
 D-picture path only for MPEG-1 streams with such a hwaccel and device.
 Everything else rejects D-pictures as before, like the software decoder.
 
-Assisted-by: LLM
 Signed-off-by: Arun Iyengar <aiyengar1990@gmail.com>
 ---
  libavcodec/hwaccel_internal.h   |  8 ++++++

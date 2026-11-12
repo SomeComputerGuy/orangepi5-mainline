@@ -10,7 +10,6 @@ line. The RK3588 block is register compatible with the RK3568 one.
 
 The clock and reset names follow the Rockchip RGA binding.
 
-Assisted-by: LLM
 Signed-off-by: Arun Iyengar <aiyengar1990@gmail.com>
 ---
  .../bindings/media/rockchip,rk3568-iep.yaml   | 98 +++++++++++++++++++

@@ -1,8 +1,8 @@
-From 1d142eccb9833751171bfeffa2736c0ac2a16d1b Mon Sep 17 00:00:00 2001
+From 17deb35da2c1a531f454dbef5a3168704ba646b5 Mon Sep 17 00:00:00 2001
 From: Arun Iyengar <aiyengar1990@gmail.com>
 Date: Sun, 1 Nov 2026 06:08:45 +0000
-Subject: [PATCH 10/33] drm/rockchip: vop2: Reject states that overload an AXI
- read port
+Subject: [PATCH] drm/rockchip: vop2: Reject states that overload an AXI read
+ port
 
 The RK3588 VOP2 fetches through two AXI read ports, and the windows are
 spread over them when they start fetching. One port sustains about one
@@ -31,7 +31,6 @@ busier than it already is.
 
 (cherry picked from commit bd80e85de63a523759a6bb6972b41bf6bb567e6c)
 
-Assisted-by: LLM
 Signed-off-by: Arun Iyengar <aiyengar1990@gmail.com>
 ---
  drivers/gpu/drm/rockchip/rockchip_drm_vop2.c | 227 ++++++++++++++++++-
@@ -39,10 +38,10 @@ Signed-off-by: Arun Iyengar <aiyengar1990@gmail.com>
  2 files changed, 228 insertions(+), 10 deletions(-)
 
 diff --git a/drivers/gpu/drm/rockchip/rockchip_drm_vop2.c b/drivers/gpu/drm/rockchip/rockchip_drm_vop2.c
-index 746cfb1f7b92..cc2ee03fdbe3 100644
+index 227d734f3b0c..adcd9b60fbbf 100644
 --- a/drivers/gpu/drm/rockchip/rockchip_drm_vop2.c
 +++ b/drivers/gpu/drm/rockchip/rockchip_drm_vop2.c
-@@ -1355,7 +1355,55 @@ static bool vop2_win_axi_ids_clash(const struct vop2_win *a, const struct vop2_w
+@@ -1378,7 +1378,55 @@ static bool vop2_win_axi_ids_clash(const struct vop2_win *a, const struct vop2_w
   * one, and never a port on which another active window already uses one of
   * its read IDs. A window keeps its port while it stays enabled.
   */
@@ -99,7 +98,7 @@ index 746cfb1f7b92..cc2ee03fdbe3 100644
  {
  	struct vop2 *vop2 = win->vop2;
  	u64 bus_load[VOP2_SYS_AXI_BUS_NUM] = { };
-@@ -1371,7 +1419,6 @@ static u8 vop2_win_get_axi_bus(struct vop2_win *win, u64 load)
+@@ -1394,7 +1442,6 @@ static u8 vop2_win_get_axi_bus(struct vop2_win *win, u64 load)
  	spin_lock_irqsave(&vop2->axi_lock, flags);
  
  	if (win->axi_active) {
@@ -107,7 +106,7 @@ index 746cfb1f7b92..cc2ee03fdbe3 100644
  		bus = win->axi_bus;
  		goto out;
  	}
-@@ -1387,17 +1434,18 @@ static u8 vop2_win_get_axi_bus(struct vop2_win *win, u64 load)
+@@ -1410,17 +1457,18 @@ static u8 vop2_win_get_axi_bus(struct vop2_win *win, u64 load)
  			clash[w->axi_bus] = true;
  	}
  
@@ -131,7 +130,7 @@ index 746cfb1f7b92..cc2ee03fdbe3 100644
  	spin_unlock_irqrestore(&vop2->axi_lock, flags);
  
  	return bus;
-@@ -1411,7 +1459,165 @@ static void vop2_win_put_axi_bus(struct vop2_win *win)
+@@ -1434,7 +1482,165 @@ static void vop2_win_put_axi_bus(struct vop2_win *win)
  	spin_lock_irqsave(&vop2->axi_lock, flags);
  	win->axi_active = false;
  	win->axi_load = 0;
@@ -297,7 +296,7 @@ index 746cfb1f7b92..cc2ee03fdbe3 100644
  }
  
  static void vop2_plane_atomic_disable(struct drm_plane *plane,
-@@ -1601,9 +1807,10 @@ static void vop2_plane_atomic_update(struct drm_plane *plane,
+@@ -1624,9 +1830,10 @@ static void vop2_plane_atomic_update(struct drm_plane *plane,
  		afbc_en ? "AFBC" : "", &yrgb_mst);
  
  	if (vop2->version > VOP_VERSION_RK3568) {
@@ -310,7 +309,7 @@ index 746cfb1f7b92..cc2ee03fdbe3 100644
  		vop2_win_write(win, VOP2_WIN_AXI_YRGB_R_ID, win->data->axi_yrgb_r_id);
  		vop2_win_write(win, VOP2_WIN_AXI_UV_R_ID, win->data->axi_uv_r_id);
  	}
-@@ -2364,7 +2571,7 @@ static int vop2_crtc_atomic_check(struct drm_crtc *crtc,
+@@ -2393,7 +2600,7 @@ static int vop2_crtc_atomic_check(struct drm_crtc *crtc,
  	if (nplanes > vp->nlayers)
  		return -EINVAL;
  
@@ -320,7 +319,7 @@ index 746cfb1f7b92..cc2ee03fdbe3 100644
  
  static void vop2_crtc_atomic_begin(struct drm_crtc *crtc,
 diff --git a/drivers/gpu/drm/rockchip/rockchip_drm_vop2.h b/drivers/gpu/drm/rockchip/rockchip_drm_vop2.h
-index bdaec56dc890..cc5fa3b9e223 100644
+index 8b6f59e93580..9f134f2db05b 100644
 --- a/drivers/gpu/drm/rockchip/rockchip_drm_vop2.h
 +++ b/drivers/gpu/drm/rockchip/rockchip_drm_vop2.h
 @@ -230,6 +230,17 @@ struct vop2_win {

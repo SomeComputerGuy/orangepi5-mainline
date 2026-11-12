@@ -27,7 +27,6 @@ already active, when the state machine has not reported the sink yet:
 let the HPD state settle in dw_dp_bridge_oob_notify() instead, before
 the connector reports the event, as runtime resume already does.
 
-Assisted-by: LLM
 Signed-off-by: Arun Iyengar <aiyengar1990@gmail.com>
 ---
  drivers/gpu/drm/bridge/synopsys/dw-dp.c | 63 +++++++++++++++++++------

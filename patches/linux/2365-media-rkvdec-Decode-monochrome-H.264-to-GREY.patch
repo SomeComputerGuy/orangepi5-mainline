@@ -1,0 +1,71 @@
+From 42b93bcfb04d723f4e5b0274563508194ea4430e Mon Sep 17 00:00:00 2001
+From: Arun Iyengar <aiyengar1990@gmail.com>
+Date: Fri, 30 Oct 2026 08:46:25 +0000
+Subject: [PATCH 2365/2409] media: rkvdec: Decode monochrome H.264 to GREY
+
+The decoder writes only the luma plane of a 4:0:0 (monochrome) H.264
+picture: the register setup already says so (the YUV size of a 4:0:0
+picture is its luma size on RK3399), and the vendor's MPP allocates
+these pictures as YUV400. The driver still offers NV12 for them, so
+userspace gets a chroma plane that the decoder never writes: green
+pictures (all zero chroma with freshly allocated buffers, stale data
+otherwise), and HPCAMOLQ_BRCM_B and HPCVMOLQ_BRCM_B of the JVT-FR-EXT
+conformance suite fail with bit-exact luma.
+
+Offer GREY, the format the decoder produces, for 8-bit 4:0:0 streams.
+There is no V4L2 format for the packed 10-bit luma plane that a 10-bit
+4:0:0 stream would give, so those still get NV15.
+
+Signed-off-by: Arun Iyengar <aiyengar1990@gmail.com>
+---
+ drivers/media/platform/rockchip/rkvdec/rkvdec-h264-common.c | 4 +++-
+ drivers/media/platform/rockchip/rkvdec/rkvdec.c             | 5 +++++
+ drivers/media/platform/rockchip/rkvdec/rkvdec.h             | 1 +
+ 3 files changed, 9 insertions(+), 1 deletion(-)
+
+diff --git a/drivers/media/platform/rockchip/rkvdec/rkvdec-h264-common.c b/drivers/media/platform/rockchip/rkvdec/rkvdec-h264-common.c
+index 78485204e5ae..7bd0cfa12220 100644
+--- a/drivers/media/platform/rockchip/rkvdec/rkvdec-h264-common.c
++++ b/drivers/media/platform/rockchip/rkvdec/rkvdec-h264-common.c
+@@ -268,7 +268,9 @@ enum rkvdec_image_fmt rkvdec_h264_get_image_fmt(struct rkvdec_ctx *ctx,
+ 		return RKVDEC_IMG_FMT_ANY;
+ 
+ 	if (sps->bit_depth_luma_minus8 == 0) {
+-		if (sps->chroma_format_idc == 2)
++		if (sps->chroma_format_idc == 0)
++			return RKVDEC_IMG_FMT_400_8BIT;
++		else if (sps->chroma_format_idc == 2)
+ 			return RKVDEC_IMG_FMT_422_8BIT;
+ 		else
+ 			return RKVDEC_IMG_FMT_420_8BIT;
+diff --git a/drivers/media/platform/rockchip/rkvdec/rkvdec.c b/drivers/media/platform/rockchip/rkvdec/rkvdec.c
+index 221b521e2c60..38a5f0227606 100644
+--- a/drivers/media/platform/rockchip/rkvdec/rkvdec.c
++++ b/drivers/media/platform/rockchip/rkvdec/rkvdec.c
+@@ -516,6 +516,11 @@ static const struct rkvdec_decoded_fmt_desc rkvdec_h264_decoded_fmts[] = {
+ 		.fourcc = V4L2_PIX_FMT_NV20,
+ 		.image_fmt = RKVDEC_IMG_FMT_422_10BIT,
+ 	},
++	{
++		/* The decoder writes no chroma plane for 4:0:0 streams. */
++		.fourcc = V4L2_PIX_FMT_GREY,
++		.image_fmt = RKVDEC_IMG_FMT_400_8BIT,
++	},
+ };
+ 
+ static const struct rkvdec_ctrl_desc rkvdec_vp9_ctrl_descs[] = {
+diff --git a/drivers/media/platform/rockchip/rkvdec/rkvdec.h b/drivers/media/platform/rockchip/rkvdec/rkvdec.h
+index 4f2558332271..9714f2b06f6a 100644
+--- a/drivers/media/platform/rockchip/rkvdec/rkvdec.h
++++ b/drivers/media/platform/rockchip/rkvdec/rkvdec.h
+@@ -130,6 +130,7 @@ enum rkvdec_image_fmt {
+ 	RKVDEC_IMG_FMT_420_10BIT,
+ 	RKVDEC_IMG_FMT_422_8BIT,
+ 	RKVDEC_IMG_FMT_422_10BIT,
++	RKVDEC_IMG_FMT_400_8BIT,
+ };
+ 
+ struct rkvdec_decoded_fmt_desc {
+-- 
+2.55.0
+

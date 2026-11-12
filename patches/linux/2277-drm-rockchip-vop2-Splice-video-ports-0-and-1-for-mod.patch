@@ -1,8 +1,8 @@
-From bb8996d88f5de5ee5de7193ebc319eab81c48757 Mon Sep 17 00:00:00 2001
+From ff0369bab08f4a6601256c0b3b5da2e530d46150 Mon Sep 17 00:00:00 2001
 From: Arun Iyengar <aiyengar1990@gmail.com>
 Date: Thu, 5 Nov 2026 11:55:37 +0000
-Subject: [PATCH 2277/2312] drm/rockchip: vop2: Splice video ports 0 and 1 for
- modes wider than 4096
+Subject: [PATCH] drm/rockchip: vop2: Splice video ports 0 and 1 for modes
+ wider than 4096
 
 A video port of the RK3588 VOP2 handles at most 4096 pixels of active
 width. For wider modes (up to 7680x4320) the hardware merges video
@@ -45,7 +45,6 @@ pixels. Splicing is decided on a modeset and kept until the next one.
  - If video port 1 has a CRTC of its own, the two exclude each other.
  - Framebuffers may be as wide as the splice output.
 
-Assisted-by: LLM
 Signed-off-by: Arun Iyengar <aiyengar1990@gmail.com>
 ---
  drivers/gpu/drm/rockchip/rockchip_drm_drv.h  |  10 +
@@ -76,10 +75,10 @@ index 859ca483313a..14bc187b79b4 100644
  #define to_rockchip_crtc_state(s) \
  		container_of(s, struct rockchip_crtc_state, base)
 diff --git a/drivers/gpu/drm/rockchip/rockchip_drm_vop2.c b/drivers/gpu/drm/rockchip/rockchip_drm_vop2.c
-index 1d1bb4e53187..fdcb674f23fe 100644
+index bb12a77eabf7..c5cde12de0ad 100644
 --- a/drivers/gpu/drm/rockchip/rockchip_drm_vop2.c
 +++ b/drivers/gpu/drm/rockchip/rockchip_drm_vop2.c
-@@ -1147,6 +1147,50 @@ static void vop2_crtc_put_aclk_boost(struct vop2_video_port *vp)
+@@ -1169,6 +1169,50 @@ static void vop2_crtc_put_aclk_boost(struct vop2_video_port *vp)
  		clk_set_rate(vop2->aclk, VOP2_ACLK_RATE_DEFAULT);
  }
  
@@ -130,7 +129,7 @@ index 1d1bb4e53187..fdcb674f23fe 100644
  static void vop2_crtc_atomic_disable(struct drm_crtc *crtc,
  				     struct drm_atomic_commit *state)
  {
-@@ -1163,6 +1207,9 @@ static void vop2_crtc_atomic_disable(struct drm_crtc *crtc,
+@@ -1185,6 +1229,9 @@ static void vop2_crtc_atomic_disable(struct drm_crtc *crtc,
  	old_crtc_state = drm_atomic_get_old_crtc_state(state, crtc);
  	drm_atomic_helper_disable_planes_on_crtc(old_crtc_state, false);
  
@@ -140,9 +139,9 @@ index 1d1bb4e53187..fdcb674f23fe 100644
  	drm_crtc_vblank_off(crtc);
  
  	/*
-@@ -1185,6 +1232,9 @@ static void vop2_crtc_atomic_disable(struct drm_crtc *crtc,
- 
+@@ -1208,6 +1255,9 @@ static void vop2_crtc_atomic_disable(struct drm_crtc *crtc,
  	vop2_crtc_disable_irq(vp, VP_INT_DSP_HOLD_VALID);
+ 	vop2_crtc_disable_post_buf_empty_irq(vp);
  
 +	if (vp->splice)
 +		vop2_crtc_splice_disable(vp);
@@ -150,7 +149,7 @@ index 1d1bb4e53187..fdcb674f23fe 100644
  	if (vop2->pll_hw_users & BIT(vp->id)) {
  		vop2->pll_hw_users &= ~BIT(vp->id);
  		if (!vop2->pll_hw_users) {
-@@ -1223,6 +1273,144 @@ static void vop2_crtc_atomic_disable(struct drm_crtc *crtc,
+@@ -1246,6 +1296,144 @@ static void vop2_crtc_atomic_disable(struct drm_crtc *crtc,
  	}
  }
  
@@ -295,7 +294,7 @@ index 1d1bb4e53187..fdcb674f23fe 100644
  static int vop2_plane_atomic_check(struct drm_plane *plane,
  				   struct drm_atomic_commit *astate)
  {
-@@ -1281,8 +1469,19 @@ static int vop2_plane_atomic_check(struct drm_plane *plane,
+@@ -1304,8 +1492,19 @@ static int vop2_plane_atomic_check(struct drm_plane *plane,
  		return -EINVAL;
  	}
  
@@ -317,7 +316,7 @@ index 1d1bb4e53187..fdcb674f23fe 100644
  		drm_dbg_kms(vop2->drm, "Invalid source: %dx%d. max input: %dx%d\n",
  			    src_w, src_h,
  			    vop2_data->max_input.width,
-@@ -1534,8 +1733,12 @@ static u64 vop2_axi_port_peak(const struct vop2_axi_slot *s, int n, u8 bus)
+@@ -1557,8 +1756,12 @@ static u64 vop2_axi_port_peak(const struct vop2_axi_slot *s, int n, u8 bus)
   */
  static int vop2_axi_check(struct vop2 *vop2, struct drm_atomic_commit *state)
  {
@@ -330,7 +329,7 @@ index 1d1bb4e53187..fdcb674f23fe 100644
  	u64 old_peak[VOP2_SYS_AXI_BUS_NUM];
  	unsigned long flags;
  	bool changed = false;
-@@ -1545,6 +1748,16 @@ static int vop2_axi_check(struct vop2 *vop2, struct drm_atomic_commit *state)
+@@ -1568,6 +1771,16 @@ static int vop2_axi_check(struct vop2 *vop2, struct drm_atomic_commit *state)
  	if (!(vop2->data->feature & VOP2_FEATURE_AXI_BALANCE))
  		return 0;
  
@@ -347,7 +346,7 @@ index 1d1bb4e53187..fdcb674f23fe 100644
  	s = kcalloc(n, sizeof(*s), GFP_KERNEL);
  	if (!s)
  		return -ENOMEM;
-@@ -1581,13 +1794,47 @@ static int vop2_axi_check(struct vop2 *vop2, struct drm_atomic_commit *state)
+@@ -1604,13 +1817,47 @@ static int vop2_axi_check(struct vop2 *vop2, struct drm_atomic_commit *state)
  			cstate = drm_atomic_get_new_crtc_state(state, pstate->crtc);
  
  		if (!cstate || !cstate->active) {
@@ -399,7 +398,7 @@ index 1d1bb4e53187..fdcb674f23fe 100644
  				   &cstate->adjusted_mode, &s[i].f);
  		s[i].active = true;
  	}
-@@ -1636,6 +1883,36 @@ static int vop2_axi_check(struct vop2 *vop2, struct drm_atomic_commit *state)
+@@ -1659,6 +1906,36 @@ static int vop2_axi_check(struct vop2 *vop2, struct drm_atomic_commit *state)
  	return ret;
  }
  
@@ -436,7 +435,7 @@ index 1d1bb4e53187..fdcb674f23fe 100644
  static void vop2_plane_atomic_disable(struct drm_plane *plane,
  				      struct drm_atomic_commit *state)
  {
-@@ -1644,6 +1921,10 @@ static void vop2_plane_atomic_disable(struct drm_plane *plane,
+@@ -1667,6 +1944,10 @@ static void vop2_plane_atomic_disable(struct drm_plane *plane,
  	struct vop2 *vop2 = win->vop2;
  	struct vop2_video_port *vp;
  
@@ -447,7 +446,7 @@ index 1d1bb4e53187..fdcb674f23fe 100644
  	drm_dbg(vop2->drm, "%s disable\n", win->data->name);
  
  	vop2_win_put_axi_bus(win);
-@@ -1652,14 +1933,19 @@ static void vop2_plane_atomic_disable(struct drm_plane *plane,
+@@ -1675,14 +1956,19 @@ static void vop2_plane_atomic_disable(struct drm_plane *plane,
  		old_pstate = drm_atomic_get_old_plane_state(state, plane);
  
  	if (old_pstate) {
@@ -469,7 +468,7 @@ index 1d1bb4e53187..fdcb674f23fe 100644
  	vop2_win_disable(win);
  	vop2_win_write(win, VOP2_WIN_YUV_CLIP, 0);
  }
-@@ -1958,6 +2244,12 @@ static void vop2_plane_atomic_update(struct drm_plane *plane,
+@@ -1981,6 +2267,12 @@ static void vop2_plane_atomic_update(struct drm_plane *plane,
  	struct drm_crtc *crtc = pstate->crtc;
  	struct vop2_win *win = to_vop2_win(plane);
  	struct vop2_video_port *vp = to_vop2_video_port(crtc);
@@ -482,7 +481,7 @@ index 1d1bb4e53187..fdcb674f23fe 100644
  
  	/*
  	 * can't update plane when vop2 is disabled.
-@@ -1973,8 +2265,42 @@ static void vop2_plane_atomic_update(struct drm_plane *plane,
+@@ -1996,8 +2288,42 @@ static void vop2_plane_atomic_update(struct drm_plane *plane,
  		return;
  	}
  
@@ -527,7 +526,7 @@ index 1d1bb4e53187..fdcb674f23fe 100644
  }
  
  static const struct drm_plane_helper_funcs vop2_plane_helper_funcs = {
-@@ -2023,7 +2349,15 @@ static enum drm_mode_status vop2_crtc_mode_valid(struct drm_crtc *crtc,
+@@ -2048,7 +2374,15 @@ static enum drm_mode_status vop2_crtc_mode_valid(struct drm_crtc *crtc,
  {
  	struct vop2_video_port *vp = to_vop2_video_port(crtc);
  
@@ -544,7 +543,7 @@ index 1d1bb4e53187..fdcb674f23fe 100644
  		return MODE_BAD_HVALUE;
  
  	if (mode->clock > vp->data->max_pixel_clock_rate / 1000)
-@@ -2090,18 +2424,26 @@ static void vop2_crtc_atomic_try_set_gamma(struct vop2 *vop2,
+@@ -2115,18 +2449,26 @@ static void vop2_crtc_atomic_try_set_gamma(struct vop2 *vop2,
  					   struct drm_crtc *crtc,
  					   struct drm_crtc_state *crtc_state)
  {
@@ -573,7 +572,7 @@ index 1d1bb4e53187..fdcb674f23fe 100644
  }
  
  static inline void vop2_crtc_atomic_try_set_gamma_locked(struct vop2 *vop2,
-@@ -2186,6 +2528,8 @@ static void vop2_bgcolor_setup(struct drm_crtc *crtc, bool force,
+@@ -2211,6 +2553,8 @@ static void vop2_bgcolor_setup(struct drm_crtc *crtc, bool force,
  	}
  
  	vop2_vp_write(vp, RK3568_VP_DSP_BG, val);
@@ -582,7 +581,7 @@ index 1d1bb4e53187..fdcb674f23fe 100644
  }
  
  static void vop2_post_config(struct drm_crtc *crtc, bool force,
-@@ -2388,6 +2732,37 @@ static void vop2_crtc_set_dclk_parent(struct vop2_video_port *vp,
+@@ -2413,6 +2757,37 @@ static void vop2_crtc_set_dclk_parent(struct vop2_video_port *vp,
  			vp->id, p, ret);
  }
  
@@ -620,7 +619,7 @@ index 1d1bb4e53187..fdcb674f23fe 100644
  static void vop2_crtc_atomic_enable(struct drm_crtc *crtc,
  				    struct drm_atomic_commit *state)
  {
-@@ -2565,6 +2940,9 @@ static void vop2_crtc_atomic_enable(struct drm_crtc *crtc,
+@@ -2590,6 +2965,9 @@ static void vop2_crtc_atomic_enable(struct drm_crtc *crtc,
  			vop2->pll_held = true;
  	}
  
@@ -630,7 +629,7 @@ index 1d1bb4e53187..fdcb674f23fe 100644
  	vop2_post_config(crtc, true, crtc_state, old_crtc_state);
  	vop2_bcsh_setup(vp, vcstate);
  
-@@ -3025,8 +3403,15 @@ static int vop2_crtc_atomic_check(struct drm_crtc *crtc,
+@@ -3051,8 +3429,15 @@ static int vop2_crtc_atomic_check(struct drm_crtc *crtc,
  	struct drm_plane *plane;
  	int nplanes = 0;
  	struct drm_crtc_state *crtc_state = drm_atomic_get_new_crtc_state(state, crtc);
@@ -646,7 +645,7 @@ index 1d1bb4e53187..fdcb674f23fe 100644
  	ret = vop2_crtc_atomic_check_gamma(vp, crtc, state, crtc_state);
  	if (ret)
  		return ret;
-@@ -3038,8 +3423,11 @@ static int vop2_crtc_atomic_check(struct drm_crtc *crtc,
+@@ -3064,8 +3449,11 @@ static int vop2_crtc_atomic_check(struct drm_crtc *crtc,
  	drm_atomic_crtc_state_for_each_plane(plane, crtc_state)
  		nplanes++;
  
@@ -659,7 +658,7 @@ index 1d1bb4e53187..fdcb674f23fe 100644
  
  	return vop2_axi_check(vp->vop2, state);
  }
-@@ -3216,9 +3604,16 @@ static int vop2_crtc_state_dump(struct drm_crtc *crtc, struct seq_file *s)
+@@ -3242,9 +3630,16 @@ static int vop2_crtc_state_dump(struct drm_crtc *crtc, struct seq_file *s)
  		   mode->hsync_end, mode->htotal);
  	seq_printf(s, "\tV: %d %d %d %d\n", mode->vdisplay, mode->vsync_start,
  		   mode->vsync_end, mode->vtotal);
@@ -676,7 +675,7 @@ index 1d1bb4e53187..fdcb674f23fe 100644
  	}
  
  	return 0;
-@@ -3390,6 +3785,280 @@ static const struct drm_crtc_funcs vop2_crtc_funcs = {
+@@ -3416,6 +3811,280 @@ static const struct drm_crtc_funcs vop2_crtc_funcs = {
  	.late_register = vop2_crtc_late_register,
  };
  
@@ -957,7 +956,7 @@ index 1d1bb4e53187..fdcb674f23fe 100644
  /**
   * vop2_atomic_check - check the resources the VOP2 video ports share
   * @drm: DRM device
-@@ -3402,7 +4071,7 @@ int vop2_atomic_check(struct drm_device *drm, struct drm_atomic_commit *state)
+@@ -3428,7 +4097,7 @@ int vop2_atomic_check(struct drm_device *drm, struct drm_atomic_commit *state)
  {
  	struct drm_crtc_state *crtc_state;
  	struct drm_crtc *crtc;
@@ -966,7 +965,7 @@ index 1d1bb4e53187..fdcb674f23fe 100644
  
  	for_each_new_crtc_in_state(state, crtc, crtc_state, i) {
  		struct vop2 *vop2;
-@@ -3412,7 +4081,15 @@ int vop2_atomic_check(struct drm_device *drm, struct drm_atomic_commit *state)
+@@ -3438,7 +4107,15 @@ int vop2_atomic_check(struct drm_device *drm, struct drm_atomic_commit *state)
  
  		vop2 = to_vop2_video_port(crtc)->vop2;
  
@@ -983,7 +982,7 @@ index 1d1bb4e53187..fdcb674f23fe 100644
  	}
  
  	return 0;
-@@ -3966,6 +4643,39 @@ static int vop2_pll_init(struct vop2 *vop2)
+@@ -3992,6 +4669,39 @@ static int vop2_pll_init(struct vop2 *vop2)
  	return 0;
  }
  
@@ -1023,7 +1022,7 @@ index 1d1bb4e53187..fdcb674f23fe 100644
  static int vop2_bind(struct device *dev, struct device *master, void *data)
  {
  	struct platform_device *pdev = to_platform_device(dev);
-@@ -4127,6 +4837,10 @@ static int vop2_bind(struct device *dev, struct device *master, void *data)
+@@ -4153,6 +4863,10 @@ static int vop2_bind(struct device *dev, struct device *master, void *data)
  	if (ret)
  		goto err_crtcs;
  
@@ -1034,7 +1033,7 @@ index 1d1bb4e53187..fdcb674f23fe 100644
  	if (vop2->version >= VOP_VERSION_RK3576) {
  		struct drm_crtc *crtc;
  
-@@ -4158,7 +4872,7 @@ static int vop2_bind(struct device *dev, struct device *master, void *data)
+@@ -4184,7 +4898,7 @@ static int vop2_bind(struct device *dev, struct device *master, void *data)
  		if (IS_ERR(vop2->rgb)) {
  			if (PTR_ERR(vop2->rgb) == -EPROBE_DEFER) {
  				ret = PTR_ERR(vop2->rgb);
@@ -1043,7 +1042,7 @@ index 1d1bb4e53187..fdcb674f23fe 100644
  			}
  			vop2->rgb = NULL;
  		}
-@@ -4170,6 +4884,16 @@ static int vop2_bind(struct device *dev, struct device *master, void *data)
+@@ -4196,6 +4910,16 @@ static int vop2_bind(struct device *dev, struct device *master, void *data)
  
  	return 0;
  
@@ -1060,7 +1059,7 @@ index 1d1bb4e53187..fdcb674f23fe 100644
  err_crtcs:
  	vop2_destroy_crtcs(vop2);
  
-@@ -4187,6 +4911,9 @@ static void vop2_unbind(struct device *dev, struct device *master, void *data)
+@@ -4213,6 +4937,9 @@ static void vop2_unbind(struct device *dev, struct device *master, void *data)
  
  	vop2_destroy_crtcs(vop2);
  
@@ -1071,7 +1070,7 @@ index 1d1bb4e53187..fdcb674f23fe 100644
  		drm_atomic_private_obj_fini(&vop2->pll_obj);
  }
 diff --git a/drivers/gpu/drm/rockchip/rockchip_drm_vop2.h b/drivers/gpu/drm/rockchip/rockchip_drm_vop2.h
-index 714136c2e325..21ec739ca213 100644
+index 2e8d01a23fcf..19cd9ae09656 100644
 --- a/drivers/gpu/drm/rockchip/rockchip_drm_vop2.h
 +++ b/drivers/gpu/drm/rockchip/rockchip_drm_vop2.h
 @@ -24,6 +24,8 @@
@@ -1178,7 +1177,7 @@ index 714136c2e325..21ec739ca213 100644
  #define RK3588_LUT_PORT_SEL__GAMMA_AHB_WRITE_SEL	GENMASK(13, 12)
  
  #define RK3568_VP0_MIPI_CTRL__DCLK_DIV2_PHASE_LOCK	BIT(5)
-@@ -1017,6 +1072,10 @@ static inline void vop2_cfg_done(struct vop2_video_port *vp)
+@@ -1018,6 +1073,10 @@ static inline void vop2_cfg_done(struct vop2_video_port *vp)
  
  	val |= BIT(vp->id) | (BIT(vp->id) << 16);
  
@@ -1190,7 +1189,7 @@ index 714136c2e325..21ec739ca213 100644
  }
  
 diff --git a/drivers/gpu/drm/rockchip/rockchip_vop2_reg.c b/drivers/gpu/drm/rockchip/rockchip_vop2_reg.c
-index f5f07f0f4f3f..d9066360245a 100644
+index 03163c079a56..4ed81480ff7b 100644
 --- a/drivers/gpu/drm/rockchip/rockchip_vop2_reg.c
 +++ b/drivers/gpu/drm/rockchip/rockchip_vop2_reg.c
 @@ -1068,7 +1068,7 @@ static const struct vop2_regs_dump rk3576_regs_dump[] = {

@@ -20,7 +20,6 @@ DEFAULT_RATELIMIT_INTERVAL and IOMMU. report_iommu_fault() is still
 called for every fault, so its io_page_fault trace event keeps the full
 record.
 
-Assisted-by: LLM
 Signed-off-by: Arun Iyengar <aiyengar1990@gmail.com>
 ---
  drivers/iommu/rockchip-iommu.c | 31 ++++++++++++++++++++++++-------

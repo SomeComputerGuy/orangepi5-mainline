@@ -1,8 +1,8 @@
-From 490d05aa5101b60ee33cf985ca085a6fca933d7e Mon Sep 17 00:00:00 2001
+From 3f293455163285017b994d5e08802ac63058dd63 Mon Sep 17 00:00:00 2001
 From: Arun Iyengar <aiyengar1990@gmail.com>
 Date: Thu, 5 Nov 2026 06:34:19 +0000
-Subject: [PATCH 2280/2312] drm/bridge: Fail an unsatisfiable bus format
- negotiation with -EINVAL
+Subject: [PATCH] drm/bridge: Fail an unsatisfiable bus format negotiation with
+ -EINVAL
 
 drm_atomic_bridge_chain_select_bus_fmts() reports that no chain of bus
 formats fits with -ENOTSUPP, and drm_atomic_bridge_chain_check() passes
@@ -18,13 +18,16 @@ errno 524, where an HDMI connector asked for the same returns EINVAL
 from the HDMI state helper.
 
 Return -EINVAL when the negotiation finds no chain, with a debug
-message naming the encoder.
+message naming the encoder, and make the drm_bridge KUnit test of a
+chain with no bus format path, drm_test_bridge_rgb_yuv_no_path(),
+expect -EINVAL from the atomic commit.
 
-Assisted-by: LLM
+Fixes: f32df58acc68 ("drm/bridge: Add the necessary bits to support bus format negotiation")
 Signed-off-by: Arun Iyengar <aiyengar1990@gmail.com>
 ---
- drivers/gpu/drm/drm_bridge.c | 11 +++++++++++
- 1 file changed, 11 insertions(+)
+ drivers/gpu/drm/drm_bridge.c            | 11 +++++++++++
+ drivers/gpu/drm/tests/drm_bridge_test.c |  2 +-
+ 2 files changed, 12 insertions(+), 1 deletion(-)
 
 diff --git a/drivers/gpu/drm/drm_bridge.c b/drivers/gpu/drm/drm_bridge.c
 index 10dde3600c70..bd5374b5edf7 100644
@@ -48,6 +51,19 @@ index 10dde3600c70..bd5374b5edf7 100644
  	if (ret)
  		return ret;
  
+diff --git a/drivers/gpu/drm/tests/drm_bridge_test.c b/drivers/gpu/drm/tests/drm_bridge_test.c
+index a445f71c31b8..6e481b0ba35f 100644
+--- a/drivers/gpu/drm/tests/drm_bridge_test.c
++++ b/drivers/gpu/drm/tests/drm_bridge_test.c
+@@ -1353,7 +1353,7 @@ static void drm_test_bridge_rgb_yuv_no_path(struct kunit *test)
+ 		drm_modeset_backoff(&ctx);
+ 		goto retry_commit;
+ 	}
+-	KUNIT_EXPECT_EQ(test, ret, -ENOTSUPP);
++	KUNIT_EXPECT_EQ(test, ret, -EINVAL);
+ 
+ 	drm_modeset_drop_locks(&ctx);
+ 	drm_modeset_acquire_fini(&ctx);
 -- 
 2.55.0
 

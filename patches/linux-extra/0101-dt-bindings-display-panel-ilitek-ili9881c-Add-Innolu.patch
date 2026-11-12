@@ -10,8 +10,6 @@ by an Ilitek ILI9881C controller. It is sold by Xunlong as the official
 vendor device trees describe it with this compatible string.
 
 Document the compatible.
-
-Assisted-by: LLM
 ---
  .../devicetree/bindings/display/panel/ilitek,ili9881c.yaml       | 1 +
  1 file changed, 1 insertion(+)

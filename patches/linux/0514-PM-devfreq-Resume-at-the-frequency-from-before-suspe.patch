@@ -24,7 +24,6 @@ made while the device is suspended still update resume_freq through
 devfreq_set_target(), as before.
 
 Fixes: 62453f1ba5d5 ("PM / devfreq: Use more accurate returned new_freq as resume_freq")
-Assisted-by: LLM
 Signed-off-by: Arun Iyengar <aiyengar1990@gmail.com>
 ---
  drivers/devfreq/devfreq.c | 9 +++++++++

@@ -1,0 +1,57 @@
+From 0bb2d04cc259ed96ed988fbf30df1a489867133e Mon Sep 17 00:00:00 2001
+From: Arun Iyengar <aiyengar1990@gmail.com>
+Date: Fri, 6 Nov 2026 11:49:13 +0000
+Subject: [PATCH 2313/2409] drm/bridge: synopsys: dw-hdmi-qp: Always apply the
+ HDCP rekey keep-out
+
+The driver leaves FRAME_COMPOSER_CONFIG9 KEEPOUT_REKEY_CFG at its reset
+value, which does not apply the HDCP rekey keep-out window unconditionally.
+Without HDCP, data islands may then be placed in the part of the blanking
+period in which an HDCP capable sink samples the encryption status
+signalling.
+
+Select the "always" setting for HDMI sinks, which is what the Rockchip
+vendor driver programs for every HDMI mode, TMDS and FRL alike.
+
+Signed-off-by: Arun Iyengar <aiyengar1990@gmail.com>
+---
+ drivers/gpu/drm/bridge/synopsys/dw-hdmi-qp.c | 9 +++++++++
+ drivers/gpu/drm/bridge/synopsys/dw-hdmi-qp.h | 2 ++
+ 2 files changed, 11 insertions(+)
+
+diff --git a/drivers/gpu/drm/bridge/synopsys/dw-hdmi-qp.c b/drivers/gpu/drm/bridge/synopsys/dw-hdmi-qp.c
+index 3728f4509b00..7994402df02a 100644
+--- a/drivers/gpu/drm/bridge/synopsys/dw-hdmi-qp.c
++++ b/drivers/gpu/drm/bridge/synopsys/dw-hdmi-qp.c
+@@ -690,6 +690,15 @@ static void dw_hdmi_qp_bridge_atomic_enable(struct drm_bridge *bridge,
+ 
+ 	dw_hdmi_qp_mod(hdmi, HDCP2_BYPASS, HDCP2_BYPASS, HDCP2LOGIC_CONFIG0);
+ 
++	/*
++	 * Keep data islands out of the HDCP rekey keep-out window whether or
++	 * not the link is encrypted, so they never overlap the window in which
++	 * an HDCP capable sink looks for the encryption status signalling.
++	 */
++	if (connector->display_info.is_hdmi)
++		dw_hdmi_qp_mod(hdmi, KEEPOUT_REKEY_ALWAYS, KEEPOUT_REKEY_CFG,
++			       FRAME_COMPOSER_CONFIG9);
++
+ 	drm_atomic_helper_connector_hdmi_update_infoframes(connector, state);
+ 
+ 	ret = drm_connector_hdmi_enable_frl(connector, conn_state);
+diff --git a/drivers/gpu/drm/bridge/synopsys/dw-hdmi-qp.h b/drivers/gpu/drm/bridge/synopsys/dw-hdmi-qp.h
+index dfb8cb6614ad..2a36a5565b55 100644
+--- a/drivers/gpu/drm/bridge/synopsys/dw-hdmi-qp.h
++++ b/drivers/gpu/drm/bridge/synopsys/dw-hdmi-qp.h
+@@ -142,6 +142,8 @@
+ #define FRAME_COMPOSER_CONFIG7				0x85c
+ #define FRAME_COMPOSER_CONFIG8				0x860
+ #define FRAME_COMPOSER_CONFIG9				0x864
++#define KEEPOUT_REKEY_CFG				GENMASK(9, 8)
++#define KEEPOUT_REKEY_ALWAYS				(0x2 << 8)
+ #define FRAME_COMPOSER_CONTROL0				0x86c
+ /* Video Monitor Registers */
+ #define VIDEO_MONITOR_CONFIG0				0x880
+-- 
+2.55.0
+

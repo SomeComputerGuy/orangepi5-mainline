@@ -37,7 +37,6 @@ resolved reference list with the per-picture reference POC lists the
 hardware needs for temporal motion vector prediction, and the coded
 picture (header and slices, with start codes) in the packet.
 
-Assisted-by: LLM
 Signed-off-by: Arun Iyengar <aiyengar1990@gmail.com>
 ---
  configure              |   1 +

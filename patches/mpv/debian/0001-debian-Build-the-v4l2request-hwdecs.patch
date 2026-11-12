@@ -13,8 +13,6 @@ decoders are V4L2 stateless devices the VA-API driver over V4L2
 (v4l2-request-va-driver) serves hwdec=vaapi, and hwdec=auto/auto-copy
 (what libmpv front ends such as Jellyfin Desktop ask for) reach
 v4l2request through the auto-probe whitelist patch.
-
-Assisted-by: LLM
 ---
  debian/rules | 1 +
  1 file changed, 1 insertion(+)

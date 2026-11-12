@@ -1,8 +1,7 @@
-From 2371b9c9741fbb597207d304da65eb4bdfb55d9b Mon Sep 17 00:00:00 2001
+From 4e58af4863f36f2c0cec977f395884b3613b7884 Mon Sep 17 00:00:00 2001
 From: Arun Iyengar <aiyengar1990@gmail.com>
 Date: Thu, 5 Nov 2026 11:45:24 +0000
-Subject: [PATCH 2274/2312] drm/rockchip: vop2: Program a window from given
- rectangles
+Subject: [PATCH] drm/rockchip: vop2: Program a window from given rectangles
 
 The plane update programs the window of the plane from the source and
 destination rectangles of the plane state. To show one plane with two
@@ -14,14 +13,13 @@ rectangles and the active width they are clipped to, and make the
 color key, AFBC transform offset and AXI fetch rate helpers take the
 window and rectangles instead of the plane. No functional change.
 
-Assisted-by: LLM
 Signed-off-by: Arun Iyengar <aiyengar1990@gmail.com>
 ---
  drivers/gpu/drm/rockchip/rockchip_drm_vop2.c | 98 ++++++++++++--------
  1 file changed, 57 insertions(+), 41 deletions(-)
 
 diff --git a/drivers/gpu/drm/rockchip/rockchip_drm_vop2.c b/drivers/gpu/drm/rockchip/rockchip_drm_vop2.c
-index 2e7c190eca91..f513f9b572c8 100644
+index 8b710e371b33..8a6f3ab2703d 100644
 --- a/drivers/gpu/drm/rockchip/rockchip_drm_vop2.c
 +++ b/drivers/gpu/drm/rockchip/rockchip_drm_vop2.c
 @@ -442,9 +442,9 @@ static bool vop2_half_block_enable(struct drm_plane_state *pstate)
@@ -35,7 +33,7 @@ index 2e7c190eca91..f513f9b572c8 100644
  	struct drm_framebuffer *fb = pstate->fb;
  	u32 bpp = vop2_get_bpp(fb->format);
  	u32 vir_width = (fb->pitches[0] << 3) / bpp;
-@@ -1379,20 +1379,22 @@ struct vop2_axi_fetch {
+@@ -1402,20 +1402,22 @@ struct vop2_axi_fetch {
  	u8 vp;
  };
  
@@ -66,7 +64,7 @@ index 2e7c190eca91..f513f9b572c8 100644
  	f->peak = 0;
  
  	if (!dsp_h || !mode->crtc_htotal)
-@@ -1584,8 +1586,9 @@ static int vop2_axi_check(struct vop2 *vop2, struct drm_atomic_commit *state)
+@@ -1607,8 +1609,9 @@ static int vop2_axi_check(struct vop2 *vop2, struct drm_atomic_commit *state)
  			continue;
  		}
  
@@ -78,7 +76,7 @@ index 2e7c190eca91..f513f9b572c8 100644
  		s[i].active = true;
  	}
  
-@@ -1665,11 +1668,11 @@ static void vop2_plane_atomic_disable(struct drm_plane *plane,
+@@ -1688,11 +1691,11 @@ static void vop2_plane_atomic_disable(struct drm_plane *plane,
   * The color key is 10 bit, so all format should
   * convert to 10 bit here.
   */
@@ -93,7 +91,7 @@ index 2e7c190eca91..f513f9b572c8 100644
  	u32 color_key_en = 0;
  	u32 r = 0;
  	u32 g = 0;
-@@ -1711,14 +1714,17 @@ static void vop2_plane_setup_color_key(struct drm_plane *plane, u32 color_key)
+@@ -1734,14 +1737,17 @@ static void vop2_plane_setup_color_key(struct drm_plane *plane, u32 color_key)
  	vop2_win_write(win, VOP2_WIN_COLOR_KEY, (r << 20) | (g << 10) | b);
  }
  
@@ -118,7 +116,7 @@ index 2e7c190eca91..f513f9b572c8 100644
  	struct vop2 *vop2 = win->vop2;
  	struct drm_framebuffer *fb = pstate->fb;
  	u32 bpp = vop2_get_bpp(fb->format);
-@@ -1728,8 +1734,6 @@ static void vop2_plane_atomic_update(struct drm_plane *plane,
+@@ -1751,8 +1757,6 @@ static void vop2_plane_atomic_update(struct drm_plane *plane,
  	u32 afbc_format;
  	u32 rb_swap;
  	u32 uv_swap;
@@ -127,7 +125,7 @@ index 2e7c190eca91..f513f9b572c8 100644
  	u32 afbc_tile_num;
  	u32 transform_offset;
  	bool dither_up;
-@@ -1744,20 +1748,6 @@ static void vop2_plane_atomic_update(struct drm_plane *plane,
+@@ -1767,20 +1771,6 @@ static void vop2_plane_atomic_update(struct drm_plane *plane,
  	dma_addr_t yrgb_mst;
  	dma_addr_t uv_mst;
  
@@ -148,7 +146,7 @@ index 2e7c190eca91..f513f9b572c8 100644
  	afbc_en = drm_is_afbc(fb->modifier);
  
  	offset = drm_format_info_min_pitch(fb->format, 0, src->x1 >> 16);
-@@ -1797,7 +1787,7 @@ static void vop2_plane_atomic_update(struct drm_plane *plane,
+@@ -1820,7 +1810,7 @@ static void vop2_plane_atomic_update(struct drm_plane *plane,
  	/* drm_atomic_helper_check_plane_state calls drm_rect_clip_scaled for
  	 * us, which keeps our planes bounded within the CRTC active area
  	 */
@@ -157,7 +155,7 @@ index 2e7c190eca91..f513f9b572c8 100644
  	    WARN_ON(dest->y1 + dsp_h > adjusted_mode->vdisplay) ||
  	    WARN_ON(dsp_w < 4) || WARN_ON(dsp_h < 4) ||
  	    WARN_ON(src_w < 4) || WARN_ON(src_h < 4))
-@@ -1822,7 +1812,7 @@ static void vop2_plane_atomic_update(struct drm_plane *plane,
+@@ -1845,7 +1835,7 @@ static void vop2_plane_atomic_update(struct drm_plane *plane,
  	if (vop2->version > VOP_VERSION_RK3568) {
  		struct vop2_axi_fetch f;
  
@@ -166,7 +164,7 @@ index 2e7c190eca91..f513f9b572c8 100644
  		vop2_win_write(win, VOP2_WIN_AXI_BUS_ID, vop2_win_get_axi_bus(win, &f));
  		vop2_win_write(win, VOP2_WIN_AXI_YRGB_R_ID, win->data->axi_yrgb_r_id);
  		vop2_win_write(win, VOP2_WIN_AXI_UV_R_ID, win->data->axi_uv_r_id);
-@@ -1897,7 +1887,7 @@ static void vop2_plane_atomic_update(struct drm_plane *plane,
+@@ -1920,7 +1910,7 @@ static void vop2_plane_atomic_update(struct drm_plane *plane,
  			vop2_win_write(win, VOP2_WIN_AFBC_PLD_OFFSET, yrgb_mst);
  		}
  
@@ -175,7 +173,7 @@ index 2e7c190eca91..f513f9b572c8 100644
  		vop2_win_write(win, VOP2_WIN_AFBC_HDR_PTR, yrgb_mst);
  		vop2_win_write(win, VOP2_WIN_AFBC_PIC_SIZE, act_info);
  		vop2_win_write(win, VOP2_WIN_TRANSFORM_OFFSET, transform_offset);
-@@ -1940,7 +1930,7 @@ static void vop2_plane_atomic_update(struct drm_plane *plane,
+@@ -1963,7 +1953,7 @@ static void vop2_plane_atomic_update(struct drm_plane *plane,
  
  	vop2_setup_scale(vop2, win, src_w, src_h, dsp_w, dsp_h, fb->format->format);
  	if (!vop2_cluster_window(win))
@@ -184,7 +182,7 @@ index 2e7c190eca91..f513f9b572c8 100644
  	vop2_win_write(win, VOP2_WIN_ACT_INFO, act_info);
  	vop2_win_write(win, VOP2_WIN_DSP_INFO, dsp_info);
  	vop2_win_write(win, VOP2_WIN_DSP_ST, dest->y1 << 16 | (dest->x1 & 0xffff));
-@@ -1960,6 +1950,32 @@ static void vop2_plane_atomic_update(struct drm_plane *plane,
+@@ -1983,6 +1973,32 @@ static void vop2_plane_atomic_update(struct drm_plane *plane,
  	}
  }
  

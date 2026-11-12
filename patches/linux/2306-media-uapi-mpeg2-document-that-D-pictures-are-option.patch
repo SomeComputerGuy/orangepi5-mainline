@@ -12,7 +12,6 @@ VIDIOC_TRY_EXT_CTRLS, so that applications can find out whether a
 decoder supports D-pictures before they hand one to it, and decode or
 drop them otherwise.
 
-Assisted-by: LLM
 Signed-off-by: Arun Iyengar <aiyengar1990@gmail.com>
 ---
  .../userspace-api/media/v4l/ext-ctrls-codec-stateless.rst    | 5 ++++-

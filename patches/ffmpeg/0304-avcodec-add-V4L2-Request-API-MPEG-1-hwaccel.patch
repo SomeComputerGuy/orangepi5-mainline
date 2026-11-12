@@ -19,7 +19,6 @@ V4L2_PIX_FMT_MPEG2_SLICE ignore the MPEG-1 flags and would decode MPEG-1
 as MPEG-2, so on them the hwaccel fails to initialise and MPEG-1 is
 decoded in software.
 
-Assisted-by: LLM
 Signed-off-by: Arun Iyengar <aiyengar1990@gmail.com>
 ---
  configure                       |  2 +
