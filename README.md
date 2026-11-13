@@ -100,9 +100,10 @@ Not finished. Listed so you know what is coming; no dates.
 - DisplayPort: fix for the rare black picture after a mode change in testing.
 - HDR: correct colours for BT.601 and BT.2020 video planes, SDR-to-HDR conversion and
   colour matrix in the display controller. In testing, not passing yet.
-- Display writeback and HDMI interlaced modes: written, board tests pending.
-- IEP2 deinterlacer: the driver is in the image and passes v4l2-compliance, but neither
-  GStreamer nor FFmpeg can use it yet. Being prepared for posting upstream.
+- HDMI interlaced modes pass on the board (DisplayPort interlaced not tested yet). Display
+  writeback: written, board test pending.
+- IEP2 deinterlacer: the driver is in the image and passes v4l2-compliance. GStreamer and
+  FFmpeg support is written, board tests pending. Being prepared for posting upstream.
 - MPEG-4 Part 2 / H.263 decode: the kernel driver is in the image; the FFmpeg fixes and
   GStreamer elements it needs have passed on the board and come with the next media
   package update.
@@ -118,15 +119,16 @@ Not finished. Listed so you know what is coming; no dates.
 - Second IOMMU (MMU600_PHP) for SATA, USB 3 and Ethernet: now in the kernel patches. SATA,
   USB 3, Ethernet and deep suspend pass on the board; data transfer over the USB-C port is
   not tested yet. Upstream posting waits for the SMMUv3 power-management series it builds on.
-- Crypto engine: driver ported, self-tests pass, one cross-check fails. In testing.
+- Crypto engine: driver ported; self-tests and the hardware random number generator pass
+  on the board. A test under concurrent load is pending.
 - OP-TEE with a firmware TPM and secure storage: on the board, OP-TEE's test suite, the
   TPM, sealing and a TPM-unlocked LUKS volume pass. The TPM was missing after one reboot
-  because Ubuntu's tee-supplicant service can start before the OP-TEE driver loads; a fix
-  (upstream's device-ordered service) is in testing. Test firmware only, booted from SD; no
-  fuses or keys are burned.
+  because Ubuntu's tee-supplicant service can start before the OP-TEE driver loads. Fixed
+  with upstream's device-ordered service: 5 of 5 boots and 3 of 3 TPM persistence reboots
+  pass. Proposed to Debian. Test firmware only, booted from SD; no fuses or keys are burned.
 - Verified and measured boot without burning fuses, and an encrypted root unlocked by
   TPM + PIN: works in emulation, board test pending.
-- Upstreaming: about 30 series are posted and in review; the rest follow as they pass
+- Upstreaming: over 30 kernel series are posted and in review; the rest follow as they pass
   on the board.
 
 ## Testing
@@ -135,11 +137,12 @@ Tested on an Orange Pi 5 (8 GB) booting from an M.2 SATA SSD:
 boot, SATA, Ethernet, USB 2 and 3, s2idle and deep suspend, HDMI (TMDS up to 4K60, FRL up
 to 4K120, HDR, CEC, stereo audio), USB-C DisplayPort (up to 4K60, HDR), video decode
 (H.264, HEVC, VP9, AV1, VP8, MPEG-2 and the formats listed above), H.264/HEVC/JPEG encode,
-JPEG decode, RGA, GPU (panthor: OpenGL ES 3.1, Vulkan 1.4) and NPU (rocket).
+JPEG decode, RGA, GPU (panthor: OpenGL ES 3.1, Vulkan 1.4, OpenCL 3.0) and NPU (rocket).
 
 Known problems: rare "No Signal" after HDMI FRL mode changes; rare black DP output after a
 mode change; underruns at 1366x768 on both outputs; some VP9 conformance streams fail; an
-SD card inserted while the board is running is not seen until reboot.
+SD card inserted while the board is running is not seen until reboot (fix written, board
+test pending).
 
 Not tested yet: the SD images built from the current kernel (the last boot test was on an
 older one), NVMe and PCIe suspend, 8K output (no 8K display), DisplayPort audio and the

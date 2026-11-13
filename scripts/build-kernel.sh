@@ -18,7 +18,8 @@ export ARCH=arm64 CROSS_COMPILE=aarch64-linux-gnu-
 # Two builds in the same O= directory corrupt each other's objects
 mkdir -p "$TOP/build"
 exec 9>"$TOP/build/.kernel-build.lock"
-flock -n 9 || { echo "another kernel build is running"; exit 1; }
+# wait for a running build instead of failing (default 4 h; OPI5_LOCK_WAIT=0 fails at once)
+flock -n 9 || { echo "another kernel build is running; waiting for it"; flock -w "${OPI5_LOCK_WAIT:-14400}" 9 || { echo "gave up waiting for the build lock"; exit 1; }; }
 # Ubuntu kernel whose config is the base (from ports.ubuntu.com)
 UBUNTU_KVER=${UBUNTU_KVER:-7.3.0-10}
 UBUNTU_PKG=linux-modules-${UBUNTU_KVER}-generic_${UBUNTU_KVER}.${UBUNTU_KVER##*-}_arm64.deb
