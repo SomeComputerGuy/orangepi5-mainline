@@ -1,8 +1,8 @@
-From 3719113013abaf5d212ae51024d8c90405a81efb Mon Sep 17 00:00:00 2001
+From ce607e5172214b496a01fa74cf5fe2cf4ef3427d Mon Sep 17 00:00:00 2001
 From: Arun Iyengar <aiyengar1990@gmail.com>
 Date: Sat, 7 Nov 2026 23:21:19 +0000
-Subject: [PATCH 2338/2409] drm/rockchip: vop2: Only vary the refresh rate with
- a VRR range
+Subject: [PATCH] drm/rockchip: vop2: Only vary the refresh rate with a VRR
+ range
 
 VRR_ENABLED is a property of every CRTC, so userspace can set it for any
 output. The video port then stretches its frames to the vtotals of the
@@ -21,10 +21,10 @@ Signed-off-by: Arun Iyengar <aiyengar1990@gmail.com>
  1 file changed, 5 insertions(+), 2 deletions(-)
 
 diff --git a/drivers/gpu/drm/rockchip/rockchip_drm_vop2.c b/drivers/gpu/drm/rockchip/rockchip_drm_vop2.c
-index 67467184758e..aca0f01c051e 100644
+index 42c70b505889..7813319b03de 100644
 --- a/drivers/gpu/drm/rockchip/rockchip_drm_vop2.c
 +++ b/drivers/gpu/drm/rockchip/rockchip_drm_vop2.c
-@@ -3584,12 +3584,15 @@ static void vop2_crtc_atomic_flush(struct drm_crtc *crtc,
+@@ -3143,12 +3143,15 @@ static void vop2_crtc_atomic_flush(struct drm_crtc *crtc,
  	spin_lock_irq(&crtc->dev->event_lock);
  
  	/*

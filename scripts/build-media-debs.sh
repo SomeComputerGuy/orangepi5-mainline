@@ -29,6 +29,15 @@ if [ "${1:-}" = --in-chroot ]; then
   src=$2 ver=$3 rev=$4 jobs=$5 pdir_name=${6:-$2} build=${7:-any}
   export DEBIAN_FRONTEND=noninteractive
   mkdir -p /build/debs && cd /build
+  # Stock Ubuntu installs also use the -updates and -security pockets: build from (and against) them too, so a
+  # rebuild never falls behind an archive (security) update of the same source.
+  if [ ! -e /etc/apt/sources.list.d/opi5-pockets.list ]; then
+    dist=$(sed -n 's/^VERSION_CODENAME=//p' /etc/os-release)
+    for pk in updates security; do
+      grep -hE "^deb(-src)? https?://[^ ]+ $dist " /etc/apt/sources.list /etc/apt/sources.list.d/*.list 2>/dev/null |
+        sed "s/ $dist / $dist-$pk /"
+    done > /etc/apt/sources.list.d/opi5-pockets.list
+  fi
   apt-get update -q
   # persistent chroot: catch up with the archive, like a fresh bootstrap would
   if [ -n "${OPI5_PERSISTENT:-}" ]; then apt-get -q -y full-upgrade; fi
@@ -101,10 +110,10 @@ declare -A VERSION=(
   [ffmpeg]=7:8.1.2-2ubuntu2
   [mpv]=0.41.0-2ubuntu5
   [gst-plugins-bad1.0]=1.28.6-1ubuntu1
-  [gst-plugins-good1.0]=1.28.7-1build1
+  [gst-plugins-good1.0]=1.28.7-1ubuntu0.1   # stonking-security (CVE-2026-111183), was 1.28.7-1build1
   [alsa-ucm-conf]=1.2.16.1-1ubuntu1
 )
-declare -A REV=([ffmpeg]=3 [mpv]=2 [gst-plugins-bad1.0]=7 [gst-plugins-good1.0]=2 [alsa-ucm-conf]=1)
+declare -A REV=([ffmpeg]=4 [mpv]=2 [gst-plugins-bad1.0]=8 [gst-plugins-good1.0]=3 [alsa-ucm-conf]=1)
 declare -A PDIR=([ffmpeg]=ffmpeg [mpv]=mpv [gst-plugins-bad1.0]=gstreamer [gst-plugins-good1.0]=gst-plugins-good [alsa-ucm-conf]=alsa-ucm-conf)
 # Architecture: all sources (built with -A); the rest build their arm64 packages
 declare -A BUILD=([alsa-ucm-conf]=all)

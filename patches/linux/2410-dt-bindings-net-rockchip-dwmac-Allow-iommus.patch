@@ -1,0 +1,31 @@
+From b2e8396509d10b93fd5712b2b88ca33a32f2bd8c Mon Sep 17 00:00:00 2001
+From: Arun Iyengar <aiyengar1990@gmail.com>
+Date: Thu, 12 Nov 2026 06:15:58 +0000
+Subject: [PATCH 2410/2436] dt-bindings: net: rockchip-dwmac: Allow iommus
+
+The two GMACs of the RK3588 are AXI masters behind the SoC's second
+SMMU (MMU600_PHP). Allow the iommus property so that they can be
+attached to it.
+
+Signed-off-by: Arun Iyengar <aiyengar1990@gmail.com>
+---
+ Documentation/devicetree/bindings/net/rockchip-dwmac.yaml | 3 +++
+ 1 file changed, 3 insertions(+)
+
+diff --git a/Documentation/devicetree/bindings/net/rockchip-dwmac.yaml b/Documentation/devicetree/bindings/net/rockchip-dwmac.yaml
+index 80c252845349..cd58ff7c6291 100644
+--- a/Documentation/devicetree/bindings/net/rockchip-dwmac.yaml
++++ b/Documentation/devicetree/bindings/net/rockchip-dwmac.yaml
+@@ -87,6 +87,9 @@ properties:
+ 
+   dma-coherent: true
+ 
++  iommus:
++    maxItems: 1
++
+   clock_in_out:
+     description:
+       For RGMII, it must be "input", means main clock(125MHz)
+-- 
+2.55.0
+

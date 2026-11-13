@@ -1,0 +1,45 @@
+From 02e015918c7eedb668268caad51e2adfe24d03ba Mon Sep 17 00:00:00 2001
+From: Arun Iyengar <aiyengar1990@gmail.com>
+Date: Thu, 12 Nov 2026 06:17:07 +0000
+Subject: [PATCH 2415/2436] arm64: dts: rockchip: Attach the RK3588 GMACs to
+ the PHP SMMU
+
+GMAC0 and GMAC1 are two of the six masters behind MMU600_PHP (RK3588
+TRM, chapter 8, figure 8-1). Their StreamIDs are 1 and 2, programmed
+into PHP_GRF_GMAC0/1_SID_AR/AW by the Rockchip GRF setup.
+
+The properties have no effect while the mmu600_php node is disabled.
+
+Signed-off-by: Arun Iyengar <aiyengar1990@gmail.com>
+---
+ arch/arm64/boot/dts/rockchip/rk3588-base.dtsi  | 1 +
+ arch/arm64/boot/dts/rockchip/rk3588-extra.dtsi | 1 +
+ 2 files changed, 2 insertions(+)
+
+diff --git a/arch/arm64/boot/dts/rockchip/rk3588-base.dtsi b/arch/arm64/boot/dts/rockchip/rk3588-base.dtsi
+index 74570779e4a7..fb3801cd57ec 100644
+--- a/arch/arm64/boot/dts/rockchip/rk3588-base.dtsi
++++ b/arch/arm64/boot/dts/rockchip/rk3588-base.dtsi
+@@ -2466,6 +2466,7 @@ gmac1: ethernet@fe1c0000 {
+ 		interrupts = <GIC_SPI 234 IRQ_TYPE_LEVEL_HIGH 0>,
+ 			     <GIC_SPI 233 IRQ_TYPE_LEVEL_HIGH 0>;
+ 		interrupt-names = "macirq", "eth_wake_irq";
++		iommus = <&mmu600_php 2>;
+ 		clocks = <&cru CLK_GMAC_125M>, <&cru CLK_GMAC_50M>,
+ 			 <&cru PCLK_GMAC1>, <&cru ACLK_GMAC1>,
+ 			 <&cru CLK_GMAC1_PTP_REF>;
+diff --git a/arch/arm64/boot/dts/rockchip/rk3588-extra.dtsi b/arch/arm64/boot/dts/rockchip/rk3588-extra.dtsi
+index 84fbd168692a..cccb3c0d7e6f 100644
+--- a/arch/arm64/boot/dts/rockchip/rk3588-extra.dtsi
++++ b/arch/arm64/boot/dts/rockchip/rk3588-extra.dtsi
+@@ -538,6 +538,7 @@ gmac0: ethernet@fe1b0000 {
+ 		interrupts = <GIC_SPI 227 IRQ_TYPE_LEVEL_HIGH 0>,
+ 			     <GIC_SPI 226 IRQ_TYPE_LEVEL_HIGH 0>;
+ 		interrupt-names = "macirq", "eth_wake_irq";
++		iommus = <&mmu600_php 1>;
+ 		clocks = <&cru CLK_GMAC_125M>, <&cru CLK_GMAC_50M>,
+ 			 <&cru PCLK_GMAC0>, <&cru ACLK_GMAC0>,
+ 			 <&cru CLK_GMAC0_PTP_REF>;
+-- 
+2.55.0
+

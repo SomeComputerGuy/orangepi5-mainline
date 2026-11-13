@@ -1,55 +1,34 @@
-From 914d02e4dcf39b71f07041b1a85c8582a2203272 Mon Sep 17 00:00:00 2001
+From c51f972c095947cf02ad4243d770133db91c510f Mon Sep 17 00:00:00 2001
 From: Arun Iyengar <aiyengar1990@gmail.com>
 Date: Sun, 1 Nov 2026 06:06:09 +0000
-Subject: [PATCH] drm/rockchip: vop2: Don't accept AFBC YTR for RGB565 on
+Subject: [PATCH] drm/rockchip: vop2: Only accept AFBC YTR for 8 bit RGB on
  RK3588
 
-The Cluster windows of the RK3588 VOP2 advertise every AFBC modifier
-of format_modifiers_afbc for RGB565 and BGR565, including the ones
-with the lossless colour transform (YTR). Scanning out an RGB565
-buffer rendered by the Mali-G610 (panfrost) with
-AFBC(16x16 | SPARSE | YTR) gives a black picture and POST_BUF_EMPTY
-on the video port, on every Cluster window, while the same buffer
-rendered with AFBC(16x16 | SPARSE) displays correctly, as do 32 bpp
-formats with YTR.
+According to the TRM, the AFBC decoder of the RK3588 Cluster windows
+supports the lossless colour transform (YTR) only for the 8 bit RGB
+formats. An RGB565 buffer with YTR gives a black picture and
+POST_BUF_EMPTY, while the same buffer without YTR displays fine.
 
-YTR on RGB565 is also a questionable pairing to start with:
-Documentation/gpu/afbc.rst requires the R, G, B component order when
-YTR is used, with component 0 in the least significant bits, which
-DRM_FORMAT_RGB565 (B in the low bits) doesn't have, and the Arm
-Mali-D71 (komeda) only accepts AFBC for BGR565.
-
-Stop advertising and accepting YTR for the two 16 bpp RGB formats on
-RK3588, so that userspace picks a modifier the decoder handles. The
-BGR565 case could not be tested (Mesa can't import BGR565 dma-bufs),
-it's rejected as well because the decoder is configured identically
-for both formats, apart from the R/B swap after decoding.
+Don't accept YTR for any other format on RK3588.
 
 Fixes: 5a028e8f062f ("drm/rockchip: vop2: Add support for rk3588")
 Signed-off-by: Arun Iyengar <aiyengar1990@gmail.com>
 ---
- drivers/gpu/drm/rockchip/rockchip_drm_vop2.c | 12 ++++++++++++
- 1 file changed, 12 insertions(+)
+ drivers/gpu/drm/rockchip/rockchip_drm_vop2.c | 5 +++++
+ 1 file changed, 5 insertions(+)
 
 diff --git a/drivers/gpu/drm/rockchip/rockchip_drm_vop2.c b/drivers/gpu/drm/rockchip/rockchip_drm_vop2.c
-index c0daba996f61..227d734f3b0c 100644
+index 61d2e2478210..bba357287e40 100644
 --- a/drivers/gpu/drm/rockchip/rockchip_drm_vop2.c
 +++ b/drivers/gpu/drm/rockchip/rockchip_drm_vop2.c
-@@ -407,6 +407,18 @@ static bool rockchip_vop2_mod_supported(struct drm_plane *plane, u32 format,
+@@ -407,6 +407,11 @@ static bool rockchip_vop2_mod_supported(struct drm_plane *plane, u32 format,
  	if (vop2_convert_afbc_format(format) == VOP2_AFBC_FMT_INVALID)
  		return false;
  
-+	/*
-+	 * The AFBC decoder of the RK3588 Cluster windows can't decode 16 bpp
-+	 * RGB that uses the lossless colour transform: the picture stays
-+	 * black and the video port reports POST_BUF_EMPTY, while the same
-+	 * buffers without YTR display fine.
-+	 */
 +	if (vop2->version == VOP_VERSION_RK3588 && (modifier & AFBC_FORMAT_MOD_YTR) &&
-+	    (format == DRM_FORMAT_RGB565 || format == DRM_FORMAT_BGR565)) {
-+		drm_dbg_kms(vop2->drm, "No AFBC YTR support for 16 bpp RGB\n");
++	    vop2_convert_afbc_format(format) != VOP2_AFBC_FMT_ARGB8888 &&
++	    vop2_convert_afbc_format(format) != VOP2_AFBC_FMT_RGB888)
 +		return false;
-+	}
 +
  	/* Different windows have different format/modifier support */
  	for (i = 0; i < plane->modifier_count; i++) {

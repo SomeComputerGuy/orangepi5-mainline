@@ -1,0 +1,42 @@
+From 11da3f3dfd71fdca6596e4a4b36169323cdbdaad Mon Sep 17 00:00:00 2001
+From: Ashish Mhetre <amhetre@nvidia.com>
+Date: Tue, 29 Sep 2026 03:45:00 +0000
+Subject: [PATCH 2423/2436] iommu/tegra241-cmdqv: Restore PROD and CONS after
+ resume
+
+PROD and CONS indices for vcmdqs are getting set to 0 after resume.
+Because of this the vcmdq is not consuming commands after resume.
+Fix this by restoring PROD and CONS indices after resume from
+saved pointers.
+
+Reviewed-by: Nicolin Chen <nicolinc@nvidia.com>
+Signed-off-by: Ashish Mhetre <amhetre@nvidia.com>
+Signed-off-by: Pranjal Shrivastava <praan@google.com>
+---
+ drivers/iommu/arm/arm-smmu-v3/tegra241-cmdqv.c | 10 ++++++++++
+ 1 file changed, 10 insertions(+)
+
+diff --git a/drivers/iommu/arm/arm-smmu-v3/tegra241-cmdqv.c b/drivers/iommu/arm/arm-smmu-v3/tegra241-cmdqv.c
+index a394bf0f487f..c7989fcd2c62 100644
+--- a/drivers/iommu/arm/arm-smmu-v3/tegra241-cmdqv.c
++++ b/drivers/iommu/arm/arm-smmu-v3/tegra241-cmdqv.c
+@@ -567,6 +567,16 @@ static int tegra241_vcmdq_hw_init(struct tegra241_vcmdq *vcmdq)
+ 	/* Configure and enable VCMDQ */
+ 	writeq_relaxed(vcmdq->cmdq.q.q_base, REG_VCMDQ_PAGE1(vcmdq, BASE));
+ 
++	/*
++	 * HW Registers reset to 0 when power-cycled. Restore them from their
++	 * SW copies to prevent executing stale/ghost commands after resume.
++	 * Note on RPM: Power-cycles can never happen when VCMDQs are assigned
++	 * to the Guests since the relevant frameworks (IOMMUFD / VFIO) hold
++	 * active PM references preventing suspend while VMs are active.
++	 */
++	writel_relaxed(vcmdq->cmdq.q.llq.prod, REG_VCMDQ_PAGE0(vcmdq, PROD));
++	writel_relaxed(vcmdq->cmdq.q.llq.cons, REG_VCMDQ_PAGE0(vcmdq, CONS));
++
+ 	ret = vcmdq_write_config(vcmdq, VCMDQ_EN);
+ 	if (ret) {
+ 		dev_err(vcmdq->cmdqv->dev,
+-- 
+2.55.0
+

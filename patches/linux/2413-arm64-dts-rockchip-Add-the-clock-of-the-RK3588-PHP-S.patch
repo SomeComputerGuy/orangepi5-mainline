@@ -1,0 +1,38 @@
+From 4252808df3f93b6e11a0bf8ff2d2a4e672e61c32 Mon Sep 17 00:00:00 2001
+From: Arun Iyengar <aiyengar1990@gmail.com>
+Date: Thu, 12 Nov 2026 06:16:32 +0000
+Subject: [PATCH 2413/2436] arm64: dts: rockchip: Add the clock of the RK3588
+ PHP SMMU
+
+MMU600_PHP is clocked by ACLK_MMU_PHP, a gate on aclk_php_root. The
+gate is also the parent of the bus clocks of the six masters behind
+this SMMU (aclk_gmac0/1, aclk_sata0/1/2, aclk_usb3otg2), so it runs
+while one of them holds its bus clock, but nothing keeps it on for the
+SMMU itself. The SMMU registers must stay accessible whenever the
+driver touches them, also with every master disabled, runtime
+suspended or already shut down. On the sister instance MMU600_PCIE a
+gated clock makes arm_smmu_device_shutdown() time out and hangs the
+reboot.
+
+Describe the clock, as for the PCIe SMMU. The node stays disabled.
+
+Signed-off-by: Arun Iyengar <aiyengar1990@gmail.com>
+---
+ arch/arm64/boot/dts/rockchip/rk3588-base.dtsi | 1 +
+ 1 file changed, 1 insertion(+)
+
+diff --git a/arch/arm64/boot/dts/rockchip/rk3588-base.dtsi b/arch/arm64/boot/dts/rockchip/rk3588-base.dtsi
+index 103d95173af6..134023e5699b 100644
+--- a/arch/arm64/boot/dts/rockchip/rk3588-base.dtsi
++++ b/arch/arm64/boot/dts/rockchip/rk3588-base.dtsi
+@@ -587,6 +587,7 @@ mmu600_php: iommu@fcb00000 {
+ 			     <GIC_SPI 386 IRQ_TYPE_EDGE_RISING 0>,
+ 			     <GIC_SPI 379 IRQ_TYPE_EDGE_RISING 0>;
+ 		interrupt-names = "eventq", "gerror", "priq", "cmdq-sync";
++		clocks = <&cru ACLK_MMU_PHP>;
+ 		#iommu-cells = <1>;
+ 		status = "disabled";
+ 	};
+-- 
+2.55.0
+

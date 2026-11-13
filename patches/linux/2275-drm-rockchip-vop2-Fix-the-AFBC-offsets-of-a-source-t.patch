@@ -1,4 +1,4 @@
-From 51ab291f7d9fa1734e9ec5e719576b277782a25b Mon Sep 17 00:00:00 2001
+From 277fdada9e97cbf89ec353bafa55382a654c3485 Mon Sep 17 00:00:00 2001
 From: Arun Iyengar <aiyengar1990@gmail.com>
 Date: Thu, 5 Nov 2026 11:45:43 +0000
 Subject: [PATCH] drm/rockchip: vop2: Fix the AFBC offsets of a source that
@@ -28,10 +28,10 @@ Signed-off-by: Arun Iyengar <aiyengar1990@gmail.com>
  1 file changed, 6 insertions(+), 5 deletions(-)
 
 diff --git a/drivers/gpu/drm/rockchip/rockchip_drm_vop2.c b/drivers/gpu/drm/rockchip/rockchip_drm_vop2.c
-index 8a6f3ab2703d..4968e2d7f70a 100644
+index 5d1d24e23f41..bbecb419301e 100644
 --- a/drivers/gpu/drm/rockchip/rockchip_drm_vop2.c
 +++ b/drivers/gpu/drm/rockchip/rockchip_drm_vop2.c
-@@ -443,7 +443,7 @@ static bool vop2_half_block_enable(struct drm_plane_state *pstate)
+@@ -436,7 +436,7 @@ static bool vop2_half_block_enable(struct drm_plane_state *pstate)
  
  static u32 vop2_afbc_transform_offset(struct drm_plane_state *pstate,
  				      const struct drm_rect *src,
@@ -40,7 +40,7 @@ index 8a6f3ab2703d..4968e2d7f70a 100644
  {
  	struct drm_framebuffer *fb = pstate->fb;
  	u32 bpp = vop2_get_bpp(fb->format);
-@@ -490,7 +490,7 @@ static u32 vop2_afbc_transform_offset(struct drm_plane_state *pstate,
+@@ -483,7 +483,7 @@ static u32 vop2_afbc_transform_offset(struct drm_plane_state *pstate,
  		ty = act_yoffset;
  		break;
  	case DRM_MODE_REFLECT_Y:
@@ -49,7 +49,7 @@ index 8a6f3ab2703d..4968e2d7f70a 100644
  		ty = bottom_crop_line_num - act_yoffset;
  		break;
  	case DRM_MODE_ROTATE_90:
-@@ -502,7 +502,7 @@ static u32 vop2_afbc_transform_offset(struct drm_plane_state *pstate,
+@@ -495,7 +495,7 @@ static u32 vop2_afbc_transform_offset(struct drm_plane_state *pstate,
  		ty = vir_width - width - act_xoffset;
  		break;
  	case 0:
@@ -58,7 +58,7 @@ index 8a6f3ab2703d..4968e2d7f70a 100644
  		ty = act_yoffset;
  		break;
  	}
-@@ -1859,7 +1859,8 @@ static void vop2_win_update(struct vop2_win *win, struct vop2_video_port *vp,
+@@ -1481,7 +1481,8 @@ static void vop2_win_update(struct vop2_win *win, struct vop2_video_port *vp,
  		if (fb->modifier & AFBC_FORMAT_MOD_YTR)
  			afbc_format |= (1 << 4);
  
@@ -68,7 +68,7 @@ index 8a6f3ab2703d..4968e2d7f70a 100644
  
  		/*
  		 * AFBC pic_vir_width is count by pixel, this is different
-@@ -1910,7 +1911,7 @@ static void vop2_win_update(struct vop2_win *win, struct vop2_video_port *vp,
+@@ -1532,7 +1533,7 @@ static void vop2_win_update(struct vop2_win *win, struct vop2_video_port *vp,
  			vop2_win_write(win, VOP2_WIN_AFBC_PLD_OFFSET, yrgb_mst);
  		}
  

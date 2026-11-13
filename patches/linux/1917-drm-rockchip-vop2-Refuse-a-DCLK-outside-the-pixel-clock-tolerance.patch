@@ -1,4 +1,4 @@
-From 40e73e8db4c84592023a8c5cff5f809826168e89 Mon Sep 17 00:00:00 2001
+From 5936890639f5c209acc09173c13ae596656d1dfe Mon Sep 17 00:00:00 2001
 From: Arun Iyengar <aiyengar1990@gmail.com>
 Date: Mon, 2 Nov 2026 06:21:52 +0000
 Subject: [PATCH] drm/rockchip: vop2: Refuse a DCLK outside the pixel clock
@@ -26,10 +26,10 @@ Signed-off-by: Arun Iyengar <aiyengar1990@gmail.com>
  1 file changed, 19 insertions(+), 6 deletions(-)
 
 diff --git a/drivers/gpu/drm/rockchip/rockchip_drm_vop2.c b/drivers/gpu/drm/rockchip/rockchip_drm_vop2.c
-index fd91a62589c7..a3bf7499d2db 100644
+index 01caf7ea75e5..07fbcc45bafa 100644
 --- a/drivers/gpu/drm/rockchip/rockchip_drm_vop2.c
 +++ b/drivers/gpu/drm/rockchip/rockchip_drm_vop2.c
-@@ -2564,6 +2564,15 @@ static bool vop2_dclk_rate_exact(long rate, unsigned long clock)
+@@ -2177,6 +2177,15 @@ static bool vop2_dclk_rate_exact(long rate, unsigned long clock)
  	return rate > 0 && abs_diff((unsigned long)rate, clock) < 1000;
  }
  
@@ -45,7 +45,7 @@ index fd91a62589c7..a3bf7499d2db 100644
  /*
   * The CRU parents of dclk_vopN_src (GPLL, CPLL, V0PLL, AUPLL) only give
   * integer fractions of their current rates. If none of them makes the DCLK
-@@ -2628,10 +2637,11 @@ static unsigned long vop2_crtc_dclk_pll_claimed(struct vop2_video_port *vp,
+@@ -2241,10 +2250,11 @@ static unsigned long vop2_crtc_dclk_pll_claimed(struct vop2_video_port *vp,
   * the PHY supports, but when the DCLK has to come from the system CRU (FRL
   * mode, or rates beyond the PHY PLL), it is derived by integer division
   * from a few fixed PLLs, and the clock framework silently picks the closest
@@ -61,7 +61,7 @@ index fd91a62589c7..a3bf7499d2db 100644
   */
  static int vop2_crtc_atomic_check_dclk(struct vop2_video_port *vp,
  				       struct drm_crtc_state *crtc_state)
-@@ -2718,9 +2728,12 @@ static int vop2_crtc_atomic_check_dclk(struct vop2_video_port *vp,
+@@ -2331,9 +2341,12 @@ static int vop2_crtc_atomic_check_dclk(struct vop2_video_port *vp,
  		return 0;
  	}
  

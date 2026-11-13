@@ -1,0 +1,50 @@
+From 7c51ff2572feb51de3054c4099a1269416a89a4f Mon Sep 17 00:00:00 2001
+From: Pranjal Shrivastava <praan@google.com>
+Date: Tue, 29 Sep 2026 03:45:03 +0000
+Subject: [PATCH 2426/2436] iommu/arm-smmu-v3: Restore MSI config on resume
+
+The SMMU's MSI configuration registers (*_IRQ_CFGn) containing target
+address, data and memory attributes lose their state when the SMMU is
+powered down.
+
+Introduce arm_smmu_resume_msis() to zero the *_IRQ_CFG0 registers (which
+reset to unknown values) and restore the cached MSI messages across the
+device's MSI domain via msi_device_domain_restore_msi_msgs().
+
+In addition, clear ARM_SMMU_FEAT_MSI if MSI setup fails and the driver
+falls back to wired IRQs, preventing spurious MSI resume attempts.
+
+Reviewed-by: Nicolin Chen <nicolinc@nvidia.com>
+Reviewed-by: Mostafa Saleh <smostafa@google.com>
+Signed-off-by: Pranjal Shrivastava <praan@google.com>
+---
+ drivers/iommu/arm/arm-smmu-v3/arm-smmu-v3.c | 13 +++++++++++++
+ 1 file changed, 13 insertions(+)
+
+diff --git a/drivers/iommu/arm/arm-smmu-v3/arm-smmu-v3.c b/drivers/iommu/arm/arm-smmu-v3/arm-smmu-v3.c
+index 1132738135f8..d1b2ed6fd960 100644
+--- a/drivers/iommu/arm/arm-smmu-v3/arm-smmu-v3.c
++++ b/drivers/iommu/arm/arm-smmu-v3/arm-smmu-v3.c
+@@ -4780,6 +4780,19 @@ static void arm_smmu_write_msi_msg(struct msi_desc *desc, struct msi_msg *msg)
+ 	writel_relaxed(ARM_SMMU_MEMATTR_DEVICE_nGnRE, smmu->base + cfg[2]);
+ }
+ 
++static void __maybe_unused arm_smmu_resume_msis(struct arm_smmu_device *smmu)
++{
++	/* Clear the MSI address regs as they reset to unknown value */
++	writeq_relaxed(0, smmu->base + ARM_SMMU_GERROR_IRQ_CFG0);
++	writeq_relaxed(0, smmu->base + ARM_SMMU_EVTQ_IRQ_CFG0);
++
++	if (smmu->features & ARM_SMMU_FEAT_PRI)
++		writeq_relaxed(0, smmu->base + ARM_SMMU_PRIQ_IRQ_CFG0);
++
++	/* No-op if no MSI device domain was instantiated (e.g. wired IRQs) */
++	msi_device_domain_restore_msi_msgs(smmu->dev, MSI_DEFAULT_DOMAIN);
++}
++
+ static void arm_smmu_setup_msis(struct arm_smmu_device *smmu)
+ {
+ 	int ret, nvec = ARM_SMMU_MAX_MSIS;
+-- 
+2.55.0
+

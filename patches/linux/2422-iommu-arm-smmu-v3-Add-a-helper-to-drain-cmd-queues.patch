@@ -1,0 +1,58 @@
+From 02ed3c1b4f2ac8aba0c0bf7955c8c13016d877c5 Mon Sep 17 00:00:00 2001
+From: Pranjal Shrivastava <praan@google.com>
+Date: Tue, 29 Sep 2026 03:44:59 +0000
+Subject: [PATCH 2422/2436] iommu/arm-smmu-v3: Add a helper to drain cmd queues
+
+Before we suspend SMMU, we want to ensure that all commands (especially
+ATC_INV) have been flushed by the CMDQ, i.e. the CMDQs are empty.
+Add arm_smmu_drain_cmdqs() that drains the command queue using the
+arm_smmu_drain_queue() helper.
+
+Reviewed-by: Nicolin Chen <nicolinc@nvidia.com>
+Reviewed-by: Jason Gunthorpe <jgg@nvidia.com>
+Signed-off-by: Pranjal Shrivastava <praan@google.com>
+---
+ drivers/iommu/arm/arm-smmu-v3/arm-smmu-v3.c | 27 +++++++++++++++++++++
+ 1 file changed, 27 insertions(+)
+
+diff --git a/drivers/iommu/arm/arm-smmu-v3/arm-smmu-v3.c b/drivers/iommu/arm/arm-smmu-v3/arm-smmu-v3.c
+index 332bedc129d5..1132738135f8 100644
+--- a/drivers/iommu/arm/arm-smmu-v3/arm-smmu-v3.c
++++ b/drivers/iommu/arm/arm-smmu-v3/arm-smmu-v3.c
+@@ -1029,6 +1029,33 @@ int arm_smmu_drain_queue(struct arm_smmu_device *smmu,
+ 	return -ETIMEDOUT;
+ }
+ 
++/*
++ * Lockless, the caller must ensure that no concurrent command submissions
++ * can happen (such as during suspend where clients are already quiesced).
++ * Polling until PROD == CONS ensures all pending commands in the queue have
++ * been consumed by the hardware.
++ */
++static int __maybe_unused arm_smmu_drain_cmdqs(struct arm_smmu_device *smmu)
++{
++	int ret, err;
++
++	/*
++	 * We skip cmdq locking here since this helper is only called
++	 * from contexts (like suspend) where the caller has already
++	 * ensured that new command submissions are fully closed.
++	 */
++	ret = arm_smmu_drain_queue(smmu, &smmu->cmdq.q, true);
++
++	/* Drain all implementation-specific queues */
++	if (smmu->impl_ops && smmu->impl_ops->drain_queues) {
++		err = smmu->impl_ops->drain_queues(smmu);
++		if (err)
++			ret = err;
++	}
++
++	return ret;
++}
++
+ static void arm_smmu_page_response(struct device *dev, struct iopf_fault *unused,
+ 				   struct iommu_page_response *resp)
+ {
+-- 
+2.55.0
+

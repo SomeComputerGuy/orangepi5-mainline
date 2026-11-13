@@ -1,4 +1,4 @@
-From fbda173394561305d140921489dcb50caf07251a Mon Sep 17 00:00:00 2001
+From 028412113ef4033827dd6a54a2f9cce9e7461b75 Mon Sep 17 00:00:00 2001
 From: Arun Iyengar <aiyengar1990@gmail.com>
 Date: Mon, 2 Nov 2026 06:21:51 +0000
 Subject: [PATCH] drm/rockchip: vop2: Take the DCLK from the video PLL when the
@@ -66,12 +66,12 @@ index 49fb5064cd5c..7dd63a4ba25b 100644
  #define to_rockchip_crtc_state(s) \
  		container_of(s, struct rockchip_crtc_state, base)
 diff --git a/drivers/gpu/drm/rockchip/rockchip_drm_vop2.c b/drivers/gpu/drm/rockchip/rockchip_drm_vop2.c
-index adcd9b60fbbf..fd91a62589c7 100644
+index bba357287e40..01caf7ea75e5 100644
 --- a/drivers/gpu/drm/rockchip/rockchip_drm_vop2.c
 +++ b/drivers/gpu/drm/rockchip/rockchip_drm_vop2.c
-@@ -1207,6 +1207,11 @@ static void vop2_crtc_atomic_disable(struct drm_crtc *crtc,
+@@ -1135,6 +1135,11 @@ static void vop2_crtc_atomic_disable(struct drm_crtc *crtc,
+ 
  	vop2_crtc_disable_irq(vp, VP_INT_DSP_HOLD_VALID);
- 	vop2_crtc_disable_post_buf_empty_irq(vp);
  
 +	if (vp->pll_v0_held) {
 +		clk_rate_exclusive_put(vp->pll_v0);
@@ -81,7 +81,7 @@ index adcd9b60fbbf..fd91a62589c7 100644
  	if (vp->dclk_src)
  		clk_set_parent(vp->dclk, vp->dclk_src);
  
-@@ -2291,6 +2296,29 @@ static struct clk *vop2_crtc_dclk_hdmiphy_pll(struct vop2_video_port *vp,
+@@ -1905,6 +1910,29 @@ static struct clk *vop2_crtc_dclk_hdmiphy_pll(struct vop2_video_port *vp,
  	return NULL;
  }
  
@@ -111,7 +111,7 @@ index adcd9b60fbbf..fd91a62589c7 100644
  static void vop2_crtc_atomic_enable(struct drm_crtc *crtc,
  				    struct drm_atomic_commit *state)
  {
-@@ -2457,7 +2485,17 @@ static void vop2_crtc_atomic_enable(struct drm_crtc *crtc,
+@@ -2071,7 +2099,17 @@ static void vop2_crtc_atomic_enable(struct drm_crtc *crtc,
  				 ret);
  	}
  
@@ -129,7 +129,7 @@ index adcd9b60fbbf..fd91a62589c7 100644
  
  	vop2_post_config(crtc, true, crtc_state, old_crtc_state);
  
-@@ -2515,38 +2553,115 @@ static int vop2_crtc_atomic_check_gamma(struct vop2_video_port *vp,
+@@ -2128,38 +2166,115 @@ static int vop2_crtc_atomic_check_gamma(struct vop2_video_port *vp,
  	return 0;
  }
  
@@ -250,7 +250,7 @@ index adcd9b60fbbf..fd91a62589c7 100644
  
  		clock = vop2->ops->dclk_rate(vp, id, crtc_state);
  	}
-@@ -2557,24 +2672,61 @@ static int vop2_crtc_atomic_check_dclk(struct vop2_video_port *vp,
+@@ -2170,24 +2285,61 @@ static int vop2_crtc_atomic_check_dclk(struct vop2_video_port *vp,
  	if (mode->flags & DRM_MODE_FLAG_DBLCLK)
  		clock *= 2;
  
@@ -324,7 +324,7 @@ index adcd9b60fbbf..fd91a62589c7 100644
  }
  
  static int vop2_crtc_atomic_check(struct drm_crtc *crtc,
-@@ -2909,6 +3061,9 @@ static struct drm_crtc_state *vop2_crtc_duplicate_state(struct drm_crtc *crtc)
+@@ -2522,6 +2674,9 @@ static struct drm_crtc_state *vop2_crtc_duplicate_state(struct drm_crtc *crtc)
  
  	__drm_atomic_helper_crtc_duplicate_state(crtc, &vcstate->base);
  
@@ -334,7 +334,7 @@ index adcd9b60fbbf..fd91a62589c7 100644
  	return &vcstate->base;
  }
  
-@@ -3156,6 +3311,11 @@ static int vop2_create_crtcs(struct vop2 *vop2)
+@@ -2765,6 +2920,11 @@ static int vop2_create_crtcs(struct vop2 *vop2)
  			return dev_err_probe(drm->dev, PTR_ERR(vp->dclk),
  					     "failed to get %s\n", dclk_name);
  
@@ -347,10 +347,10 @@ index adcd9b60fbbf..fd91a62589c7 100644
  									 dclk_name);
  		if (IS_ERR(vp->dclk_rst))
 diff --git a/drivers/gpu/drm/rockchip/rockchip_drm_vop2.h b/drivers/gpu/drm/rockchip/rockchip_drm_vop2.h
-index 9f134f2db05b..20fa7734d156 100644
+index 990ac3ea9da9..8ad58e7121b4 100644
 --- a/drivers/gpu/drm/rockchip/rockchip_drm_vop2.h
 +++ b/drivers/gpu/drm/rockchip/rockchip_drm_vop2.h
-@@ -263,6 +263,13 @@ struct vop2_video_port {
+@@ -241,6 +241,13 @@ struct vop2_video_port {
  	struct vop2 *vop2;
  	struct clk *dclk;
  	struct clk *dclk_src;

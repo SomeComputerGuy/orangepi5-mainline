@@ -1,4 +1,4 @@
-From 4ccdd91ca34c7cbc60cda67a8d7192e36965d5ad Mon Sep 17 00:00:00 2001
+From 17e1424acc57021947ac8a9fb616169f49c8cf91 Mon Sep 17 00:00:00 2001
 From: Arun Iyengar <aiyengar1990@gmail.com>
 Date: Mon, 2 Nov 2026 16:58:31 +0000
 Subject: [PATCH] drm/rockchip: vop2: Plan the video PLL for all video ports in
@@ -52,10 +52,10 @@ Signed-off-by: Arun Iyengar <aiyengar1990@gmail.com>
  1 file changed, 348 insertions(+), 87 deletions(-)
 
 diff --git a/drivers/gpu/drm/rockchip/rockchip_drm_vop2.c b/drivers/gpu/drm/rockchip/rockchip_drm_vop2.c
-index a3bf7499d2db..e7499aee6274 100644
+index 07fbcc45bafa..b188f2b358db 100644
 --- a/drivers/gpu/drm/rockchip/rockchip_drm_vop2.c
 +++ b/drivers/gpu/drm/rockchip/rockchip_drm_vop2.c
-@@ -2575,96 +2575,122 @@ static bool vop2_dclk_rate_close(long rate, unsigned long clock)
+@@ -2188,96 +2188,122 @@ static bool vop2_dclk_rate_close(long rate, unsigned long clock)
  
  /*
   * The CRU parents of dclk_vopN_src (GPLL, CPLL, V0PLL, AUPLL) only give
@@ -234,7 +234,7 @@ index a3bf7499d2db..e7499aee6274 100644
  
  	drm_for_each_encoder_mask(encoder, vop2->drm, crtc_state->encoder_mask) {
  		struct rockchip_encoder *rkencoder = to_rockchip_encoder(encoder);
-@@ -2677,13 +2703,13 @@ static int vop2_crtc_atomic_check_dclk(struct vop2_video_port *vp,
+@@ -2290,13 +2316,13 @@ static int vop2_crtc_atomic_check_dclk(struct vop2_video_port *vp,
  	}
  
  	if (!clock)
@@ -250,7 +250,7 @@ index a3bf7499d2db..e7499aee6274 100644
  
  	/*
  	 * A DCLK that can also run from an HDMI PHY PLL is a plain mux in front
-@@ -2695,49 +2721,287 @@ static int vop2_crtc_atomic_check_dclk(struct vop2_video_port *vp,
+@@ -2308,49 +2334,287 @@ static int vop2_crtc_atomic_check_dclk(struct vop2_video_port *vp,
  		cru_clk = vp->dclk_src ?: clk_get_parent(vp->dclk);
  		if (!cru_clk || clk_is_match(cru_clk, vop2->pll_hdmiphy0) ||
  		    clk_is_match(cru_clk, vop2->pll_hdmiphy1))
@@ -564,7 +564,7 @@ index a3bf7499d2db..e7499aee6274 100644
  
  	return -EINVAL;
  }
-@@ -3074,9 +3338,6 @@ static struct drm_crtc_state *vop2_crtc_duplicate_state(struct drm_crtc *crtc)
+@@ -2687,9 +2951,6 @@ static struct drm_crtc_state *vop2_crtc_duplicate_state(struct drm_crtc *crtc)
  
  	__drm_atomic_helper_crtc_duplicate_state(crtc, &vcstate->base);
  

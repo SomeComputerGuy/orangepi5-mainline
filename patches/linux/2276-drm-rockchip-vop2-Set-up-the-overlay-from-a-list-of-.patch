@@ -1,4 +1,4 @@
-From 1bc222cab992281aa12c88a4af51fd4384558b6c Mon Sep 17 00:00:00 2001
+From 03352491ed25e288b1bd280a5b90c5d2c66a331d Mon Sep 17 00:00:00 2001
 From: Arun Iyengar <aiyengar1990@gmail.com>
 Date: Thu, 5 Nov 2026 11:48:01 +0000
 Subject: [PATCH] drm/rockchip: vop2: Set up the overlay from a list of windows
@@ -37,10 +37,10 @@ index f2af4ea97b5f..859ca483313a 100644
  /*
   * display output interface supported by rockchip lcdc
 diff --git a/drivers/gpu/drm/rockchip/rockchip_drm_vop2.c b/drivers/gpu/drm/rockchip/rockchip_drm_vop2.c
-index 4968e2d7f70a..bb12a77eabf7 100644
+index bbecb419301e..629e421bd757 100644
 --- a/drivers/gpu/drm/rockchip/rockchip_drm_vop2.c
 +++ b/drivers/gpu/drm/rockchip/rockchip_drm_vop2.c
-@@ -3829,6 +3829,7 @@ static int vop2_create_crtcs(struct vop2 *vop2)
+@@ -3435,6 +3435,7 @@ static int vop2_create_crtcs(struct vop2 *vop2)
  
  		if (vp->crtc.port)
  			vp->nlayers = vop2_data->win_size / nvps;
@@ -48,7 +48,7 @@ index 4968e2d7f70a..bb12a77eabf7 100644
  	}
  
  	return 0;
-@@ -4005,6 +4006,9 @@ static int vop2_bind(struct device *dev, struct device *master, void *data)
+@@ -3611,6 +3612,9 @@ static int vop2_bind(struct device *dev, struct device *master, void *data)
  	if (!vop2_data)
  		return -ENODEV;
  
@@ -59,10 +59,10 @@ index 4968e2d7f70a..bb12a77eabf7 100644
  	alloc_size = struct_size(vop2, win, vop2_data->win_size);
  	vop2 = devm_kzalloc(dev, alloc_size, GFP_KERNEL);
 diff --git a/drivers/gpu/drm/rockchip/rockchip_drm_vop2.h b/drivers/gpu/drm/rockchip/rockchip_drm_vop2.h
-index 4d3e3a1e1171..2e8d01a23fcf 100644
+index 352228b498d6..2ffa72f6ebfe 100644
 --- a/drivers/gpu/drm/rockchip/rockchip_drm_vop2.h
 +++ b/drivers/gpu/drm/rockchip/rockchip_drm_vop2.h
-@@ -337,6 +337,11 @@ struct vop2_video_port {
+@@ -315,6 +315,11 @@ struct vop2_video_port {
  	struct drm_pending_vblank_event *event;
  
  	unsigned int nlayers;
@@ -71,11 +71,11 @@ index 4d3e3a1e1171..2e8d01a23fcf 100644
 +	 * OVL_PORT_SEL, protected by &vop2.ovl_lock
 +	 */
 +	unsigned int ovl_layers;
+ };
  
- 	/** @irq_lock: protects @vblank_enabled and @post_buf_empty_masked */
- 	spinlock_t irq_lock;
+ /**
 diff --git a/drivers/gpu/drm/rockchip/rockchip_vop2_reg.c b/drivers/gpu/drm/rockchip/rockchip_vop2_reg.c
-index 179538dd511c..03163c079a56 100644
+index d7dacb6965ce..7f3a4095e756 100644
 --- a/drivers/gpu/drm/rockchip/rockchip_vop2_reg.c
 +++ b/drivers/gpu/drm/rockchip/rockchip_vop2_reg.c
 @@ -54,6 +54,12 @@ struct vop2_alpha_config {
@@ -91,7 +91,7 @@ index 179538dd511c..03163c079a56 100644
  static const uint32_t formats_cluster[] = {
  	DRM_FORMAT_XRGB2101010,
  	DRM_FORMAT_XBGR2101010,
-@@ -1929,11 +1935,12 @@ static int vop2_find_start_mixer_id_for_vp(struct vop2_video_port *vp)
+@@ -1922,11 +1928,12 @@ static int vop2_find_start_mixer_id_for_vp(struct vop2_video_port *vp)
  	return used_layer;
  }
  
@@ -106,7 +106,7 @@ index 179538dd511c..03163c079a56 100644
  	bool src_pixel_alpha_en = false;
  	u16 src_glb_alpha_val, dst_glb_alpha_val;
  	u32 src_color_ctrl_reg, dst_color_ctrl_reg, src_alpha_ctrl_reg, dst_alpha_ctrl_reg;
-@@ -1942,9 +1949,9 @@ static void vop2_setup_cluster_alpha(struct vop2 *vop2, struct vop2_win *main_wi
+@@ -1935,9 +1942,9 @@ static void vop2_setup_cluster_alpha(struct vop2 *vop2, struct vop2_win *main_wi
  	bool swap = false;
  
  	/* At one win mode, win0 is dst/bottom win, and win1 is a all zero src/top win */
@@ -118,7 +118,7 @@ index 179538dd511c..03163c079a56 100644
  
  	if (!bottom_win_pstate->fb)
  		return;
-@@ -1992,13 +1999,13 @@ static void vop2_setup_cluster_alpha(struct vop2 *vop2, struct vop2_win *main_wi
+@@ -1985,13 +1992,13 @@ static void vop2_setup_cluster_alpha(struct vop2 *vop2, struct vop2_win *main_wi
  	vop2_writel(vop2, dst_alpha_ctrl_reg + offset, alpha.dst_alpha_ctrl.val);
  }
  
@@ -134,7 +134,7 @@ index 179538dd511c..03163c079a56 100644
  	int pixel_alpha_en;
  	int premulti_en, gpremulti_en = 0;
  	int mixer_id;
-@@ -2006,6 +2013,7 @@ static void vop2_setup_alpha(struct vop2_video_port *vp)
+@@ -1999,6 +2006,7 @@ static void vop2_setup_alpha(struct vop2_video_port *vp)
  	u32 offset;
  	bool bottom_layer_alpha_en = false;
  	u32 dst_global_alpha = DRM_BLEND_ALPHA_OPAQUE;
@@ -142,7 +142,7 @@ index 179538dd511c..03163c079a56 100644
  
  	if (vop2->version <= VOP_VERSION_RK3588)
  		mixer_id = vop2_find_start_mixer_id_for_vp(vp);
-@@ -2014,19 +2022,19 @@ static void vop2_setup_alpha(struct vop2_video_port *vp)
+@@ -2007,19 +2015,19 @@ static void vop2_setup_alpha(struct vop2_video_port *vp)
  
  	alpha_config.dst_pixel_alpha_en = true; /* alpha value need transfer to next mix */
  
@@ -168,7 +168,7 @@ index 179538dd511c..03163c079a56 100644
  		}
  	}
  
-@@ -2042,9 +2050,10 @@ static void vop2_setup_alpha(struct vop2_video_port *vp)
+@@ -2035,9 +2043,10 @@ static void vop2_setup_alpha(struct vop2_video_port *vp)
  		dst_alpha_ctrl_reg = RK3576_OVL_MIX0_DST_ALPHA_CTRL(vp->id);
  	}
  
@@ -182,7 +182,7 @@ index 179538dd511c..03163c079a56 100644
  
  		/*
  		 * Need to configure alpha from second layer.
-@@ -2052,13 +2061,12 @@ static void vop2_setup_alpha(struct vop2_video_port *vp)
+@@ -2045,13 +2054,12 @@ static void vop2_setup_alpha(struct vop2_video_port *vp)
  		if (zpos == 0)
  			continue;
  
@@ -198,7 +198,7 @@ index 179538dd511c..03163c079a56 100644
  
  		pixel_alpha_en = fb->format->has_alpha;
  
-@@ -2069,7 +2077,7 @@ static void vop2_setup_alpha(struct vop2_video_port *vp)
+@@ -2062,7 +2070,7 @@ static void vop2_setup_alpha(struct vop2_video_port *vp)
  			/* Cd = Cs + (1 - As) * Cd * Agd */
  			alpha_config.dst_premulti_en = false;
  			alpha_config.src_pixel_alpha_en = pixel_alpha_en;
@@ -207,7 +207,7 @@ index 179538dd511c..03163c079a56 100644
  			alpha_config.dst_glb_alpha_value = dst_global_alpha;
  		} else if (vop2_cluster_window(win)) {
  			/* Mix output data only have pixel alpha */
-@@ -2081,7 +2089,7 @@ static void vop2_setup_alpha(struct vop2_video_port *vp)
+@@ -2074,7 +2082,7 @@ static void vop2_setup_alpha(struct vop2_video_port *vp)
  			/* Cd = Cs + (1 - As) * Cd */
  			alpha_config.dst_premulti_en = true;
  			alpha_config.src_pixel_alpha_en = pixel_alpha_en;
@@ -216,7 +216,7 @@ index 179538dd511c..03163c079a56 100644
  			alpha_config.dst_glb_alpha_value = DRM_BLEND_ALPHA_OPAQUE;
  		}
  
-@@ -2168,77 +2176,35 @@ static void rk3568_vop2_wait_for_layer_cfg_done(struct vop2 *vop2)
+@@ -2161,77 +2169,35 @@ static void rk3568_vop2_wait_for_layer_cfg_done(struct vop2 *vop2)
  				    atv_layer_cfg, vop2->old_layer_sel);
  }
  
@@ -307,7 +307,7 @@ index 179538dd511c..03163c079a56 100644
  			if (layer_sel_id == win->data->layer_sel_id[vp->id])
  				break;
  		}
-@@ -2248,64 +2214,120 @@ static void rk3568_vop2_setup_layer_mixer(struct vop2_video_port *vp)
+@@ -2241,64 +2207,120 @@ static void rk3568_vop2_setup_layer_mixer(struct vop2_video_port *vp)
  		 */
  		for (i = 0; i < vop2->data->win_size; i++) {
  			old_win = &vop2->win[i];
@@ -454,7 +454,7 @@ index 179538dd511c..03163c079a56 100644
  
  	/*
  	 * As the RK3568_OVL_LAYER_SEL and RK3568_OVL_PORT_SEL are shared by all Video Ports,
-@@ -2395,28 +2417,37 @@ static void rk3568_vop2_setup_dly_for_windows(struct vop2_video_port *vp)
+@@ -2388,28 +2410,37 @@ static void rk3568_vop2_setup_dly_for_windows(struct vop2_video_port *vp)
  
  static void rk3568_vop2_setup_overlay(struct vop2_video_port *vp)
  {
@@ -495,7 +495,7 @@ index 179538dd511c..03163c079a56 100644
  	rk3568_vop2_setup_dly_for_windows(vp);
  }
  
-@@ -2461,27 +2492,36 @@ static void rk3576_vop2_setup_dly_for_windows(struct vop2_video_port *vp)
+@@ -2454,27 +2485,36 @@ static void rk3576_vop2_setup_dly_for_windows(struct vop2_video_port *vp)
  
  static void rk3576_vop2_setup_overlay(struct vop2_video_port *vp)
  {

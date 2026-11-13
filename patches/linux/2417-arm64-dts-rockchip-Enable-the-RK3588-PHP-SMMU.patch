@@ -1,0 +1,35 @@
+From 74fcf8f5421e72b21f5e62d4670cf2450738d9f6 Mon Sep 17 00:00:00 2001
+From: Arun Iyengar <aiyengar1990@gmail.com>
+Date: Thu, 12 Nov 2026 06:17:07 +0000
+Subject: [PATCH 2417/2436] arm64: dts: rockchip: Enable the RK3588 PHP SMMU
+
+Commit cd81d3a0695c ("arm64: dts: rockchip: add rk3588 pcie and php
+IOMMUs") added mmu600_php disabled, because nothing programmed the
+StreamIDs of its masters. The Rockchip GRF setup now gives GMAC0/1,
+SATA0/1/2 and USB3OTG_2 a StreamID each, all six have an iommus
+property, and the SMMU has its clock, so enable it.
+
+All six masters share the one TBU of this SMMU and there is no bypass
+around it: once the SMMU is enabled, a master without a stream table
+entry is aborted. That is why the masters were attached first.
+
+Signed-off-by: Arun Iyengar <aiyengar1990@gmail.com>
+---
+ arch/arm64/boot/dts/rockchip/rk3588-base.dtsi | 1 -
+ 1 file changed, 1 deletion(-)
+
+diff --git a/arch/arm64/boot/dts/rockchip/rk3588-base.dtsi b/arch/arm64/boot/dts/rockchip/rk3588-base.dtsi
+index 23f5435d5202..0fa6b66b1b8e 100644
+--- a/arch/arm64/boot/dts/rockchip/rk3588-base.dtsi
++++ b/arch/arm64/boot/dts/rockchip/rk3588-base.dtsi
+@@ -590,7 +590,6 @@ mmu600_php: iommu@fcb00000 {
+ 		interrupt-names = "eventq", "gerror", "priq", "cmdq-sync";
+ 		clocks = <&cru ACLK_MMU_PHP>;
+ 		#iommu-cells = <1>;
+-		status = "disabled";
+ 	};
+ 
+ 	pmu1grf: syscon@fd58a000 {
+-- 
+2.55.0
+

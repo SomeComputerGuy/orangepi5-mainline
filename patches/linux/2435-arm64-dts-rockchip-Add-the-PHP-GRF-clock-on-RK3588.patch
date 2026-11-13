@@ -1,0 +1,34 @@
+From 41bfe51fc20ea6d1b0438b1241a63813ff5cab40 Mon Sep 17 00:00:00 2001
+From: Arun Iyengar <aiyengar1990@gmail.com>
+Date: Thu, 12 Nov 2026 18:41:06 +0000
+Subject: [PATCH 2435/2436] arm64: dts: rockchip: Add the PHP GRF clock on
+ RK3588
+
+The PHP GRF's own clock gate, pclk_grf (CRU_GATE_CON32 bit 1), is not
+modelled; its parent pclk_php_root (bit 0) is. That clock is only held
+by the PHP peripherals (GMAC, combo PHYs, PCIe), so after they suspend
+it is gated and a GRF access stalls the bus. A deep suspend then hung
+in the GRF syscore resume op reading the StreamIDs.
+
+Describe the clock, so the syscon regmap enables it for every access.
+
+Signed-off-by: Arun Iyengar <aiyengar1990@gmail.com>
+---
+ arch/arm64/boot/dts/rockchip/rk3588-base.dtsi | 1 +
+ 1 file changed, 1 insertion(+)
+
+diff --git a/arch/arm64/boot/dts/rockchip/rk3588-base.dtsi b/arch/arm64/boot/dts/rockchip/rk3588-base.dtsi
+index 0fa6b66b1b8e..15b9b00d5257 100644
+--- a/arch/arm64/boot/dts/rockchip/rk3588-base.dtsi
++++ b/arch/arm64/boot/dts/rockchip/rk3588-base.dtsi
+@@ -637,6 +637,7 @@ usb_grf: syscon@fd5ac000 {
+ 	php_grf: syscon@fd5b0000 {
+ 		compatible = "rockchip,rk3588-php-grf", "syscon";
+ 		reg = <0x0 0xfd5b0000 0x0 0x1000>;
++		clocks = <&cru PCLK_PHP_ROOT>;
+ 	};
+ 
+ 	csidphy0_grf: syscon@fd5b4000 {
+-- 
+2.55.0
+

@@ -1,8 +1,7 @@
-From 2833b06af1fe1fb592b4c8c9c114a76d2501548b Mon Sep 17 00:00:00 2001
+From 26db7b1a58749db9a5aceedae9cd21f5fa38687f Mon Sep 17 00:00:00 2001
 From: Arun Iyengar <aiyengar1990@gmail.com>
 Date: Sat, 7 Nov 2026 20:32:48 +0000
-Subject: [PATCH 2331/2409] drm/rockchip: vop2: Track the VRR vtotal in the
- video port
+Subject: [PATCH] drm/rockchip: vop2: Track the VRR vtotal in the video port
 
 The VRR handling had these problems:
 
@@ -38,7 +37,7 @@ Signed-off-by: Arun Iyengar <aiyengar1990@gmail.com>
  2 files changed, 59 insertions(+), 20 deletions(-)
 
 diff --git a/drivers/gpu/drm/rockchip/rockchip_drm_vop2.c b/drivers/gpu/drm/rockchip/rockchip_drm_vop2.c
-index bc308a9b7bb7..8a1a53c3f600 100644
+index 8cfce372ceec..ca5f31858222 100644
 --- a/drivers/gpu/drm/rockchip/rockchip_drm_vop2.c
 +++ b/drivers/gpu/drm/rockchip/rockchip_drm_vop2.c
 @@ -26,7 +26,6 @@
@@ -49,7 +48,7 @@ index bc308a9b7bb7..8a1a53c3f600 100644
  #include <linux/debugfs.h>
  #include <drm/drm_debugfs.h>
  #include <drm/drm_flip_work.h>
-@@ -1244,6 +1243,10 @@ static void vop2_crtc_atomic_disable(struct drm_crtc *crtc,
+@@ -1173,6 +1172,10 @@ static void vop2_crtc_atomic_disable(struct drm_crtc *crtc,
  
  	drm_crtc_vblank_off(crtc);
  
@@ -60,7 +59,7 @@ index bc308a9b7bb7..8a1a53c3f600 100644
  	/*
  	 * Vop standby will take effect at end of current frame,
  	 * if dsp hold valid irq happen, it means standby complete.
-@@ -2944,6 +2947,10 @@ static void vop2_crtc_atomic_enable(struct drm_crtc *crtc,
+@@ -2504,6 +2507,10 @@ static void vop2_crtc_atomic_enable(struct drm_crtc *crtc,
  		    (act_end - us_to_vertical_line(mode, 0)) << 16 | act_end);
  
  	vop2_vp_write(vp, RK3568_VP_DSP_VTOTAL_VS_END, vtotal << 16 | vsync_len);
@@ -71,7 +70,7 @@ index bc308a9b7bb7..8a1a53c3f600 100644
  
  	if (mode->flags & DRM_MODE_FLAG_DBLCLK) {
  		dsp_ctrl |= RK3568_VP_DSP_CTRL__CORE_DCLK_DIV;
-@@ -3448,6 +3455,12 @@ static int vop2_crtc_atomic_check(struct drm_crtc *crtc,
+@@ -3007,6 +3014,12 @@ static int vop2_crtc_atomic_check(struct drm_crtc *crtc,
  	if (vcstate->splice)
  		nlayers = (vp->nlayers + vp->vop2->vps[vp->data->splice_vp].nlayers) / 2;
  
@@ -84,7 +83,7 @@ index bc308a9b7bb7..8a1a53c3f600 100644
  	ret = vop2_crtc_atomic_check_gamma(vp, crtc, state, crtc_state);
  	if (ret)
  		return ret;
-@@ -3480,23 +3493,28 @@ static void vop2_crtc_atomic_begin(struct drm_crtc *crtc,
+@@ -3039,23 +3052,28 @@ static void vop2_crtc_atomic_begin(struct drm_crtc *crtc,
  	vop2->ops->setup_overlay(vp);
  }
  
@@ -119,7 +118,7 @@ index bc308a9b7bb7..8a1a53c3f600 100644
  }
  
  static void vop2_crtc_atomic_flush(struct drm_crtc *crtc,
-@@ -3523,9 +3541,17 @@ static void vop2_crtc_atomic_flush(struct drm_crtc *crtc,
+@@ -3082,9 +3100,17 @@ static void vop2_crtc_atomic_flush(struct drm_crtc *crtc,
  
  	spin_lock_irq(&crtc->dev->event_lock);
  
@@ -140,7 +139,7 @@ index bc308a9b7bb7..8a1a53c3f600 100644
  	}
  
  	if (crtc->state->event) {
-@@ -4245,24 +4271,26 @@ static void vop2_vp_handle_vblank(struct vop2_video_port *vp)
+@@ -3800,24 +3826,26 @@ static void vop2_vp_handle_vblank(struct vop2_video_port *vp)
  {
  	struct drm_crtc *crtc = &vp->crtc;
  	struct vop2 *vop2 = vp->vop2;
@@ -178,10 +177,10 @@ index bc308a9b7bb7..8a1a53c3f600 100644
  
  static irqreturn_t vop2_isr(int irq, void *data)
 diff --git a/drivers/gpu/drm/rockchip/rockchip_drm_vop2.h b/drivers/gpu/drm/rockchip/rockchip_drm_vop2.h
-index 61f73783026c..83febc0e643d 100644
+index 96b98bf823aa..848fc6f31d24 100644
 --- a/drivers/gpu/drm/rockchip/rockchip_drm_vop2.h
 +++ b/drivers/gpu/drm/rockchip/rockchip_drm_vop2.h
-@@ -381,6 +381,17 @@ struct vop2_video_port {
+@@ -359,6 +359,17 @@ struct vop2_video_port {
  	struct vop2_win *primary_plane;
  	struct drm_pending_vblank_event *event;
  

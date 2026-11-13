@@ -1,0 +1,129 @@
+From 6b2ad298c1b79927b5ce2cdd4d7d1b62c216f3b0 Mon Sep 17 00:00:00 2001
+From: Nicolin Chen <nicolinc@nvidia.com>
+Date: Tue, 29 Sep 2026 03:44:57 +0000
+Subject: [PATCH 2420/2436] iommu/arm-smmu-v3: Add arm_smmu_drain_queue()
+ helper
+
+Add a counting-based arm_smmu_drain_queue() helper, to replace queue
+specific polling loops. Its until_empty mode serves the suspend and
+runtime PM routines that would drain the CMDQ. Any timed-out drain fires
+a WARN_ON as well, since reaching the timeout would take some stuck
+consumer in any realistic case.
+
+The existing queue_poll() API is not reusable for such a drain: it is the
+atomic busy-wait for the command issuing paths, and it assumes a hardware
+consumer making progress. A drain caller is sleepable, in contrast, while
+the EVTQ/PRIQ consumer is a threaded IRQ handler that needs the CPU: such
+a busy wait would starve the handler throughout an entire timeout, whenever
+the waiter and the handler shared one CPU on a non-preemptible kernel. So,
+this new sleeping helper is marked with a might_sleep() as well, given that
+an atomic-context misuse would otherwise hide behind an empty queue.
+
+Note that a drained event is dequeued, but not necessarily handled, since
+queue_remove_raw() moves the MMIO CONS before the threaded IRQ handler gets
+to push the event onto the IOPF workqueue. A subsequent change will invoke
+synchronize_irq() and iopf_queue_flush_dev() to close that gap, and it will
+act on the errno of a timed-out drain too.
+
+Assisted-by: Claude:claude-fable-5
+Signed-off-by: Nicolin Chen <nicolinc@nvidia.com>
+Signed-off-by: Pranjal Shrivastava <praan@google.com>
+---
+ drivers/iommu/arm/arm-smmu-v3/arm-smmu-v3.c | 81 +++++++++++++++++++++
+ 1 file changed, 81 insertions(+)
+
+diff --git a/drivers/iommu/arm/arm-smmu-v3/arm-smmu-v3.c b/drivers/iommu/arm/arm-smmu-v3/arm-smmu-v3.c
+index 3b9fb6ed8fbd..72c9879ad382 100644
+--- a/drivers/iommu/arm/arm-smmu-v3/arm-smmu-v3.c
++++ b/drivers/iommu/arm/arm-smmu-v3/arm-smmu-v3.c
+@@ -949,6 +949,87 @@ static int arm_smmu_cmdq_batch_submit(struct arm_smmu_device *smmu,
+ 					   cmds->num, true);
+ }
+ 
++/**
++ * arm_smmu_drain_queue - Drain an SMMU queue
++ * @smmu: the SMMU device
++ * @q: the queue to drain
++ * @until_empty: target selection
++ *
++ * With @until_empty == true (for CMDQ), exit once the queue is observed empty:
++ *
++ *   cons0                cons                                prod
++ *     |                   |                                   |
++ *  ---+###################+=====================+=============+--->
++ *                         |<--------- undrained==0? --------->|
++ *
++ * With @until_empty == false (for EVTQ/PRIQ), exit once "drained" reaches its
++ * target: "pending" (i.e. prod0 - cons0, frozen at the entry time):
++ *
++ *   cons0                cons                 prod0         (prod)
++ *     |<---- drained ---->|                     |             |
++ *  ---+###################+=====================+=============+--->
++ *     |<--------------- pending --------------->|
++ *
++ * Note that a drained entry is dequeued, but not necessarily handled: the
++ * EVTQ/PRIQ callers must follow up with a synchronize_irq() to wait for the
++ * threaded IRQ handler to finish handling the dequeued entries.
++ *
++ * Context: Process context; may sleep.
++ * Return: 0 on success or a negative errno on timeout.
++ */
++static int __maybe_unused arm_smmu_drain_queue(struct arm_smmu_device *smmu,
++					       struct arm_smmu_queue *q,
++					       bool until_empty)
++{
++	ktime_t timeout = ktime_add_us(ktime_get(), ARM_SMMU_POLL_TIMEOUT_US);
++	u32 cons, prod, prev, undrained;
++	u32 drained = 0, pending;
++
++	might_sleep();
++
++	cons = readl_relaxed(q->cons_reg);
++	prod = readl_relaxed(q->prod_reg);
++	/* The exit target: the number of entries in the queue at entry */
++	pending = Q_POS(&q->llq, prod - cons);
++
++	while (true) {
++		/* Accumulate the entries consumed since the last poll */
++		prev = cons;
++		cons = readl_relaxed(q->cons_reg);
++		drained += Q_POS(&q->llq, cons - prev);
++
++		prod = readl_relaxed(q->prod_reg);
++		undrained = Q_POS(&q->llq, prod - cons);
++
++		/* Exit on an empty queue, regardless of until_empty */
++		if (!undrained)
++			return 0;
++
++		/* Snapshot mode: exit once the pending entries are drained */
++		if (!until_empty && drained >= pending)
++			return 0;
++
++		/*
++		 * A timeout means the consumer might be stuck. In theory, if it
++		 * moves 2 * qsize entries or more within a single poll interval
++		 * Q_POS() would wrap and undercount drained: that could trigger
++		 * a spurious warning too, if the queue was never once observed
++		 * empty. Yet, that much consumption in such a short interval is
++		 * unrealistic. WARN it only, as a stuck consumer is a real bug.
++		 */
++		if (WARN_ON(ktime_compare(ktime_get(), timeout) > 0))
++			break;
++
++		/* The consumer might be a threaded IRQ handler. Yield to it */
++		usleep_range(100, 200);
++	}
++
++	dev_warn_ratelimited(smmu->dev,
++			     "queue drain timed out at prod=0x%x cons=0x%x\n",
++			     prod, cons);
++	return -ETIMEDOUT;
++}
++
+ static void arm_smmu_page_response(struct device *dev, struct iopf_fault *unused,
+ 				   struct iommu_page_response *resp)
+ {
+-- 
+2.55.0
+

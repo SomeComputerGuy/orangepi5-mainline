@@ -1,0 +1,118 @@
+From 46811a9338a998ff5f34376745fba049ab251030 Mon Sep 17 00:00:00 2001
+From: Pranjal Shrivastava <praan@google.com>
+Date: Tue, 29 Sep 2026 03:45:05 +0000
+Subject: [PATCH 2428/2436] iommu/arm-smmu-v3: Add CMDQ_PROD_STOP_FLAG to gate
+ CMDQ submissions
+
+Introduce a new bit flag, CMDQ_PROD_STOP_FLAG (bit 30), in the command
+queue's producer index to safely gate command submissions during device
+suspension.
+
+The flag embeds the suspend state directly into the existing global state
+The flag is checked in the cmpxchg loop in arm_smmu_cmdq_issue_cmdlist(),
+which acts as a Point of Commitment, ensuring that no indices are
+reserved or committed once the SMMU begins suspending.
+
+This prevents a situation of "abandoned batches" where indices are
+incremented but commands are never written, which would otherwise
+lead to timeout during the drain poll.
+
+Update queue_inc_prod_n() to preserve this flag during index
+calculations, ensuring that any in-flight commands that successfully
+passed the point of commitment can proceed to completion while the
+flag remains set.
+
+Suggested-by: Daniel Mentz <danielmentz@google.com>
+Reviewed-by: Nicolin Chen <nicolinc@nvidia.com>
+Signed-off-by: Pranjal Shrivastava <praan@google.com>
+---
+ drivers/iommu/arm/arm-smmu-v3/arm-smmu-v3.c | 35 +++++++++++++++++++--
+ drivers/iommu/arm/arm-smmu-v3/arm-smmu-v3.h |  5 +++
+ 2 files changed, 38 insertions(+), 2 deletions(-)
+
+diff --git a/drivers/iommu/arm/arm-smmu-v3/arm-smmu-v3.c b/drivers/iommu/arm/arm-smmu-v3/arm-smmu-v3.c
+index b4a6ade774d5..268d49385248 100644
+--- a/drivers/iommu/arm/arm-smmu-v3/arm-smmu-v3.c
++++ b/drivers/iommu/arm/arm-smmu-v3/arm-smmu-v3.c
+@@ -219,7 +219,8 @@ static int queue_sync_prod_in(struct arm_smmu_queue *q)
+ static u32 queue_inc_prod_n(struct arm_smmu_ll_queue *q, int n)
+ {
+ 	u32 prod = Q_POS(q, q->prod) + n;
+-	return Q_OVF(q->prod) | Q_POS(q, prod);
++
++	return Q_OVF(q->prod) | Q_STOP(q->prod) | Q_POS(q, prod);
+ }
+ 
+ static void queue_poll_init(struct arm_smmu_device *smmu,
+@@ -727,13 +728,42 @@ int __arm_smmu_cmdq_issue_cmdlist(struct arm_smmu_device *smmu,
+ 	do {
+ 		u64 old;
+ 
++		/*
++		 * If the SMMU is suspended/suspending, any new CMDs are elided.
++		 * This loop is the Point of Commitment. If we haven't cmpxchg'd
++		 * our new indices yet, we can safely bail. Once the indices are
++		 * committed, we MUST write valid commands to those slots to
++		 * avoid indefinite polling in the drain function.
++		 */
++		if (Q_STOP(llq.prod)) {
++			local_irq_restore(flags);
++			return 0;
++		}
++
+ 		while (!queue_has_space(&llq, n + sync)) {
+ 			local_irq_restore(flags);
++
++			/* Avoid waiting for space if the SMMU is suspending */
++			if (Q_STOP(READ_ONCE(cmdq->q.llq.prod)))
++				return 0;
++
+ 			if (arm_smmu_cmdq_poll_until_not_full(smmu, cmdq, &llq))
+ 				dev_err_ratelimited(smmu->dev, "CMDQ timeout\n");
+ 			local_irq_save(flags);
+ 		}
+ 
++		/*
++		 * If we exited the polling loop because the queue finally
++		 * has space, but the STOP_FLAG was set during the poll,
++		 * we must abort immediately. If we proceed, we will
++		 * commit new commands beyond the Point of Commitment while
++		 * the SMMU is suspending.
++		 */
++		if (Q_STOP(llq.prod)) {
++			local_irq_restore(flags);
++			return 0;
++		}
++
+ 		head.cons = llq.cons;
+ 		head.prod = queue_inc_prod_n(&llq, n + sync) |
+ 					     CMDQ_PROD_OWNED_FLAG;
+@@ -780,7 +810,8 @@ int __arm_smmu_cmdq_issue_cmdlist(struct arm_smmu_device *smmu,
+ 		/* b. Stop gathering work by clearing the owned flag */
+ 		prod = atomic_fetch_andnot_relaxed(CMDQ_PROD_OWNED_FLAG,
+ 						   &cmdq->q.llq.atomic.prod);
+-		prod &= ~CMDQ_PROD_OWNED_FLAG;
++		/* Strip all metadata flags */
++		prod &= CMDQ_PROD_IDX_MASK;
+ 
+ 		/*
+ 		 * c. Wait for any gathered work to be written to the queue.
+diff --git a/drivers/iommu/arm/arm-smmu-v3/arm-smmu-v3.h b/drivers/iommu/arm/arm-smmu-v3/arm-smmu-v3.h
+index deefb17e31eb..794b258550dd 100644
+--- a/drivers/iommu/arm/arm-smmu-v3/arm-smmu-v3.h
++++ b/drivers/iommu/arm/arm-smmu-v3/arm-smmu-v3.h
+@@ -394,6 +394,11 @@ static inline unsigned int arm_smmu_cdtab_l2_idx(unsigned int ssid)
+ #define CMDQ_ERR_CERROR_ATC_INV_IDX	3
+ 
+ #define CMDQ_PROD_OWNED_FLAG		Q_OVERFLOW_FLAG
++#define CMDQ_PROD_STOP_FLAG		(1U << 30)
++#define Q_STOP(p)			((p) & CMDQ_PROD_STOP_FLAG)
++
++/* Mask out software-only metadata flags to get the pure queue index/wrap bits */
++#define CMDQ_PROD_IDX_MASK		~(CMDQ_PROD_STOP_FLAG | CMDQ_PROD_OWNED_FLAG)
+ 
+ struct arm_smmu_cmd {
+ 	u64 data[CMDQ_ENT_DWORDS];
+-- 
+2.55.0
+

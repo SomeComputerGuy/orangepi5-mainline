@@ -1,0 +1,53 @@
+From 7b006313032974547edf48fd13e12c707c072373 Mon Sep 17 00:00:00 2001
+From: Arun Iyengar <aiyengar1990@gmail.com>
+Date: Thu, 12 Nov 2026 06:17:07 +0000
+Subject: [PATCH 2416/2436] arm64: dts: rockchip: Attach the RK3588 SATA
+ controllers to the PHP SMMU
+
+SATA0, SATA1 and SATA2 are three of the six masters behind MMU600_PHP
+(RK3588 TRM, chapter 8, figure 8-1). Their StreamIDs are 3, 4 and 5,
+programmed into PHP_GRF_SATA0/1/2_SID_AR/AW by the Rockchip GRF setup.
+
+The properties have no effect while the mmu600_php node is disabled.
+
+Signed-off-by: Arun Iyengar <aiyengar1990@gmail.com>
+---
+ arch/arm64/boot/dts/rockchip/rk3588-base.dtsi  | 2 ++
+ arch/arm64/boot/dts/rockchip/rk3588-extra.dtsi | 1 +
+ 2 files changed, 3 insertions(+)
+
+diff --git a/arch/arm64/boot/dts/rockchip/rk3588-base.dtsi b/arch/arm64/boot/dts/rockchip/rk3588-base.dtsi
+index fb3801cd57ec..23f5435d5202 100644
+--- a/arch/arm64/boot/dts/rockchip/rk3588-base.dtsi
++++ b/arch/arm64/boot/dts/rockchip/rk3588-base.dtsi
+@@ -2514,6 +2514,7 @@ sata0: sata@fe210000 {
+ 		compatible = "rockchip,rk3588-dwc-ahci", "snps,dwc-ahci";
+ 		reg = <0 0xfe210000 0 0x1000>;
+ 		interrupts = <GIC_SPI 273 IRQ_TYPE_LEVEL_HIGH 0>;
++		iommus = <&mmu600_php 3>;
+ 		clocks = <&cru ACLK_SATA0>, <&cru CLK_PMALIVE0>,
+ 			 <&cru CLK_RXOOB0>, <&cru CLK_PIPEPHY0_REF>,
+ 			 <&cru CLK_PIPEPHY0_PIPE_ASIC_G>;
+@@ -2537,6 +2538,7 @@ sata2: sata@fe230000 {
+ 		compatible = "rockchip,rk3588-dwc-ahci", "snps,dwc-ahci";
+ 		reg = <0 0xfe230000 0 0x1000>;
+ 		interrupts = <GIC_SPI 275 IRQ_TYPE_LEVEL_HIGH 0>;
++		iommus = <&mmu600_php 5>;
+ 		clocks = <&cru ACLK_SATA2>, <&cru CLK_PMALIVE2>,
+ 			 <&cru CLK_RXOOB2>, <&cru CLK_PIPEPHY2_REF>,
+ 			 <&cru CLK_PIPEPHY2_PIPE_ASIC_G>;
+diff --git a/arch/arm64/boot/dts/rockchip/rk3588-extra.dtsi b/arch/arm64/boot/dts/rockchip/rk3588-extra.dtsi
+index cccb3c0d7e6f..8ca06b7d8260 100644
+--- a/arch/arm64/boot/dts/rockchip/rk3588-extra.dtsi
++++ b/arch/arm64/boot/dts/rockchip/rk3588-extra.dtsi
+@@ -586,6 +586,7 @@ sata1: sata@fe220000 {
+ 		compatible = "rockchip,rk3588-dwc-ahci", "snps,dwc-ahci";
+ 		reg = <0 0xfe220000 0 0x1000>;
+ 		interrupts = <GIC_SPI 274 IRQ_TYPE_LEVEL_HIGH 0>;
++		iommus = <&mmu600_php 4>;
+ 		clocks = <&cru ACLK_SATA1>, <&cru CLK_PMALIVE1>,
+ 			 <&cru CLK_RXOOB1>, <&cru CLK_PIPEPHY1_REF>,
+ 			 <&cru CLK_PIPEPHY1_PIPE_ASIC_G>;
+-- 
+2.55.0
+

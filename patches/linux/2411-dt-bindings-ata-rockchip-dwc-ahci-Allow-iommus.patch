@@ -1,0 +1,31 @@
+From f2c1f85eb8334ef464af4cbb5133a7512fad021f Mon Sep 17 00:00:00 2001
+From: Arun Iyengar <aiyengar1990@gmail.com>
+Date: Thu, 12 Nov 2026 06:15:58 +0000
+Subject: [PATCH 2411/2436] dt-bindings: ata: rockchip,dwc-ahci: Allow iommus
+
+The three SATA controllers of the RK3588 are AXI masters behind the
+SoC's second SMMU (MMU600_PHP). Allow the iommus property so that they
+can be attached to it. The generic snps,dwc-ahci binding already has it.
+
+Signed-off-by: Arun Iyengar <aiyengar1990@gmail.com>
+---
+ Documentation/devicetree/bindings/ata/rockchip,dwc-ahci.yaml | 3 +++
+ 1 file changed, 3 insertions(+)
+
+diff --git a/Documentation/devicetree/bindings/ata/rockchip,dwc-ahci.yaml b/Documentation/devicetree/bindings/ata/rockchip,dwc-ahci.yaml
+index b5ecaabfe2e2..e33e8b5591ee 100644
+--- a/Documentation/devicetree/bindings/ata/rockchip,dwc-ahci.yaml
++++ b/Documentation/devicetree/bindings/ata/rockchip,dwc-ahci.yaml
+@@ -34,6 +34,9 @@ properties:
+           - rockchip,rk3588-dwc-ahci
+       - const: snps,dwc-ahci
+ 
++  iommus:
++    maxItems: 1
++
+   ports-implemented:
+     const: 1
+ 
+-- 
+2.55.0
+

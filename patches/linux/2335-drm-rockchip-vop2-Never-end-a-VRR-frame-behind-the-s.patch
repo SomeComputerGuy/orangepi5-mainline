@@ -1,8 +1,8 @@
-From 5f9a5b906a0dd29a297ef595f90a63872b560e6a Mon Sep 17 00:00:00 2001
+From 4fc35c479b8ae4b6a4fcfe0e784c1d2a1cb9203d Mon Sep 17 00:00:00 2001
 From: Arun Iyengar <aiyengar1990@gmail.com>
 Date: Sat, 7 Nov 2026 23:19:09 +0000
-Subject: [PATCH 2335/2409] drm/rockchip: vop2: Never end a VRR frame behind
- the scan position
+Subject: [PATCH] drm/rockchip: vop2: Never end a VRR frame behind the scan
+ position
 
 When a new frame is ready, atomic_flush() ends the stretched front porch
 of the frame being scanned out by writing the vtotal of the highest
@@ -36,10 +36,10 @@ Signed-off-by: Arun Iyengar <aiyengar1990@gmail.com>
  1 file changed, 37 insertions(+), 5 deletions(-)
 
 diff --git a/drivers/gpu/drm/rockchip/rockchip_drm_vop2.c b/drivers/gpu/drm/rockchip/rockchip_drm_vop2.c
-index 2a5e7556960c..67467184758e 100644
+index a08d4a19b435..42c70b505889 100644
 --- a/drivers/gpu/drm/rockchip/rockchip_drm_vop2.c
 +++ b/drivers/gpu/drm/rockchip/rockchip_drm_vop2.c
-@@ -3504,9 +3504,17 @@ static u32 vop2_vp_read_vcnt(struct vop2_video_port *vp)
+@@ -3063,9 +3063,17 @@ static u32 vop2_vp_read_vcnt(struct vop2_video_port *vp)
  }
  
  /*
@@ -60,7 +60,7 @@ index 2a5e7556960c..67467184758e 100644
   */
  static void vop2_vp_set_vrr_vtotal(struct vop2_video_port *vp, u16 vtotal)
  {
-@@ -3527,6 +3535,30 @@ static void vop2_vp_set_vrr_vtotal(struct vop2_video_port *vp, u16 vtotal)
+@@ -3086,6 +3094,30 @@ static void vop2_vp_set_vrr_vtotal(struct vop2_video_port *vp, u16 vtotal)
  	vp->vrr_cur_vtotal = vtotal;
  }
  
@@ -91,7 +91,7 @@ index 2a5e7556960c..67467184758e 100644
  static void vop2_crtc_atomic_flush(struct drm_crtc *crtc,
  				   struct drm_atomic_commit *state)
  {
-@@ -3554,14 +3586,14 @@ static void vop2_crtc_atomic_flush(struct drm_crtc *crtc,
+@@ -3113,14 +3145,14 @@ static void vop2_crtc_atomic_flush(struct drm_crtc *crtc,
  	/*
  	 * VRR: the new frame is ready (the configuration is marked done
  	 * above), so end the stretched front porch of the current frame at the

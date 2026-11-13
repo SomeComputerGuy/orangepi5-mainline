@@ -1,8 +1,8 @@
-From ce09ebbba553e60862a264dd5661fa6db9d414d6 Mon Sep 17 00:00:00 2001
+From 1c641fc65d3555d0eac33b02bbe41f207a38ed7b Mon Sep 17 00:00:00 2001
 From: Arun Iyengar <aiyengar1990@gmail.com>
 Date: Sat, 7 Nov 2026 20:44:21 +0000
-Subject: [PATCH 2333/2409] drm/rockchip: vop2: Re-stretch VRR frames after
- commits without event
+Subject: [PATCH] drm/rockchip: vop2: Re-stretch VRR frames after commits
+ without event
 
 The VRR front porch is stretched again from the frame start interrupt.
 That interrupt is only enabled while someone holds a vblank reference,
@@ -20,10 +20,10 @@ Signed-off-by: Arun Iyengar <aiyengar1990@gmail.com>
  1 file changed, 10 insertions(+)
 
 diff --git a/drivers/gpu/drm/rockchip/rockchip_drm_vop2.c b/drivers/gpu/drm/rockchip/rockchip_drm_vop2.c
-index 8a1a53c3f600..022e79bd2bd8 100644
+index ca5f31858222..6e80c508a496 100644
 --- a/drivers/gpu/drm/rockchip/rockchip_drm_vop2.c
 +++ b/drivers/gpu/drm/rockchip/rockchip_drm_vop2.c
-@@ -3569,6 +3569,16 @@ static void vop2_crtc_atomic_flush(struct drm_crtc *crtc,
+@@ -3128,6 +3128,16 @@ static void vop2_crtc_atomic_flush(struct drm_crtc *crtc,
  		}
  
  		crtc->state->event = NULL;

@@ -93,6 +93,8 @@ Not finished. Listed so you know what is coming; no dates.
 
 - HDMI VRR and ALLM (game mode): in the image; underruns while page-flipping at some
   high refresh rates. In testing.
+- Two full-screen layers at 4K120: more than the display controller's memory port can
+  fetch, so the picture underruns. A check that refuses such setups instead is in testing.
 - HDMI FRL: fix for the rare "No Signal" after a mode change in testing. 12 Gbit/s per
   lane (4K120 at 10 bpc, 4K144) is being investigated.
 - DisplayPort: fix for the rare black picture after a mode change in testing.
@@ -113,10 +115,15 @@ Not finished. Listed so you know what is coming; no dates.
 - Encoders: an FFmpeg encoder is planned; today only GStreamer can use them.
 - Parity with the vendor's MPP stack: still missing are compressed (AFBC) decoder output,
   VP8 encode and multiview HEVC. Planned.
-- Second IOMMU (MMU600_PHP) for SATA, USB 3 and Ethernet: USB 3 and Ethernet pass; deep
-  suspend and SATA are still being worked on. In testing.
+- Second IOMMU (MMU600_PHP) for SATA, USB 3 and Ethernet: now in the kernel patches. SATA,
+  USB 3, Ethernet and deep suspend pass on the board; data transfer over the USB-C port is
+  not tested yet. Upstream posting waits for the SMMUv3 power-management series it builds on.
 - Crypto engine: driver ported, self-tests pass, one cross-check fails. In testing.
-- OP-TEE with a firmware TPM and secure storage: built, board test pending.
+- OP-TEE with a firmware TPM and secure storage: on the board, OP-TEE's test suite, the
+  TPM, sealing and a TPM-unlocked LUKS volume pass. The TPM was missing after one reboot
+  because Ubuntu's tee-supplicant service can start before the OP-TEE driver loads; a fix
+  (upstream's device-ordered service) is in testing. Test firmware only, booted from SD; no
+  fuses or keys are burned.
 - Verified and measured boot without burning fuses, and an encrypted root unlocked by
   TPM + PIN: works in emulation, board test pending.
 - Upstreaming: about 30 series are posted and in review; the rest follow as they pass

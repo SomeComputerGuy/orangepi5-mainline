@@ -1,0 +1,66 @@
+From b7cda74374a31d822ec4303342c5a30efdb96247 Mon Sep 17 00:00:00 2001
+From: Pranjal Shrivastava <praan@google.com>
+Date: Tue, 29 Sep 2026 03:45:01 +0000
+Subject: [PATCH 2424/2436] genirq/msi: Cache MSI message in
+ irq_chip_write_msi_msg()
+
+Currently, PCI MSI caches the composed MSI message into the MSI
+descriptor inside __pci_write_msi_msg(), whereas platform MSI and other
+device MSI domains do not cache the message in the core, forcing
+individual drivers to manually copy the message into desc->msg if they
+need to restore it across power transitions.
+
+Cache desc->msg in irq_chip_write_msi_msg() before invoking the chip
+callback so all hierarchical MSI domains automatically record the
+latest message. Document why the redundant assignment in
+__pci_write_msi_msg() must remain for direct callers outside the
+irq_chip hierarchy.
+
+Suggested-by: Thomas Gleixner <tglx@kernel.org>
+Signed-off-by: Pranjal Shrivastava <praan@google.com>
+Acked-by: Bjorn Helgaas <bhelgaas@google.com>
+---
+ drivers/pci/msi/msi.c | 6 ++++++
+ kernel/irq/msi.c      | 9 +++++++++
+ 2 files changed, 15 insertions(+)
+
+diff --git a/drivers/pci/msi/msi.c b/drivers/pci/msi/msi.c
+index 80a9db417dc8..f7bedc31d486 100644
+--- a/drivers/pci/msi/msi.c
++++ b/drivers/pci/msi/msi.c
+@@ -257,6 +257,12 @@ void __pci_write_msi_msg(struct msi_desc *entry, struct msi_msg *msg)
+ 		pci_write_msg_msi(dev, entry, msg);
+ 	}
+ 
++	/*
++	 * Although irq_chip_write_msi_msg() already caches the message,
++	 * keep the assignment here for callers that invoke
++	 * __pci_write_msi_msg() or pci_write_msi_msg() directly outside
++	 * the irq_chip hierarchy.
++	 */
+ 	entry->msg = *msg;
+ 
+ 	if (entry->write_msi_msg)
+diff --git a/kernel/irq/msi.c b/kernel/irq/msi.c
+index fb5f372215bf..df460a574d80 100644
+--- a/kernel/irq/msi.c
++++ b/kernel/irq/msi.c
+@@ -634,6 +634,15 @@ static unsigned int msi_domain_get_hwsize(struct device *dev, unsigned int domid
+ static inline void irq_chip_write_msi_msg(struct irq_data *data,
+ 					  struct msi_msg *msg)
+ {
++	struct msi_desc *desc = irq_data_get_msi_desc(data);
++
++	/*
++	 * PCI Multi-MSI shares a single descriptor across all vectors and
++	 * the device stores only the base message. Cache the message of the
++	 * first interrupt only, so that sub-vectors cannot overwrite it.
++	 */
++	if (desc->irq == data->irq)
++		desc->msg = *msg;
+ 	data->chip->irq_write_msi_msg(data, msg);
+ }
+ 
+-- 
+2.55.0
+

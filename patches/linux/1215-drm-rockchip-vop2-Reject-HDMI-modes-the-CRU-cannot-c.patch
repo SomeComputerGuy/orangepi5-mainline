@@ -1,8 +1,8 @@
-From 1447b2a779a77a899babd464b1e726049a62df33 Mon Sep 17 00:00:00 2001
+From 2bdfb19f12f3773c594f8593ec8f51336c6df7f8 Mon Sep 17 00:00:00 2001
 From: Arun Iyengar <aiyengar1990@gmail.com>
 Date: Sat, 31 Oct 2026 20:39:19 +0000
-Subject: [PATCH 5/5] drm/rockchip: vop2: Reject HDMI modes the CRU cannot
- clock exactly
+Subject: [PATCH] drm/rockchip: vop2: Reject HDMI modes the CRU cannot clock
+ exactly
 
 When the DCLK of a video port driving HDMI cannot come from the HDMI PHY
 PLL (FRL mode, pixel clocks above 600 MHz), it is taken from the system
@@ -44,10 +44,10 @@ Signed-off-by: Arun Iyengar <aiyengar1990@gmail.com>
  3 files changed, 84 insertions(+), 5 deletions(-)
 
 diff --git a/drivers/gpu/drm/rockchip/rockchip_drm_vop2.c b/drivers/gpu/drm/rockchip/rockchip_drm_vop2.c
-index 06b98fc..6247671 100644
+index f74e2a0adead..86d5c3cb8812 100644
 --- a/drivers/gpu/drm/rockchip/rockchip_drm_vop2.c
 +++ b/drivers/gpu/drm/rockchip/rockchip_drm_vop2.c
-@@ -2234,6 +2234,68 @@ static int vop2_crtc_atomic_check_gamma(struct vop2_video_port *vp,
+@@ -2090,6 +2090,68 @@ static int vop2_crtc_atomic_check_gamma(struct vop2_video_port *vp,
  	return 0;
  }
  
@@ -116,7 +116,7 @@ index 06b98fc..6247671 100644
  static int vop2_crtc_atomic_check(struct drm_crtc *crtc,
  				  struct drm_atomic_commit *state)
  {
-@@ -2247,6 +2309,10 @@ static int vop2_crtc_atomic_check(struct drm_crtc *crtc,
+@@ -2103,6 +2165,10 @@ static int vop2_crtc_atomic_check(struct drm_crtc *crtc,
  	if (ret)
  		return ret;
  
@@ -128,10 +128,10 @@ index 06b98fc..6247671 100644
  		nplanes++;
  
 diff --git a/drivers/gpu/drm/rockchip/rockchip_drm_vop2.h b/drivers/gpu/drm/rockchip/rockchip_drm_vop2.h
-index 16ef30c..30a1159 100644
+index 5a0ef4ee8227..bb7492765e98 100644
 --- a/drivers/gpu/drm/rockchip/rockchip_drm_vop2.h
 +++ b/drivers/gpu/drm/rockchip/rockchip_drm_vop2.h
-@@ -292,6 +292,9 @@ struct vop2_video_port {
+@@ -272,6 +272,9 @@ struct vop2_video_port {
   */
  struct vop2_ops {
  	unsigned long (*setup_intf_mux)(struct vop2_video_port *vp, int ep_id, u32 polflags);
@@ -142,10 +142,10 @@ index 16ef30c..30a1159 100644
  	void (*setup_overlay)(struct vop2_video_port *vp);
  };
 diff --git a/drivers/gpu/drm/rockchip/rockchip_vop2_reg.c b/drivers/gpu/drm/rockchip/rockchip_vop2_reg.c
-index 83203d1..0a50c63 100644
+index f1c8f6ec32ae..51eddb8a2926 100644
 --- a/drivers/gpu/drm/rockchip/rockchip_vop2_reg.c
 +++ b/drivers/gpu/drm/rockchip/rockchip_vop2_reg.c
-@@ -1564,13 +1564,13 @@ static unsigned long rk3588_calc_dclk(unsigned long child_clk, unsigned long max
+@@ -1574,13 +1574,13 @@ static unsigned long rk3588_calc_dclk(unsigned long child_clk, unsigned long max
   * DSI: mipi_pixclk <= dclk_out <= dclk_core
   */
  static unsigned long rk3588_calc_cru_cfg(struct vop2_video_port *vp, int id,
@@ -162,7 +162,7 @@ index 83203d1..0a50c63 100644
  	int output_mode = vcstate->output_mode;
  	unsigned long v_pixclk = adjusted_mode->crtc_clock * 1000LL; /* video timing pixclk */
  	unsigned long dclk_core_rate = v_pixclk >> 2;
-@@ -1677,6 +1677,15 @@ static unsigned long rk3588_calc_cru_cfg(struct vop2_video_port *vp, int id,
+@@ -1683,6 +1683,15 @@ static unsigned long rk3588_calc_cru_cfg(struct vop2_video_port *vp, int id,
   * 1: Video Port3
   * 3: Video Port 1(MIPI1 only)
   */
@@ -178,7 +178,7 @@ index 83203d1..0a50c63 100644
  static u32 rk3588_get_mipi_port_mux(int vp_id)
  {
  	if (vp_id == 1)
-@@ -1708,8 +1717,8 @@ static unsigned long rk3588_set_intf_mux(struct vop2_video_port *vp, int id, u32
+@@ -1711,8 +1720,8 @@ static unsigned long rk3588_set_intf_mux(struct vop2_video_port *vp, int id, u32
  	unsigned long clock;
  	u32 die, dip, div, vp_clk_div, val;
  
@@ -189,7 +189,7 @@ index 83203d1..0a50c63 100644
  	if (!clock)
  		return 0;
  
-@@ -2513,6 +2522,7 @@ static const struct vop2_ops rk3576_vop_ops = {
+@@ -2516,6 +2525,7 @@ static const struct vop2_ops rk3576_vop_ops = {
  
  static const struct vop2_ops rk3588_vop_ops = {
  	.setup_intf_mux = rk3588_set_intf_mux,

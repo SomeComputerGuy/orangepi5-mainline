@@ -1,4 +1,4 @@
-From 767cb4bf387bc27b0d509b01c3e5de5ac8f732fa Mon Sep 17 00:00:00 2001
+From 7a6d7225ae6ff3ae99f6b3c9cb4aef572a6f242a Mon Sep 17 00:00:00 2001
 From: Arun Iyengar <aiyengar1990@gmail.com>
 Date: Sun, 1 Nov 2026 06:05:37 +0000
 Subject: [PATCH] drm/rockchip: vop2: Raise ACLK for every video port above 600
@@ -34,7 +34,7 @@ Signed-off-by: Arun Iyengar <aiyengar1990@gmail.com>
  2 files changed, 58 insertions(+), 18 deletions(-)
 
 diff --git a/drivers/gpu/drm/rockchip/rockchip_drm_vop2.c b/drivers/gpu/drm/rockchip/rockchip_drm_vop2.c
-index feaf38a5813f..c0daba996f61 100644
+index 86d5c3cb8812..61d2e2478210 100644
 --- a/drivers/gpu/drm/rockchip/rockchip_drm_vop2.c
 +++ b/drivers/gpu/drm/rockchip/rockchip_drm_vop2.c
 @@ -105,7 +105,7 @@ enum vop2_afbc_format {
@@ -46,7 +46,7 @@ index feaf38a5813f..c0daba996f61 100644
  
  /*
   * bus-format types.
-@@ -1112,6 +1112,50 @@ static bool vop2_gamma_lut_in_use(struct vop2 *vop2, struct vop2_video_port *vp)
+@@ -1048,6 +1048,50 @@ static bool vop2_gamma_lut_in_use(struct vop2 *vop2, struct vop2_video_port *vp)
  	return gamma_en_vp_id != nr_vps && gamma_en_vp_id != vp->id;
  }
  
@@ -97,7 +97,7 @@ index feaf38a5813f..c0daba996f61 100644
  static void vop2_crtc_atomic_disable(struct drm_crtc *crtc,
  				     struct drm_atomic_commit *state)
  {
-@@ -1156,16 +1200,7 @@ static void vop2_crtc_atomic_disable(struct drm_crtc *crtc,
+@@ -1091,16 +1135,7 @@ static void vop2_crtc_atomic_disable(struct drm_crtc *crtc,
  
  	clk_disable_unprepare(vp->dclk);
  
@@ -115,7 +115,7 @@ index feaf38a5813f..c0daba996f61 100644
  
  	vp->enabled = false;
  
-@@ -2089,12 +2124,9 @@ static void vop2_crtc_atomic_enable(struct drm_crtc *crtc,
+@@ -1917,12 +1952,9 @@ static void vop2_crtc_atomic_enable(struct drm_crtc *crtc,
  
  	vop2->enable_count++;
  
@@ -131,19 +131,19 @@ index feaf38a5813f..c0daba996f61 100644
  
  	vcstate->yuv_overlay = is_yuv_output(vcstate->bus_format);
  
-@@ -2228,6 +2260,7 @@ static void vop2_crtc_atomic_enable(struct drm_crtc *crtc,
+@@ -2055,6 +2087,7 @@ static void vop2_crtc_atomic_enable(struct drm_crtc *crtc,
+ 	return;
  
  err_put_enable_count:
- 	vop2_crtc_disable_post_buf_empty_irq(vp);
 +	vop2_crtc_put_aclk_boost(vp);
  	if (!--vop2->enable_count)
  		vop2_disable(vop2);
  
 diff --git a/drivers/gpu/drm/rockchip/rockchip_drm_vop2.h b/drivers/gpu/drm/rockchip/rockchip_drm_vop2.h
-index d5b3af740824..8b6f59e93580 100644
+index bb7492765e98..990ac3ea9da9 100644
 --- a/drivers/gpu/drm/rockchip/rockchip_drm_vop2.h
 +++ b/drivers/gpu/drm/rockchip/rockchip_drm_vop2.h
-@@ -264,6 +264,12 @@ struct vop2_video_port {
+@@ -253,6 +253,12 @@ struct vop2_video_port {
  	 */
  	bool enabled;
  
@@ -156,7 +156,7 @@ index d5b3af740824..8b6f59e93580 100644
  	/**
  	 * @win_mask: Bitmask of windows attached to the video port;
  	 */
-@@ -358,7 +364,8 @@ struct vop2 {
+@@ -337,7 +343,8 @@ struct vop2 {
  	 * we need a ref counter here.
  	 */
  	unsigned int enable_count;

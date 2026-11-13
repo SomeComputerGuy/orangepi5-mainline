@@ -1,4 +1,4 @@
-From 84be7bde590024035df5b565b1cde32977585735 Mon Sep 17 00:00:00 2001
+From 92256a969369ac3b0c3545a3220560b528a87fda Mon Sep 17 00:00:00 2001
 From: Arun Iyengar <aiyengar1990@gmail.com>
 Date: Tue, 3 Nov 2026 05:33:55 +0000
 Subject: [PATCH] drm/rockchip: vop2: Add limited range RGB output
@@ -49,10 +49,10 @@ index 7dd63a4ba25b..7bf9a8262258 100644
  	/* VOP2: rate to program into the dedicated video PLL for the DCLK, 0 if none */
  	unsigned long dclk_pll_rate;
 diff --git a/drivers/gpu/drm/rockchip/rockchip_drm_vop2.c b/drivers/gpu/drm/rockchip/rockchip_drm_vop2.c
-index e7499aee6274..990ea11f3e37 100644
+index b188f2b358db..da080f546a52 100644
 --- a/drivers/gpu/drm/rockchip/rockchip_drm_vop2.c
 +++ b/drivers/gpu/drm/rockchip/rockchip_drm_vop2.c
-@@ -2319,6 +2319,59 @@ static void vop2_crtc_protect_dclk_pll(struct vop2_video_port *vp)
+@@ -1933,6 +1933,59 @@ static void vop2_crtc_protect_dclk_pll(struct vop2_video_port *vp)
  		vp->pll_v0_held = true;
  }
  
@@ -112,7 +112,7 @@ index e7499aee6274..990ea11f3e37 100644
  static void vop2_crtc_atomic_enable(struct drm_crtc *crtc,
  				    struct drm_atomic_commit *state)
  {
-@@ -2498,6 +2551,7 @@ static void vop2_crtc_atomic_enable(struct drm_crtc *crtc,
+@@ -2112,6 +2165,7 @@ static void vop2_crtc_atomic_enable(struct drm_crtc *crtc,
  	vop2_crtc_protect_dclk_pll(vp);
  
  	vop2_post_config(crtc, true, crtc_state, old_crtc_state);
@@ -120,7 +120,7 @@ index e7499aee6274..990ea11f3e37 100644
  
  	vop2_cfg_done(vp);
  
-@@ -3338,6 +3392,9 @@ static struct drm_crtc_state *vop2_crtc_duplicate_state(struct drm_crtc *crtc)
+@@ -2951,6 +3005,9 @@ static struct drm_crtc_state *vop2_crtc_duplicate_state(struct drm_crtc *crtc)
  
  	__drm_atomic_helper_crtc_duplicate_state(crtc, &vcstate->base);
  
@@ -131,10 +131,10 @@ index e7499aee6274..990ea11f3e37 100644
  }
  
 diff --git a/drivers/gpu/drm/rockchip/rockchip_drm_vop2.h b/drivers/gpu/drm/rockchip/rockchip_drm_vop2.h
-index 20fa7734d156..7425e63f826f 100644
+index 8ad58e7121b4..73ca9ffd6e6b 100644
 --- a/drivers/gpu/drm/rockchip/rockchip_drm_vop2.h
 +++ b/drivers/gpu/drm/rockchip/rockchip_drm_vop2.h
-@@ -440,6 +440,13 @@ enum vop_csc_format {
+@@ -405,6 +405,13 @@ enum vop_csc_format {
  	CSC_BT2020L,
  };
  
@@ -148,7 +148,7 @@ index 20fa7734d156..7425e63f826f 100644
  enum src_factor_mode {
  	SRC_FAC_ALPHA_ZERO,
  	SRC_FAC_ALPHA_ONE,
-@@ -701,6 +708,21 @@ enum dst_factor_mode {
+@@ -666,6 +673,21 @@ enum dst_factor_mode {
  
  #define RK3568_REG_CFG_DONE__GLB_CFG_DONE_EN		BIT(15)
  

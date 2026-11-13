@@ -1,0 +1,86 @@
+From 2b7878e30c65937ee0bca7d4970e81f4baafc7d0 Mon Sep 17 00:00:00 2001
+From: Thomas Gleixner <tglx@kernel.org>
+Date: Tue, 29 Sep 2026 03:45:02 +0000
+Subject: [PATCH 2425/2436] genirq/msi: Provide
+ msi_device_domain_restore_msi_msgs()
+
+Devices that provide the message store for MSI interrupts in their own
+hardware registers often lose that register state across power transitions
+(such as runtime suspend or system sleep) and need to restore the cached
+MSI messages upon resume.
+
+Provide msi_device_domain_restore_msi_msgs() to iterate over all
+associated MSI descriptors in a device's MSI domain under proper
+descriptor and irq_desc locking and rewrite the cached MSI messages via
+the irq_chip hierarchy.
+
+Signed-off-by: Thomas Gleixner <tglx@kernel.org>
+[praan: Use scoped_irqdesc_get_and_buslock(), fix the xarray range bound
+ and write the commit message]
+Signed-off-by: Pranjal Shrivastava <praan@google.com>
+---
+ include/linux/msi.h |  2 ++
+ kernel/irq/msi.c    | 37 +++++++++++++++++++++++++++++++++++++
+ 2 files changed, 39 insertions(+)
+
+diff --git a/include/linux/msi.h b/include/linux/msi.h
+index a4613de11960..44d551e85abd 100644
+--- a/include/linux/msi.h
++++ b/include/linux/msi.h
+@@ -669,6 +669,8 @@ void msi_domain_free_irqs_all(struct device *dev, unsigned int domid);
+ 
+ struct msi_domain_info *msi_get_domain_info(struct irq_domain *domain);
+ 
++void msi_device_domain_restore_msi_msgs(struct device *dev, unsigned int domid);
++
+ /* Per device platform MSI */
+ int platform_device_msi_init_and_alloc_irqs(struct device *dev, unsigned int nvec,
+ 					    irq_write_msi_msg_t write_msi_msg);
+diff --git a/kernel/irq/msi.c b/kernel/irq/msi.c
+index df460a574d80..8fb855b5e09f 100644
+--- a/kernel/irq/msi.c
++++ b/kernel/irq/msi.c
+@@ -1784,3 +1784,40 @@ bool msi_device_has_isolated_msi(struct device *dev)
+ 	return arch_is_isolated_msi();
+ }
+ EXPORT_SYMBOL_GPL(msi_device_has_isolated_msi);
++
++/**
++ * msi_device_domain_restore_msi_msgs - Restore MSI messages for a device domain
++ * @dev:	The device to restore MSI messages for
++ * @domid:	The id of the interrupt domain to restore
++ */
++void msi_device_domain_restore_msi_msgs(struct device *dev, unsigned int domid)
++{
++	if (!dev->msi.data)
++		return;
++
++	guard(msi_descs_lock)(dev);
++	struct irq_domain *domain = msi_get_device_domain(dev, domid);
++
++	if (!domain || !irq_domain_is_msi_device(domain))
++		return;
++
++	struct xarray *xa = &dev->msi.data->__domains[domid].store;
++	struct msi_domain_info *info = domain->host_data;
++	struct msi_desc *msi_desc;
++	unsigned long idx;
++
++	xa_for_each_range(xa, idx, msi_desc, 0, info->hwsize - 1) {
++		/* Only handle MSI entries which have an interrupt associated */
++		if (!msi_desc_match(msi_desc, MSI_DESC_ASSOCIATED))
++			continue;
++
++		scoped_irqdesc_get_and_buslock(msi_desc->irq, 0) {
++			struct irq_data *data = irq_desc_get_irq_data(scoped_irqdesc);
++			struct msi_msg msg = msi_desc->msg;
++
++			if (data->chip)
++				irq_chip_write_msi_msg(data, &msg);
++		}
++	}
++}
++EXPORT_SYMBOL_GPL(msi_device_domain_restore_msi_msgs);
+-- 
+2.55.0
+

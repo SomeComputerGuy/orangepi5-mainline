@@ -1,4 +1,4 @@
-From b0a18aaf6f0cc10a65a03bb97ee6f8fbf75c0252 Mon Sep 17 00:00:00 2001
+From 895f85862e7e4d2fda67eba961b826edd6442839 Mon Sep 17 00:00:00 2001
 From: Arun Iyengar <aiyengar1990@gmail.com>
 Date: Thu, 5 Nov 2026 11:44:14 +0000
 Subject: [PATCH] drm/rockchip: vop2: Keep the other LUT_PORT_SEL fields on
@@ -20,10 +20,10 @@ Signed-off-by: Arun Iyengar <aiyengar1990@gmail.com>
  1 file changed, 3 insertions(+), 2 deletions(-)
 
 diff --git a/drivers/gpu/drm/rockchip/rockchip_drm_vop2.c b/drivers/gpu/drm/rockchip/rockchip_drm_vop2.c
-index 7d06092aad97..8b710e371b33 100644
+index f7d91017d403..84cfe5a7b582 100644
 --- a/drivers/gpu/drm/rockchip/rockchip_drm_vop2.c
 +++ b/drivers/gpu/drm/rockchip/rockchip_drm_vop2.c
-@@ -2071,8 +2071,9 @@ static void vop2_crtc_atomic_set_gamma_seamless(struct vop2 *vop2,
+@@ -1685,8 +1685,9 @@ static void vop2_crtc_atomic_set_gamma_seamless(struct vop2 *vop2,
  						struct vop2_video_port *vp,
  						struct drm_crtc *crtc)
  {

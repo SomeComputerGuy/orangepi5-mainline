@@ -1,57 +1,65 @@
-From 81f1899accdf71b4322430cf2d369f293032a3bf Mon Sep 17 00:00:00 2001
+From e5ba63fbc6be1a587f6330ee59ffb41525c1f3ab Mon Sep 17 00:00:00 2001
 From: Arun Iyengar <aiyengar1990@gmail.com>
 Date: Sat, 31 Oct 2026 20:36:07 +0000
-Subject: [PATCH 1/5] drm/rockchip: vop2: Don't use uninitialised dividers on
+Subject: [PATCH] drm/rockchip: vop2: Don't use uninitialised dividers on
  RK3588
 
-rk3588_calc_cru_cfg() converts all four dividers to their register
-encoding with ilog2(), but only sets the ones the interface uses:
-dclk_out_div is left uninitialised for HDMI, eDP and DPI, and
-if_pixclk_div/if_dclk_div for DP and DPI. The garbage is then written to
-RK3588_VP_CLK_CTRL; on an Orange Pi 5 the dclk_out divider of the HDMI
-video port reads back as 3 (/8) in every mode.
+rk3588_calc_cru_cfg() converts all four dividers with ilog2(), but every
+interface only sets the ones it uses: dclk_out_div is left uninitialised
+for HDMI, eDP and DPI, if_dclk_div for DP, MIPI and DPI, and
+if_pixclk_div for DP and DPI. For HDMI and eDP the uninitialised
+dclk_out_div is then written to RK3588_VP_CLK_CTRL.
 
-Start all dividers at 1. dclk_out only feeds DP and MIPI (and HDMI with
-DSC, which is not supported), so for the other interfaces keep it at the
-dclk_core rate, as the vendor kernel does for HDMI with DSC, instead of
-letting it run at the full DCLK rate.
+Set the dividers an interface doesn't use to 1.
 
 Fixes: 5a028e8f062f ("drm/rockchip: vop2: Add support for rk3588")
 Signed-off-by: Arun Iyengar <aiyengar1990@gmail.com>
 ---
- drivers/gpu/drm/rockchip/rockchip_vop2_reg.c | 12 ++++++++++++
- 1 file changed, 12 insertions(+)
+ drivers/gpu/drm/rockchip/rockchip_vop2_reg.c | 8 ++++++++
+ 1 file changed, 8 insertions(+)
 
 diff --git a/drivers/gpu/drm/rockchip/rockchip_vop2_reg.c b/drivers/gpu/drm/rockchip/rockchip_vop2_reg.c
-index c329250..7bd4137 100644
+index 7e4e40731fb7..a9cf4f0252dd 100644
 --- a/drivers/gpu/drm/rockchip/rockchip_vop2_reg.c
 +++ b/drivers/gpu/drm/rockchip/rockchip_vop2_reg.c
-@@ -1579,6 +1579,15 @@ static unsigned long rk3588_calc_cru_cfg(struct vop2_video_port *vp, int id,
- 	unsigned long if_pixclk_rate;
- 	int K = 1;
- 
-+	/*
-+	 * Not every interface uses every divider: dclk_out only feeds DP and
-+	 * MIPI, the interface dividers are unused for DP. Start from 1 so that
-+	 * no divider is left uninitialised when its value is converted below.
-+	 */
-+	*dclk_out_div = 1;
-+	*if_pixclk_div = 1;
-+	*if_dclk_div = 1;
-+
- 	if (vop2_output_if_is_hdmi(id)) {
+@@ -1607,6 +1607,7 @@ static unsigned long rk3588_calc_cru_cfg(struct vop2_video_port *vp, int id,
+ 		 */
+ 		*if_pixclk_div = 2;
+ 		*if_dclk_div = 4;
++		*dclk_out_div = 1;
+ 	} else if (vop2_output_if_is_edp(id)) {
  		/*
- 		 * K = 2: dclk_core = if_pixclk_rate > if_dclk_rate
-@@ -1648,6 +1657,9 @@ static unsigned long rk3588_calc_cru_cfg(struct vop2_video_port *vp, int id,
+ 		 * edp_pixclk = edp_dclk > dclk_core
+@@ -1619,6 +1620,7 @@ static unsigned long rk3588_calc_cru_cfg(struct vop2_video_port *vp, int id,
+ 		 */
+ 		*if_pixclk_div = K;
+ 		*if_dclk_div = K;
++		*dclk_out_div = 1;
+ 	} else if (vop2_output_if_is_dp(id)) {
+ 		if (output_mode == ROCKCHIP_OUT_MODE_YUV420)
+ 			dclk_out_rate = v_pixclk >> 3;
+@@ -1632,6 +1634,8 @@ static unsigned long rk3588_calc_cru_cfg(struct vop2_video_port *vp, int id,
+ 			return 0;
+ 		}
+ 		*dclk_out_div = dclk_rate / dclk_out_rate;
++		*if_pixclk_div = 1;
++		*if_dclk_div = 1;
+ 	} else if (vop2_output_if_is_mipi(id)) {
+ 		if_pixclk_rate = dclk_core_rate / K;
+ 		/*
+@@ -1653,8 +1657,12 @@ static unsigned long rk3588_calc_cru_cfg(struct vop2_video_port *vp, int id,
+ 		 * mipi pixclk == dclk_out
+ 		 */
+ 		*if_pixclk_div = 1;
++		*if_dclk_div = 1;
+ 	} else if (vop2_output_if_is_dpi(id)) {
+ 		dclk_rate = v_pixclk;
++		*dclk_out_div = 1;
++		*if_pixclk_div = 1;
++		*if_dclk_div = 1;
  	}
  
  	*dclk_core_div = dclk_rate / dclk_core_rate;
-+	/* An unused dclk_out must not run faster than dclk_core */
-+	if (!vop2_output_if_is_dp(id) && !vop2_output_if_is_mipi(id))
-+		*dclk_out_div = *dclk_core_div;
- 	*if_pixclk_div = ilog2(*if_pixclk_div);
- 	*if_dclk_div = ilog2(*if_dclk_div);
- 	*dclk_core_div = ilog2(*dclk_core_div);
 -- 
 2.55.0
 

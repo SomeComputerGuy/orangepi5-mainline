@@ -1,0 +1,48 @@
+From d861114c39f5c0e85a4c3e92715ceb52aadba834 Mon Sep 17 00:00:00 2001
+From: Arun Iyengar <aiyengar1990@gmail.com>
+Date: Thu, 12 Nov 2026 18:41:06 +0000
+Subject: [PATCH 2434/2436] dt-bindings: soc: rockchip: grf: Allow a clock for
+ the RK3588 PHP GRF
+
+The RK3588 PHP GRF registers sit behind pclk_php_root, which is gated
+whenever none of the PHP peripherals holds it, e.g. late in system
+suspend. Allow the clock to be described so the syscon regmap can
+enable it around each access. It stays optional for older devicetrees.
+
+Signed-off-by: Arun Iyengar <aiyengar1990@gmail.com>
+---
+ .../devicetree/bindings/soc/rockchip/grf.yaml  | 18 ++++++++++++++++--
+ 1 file changed, 16 insertions(+), 2 deletions(-)
+
+diff --git a/Documentation/devicetree/bindings/soc/rockchip/grf.yaml b/Documentation/devicetree/bindings/soc/rockchip/grf.yaml
+index 7bcb4e2f47ec..3f4cec128a20 100644
+--- a/Documentation/devicetree/bindings/soc/rockchip/grf.yaml
++++ b/Documentation/devicetree/bindings/soc/rockchip/grf.yaml
+@@ -320,8 +320,22 @@ allOf:
+         - clocks
+ 
+     else:
+-      properties:
+-        clocks: false
++      if:
++        properties:
++          compatible:
++            contains:
++              const: rockchip,rk3588-php-grf
++
++      then:
++        properties:
++          clocks:
++            description:
++              Bus clock of the PHP GRF registers. Optional, as older
++              devicetrees have no clock here.
++
++      else:
++        properties:
++          clocks: false
+ 
+ examples:
+   - |
+-- 
+2.55.0
+
