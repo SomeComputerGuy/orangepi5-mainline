@@ -12,6 +12,7 @@ SRC=$OPI5_SRC/linux BUILD=$TOP/build/linux
 #   OPI5_PKGREV=<rev>           package revision (default 17): a number is a release,
 #                               <kernelversion>+opi5.<rev>; with letters a test kernel, <kernelversion>-<rev>
 #   OPI5_OUT=<dir>              output directory (default out; tests: out/test)
+#   OPI5_CONFIG=<file>          extra config fragment for a test kernel (with OPI5_REF)
 OUT=${OPI5_OUT:-$TOP/out}
 OPI5_REF=${OPI5_REF:-} OPI5_PKGREV=${OPI5_PKGREV:-17}
 export ARCH=arm64 CROSS_COMPILE=aarch64-linux-gnu-
@@ -119,6 +120,11 @@ if [ -n "$OPI5_REF" ]; then
   BASE=$(git -C "$SRC" rev-parse --verify -q "$OPI5_REF^{commit}") || { echo "no $OPI5_REF in $SRC"; exit 1; }
   PATCH_DIRS=()
   echo "OPI5_REF=$OPI5_REF: building $BASE as is (no patches/linux)"
+fi
+# OPI5_CONFIG=<fragment>: test kernels only, merged last (e.g. KASAN)
+if [ -n "${OPI5_CONFIG:-}" ]; then
+  [ -n "$OPI5_REF" ] || { echo "OPI5_CONFIG is for test kernels (OPI5_REF) only"; exit 1; }
+  CONFIGS+=("$OPI5_CONFIG")
 fi
 mkdir -p "$BUILD"
 want=$(for d in "${PATCH_DIRS[@]}"; do (cd "$d" && sha256sum ./*.patch | sed "s|\./|${d##*/}/|"); done)
