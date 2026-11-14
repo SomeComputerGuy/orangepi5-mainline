@@ -103,7 +103,7 @@ Not finished. Listed so you know what is coming; no dates.
 - HDMI interlaced modes pass on the board (DisplayPort interlaced not tested yet). Display
   writeback: written, board test pending.
 - IEP2 deinterlacer: the driver is in the image and passes v4l2-compliance. GStreamer and
-  FFmpeg support is written, board tests pending. Being prepared for posting upstream.
+  FFmpeg support is written, board tests pending. Posted upstream.
 - MPEG-4 Part 2 / H.263 decode: the kernel driver is in the image; the FFmpeg fixes and
   GStreamer elements it needs have passed on the board and come with the next media
   package update.
@@ -118,18 +118,19 @@ Not finished. Listed so you know what is coming; no dates.
   VP8 encode and multiview HEVC. Planned.
 - Second IOMMU (MMU600_PHP) for SATA, USB 3 and Ethernet: now in the kernel patches. SATA,
   USB 3, Ethernet and deep suspend pass on the board; data transfer over the USB-C port is
-  not tested yet. Upstream posting waits for the SMMUv3 power-management series it builds on.
+  not tested yet. Posted upstream.
 - Crypto engine: driver ported; self-tests and the hardware random number generator pass
   on the board. A test under concurrent load is pending.
-- OP-TEE with a firmware TPM and secure storage: on the board, OP-TEE's test suite, the
-  TPM, sealing and a TPM-unlocked LUKS volume pass. The TPM was missing after one reboot
-  because Ubuntu's tee-supplicant service can start before the OP-TEE driver loads. Fixed
-  with upstream's device-ordered service: 5 of 5 boots and 3 of 3 TPM persistence reboots
-  pass. Proposed to Debian. Test firmware only, booted from SD; no fuses or keys are burned.
+- OP-TEE with a firmware TPM and secure storage: on the board, OP-TEE's test suite (no
+  failures), TPM sealing, PCRs, a TPM-unlocked LUKS volume, and TPM state over 3 of 3
+  reboots pass. The board's key fuses are blank, so it runs with a test key: it works but
+  is not secure. Test firmware only, booted from SD; no fuses or keys are burned. The OP-TEE
+  change that makes the fused key optional is posted; a tee-supplicant start-order fix for
+  Debian is ready.
 - Verified and measured boot without burning fuses, and an encrypted root unlocked by
-  TPM + PIN: works in emulation, board test pending.
-- Upstreaming: over 30 kernel series are posted and in review; the rest follow as they pass
-  on the board.
+  TPM + PIN: board test in progress, not passing yet.
+- Upstreaming: over 35 kernel series and changes to TF-A, OP-TEE and util-linux are posted
+  and in review; the rest follow as they pass on the board.
 
 ## Testing
 
