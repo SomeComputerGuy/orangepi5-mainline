@@ -203,6 +203,19 @@ case $OPI5_PKGREV in
      # Without a "-" debian/rules finds no revision for the build number: keep uname -v at #<rev>
      export KBUILD_BUILD_VERSION=$OPI5_PKGREV ;;
 esac
-make -C "$SRC" O="$BUILD" CC="$KMAKE_CC" -j"$(nproc)" DPKG_FLAGS=-d KDEB_PKGVERSION="$(make -s -C "$SRC" kernelversion)$OPI5_PKGSUFFIX" bindeb-pkg
+debs() { make -C "$SRC" O="$BUILD" CC="$KMAKE_CC" -j"$(nproc)" DPKG_FLAGS=-d KDEB_PKGVERSION="$(make -s -C "$SRC" kernelversion)$OPI5_PKGSUFFIX" "$@" bindeb-pkg; }
+debs
+# U-Boot (rk3588_common.h) loads the kernel at kernel_addr_r 0x02000000, the DTB at fdt_addr_r
+# 0x12000000, and inflates Image.gz at kernel_comp_addr_r 0x0a000000. An Image over 128 MiB
+# (KASAN builds) overwrites the DTB, so ship it uncompressed instead.
+IMG=$BUILD/arch/arm64/boot/Image
+img_mem=$(od -An -tu8 -j16 -N8 "$IMG")   # header image_size: Image + BSS, run in place
+if [ "$img_mem" -gt $((0x12000000 - 0x02000000)) ]; then
+  echo "Image needs $img_mem bytes from kernel_addr_r: overlaps fdt_addr_r, will not boot"; exit 1
+fi
+if [ "$(stat -c %s "$IMG")" -gt $((0x12000000 - 0x0a000000)) ]; then
+  echo "Image over 128 MiB: packaging it uncompressed"
+  debs KBUILD_IMAGE=arch/arm64/boot/Image
+fi
 mv "$BUILD"/../linux-*.deb "$OUT/debs/"
 ls -l "$OUT/debs"
