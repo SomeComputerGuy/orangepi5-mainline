@@ -114,6 +114,9 @@ Not finished. Listed so you know what is coming; no dates.
 - VC-1 decode: in development, not decoding correctly yet.
 - VP9: one group of conformance streams (very small frame sizes) still fails.
 - Encoders: an FFmpeg encoder is planned; today only GStreamer can use them.
+- HDR10+ and Dolby Vision video: decoding with the metadata kept is in testing. Sending HDR10+
+  metadata to the TV needs a kernel interface that does not exist yet (planned). Dolby Vision
+  output needs Dolby's licence and is not planned.
 - Parity with the vendor's MPP stack: still missing are compressed (AFBC) decoder output,
   VP8 encode and multiview HEVC. Planned.
 - Second IOMMU (MMU600_PHP) for SATA, USB 3 and Ethernet: now in the kernel patches. SATA,
@@ -122,11 +125,11 @@ Not finished. Listed so you know what is coming; no dates.
 - Crypto engine: driver ported; self-tests and the hardware random number generator pass
   on the board. A test under concurrent load is pending.
 - OP-TEE with a firmware TPM and secure storage: on the board, OP-TEE's test suite (no
-  failures), TPM sealing, PCRs, a TPM-unlocked LUKS volume, and TPM state over 3 of 3
-  reboots pass. The board's key fuses are blank, so it runs with a test key: it works but
-  is not secure. Test firmware only, booted from SD; no fuses or keys are burned. The OP-TEE
-  change that makes the fused key optional is posted; a tee-supplicant start-order fix for
-  Debian is ready.
+  failures), TPM sealing, PCRs, a TPM-unlocked LUKS volume, and TPM state over 3 of 3 reboots
+  pass. Upgrading the Debian OP-TEE client package while the TPM is in use hangs the TPM; a
+  kernel and packaging fix is written, board test pending. The board's key fuses are blank, so
+  it runs with a test key: it works but is not secure. Test firmware only, booted from SD; no
+  fuses or keys are burned. The OP-TEE change that makes the fused key optional is posted.
 - Verified and measured boot without burning fuses, and an encrypted root unlocked by
   TPM + PIN: on the board, the signed boot chain, measured boot, TPM unlock, PIN unlock
   (wrong PIN refused) and the recovery passphrase pass, and tampered, unsigned or
@@ -145,14 +148,17 @@ to 4K120, HDR, CEC, stereo audio), USB-C DisplayPort (up to 4K60, HDR), video de
 (H.264, HEVC, VP9, AV1, VP8, MPEG-2 and the formats listed above), H.264/HEVC/JPEG encode,
 JPEG decode, RGA, GPU (panthor: OpenGL ES 3.1, Vulkan 1.4, OpenCL 3.0) and NPU (rocket).
 
-Known problems: rare "No Signal" after HDMI FRL mode changes; rare black DP output after a
-mode change; underruns at 1366x768 on both outputs; some VP9 conformance streams fail; an
-SD card inserted while the board is running is not seen until reboot (fix written, board
-test pending).
+Known problems: rare crash (SError) when a video decoder's IOMMU is switched on during video
+decoding (fix passed on the board, comes with the next kernel); the Hantro H.264 decoder can
+stop after long AV1 decoding runs; rare "No Signal" after HDMI FRL mode changes; rare black DP
+output after a mode change; underruns at 1366x768 on both outputs; some VP9 conformance streams
+fail; an SD card inserted while the board is running is not seen until reboot (fix written,
+board test pending).
 
 Not tested yet: the SD images built from the current kernel (the last boot test was on an
-older one), NVMe and PCIe suspend, 8K output (no 8K display), DisplayPort audio and the
-headphone jack by ear, USB-C device mode, cameras and MIPI DSI panels
+older one), NVMe and PCIe suspend, 8K output (no 8K display), DisplayPort audio, HDMI audio
+beyond stereo LPCM (8 channels, 96/192 kHz, Dolby/DTS passthrough), HDMI VRR and ALLM end to
+end, the headphone jack by ear, USB-C device mode, cameras and MIPI DSI panels
 (`patches/linux-extra`, no hardware attached).
 
 ## Licensing
