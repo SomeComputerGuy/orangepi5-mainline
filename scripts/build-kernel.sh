@@ -89,6 +89,8 @@ else
 fi
 # Release is exactly <version>-opi5: no "+"/"-dirty" for our patched tree
 export LOCALVERSION=
+# the kernel build runs tools/lib/python scripts; their .pyc in src/linux trips the "src/linux changed" check
+export PYTHONDONTWRITEBYTECODE=1
 # Keep the build machine's user/host name out of the binaries (/proc/version,
 # the deb Maintainer field)
 export KBUILD_BUILD_USER=${KBUILD_BUILD_USER:-opi5}
@@ -179,6 +181,7 @@ else
 fi
 
 mkdir -p "$BUILD" "$OUT/debs"
+touch "$BUILD/.opi5-build-start"
 cp "$UBUNTU_CONFIG" "$BUILD/.config"
 "$SRC/scripts/kconfig/merge_config.sh" -m -O "$BUILD" "$BUILD/.config" "${CONFIGS[@]}"
 make -C "$SRC" O="$BUILD" CC="$KMAKE_CC" olddefconfig
@@ -203,7 +206,8 @@ case $OPI5_PKGREV in
      # Without a "-" debian/rules finds no revision for the build number: keep uname -v at #<rev>
      export KBUILD_BUILD_VERSION=$OPI5_PKGREV ;;
 esac
-debs() { make -C "$SRC" O="$BUILD" CC="$KMAKE_CC" -j"$(nproc)" DPKG_FLAGS=-d KDEB_PKGVERSION="$(make -s -C "$SRC" kernelversion)$OPI5_PKGSUFFIX" "$@" bindeb-pkg; }
+PKGVER=$(make -s -C "$SRC" kernelversion)$OPI5_PKGSUFFIX
+debs() { make -C "$SRC" O="$BUILD" CC="$KMAKE_CC" -j"$(nproc)" DPKG_FLAGS=-d KDEB_PKGVERSION="$PKGVER" "$@" bindeb-pkg; }
 debs
 # U-Boot (rk3588_common.h) loads the kernel at kernel_addr_r 0x02000000, the DTB at fdt_addr_r
 # 0x12000000, and inflates Image.gz at kernel_comp_addr_r 0x0a000000. An Image over 128 MiB
@@ -217,5 +221,11 @@ if [ "$(stat -c %s "$IMG")" -gt $((0x12000000 - 0x0a000000)) ]; then
   echo "Image over 128 MiB: packaging it uncompressed"
   debs KBUILD_IMAGE=arch/arm64/boot/Image
 fi
-mv "$BUILD"/../linux-*.deb "$OUT/debs/"
+# Something outside this script changed src/linux during the build: the debs are not $BASE
+if [ "$(git -C "$SRC" rev-parse HEAD)" != "$base_commit" ] ||
+   [ -n "$(find "$SRC" -path "$SRC/.git" -prune -o -newer "$BUILD/.opi5-build-start" -type f -print -quit)" ]; then
+  echo "src/linux changed during the build, debs discarded"; rm -f "$BUILD"/../linux-*_"$PKGVER"_arm64.deb; exit 1
+fi
+# only this build's debs: build/ may hold another build's leftovers
+mv "$BUILD"/../linux-*_"$PKGVER"_arm64.deb "$OUT/debs/"
 ls -l "$OUT/debs"
