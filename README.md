@@ -111,7 +111,8 @@ Not finished. Listed so you know what is coming; no dates.
   pictures and some bit-depth cases are untested.
 - H.264 MVC (3D) decode: the kernel decodes both views; FFmpeg and GStreamer only show
   the base view.
-- VC-1 decode: in development, not decoding correctly yet.
+- VC-1 decode: passes on the board (9 streams identical to the software decoder); comes
+  with the next kernel.
 - VP9: one group of conformance streams (very small frame sizes) still fails.
 - Encoders: an FFmpeg encoder is planned; today only GStreamer can use them.
 - HDR10+ and Dolby Vision video: decoding with the metadata kept is in testing. Sending HDR10+
@@ -126,9 +127,9 @@ Not finished. Listed so you know what is coming; no dates.
   on the board. A test under concurrent load is pending.
 - OP-TEE with a firmware TPM and secure storage: on the board, OP-TEE's test suite (no
   failures), TPM sealing, PCRs, a TPM-unlocked LUKS volume, and TPM state over 3 of 3 reboots
-  pass. Upgrading the Debian OP-TEE client package while the TPM is in use hangs the TPM; a
-  kernel and packaging fix is written, board test pending. The board's key fuses are blank, so
-  it runs with a test key: it works but is not secure. Test firmware only, booted from SD; no
+  pass. Upgrading the Debian OP-TEE client package while the TPM is in use no longer hangs
+  the TPM (kernel and packaging fix, passed on the board). The hardware unique key is derived
+  from the board's factory key through the key ladder. Test firmware only, booted from SD; no
   fuses or keys are burned. The OP-TEE change that makes the fused key optional is posted.
 - Verified and measured boot without burning fuses, and an encrypted root unlocked by
   TPM + PIN: on the board, the signed boot chain, measured boot, TPM unlock, PIN unlock
@@ -150,10 +151,11 @@ JPEG decode, RGA, GPU (panthor: OpenGL ES 3.1, Vulkan 1.4, OpenCL 3.0) and NPU (
 
 Known problems: rare crash (SError) when a video decoder's IOMMU is switched on during video
 decoding (fix passed on the board, comes with the next kernel); the Hantro H.264 decoder can
-stop after long AV1 decoding runs; rare "No Signal" after HDMI FRL mode changes; rare black DP
-output after a mode change; underruns at 1366x768 on both outputs; some VP9 conformance streams
-fail; an SD card inserted while the board is running is not seen until reboot (fix written,
-board test pending).
+stop after long AV1 decoding runs (fix passed on the board, comes with the next kernel); two
+H.264 conformance streams occasionally decode wrongly (under 2 % of runs) on the Hantro
+decoder; rare "No Signal" after HDMI FRL mode changes; rare black DP output after a mode
+change; underruns at 1366x768 on both outputs; some VP9 conformance streams fail; an SD card
+inserted while the board is running is not seen until reboot (fix written, board test pending).
 
 Not tested yet: the SD images built from the current kernel (the last boot test was on an
 older one), NVMe and PCIe suspend, 8K output (no 8K display), DisplayPort audio, HDMI audio
