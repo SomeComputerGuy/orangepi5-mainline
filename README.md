@@ -134,8 +134,8 @@ Not finished. Listed so you know what is coming; no dates.
 - Verified and measured boot without burning fuses, and an encrypted root unlocked by
   TPM + PIN: on the board, the signed boot chain, measured boot, TPM unlock, PIN unlock
   (wrong PIN refused) and the recovery passphrase pass, and tampered, unsigned or
-  wrongly signed kernels and a tampered U-Boot are refused. Still failing: the boot that
-  unlocks with the PIN typed at the console stalls. Test firmware only, booted from SD.
+  wrongly signed kernels and a tampered U-Boot are refused. Not passing yet: unlocking with
+  a PIN typed at the console at boot (fix in testing). Test firmware only, booted from SD.
 - Planned: UEFI Secure Boot the way a PC does it (U-Boot as UEFI firmware with Microsoft's
   certificate, Ubuntu's signed shim and MOK), with locking the firmware left to the owner.
 - Upstreaming: over 35 kernel series and changes to TF-A, OP-TEE and util-linux are posted
