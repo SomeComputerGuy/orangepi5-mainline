@@ -132,10 +132,10 @@ Not finished. Listed so you know what is coming; no dates.
   from the board's factory key through the key ladder. Test firmware only, booted from SD; no
   fuses or keys are burned. The OP-TEE change that makes the fused key optional is posted.
 - Verified and measured boot without burning fuses, and an encrypted root unlocked by
-  TPM + PIN: on the board, the signed boot chain, measured boot, TPM unlock, PIN unlock
-  (wrong PIN refused) and the recovery passphrase pass, and tampered, unsigned or
-  wrongly signed kernels and a tampered U-Boot are refused. Not passing yet: unlocking with
-  a PIN typed at the console at boot (fix in testing). Test firmware only, booted from SD.
+  TPM + PIN: on the board, the signed boot chain, measured boot, TPM and TPM + PIN unlock
+  at boot (PIN typed at the console, wrong PIN refused), the recovery passphrase and the
+  TPM state over reboots pass, and tampered, unsigned or wrongly signed kernels and a
+  tampered U-Boot are refused. Test firmware only, booted from SD.
 - Planned: UEFI Secure Boot the way a PC does it (U-Boot as UEFI firmware with Microsoft's
   certificate, Ubuntu's signed shim and MOK), with locking the firmware left to the owner.
 - Upstreaming: over 35 kernel series and changes to TF-A, OP-TEE and util-linux are posted
