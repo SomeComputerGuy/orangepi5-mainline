@@ -149,6 +149,12 @@ to 4K120, HDR, CEC, stereo audio), USB-C DisplayPort (up to 4K60, HDR), video de
 (H.264, HEVC, VP9, AV1, VP8, MPEG-2 and the formats listed above), H.264/HEVC/JPEG encode,
 JPEG decode, RGA, GPU (panthor: OpenGL ES 3.1, Vulkan 1.4, OpenCL 3.0) and NPU (rocket).
 
+Full-load test (megastress: every video decoder and encoder, JPEG, RGA, IEP, NPU, GPU, crypto,
+all CPUs, memory, Ethernet, USB, SATA and audio at once, ~1 h, KASAN kernel): no crash; NPU, GPU,
+rkvdec, RGA, IEP, crypto and I/O pass. The Hantro and AV1 decoders, the H.264/HEVC encoders and the
+JPEG decoder return errors or a wrong frame under this load, and DisplayPort logs AUX timeouts.
+Being fixed.
+
 Known problems: rare crash (SError) when a video decoder's IOMMU is switched on during video
 decoding (fix passed on the board, comes with the next kernel); the Hantro H.264 decoder can
 stop after long AV1 decoding runs (fix passed on the board, comes with the next kernel); two
