@@ -1,0 +1,33 @@
+From 14ceaa89287d4fd72ed8d55dc05867ab322ad0eb Mon Sep 17 00:00:00 2001
+From: =?UTF-8?q?Kacper=20Michaj=C5=82ow?= <kasper93@gmail.com>
+Date: Thu, 5 Nov 2026 15:38:04 +0100
+Subject: [PATCH 5/5] vd_lavc: hold back 4 hardware decoded frames instead of 2
+
+With 2 frames, 31 Mbps 4K AV1 at 2x speed still was dropping frames.
+Make the queue 4, which nicelly hides decoder latency.
+
+Note that the main issue comes from that not every frame is decoded in
+the same time for those AV1 samples, so we need to eat the latency
+spikes. And also it's good for pipelining with rendering.
+
+(cherry picked from commit 55d3feb45c3dda1afd02b3087d3463c57d6514f7)
+---
+ video/decode/vd_lavc.c | 2 +-
+ 1 file changed, 1 insertion(+), 1 deletion(-)
+
+diff --git a/video/decode/vd_lavc.c b/video/decode/vd_lavc.c
+index 3b4fd2f..674db3d 100644
+--- a/video/decode/vd_lavc.c
++++ b/video/decode/vd_lavc.c
+@@ -65,7 +65,7 @@ static enum AVPixelFormat get_format_hwdec(struct AVCodecContext *avctx,
+ static int hwdec_opt_help(struct mp_log *log, const m_option_t *opt,
+                           struct bstr name);
+ 
+-#define HWDEC_DELAY_QUEUE_COUNT 2
++#define HWDEC_DELAY_QUEUE_COUNT 4
+ 
+ #define OPT_BASE_STRUCT struct vd_lavc_params
+ 
+-- 
+2.55.0
+

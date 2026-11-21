@@ -1,0 +1,114 @@
+From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
+From: Arun Iyengar <aiyengar1990@gmail.com>
+Date: Sat, 21 Nov 2026 17:08:50 +0000
+Subject: [PATCH] v4l2: Import a single DMABuf through the contiguous format
+
+Upstream elements usually export all planes in one DMABuf, but for a
+multi-planar device the non-contiguous format (e.g. NV12M) is picked,
+and importing failed: "Got 1 dmabuf but needed 2".
+
+When the first buffer has one memory, switch to the contiguous variant
+(e.g. NV12) before allocating, if the device has one, and refuse the
+import otherwise. Plane offsets through data_offset are not an option:
+most drivers ignore it. Check the import in v4l2videoenc too.
+
+Signed-off-by: Arun Iyengar <aiyengar1990@gmail.com>
+---
+ sys/v4l2/gstv4l2object.c   | 51 ++++++++++++++++++++++++++++++++++++++
+ sys/v4l2/gstv4l2videoenc.c | 11 ++++++++
+ 2 files changed, 62 insertions(+)
+
+diff --git a/sys/v4l2/gstv4l2object.c b/sys/v4l2/gstv4l2object.c
+index 493f19d7..c1700b78 100644
+--- a/sys/v4l2/gstv4l2object.c
++++ b/sys/v4l2/gstv4l2object.c
+@@ -6251,6 +6251,49 @@ different_caps:
+   }
+ }
+ 
++/* One DMABuf can only fill the planes of a non-contiguous format through
++ * data_offset, which most drivers ignore: use the contiguous variant. */
++static gboolean
++gst_v4l2_object_use_contiguous_format (GstV4l2Object * obj)
++{
++  GstVideoFormat vformat = GST_VIDEO_INFO_FORMAT (&obj->info.vinfo);
++  const GstV4L2FormatDesc *desc = NULL;
++  struct v4l2_fmtdesc *fmtdesc = NULL;
++  struct v4l2_format format;
++
++  if (vformat != GST_VIDEO_FORMAT_DMA_DRM)
++    gst_v4l2_object_get_desc_from_video_format (vformat, &desc);
++  if (desc)
++    fmtdesc = gst_v4l2_object_get_format_from_fourcc (obj, desc->v4l2_format);
++  if (!fmtdesc)
++    return FALSE;
++
++  format = obj->format;
++  format.fmt.pix_mp.pixelformat = desc->v4l2_format;
++  format.fmt.pix_mp.num_planes = 1;
++  format.fmt.pix_mp.plane_fmt[0].sizeimage = 0;
++  memset (&format.fmt.pix_mp.plane_fmt[1], 0,
++      sizeof (format.fmt.pix_mp.plane_fmt) -
++      sizeof (format.fmt.pix_mp.plane_fmt[0]));
++
++  if (obj->ioctl (obj->video_fd, VIDIOC_S_FMT, &format) < 0)
++    return FALSE;
++
++  if (format.fmt.pix_mp.pixelformat != desc->v4l2_format ||
++      format.fmt.pix_mp.num_planes != 1) {
++    format = obj->format;
++    obj->ioctl (obj->video_fd, VIDIOC_S_FMT, &format);
++    return FALSE;
++  }
++
++  GST_DEBUG_OBJECT (obj->dbg_obj, "Using %" GST_FOURCC_FORMAT
++      " to import a single DMABuf", GST_FOURCC_ARGS (desc->v4l2_format));
++
++  gst_v4l2_object_save_format (obj, fmtdesc, &format, &obj->info, &obj->align);
++
++  return TRUE;
++}
++
+ gboolean
+ gst_v4l2_object_try_import (GstV4l2Object * obj, GstBuffer * buffer)
+ {
+@@ -6268,6 +6311,14 @@ gst_v4l2_object_try_import (GstV4l2Object * obj, GstBuffer * buffer)
+       return FALSE;
+   }
+ 
++  if (obj->mode == GST_V4L2_IO_DMABUF_IMPORT && n_mem == 1 &&
++      obj->n_v4l2_planes > 1 && V4L2_TYPE_IS_MULTIPLANAR (obj->type) &&
++      !gst_v4l2_object_use_contiguous_format (obj)) {
++    GST_DEBUG_OBJECT (obj->dbg_obj, "Cannot import one DMABuf into %u planes",
++        obj->n_v4l2_planes);
++    return FALSE;
++  }
++
+   vmeta = gst_buffer_get_video_meta (buffer);
+   if (!vmeta && obj->need_video_meta) {
+     GST_DEBUG_OBJECT (obj->dbg_obj, "Downstream buffer uses standard "
+diff --git a/sys/v4l2/gstv4l2videoenc.c b/sys/v4l2/gstv4l2videoenc.c
+index aaeb3a56..c6146677 100644
+--- a/sys/v4l2/gstv4l2videoenc.c
++++ b/sys/v4l2/gstv4l2videoenc.c
+@@ -798,6 +798,17 @@ gst_v4l2_video_enc_handle_frame (GstVideoEncoder * encoder,
+       guint min = MAX (self->v4l2output->min_buffers,
+           GST_V4L2_MIN_BUFFERS (self->v4l2output));
+ 
++      if (frame->input_buffer &&
++          (self->v4l2output->mode == GST_V4L2_IO_USERPTR ||
++              self->v4l2output->mode == GST_V4L2_IO_DMABUF_IMPORT) &&
++          !gst_v4l2_object_try_import (self->v4l2output,
++              frame->input_buffer)) {
++        GST_ERROR_OBJECT (self, "cannot import buffers from upstream");
++        gst_structure_free (config);
++        gst_object_unref (opool);
++        goto activate_failed;
++      }
++
+       gst_buffer_pool_config_set_params (config, self->input_state->caps,
+           self->v4l2output->info.vinfo.size, min, min);
+ 
+-- 
+2.55.0
+

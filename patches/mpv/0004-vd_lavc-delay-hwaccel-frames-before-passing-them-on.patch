@@ -1,0 +1,53 @@
+From 02cee14aec79915129d120115c7e0055022202d3 Mon Sep 17 00:00:00 2001
+From: =?UTF-8?q?Kacper=20Michaj=C5=82ow?= <kasper93@gmail.com>
+Date: Thu, 5 Nov 2026 15:04:05 +0100
+Subject: [PATCH 4/5] vd_lavc: delay hwaccel frames before passing them on
+
+libavcodec returns a hwaccel frame while the GPU is still decoding it.
+We directly pass it to VO which then stalls waiting on those frames to
+be ready. Even though decoder and rendering is a lot faster than what's
+needed to smooth playback, this can stall whole pipeline and we drop
+frames.
+
+Fixes lower than expected hwdec performance with heavier to decode
+files.
+
+(cherry picked from commit 7cf40ca1f58659bca4e59c601e509d33bfd361d3;
+ 0.41 has no hwdec_get_extra_frames(): the queue is added to the pool
+ in init_generic_hwaccel() instead)
+---
+ video/decode/vd_lavc.c | 10 +++++++---
+ 1 file changed, 7 insertions(+), 3 deletions(-)
+
+diff --git a/video/decode/vd_lavc.c b/video/decode/vd_lavc.c
+index 75a29aa..3b4fd2f 100644
+--- a/video/decode/vd_lavc.c
++++ b/video/decode/vd_lavc.c
+@@ -778,9 +778,12 @@ static void init_avctx(struct mp_filter *vd)
+         if (ctx->hwdec.pix_fmt != AV_PIX_FMT_NONE)
+             avctx->get_format = get_format_hwdec;
+ 
+-        // Some APIs benefit from this, for others it's additional bloat.
+-        if (ctx->hwdec.copying)
++        // Allow decoder to finish decoding before the frames are passed to the
++        // renderer.
++        if (ctx->hwdec.copying || ctx->hwdec.use_hw_frames)
+             ctx->max_delay_queue = HWDEC_DELAY_QUEUE_COUNT;
++        if (ctx->max_delay_queue && !ctx->hwdec.use_hw_frames)
++            avctx->extra_hw_frames = ctx->max_delay_queue;
+         ctx->hw_probing = true;
+ 
+         threads = ctx->hwdec_opts->hwdec_threads;
+@@ -955,7 +958,8 @@ static int init_generic_hwaccel(struct AVCodecContext *avctx, enum AVPixelFormat
+     // 1 surface is already included by libavcodec. The field is 0 if the
+     // hwaccel supports dynamic surface allocation.
+     if (new_fctx->initial_pool_size)
+-        new_fctx->initial_pool_size += ctx->hwdec_opts->hwdec_extra_frames - 1;
++        new_fctx->initial_pool_size += ctx->hwdec_opts->hwdec_extra_frames - 1 +
++                                       ctx->max_delay_queue;
+ 
+     const struct hwcontext_fns *fns =
+         hwdec_get_hwcontext_fns(new_fctx->device_ctx->type);
+-- 
+2.55.0
+

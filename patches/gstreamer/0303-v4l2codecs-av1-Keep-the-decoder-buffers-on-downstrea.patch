@@ -1,0 +1,63 @@
+From 34df06eb8f16919c2f5fd041b3092e81ee37cfbe Mon Sep 17 00:00:00 2001
+From: Arun Iyengar <aiyengar1990@gmail.com>
+Date: Fri, 20 Nov 2026 21:46:54 +0000
+Subject: [PATCH] v4l2codecs: av1: Keep the decoder buffers on
+ downstream renegotiation
+
+decide_allocation() allocated new OUTPUT and CAPTURE buffers on each
+downstream renegotiation while streaming, which h264, h265, vp8, vp9 and
+mpeg2 avoid. With kmssink a 4K stream got a second set of 15 CAPTURE
+buffers right after the start; Hantro allocates a reference buffer for each
+new one inside the decode job, so the first ~20 frames took 26 ms instead
+of 10 ms and 25 frames were dropped by QoS.
+
+Keep the buffers like vp9; negotiate() releases them when the V4L2 formats
+change.
+
+Signed-off-by: Arun Iyengar <aiyengar1990@gmail.com>
+---
+ sys/v4l2codecs/gstv4l2codecav1dec.c | 14 ++++++++++----
+ 1 file changed, 10 insertions(+), 4 deletions(-)
+
+diff --git a/sys/v4l2codecs/gstv4l2codecav1dec.c b/sys/v4l2codecs/gstv4l2codecav1dec.c
+index 5a7a6b7..a4905bc 100644
+--- a/sys/v4l2codecs/gstv4l2codecav1dec.c
++++ b/sys/v4l2codecs/gstv4l2codecav1dec.c
+@@ -412,10 +412,6 @@ gst_v4l2_codec_av1_dec_decide_allocation (GstVideoDecoder * decoder,
+   guint min = 0, num_bitstream;
+   gboolean has_videometa;
+ 
+-  g_clear_object (&self->src_pool);
+-  g_clear_object (&self->src_allocator);
+-  g_clear_object (&self->sink_allocator);
+-
+   has_videometa = gst_query_find_allocation_meta (query,
+       GST_VIDEO_META_API_TYPE, NULL);
+ 
+@@ -453,6 +449,15 @@ gst_v4l2_codec_av1_dec_decide_allocation (GstVideoDecoder * decoder,
+     self->copy_frames = FALSE;
+   }
+ 
++  /* negotiate() releases the buffers when the V4L2 formats change. Keep them
++   * on a downstream renegotiation: they hold the reference frames. */
++  if (self->sink_allocator && self->src_allocator)
++    goto done;
++
++  g_clear_object (&self->src_pool);
++  g_clear_object (&self->src_allocator);
++  g_clear_object (&self->sink_allocator);
++
+   if (gst_query_get_n_allocation_pools (query) > 0)
+     gst_query_parse_nth_allocation_pool (query, 0, NULL, NULL, &min, NULL);
+ 
+@@ -481,6 +486,7 @@ gst_v4l2_codec_av1_dec_decide_allocation (GstVideoDecoder * decoder,
+   self->src_pool =
+       gst_v4l2_codec_pool_new (self->src_allocator, &self->vinfo_drm);
+ 
++done:
+   /* Our buffer pool is internal, we will let the base class create a video
+    * pool, and use it if we are running out of buffers or if downstream does
+    * not support GstVideoMeta */
+-- 
+2.55.0
+

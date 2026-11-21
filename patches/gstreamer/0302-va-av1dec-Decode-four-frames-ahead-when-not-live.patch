@@ -1,0 +1,56 @@
+From a15ffbbb73a7158bd4ce17a78434d80e9a5e241c Mon Sep 17 00:00:00 2001
+From: Arun Iyengar <aiyengar1990@gmail.com>
+Date: Fri, 20 Nov 2026 20:08:08 +0000
+Subject: [PATCH] va: av1dec: Decode four frames ahead when not live
+
+Without output delay each frame is pushed as soon as it is submitted,
+so a key frame that takes several frame periods to decode misses its
+display time. Use four frames of delay for non-live streams, as
+v4l2codecs does, and size the pool from the DPB size.
+
+Signed-off-by: Arun Iyengar <aiyengar1990@gmail.com>
+---
+ sys/va/gstvaav1dec.c | 13 ++++++++++++-
+ 1 file changed, 12 insertions(+), 1 deletion(-)
+
+diff --git a/sys/va/gstvaav1dec.c b/sys/va/gstvaav1dec.c
+index b18667f..84462c0 100644
+--- a/sys/va/gstvaav1dec.c
++++ b/sys/va/gstvaav1dec.c
+@@ -353,7 +353,7 @@ gst_va_av1_dec_new_sequence (GstAV1Decoder * decoder,
+     GST_VIDEO_INFO_WIDTH (info) = base->width = width;
+     GST_VIDEO_INFO_HEIGHT (info) = base->height = height;
+     base->need_negotiation = TRUE;
+-    base->min_buffers = 7 + 4;  /* dpb size + scratch surfaces */
++    base->min_buffers = max_dpb_size + 2;       /* + scratch surfaces */
+     base->need_valign = FALSE;
+   }
+ 
+@@ -939,6 +939,15 @@ gst_va_av1_dec_end_picture (GstAV1Decoder * decoder, GstAV1Picture * picture)
+   return GST_FLOW_OK;
+ }
+ 
++static guint
++gst_va_av1_dec_get_preferred_output_delay (GstAV1Decoder * decoder,
++    gboolean live)
++{
++  /* Intra frames of high resolution streams can take several frame periods
++   * to decode, so decode a few frames ahead when not live. */
++  return live ? 0 : 4;
++}
++
+ static GstFlowReturn
+ gst_va_av1_dec_output_picture (GstAV1Decoder * decoder,
+     GstVideoCodecFrame * frame, GstAV1Picture * picture)
+@@ -1065,6 +1074,8 @@ gst_va_av1_dec_class_init (gpointer g_class, gpointer class_data)
+       GST_DEBUG_FUNCPTR (gst_va_av1_dec_end_picture);
+   av1decoder_class->output_picture =
+       GST_DEBUG_FUNCPTR (gst_va_av1_dec_output_picture);
++  av1decoder_class->get_preferred_output_delay =
++      GST_DEBUG_FUNCPTR (gst_va_av1_dec_get_preferred_output_delay);
+ 
+   g_free (long_name);
+   g_free (cdata->description);
+-- 
+2.55.0
+

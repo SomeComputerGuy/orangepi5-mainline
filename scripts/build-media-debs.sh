@@ -3,7 +3,7 @@
 #   ffmpeg              V4L2 Request API (stateless decoder) hwaccels
 #   mpv                 v4l2request hwdec + DRM PRIME interop; needs our ffmpeg
 #   gst-plugins-bad1.0  v4l2codecs fixes and stateless H.264/H.265 encoders, kmssink fixes (patches/gstreamer)
-#   gst-plugins-good1.0 v4l2transform colorimetry, souphttpsrc HEAD race (patches/gst-plugins-good)
+#   gst-plugins-good1.0 v4l2 colorimetry, single-dmabuf import, souphttpsrc HEAD race (patches/gst-plugins-good)
 #   alsa-ucm-conf       UCM for the RK3588 HDMI/DP and ES8388 sound cards (Architecture: all)
 # Rootless: mmdebstrap --mode=unshare + qemu-user binfmt, no sudo.
 # Each source builds in its own persistent arm64 chroot (stonking-arm64-<source>,
@@ -113,7 +113,7 @@ declare -A VERSION=(
   [gst-plugins-good1.0]=1.28.7-1ubuntu0.1   # stonking-security (CVE-2026-111183), was 1.28.7-1build1
   [alsa-ucm-conf]=1.2.16.1-1ubuntu1
 )
-declare -A REV=([ffmpeg]=4 [mpv]=2 [gst-plugins-bad1.0]=8 [gst-plugins-good1.0]=3 [alsa-ucm-conf]=1)
+declare -A REV=([ffmpeg]=6 [mpv]=3 [gst-plugins-bad1.0]=8 [gst-plugins-good1.0]=5 [alsa-ucm-conf]=1)
 declare -A PDIR=([ffmpeg]=ffmpeg [mpv]=mpv [gst-plugins-bad1.0]=gstreamer [gst-plugins-good1.0]=gst-plugins-good [alsa-ucm-conf]=alsa-ucm-conf)
 # Architecture: all sources (built with -A); the rest build their arm64 packages
 declare -A BUILD=([alsa-ucm-conf]=all)

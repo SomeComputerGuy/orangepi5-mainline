@@ -38,7 +38,7 @@ fi
 # Source: https://github.com/SomeComputerGuy/libva-v4l2_request, branch opi5/main
 # (base: https://xff.cz/git/libva-v4l2_request cac6ece + three of sofus13's HEVC fixes)
 URL=https://github.com/SomeComputerGuy/libva-v4l2_request.git
-COMMIT=${VA_DRIVER_COMMIT:-e912dc47684e32276b9594c593855a79fae474f6}
+COMMIT=${VA_DRIVER_COMMIT:-fc543dca977f24ce1f6683b0b361257aedaac7b0}
 
 PREPARE=
 if [ "${1:-}" = --prepare-chroot ]; then PREPARE=1; shift; fi

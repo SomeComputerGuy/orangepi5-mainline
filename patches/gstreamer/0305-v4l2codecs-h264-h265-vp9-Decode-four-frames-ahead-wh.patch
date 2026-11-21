@@ -1,0 +1,86 @@
+From 53c6f23f703787341b7b84173db1720b20068425 Mon Sep 17 00:00:00 2001
+From: Arun Iyengar <aiyengar1990@gmail.com>
+Date: Sat, 21 Nov 2026 05:04:56 +0000
+Subject: [PATCH 305/306] v4l2codecs: h264, h265, vp9: Decode four frames ahead
+ when not live
+
+A 4K frame takes close to one 60 Hz period on RK3588. With one frame of
+delay, the next frame is only queued once the sink has rendered the
+previous one, so compositor latency misses vblanks. AV1 already uses 4.
+VP9 sizes its pool without the delay: add it.
+
+Signed-off-by: Arun Iyengar <aiyengar1990@gmail.com>
+---
+ sys/v4l2codecs/gstv4l2codech264dec.c | 5 +++--
+ sys/v4l2codecs/gstv4l2codech265dec.c | 4 +++-
+ sys/v4l2codecs/gstv4l2codecvp9dec.c  | 7 +++++--
+ 3 files changed, 11 insertions(+), 5 deletions(-)
+
+diff --git a/sys/v4l2codecs/gstv4l2codech264dec.c b/sys/v4l2codecs/gstv4l2codech264dec.c
+index f868c32..f8180fc 100644
+--- a/sys/v4l2codecs/gstv4l2codech264dec.c
++++ b/sys/v4l2codecs/gstv4l2codech264dec.c
+@@ -1437,11 +1437,12 @@ gst_v4l2_codec_h264_dec_get_preferred_output_delay (GstH264Decoder * decoder,
+   GstV4l2CodecH264Dec *self = GST_V4L2_CODEC_H264_DEC (decoder);
+   guint delay;
+ 
++  /* High resolution frames can take about a frame period to decode, so
++   * decode a few frames ahead when not live. */
+   if (live)
+     delay = 0;
+   else
+-    /* Just one for now, perhaps we can make this configurable in the future. */
+-    delay = 1;
++    delay = 4;
+ 
+   gst_v4l2_decoder_set_render_delay (self->decoder, delay);
+ 
+diff --git a/sys/v4l2codecs/gstv4l2codech265dec.c b/sys/v4l2codecs/gstv4l2codech265dec.c
+index 595f67e..06d9cc8 100644
+--- a/sys/v4l2codecs/gstv4l2codech265dec.c
++++ b/sys/v4l2codecs/gstv4l2codech265dec.c
+@@ -1679,10 +1679,12 @@ gst_v4l2_codec_h265_dec_get_preferred_output_delay (GstH265Decoder * decoder,
+   GstV4l2CodecH265Dec *self = GST_V4L2_CODEC_H265_DEC (decoder);
+   guint delay;
+ 
++  /* High resolution frames can take about a frame period to decode, so
++   * decode a few frames ahead when not live. */
+   if (is_live)
+     delay = 0;
+   else
+-    delay = 1;
++    delay = 4;
+ 
+   gst_v4l2_decoder_set_render_delay (self->decoder, delay);
+   return delay;
+diff --git a/sys/v4l2codecs/gstv4l2codecvp9dec.c b/sys/v4l2codecs/gstv4l2codecvp9dec.c
+index 311233f..44ea6cc 100644
+--- a/sys/v4l2codecs/gstv4l2codecvp9dec.c
++++ b/sys/v4l2codecs/gstv4l2codecvp9dec.c
+@@ -156,10 +156,12 @@ gst_v4l2_codec_vp9_dec_get_preferred_output_delay (GstVp9Decoder * decoder,
+   GstV4l2CodecVp9Dec *self = GST_V4L2_CODEC_VP9_DEC (decoder);
+   guint delay;
+ 
++  /* High resolution frames can take about a frame period to decode, so
++   * decode a few frames ahead when not live. */
+   if (is_live)
+     delay = 0;
+   else
+-    delay = 1;
++    delay = 4;
+ 
+   gst_v4l2_decoder_set_render_delay (self->decoder, delay);
+   return delay;
+@@ -711,7 +713,8 @@ gst_v4l2_codec_vp9_dec_decide_allocation (GstVideoDecoder * decoder,
+   }
+ 
+   self->src_allocator = gst_v4l2_codec_allocator_new (self->decoder,
+-      GST_PAD_SRC, GST_VP9_REF_FRAMES + min + 4);
++      GST_PAD_SRC, GST_VP9_REF_FRAMES +
++      gst_v4l2_decoder_get_render_delay (self->decoder) + min + 4);
+   if (!self->src_allocator) {
+     GST_ELEMENT_ERROR (self, RESOURCE, NO_SPACE_LEFT,
+         ("Not enough memory to allocate source buffers."), (NULL));
+-- 
+2.55.0
+

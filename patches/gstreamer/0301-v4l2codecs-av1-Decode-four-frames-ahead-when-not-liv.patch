@@ -1,0 +1,37 @@
+From 96fe6408045f14fde97082be0b110af19238d2ee Mon Sep 17 00:00:00 2001
+From: Arun Iyengar <aiyengar1990@gmail.com>
+Date: Fri, 20 Nov 2026 20:08:08 +0000
+Subject: [PATCH] v4l2codecs: av1: Decode four frames ahead when not
+ live
+
+With one frame of output delay a 4K60 key frame that takes 50 ms to
+decode (RK3588 VPU981) misses its vblank. Use four frames of delay for
+non-live streams.
+
+Signed-off-by: Arun Iyengar <aiyengar1990@gmail.com>
+---
+ sys/v4l2codecs/gstv4l2codecav1dec.c | 5 +++--
+ 1 file changed, 3 insertions(+), 2 deletions(-)
+
+diff --git a/sys/v4l2codecs/gstv4l2codecav1dec.c b/sys/v4l2codecs/gstv4l2codecav1dec.c
+index e19d3e6..5a7a6b7 100644
+--- a/sys/v4l2codecs/gstv4l2codecav1dec.c
++++ b/sys/v4l2codecs/gstv4l2codecav1dec.c
+@@ -495,11 +495,12 @@ gst_v4l2_codec_av1_dec_get_preferred_output_delay (GstAV1Decoder * decoder,
+   GstV4l2CodecAV1Dec *self = GST_V4L2_CODEC_AV1_DEC (decoder);
+   guint delay;
+ 
++  /* Intra frames of high resolution streams can take several frame periods
++   * to decode, so decode a few frames ahead when not live. */
+   if (live)
+     delay = 0;
+   else
+-    /* Just one for now, perhaps we can make this configurable in the future. */
+-    delay = 1;
++    delay = 4;
+ 
+   gst_v4l2_decoder_set_render_delay (self->decoder, delay);
+ 
+-- 
+2.55.0
+
