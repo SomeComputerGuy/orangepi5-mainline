@@ -131,13 +131,12 @@ Not finished. Listed so you know what is coming; no dates.
   the TPM (kernel and packaging fix, passed on the board). The hardware unique key is derived
   from the board's factory key through the key ladder. Test firmware only, booted from SD; no
   fuses or keys are burned. The OP-TEE change that makes the fused key optional is posted.
-- Verified and measured boot without burning fuses, and an encrypted root unlocked by
-  TPM + PIN: on the board, the signed boot chain, measured boot, TPM and TPM + PIN unlock
-  at boot (PIN typed at the console, wrong PIN refused), the recovery passphrase and the
-  TPM state over reboots pass, and tampered, unsigned or wrongly signed kernels and a
-  tampered U-Boot are refused. Test firmware only, booted from SD.
-- Planned: UEFI Secure Boot the way a PC does it (U-Boot as UEFI firmware with Microsoft's
-  certificate, Ubuntu's signed shim and MOK), with locking the firmware left to the owner.
+- UEFI Secure Boot the way a PC does it: U-Boot as UEFI firmware with Microsoft's
+  certificate checks Ubuntu's signed shim, GRUB and kernel; your own keys are enrolled with
+  mokutil. U-Boot and the UEFI variables go in SPI flash, write-locked from the running OS
+  if the flash chip allows it.
+  Planned; the firmware TPM stays on. (An earlier signed-FIT boot chain with a TPM-unlocked
+  encrypted root passed on the board but is set aside for this.)
 - Upstreaming: over 35 kernel series and changes to TF-A, OP-TEE and util-linux are posted
   and in review; the rest follow as they pass on the board.
 
