@@ -102,8 +102,10 @@ Not finished. Listed so you know what is coming; no dates.
   colour matrix in the display controller. In testing, not passing yet.
 - HDMI interlaced modes pass on the board (DisplayPort interlaced not tested yet). Display
   writeback: written, board test pending.
-- IEP2 deinterlacer: the driver is in the image and passes v4l2-compliance. GStreamer and
-  FFmpeg support is written, board tests pending. Posted upstream.
+- IEP2 deinterlacer: the driver is in the image and passes v4l2-compliance. FFmpeg
+  deinterlacing passes on the board with the reworked driver (comes with the next kernel);
+  GStreamer does not negotiate formats with it yet.
+  Posted upstream.
 - MPEG-4 Part 2 / H.263 decode: the kernel driver is in the image; the FFmpeg fixes and
   GStreamer elements it needs have passed on the board and come with the next media
   package update.
